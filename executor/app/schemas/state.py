@@ -2,12 +2,14 @@ from datetime import datetime, timezone
 
 from pydantic import BaseModel, Field
 
+from app.schemas.enums import FileStatus, TodoStatus
+
 
 class TodoItem(BaseModel):
     """A todo item tracking a task."""
 
     content: str
-    status: str
+    status: TodoStatus
     active_form: str | None = None
 
 
@@ -22,7 +24,7 @@ class FileChange(BaseModel):
     """Detailed information about a single file change."""
 
     path: str
-    status: str
+    status: FileStatus
     added_lines: int = 0
     deleted_lines: int = 0
     diff: str | None = None

@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from app.hooks.base import AgentHook, ExecutionContext
+from app.schemas.enums import FileStatus
 from app.schemas.state import FileChange, WorkspaceState
 from app.utils.git.operations import (
     GitNotRepositoryError,
@@ -70,7 +71,7 @@ class WorkspaceHook(AgentHook):
             file_changes.append(
                 FileChange(
                     path=file,
-                    status="modified",
+                    status=FileStatus.MODIFIED,
                     added_lines=added,
                     deleted_lines=deleted,
                     diff=diff_content or None,
@@ -83,7 +84,7 @@ class WorkspaceHook(AgentHook):
             file_changes.append(
                 FileChange(
                     path=file,
-                    status="staged",
+                    status=FileStatus.STAGED,
                     added_lines=added,
                     deleted_lines=deleted,
                     diff=diff_content or None,
@@ -92,14 +93,16 @@ class WorkspaceHook(AgentHook):
 
         for file in git_status.deleted:
             file_changes.append(
-                FileChange(path=file, status="deleted", added_lines=0, deleted_lines=0)
+                FileChange(
+                    path=file, status=FileStatus.DELETED, added_lines=0, deleted_lines=0
+                )
             )
 
         for old_path, new_path in git_status.renamed:
             file_changes.append(
                 FileChange(
                     path=new_path,
-                    status="renamed",
+                    status=FileStatus.RENAMED,
                     added_lines=0,
                     deleted_lines=0,
                     old_path=old_path,
