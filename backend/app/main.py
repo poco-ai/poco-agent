@@ -2,6 +2,7 @@ from fastapi import FastAPI
 
 from app.api import setup_routers
 from app.core.errors.exception_handlers import setup_exception_handlers
+from app.core.lifespan import lifespan
 from app.core.middleware import setup_middleware
 from app.core.observability.logging import configure_logging
 from app.core.settings import get_settings
@@ -15,6 +16,7 @@ def create_app() -> FastAPI:
         title=settings.app_name,
         version=settings.app_version,
         debug=settings.debug,
+        lifespan=lifespan,
     )
 
     setup_middleware(app)
