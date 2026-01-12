@@ -3,7 +3,7 @@ import sys
 
 from fastapi import FastAPI
 
-from app.api import callback_router, task_router
+from app.api import task_router
 
 
 logging.basicConfig(
@@ -15,7 +15,6 @@ logging.basicConfig(
 app = FastAPI()
 
 app.include_router(task_router)
-app.include_router(callback_router)
 
 if __name__ == "__main__":
     import uvicorn

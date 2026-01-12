@@ -1,6 +1,6 @@
 import httpx
 
-from app.schemas.callback import AgentReportCallback
+from app.schemas.callback import AgentCallbackRequest
 
 
 class CallbackClient:
@@ -8,7 +8,7 @@ class CallbackClient:
         self.callback_url = callback_url
         self.timeout = timeout
 
-    async def send(self, report: AgentReportCallback) -> bool:
+    async def send(self, report: AgentCallbackRequest) -> bool:
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 response = await client.post(

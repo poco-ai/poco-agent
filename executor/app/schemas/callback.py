@@ -7,8 +7,8 @@ from app.schemas.enums import CallbackStatus
 from app.schemas.state import AgentCurrentState
 
 
-class AgentReportCallback(BaseModel):
-    """Callback report sent during agent execution."""
+class AgentCallbackRequest(BaseModel):
+    """Callback request sent during agent execution."""
 
     session_id: str
     time: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

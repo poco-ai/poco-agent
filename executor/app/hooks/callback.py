@@ -2,7 +2,7 @@ from typing import Any, Optional
 
 from app.core.callback import CallbackClient
 from app.hooks.base import AgentHook, ExecutionContext
-from app.schemas.callback import AgentReportCallback
+from app.schemas.callback import AgentCallbackRequest
 from app.schemas.enums import CallbackStatus, TodoStatus
 from app.utils.serializer import serialize_message
 
@@ -18,8 +18,8 @@ class CallbackHook(AgentHook):
         status: str,
         progress: int,
         new_message: Optional[Any] = None,
-    ) -> AgentReportCallback:
-        return AgentReportCallback(
+    ) -> AgentCallbackRequest:
+        return AgentCallbackRequest(
             session_id=context.session_id,
             status=status,
             progress=progress,
