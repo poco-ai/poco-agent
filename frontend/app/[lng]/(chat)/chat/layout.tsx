@@ -65,11 +65,11 @@ export function ChatLayout({
     (taskId: string, projectId: string | null) => {
       setTaskHistory((prev) =>
         prev.map((task) =>
-          task.id === taskId ? { ...task, projectId } : task
-        )
+          task.id === taskId ? { ...task, projectId } : task,
+        ),
       );
     },
-    []
+    [],
   );
 
   return (
@@ -88,7 +88,10 @@ export function ChatLayout({
           <SidebarInset className="flex flex-col bg-muted/30">
             {children}
           </SidebarInset>
-          <SettingsDialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen} />
+          <SettingsDialog
+            open={isSettingsOpen}
+            onOpenChange={setIsSettingsOpen}
+          />
         </div>
       </SidebarProvider>
     </LanguageProvider>

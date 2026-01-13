@@ -1,16 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useRouter, usePathname } from "next/navigation";
-import {
-  DndContext,
-  DragEndEvent,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  closestCorners,
-} from "@dnd-kit/core";
-import { useT } from "@/app/i18n/client";
+import { useRouter } from "next/navigation";
 import { GlobalSearchDialog } from "@/components/search/global-search-dialog";
 import { useSearchDialog } from "@/hooks/use-search-dialog";
 import { CreateProjectDialog } from "@/components/project/create-project-dialog";
@@ -32,7 +23,7 @@ interface AppSidebarProps {
 }
 
 // 默认空函数
-const noop = () => { };
+const noop = () => {};
 
 /**
  * 统一的侧边栏组件，根据当前路由自动调整行为
@@ -49,7 +40,6 @@ export function AppSidebar({
   onOpenSettings,
 }: AppSidebarProps) {
   const router = useRouter();
-  const pathname = usePathname();
   const { isSearchOpen, setIsSearchOpen } = useSearchDialog();
   const [isCreateProjectDialogOpen, setIsCreateProjectDialogOpen] =
     React.useState(false);

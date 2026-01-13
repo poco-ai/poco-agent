@@ -39,10 +39,10 @@ export default function LibraryPage() {
           taskHistory={taskHistory}
           // Passing undefined will trigger the default navigation in AppSidebar
           onNewTask={undefined}
-          onDeleteTask={() => { }}
+          onDeleteTask={() => {}}
           onCreateProject={(name) => {
             // Mock create project for library page to show responsiveness
-            setProjects(prev => [
+            setProjects((prev) => [
               ...prev,
               {
                 id: `project-${Date.now()}`,
@@ -65,7 +65,10 @@ export default function LibraryPage() {
           </div>
         </SidebarInset>
 
-        <SettingsDialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen} />
+        <SettingsDialog
+          open={isSettingsOpen}
+          onOpenChange={setIsSettingsOpen}
+        />
       </div>
     </SidebarProvider>
   );

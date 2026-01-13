@@ -3,10 +3,6 @@
 import * as React from "react";
 import type { TaskHistoryItem } from "../model/types";
 
-interface UseProjectTasksOptions {
-  initialTasks?: TaskHistoryItem[];
-}
-
 export function useProjectTasks(
   initialTasksFn?: () => TaskHistoryItem[],
   projectId?: string,

@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { Bell, ChevronDown, Coins } from "lucide-react";
 
 import { useT } from "@/app/i18n/client";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { CreditsPopover } from "./credits-popover";
@@ -54,7 +53,9 @@ export function HomeHeader({ onOpenSettings }: HomeHeaderProps) {
               className="mx-1 h-8 gap-1.5 rounded-full border border-primary/10 bg-primary/5 px-3 text-sm font-medium text-primary hover:bg-primary/10 hover:text-primary"
             >
               <Coins className="size-3.5" />
-              <span>{isLoading ? "..." : credits?.total?.toLocaleString()}</span>
+              <span>
+                {isLoading ? "..." : credits?.total?.toLocaleString()}
+              </span>
             </Button>
           }
         />

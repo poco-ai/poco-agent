@@ -1,3 +1,11 @@
+[project]
+name = "OpenCoWork"
+version = "0.1.0"
+description = "OpenCoWork is a cloud-based AI agent execution platform inspired by Anthropic's Cowork. It orchestrates Claude AI agents to perform autonomous tasks beyond coding—organizing files, writing documents, analyzing data, and more—in a distributed cloud environment."
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+
 [tool.ruff]
 src = ["backend", "executor", "executor_manager"]
 

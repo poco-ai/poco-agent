@@ -6,7 +6,6 @@ import {
   FileText,
   Figma,
   Mic,
-  MoreHorizontal,
   Plus,
   SlidersHorizontal,
 } from "lucide-react";
@@ -21,9 +20,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
 
-import {
-  MOCK_CONNECTORS,
-} from "../model/connectors";
+import { MOCK_CONNECTORS } from "../model/connectors";
 
 export function TaskComposer({
   textareaRef,
@@ -97,18 +94,25 @@ export function TaskComposer({
                 <SlidersHorizontal className="size-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-56 max-h-64 overflow-y-auto">
-              {MOCK_CONNECTORS.filter((c) => c.type === "app").map((connector) => (
-                <DropdownMenuItem key={connector.id}>
-                  <div className="flex items-center justify-between w-full">
-                    <div className="flex items-center gap-2">
-                      <connector.icon className="size-4" />
-                      <span>{connector.title}</span>
+            <DropdownMenuContent
+              align="start"
+              className="w-56 max-h-64 overflow-y-auto"
+            >
+              {MOCK_CONNECTORS.filter((c) => c.type === "app").map(
+                (connector) => (
+                  <DropdownMenuItem key={connector.id}>
+                    <div className="flex items-center justify-between w-full">
+                      <div className="flex items-center gap-2">
+                        <connector.icon className="size-4" />
+                        <span>{connector.title}</span>
+                      </div>
+                      <span className="text-xs text-primary font-medium">
+                        连接
+                      </span>
                     </div>
-                    <span className="text-xs text-primary font-medium">连接</span>
-                  </div>
-                </DropdownMenuItem>
-              ))}
+                  </DropdownMenuItem>
+                ),
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

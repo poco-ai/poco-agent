@@ -36,10 +36,6 @@ export function HomePage() {
 
   useAutosizeTextarea(textareaRef, inputValue);
 
-  const focusComposer = React.useCallback(() => {
-    requestAnimationFrame(() => textareaRef.current?.focus());
-  }, []);
-
   const handleNewTask = React.useCallback(() => {
     // Navigate to home for new task
     router.push("/");
@@ -59,7 +55,7 @@ export function HomePage() {
     // Note: We need to ensure this code runs in client (which it does, inside callback)
     localStorage.setItem(`session_prompt_${sessionId}`, inputValue);
 
-    // 3. Add to local history (optional, helps with instant feedback if we stay on page, 
+    // 3. Add to local history (optional, helps with instant feedback if we stay on page,
     // but we are navigating away. taskHistory in Home is local state, so it won't persist to ChatLayout
     // unless we persist it globally. For now, we follow the pattern.)
     addTask(inputValue, {
@@ -72,8 +68,6 @@ export function HomePage() {
     // 4. Navigate to the chat page
     router.push(`/chat/${sessionId}`);
   }, [addTask, inputValue, t, router]);
-
-
 
   const handleCreateProject = React.useCallback((name: string) => {
     setProjects((prev) => [
@@ -140,7 +134,10 @@ export function HomePage() {
           </div>
         </SidebarInset>
 
-        <SettingsDialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen} />
+        <SettingsDialog
+          open={isSettingsOpen}
+          onOpenChange={setIsSettingsOpen}
+        />
       </div>
     </SidebarProvider>
   );
