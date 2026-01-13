@@ -77,6 +77,7 @@ class ContainerPool:
             name=container_name,
             environment={
                 "ANTHROPIC_AUTH_TOKEN": self.settings.anthropic_token,
+                "ANTHROPIC_BASE_URL": self.settings.anthropic_base_url,
                 "DEFAULT_MODEL": self.settings.default_model,
                 "WORKSPACE_PATH": "/workspace",
                 "USER_ID": user_id,
