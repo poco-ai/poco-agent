@@ -84,10 +84,9 @@ class ContainerPool:
                 "SESSION_ID": session_id,
             },
             volumes={workspace_volume: {"bind": "/workspace", "mode": "rw"}},
-            ports={"8000/tcp": None},
+            ports={"8000/tcp": None},  # Docker 随机分配宿主机端口
             detach=True,
             auto_remove=True,
-            network="host",
             labels=labels,
         )
 
@@ -96,8 +95,20 @@ class ContainerPool:
 
         self._wait_for_container_ready(container)
 
-        logger.info(f"Container {container_id} started for session {session_id}")
-        return "http://localhost:8000", container_id
+        # 获取 Docker 分配的实际端口
+        container.reload()
+        port_info = container.ports.get("8000/tcp")
+        if not port_info:
+            raise AppException(
+                error_code=ErrorCode.CONTAINER_START_FAILED,
+                message=f"Container {container_name} has no port mapping",
+            )
+        host_port = port_info[0]["HostPort"]
+
+        logger.info(
+            f"Container {container_id} started for session {session_id} on port {host_port}"
+        )
+        return f"http://localhost:{host_port}", container_id
 
     def _wait_for_container_ready(
         self,
