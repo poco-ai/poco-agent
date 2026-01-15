@@ -41,6 +41,7 @@ class WorkspaceManager:
         self.active_dir = self.base_dir / "active"
         self.archive_dir = self.base_dir / "archive"
         self.temp_dir = self.base_dir / "temp"
+        self.ignore_dot_files = self.settings.workspace_ignore_dot_files
 
         self._init_directories()
 
@@ -139,6 +140,9 @@ class WorkspaceManager:
                     break
 
                 if entry.name in self._ignore_names:
+                    continue
+
+                if self.ignore_dot_files and entry.name.startswith("."):
                     continue
 
                 if entry.is_symlink():

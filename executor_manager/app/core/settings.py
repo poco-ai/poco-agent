@@ -94,6 +94,9 @@ class Settings(BaseSettings):
         default=True, alias="WORKSPACE_ARCHIVE_ENABLED"
     )
     workspace_archive_days: int = Field(default=7, alias="WORKSPACE_ARCHIVE_DAYS")
+    workspace_ignore_dot_files: bool = Field(
+        default=True, alias="WORKSPACE_IGNORE_DOT_FILES"
+    )
 
     model_config = SettingsConfigDict(
         env_file=".env",
