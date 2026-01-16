@@ -53,7 +53,7 @@ export const tasksService = {
   }): Promise<TaskHistoryItem[]> => {
     try {
       return await apiClient.get<TaskHistoryItem[]>(
-        API_ENDPOINTS.tasksHistory,
+        API_ENDPOINTS.sessions,
         {
           next: { revalidate: options?.revalidate },
         },

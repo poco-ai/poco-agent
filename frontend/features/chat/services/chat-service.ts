@@ -110,11 +110,11 @@ export const chatService = {
     }
   },
 
-  enqueueTask: async (request: TaskEnqueueRequest) => {
+  enqueueTask: async (request: TaskEnqueueRequest): Promise<TaskEnqueueResponse> => {
     console.log("[enqueueTask] request:", JSON.stringify(request));
     try {
       const result = await apiClient.post<TaskEnqueueResponse>(
-        API_ENDPOINTS.sessions,
+        API_ENDPOINTS.tasks,
         request,
       );
       console.log("[enqueueTask] result:", JSON.stringify(result));

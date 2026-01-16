@@ -4,8 +4,11 @@ import type { ApiResponse } from "@/types";
 export const API_PREFIX = "/api/v1";
 
 export const API_ENDPOINTS = {
+  // Sessions
   sessions: "/sessions",
+  sessionsWithTitles: "/sessions/list-with-titles",
   session: (sessionId: string) => `/sessions/${sessionId}`,
+  sessionState: (sessionId: string) => `/sessions/${sessionId}/state`,
   sessionMessages: (sessionId: string) => `/sessions/${sessionId}/messages`,
   sessionToolExecutions: (sessionId: string) =>
     `/sessions/${sessionId}/tool-executions`,
@@ -14,16 +17,52 @@ export const API_ENDPOINTS = {
     `/sessions/${sessionId}/workspace/files`,
   sessionWorkspaceFile: (sessionId: string, filePath: string) =>
     `/sessions/${sessionId}/workspace/file?path=${encodeURIComponent(filePath)}`,
-  // tasks: "/tasks",
-  tasksHistory: "/sessions",
-  runs: "/runs",
-  run: (runId: string) => `/runs/${runId}`,
-  runsBySession: (sessionId: string) => `/runs/session/${sessionId}`,
+
+  // Tasks
+  tasks: "/tasks",
+
+  // Attachments
+  attachmentsUpload: "/attachments/upload",
+
+  // Environment Variables
+  envVars: "/env-vars",
+  envVar: (envVarId: number) => `/env-vars/${envVarId}`,
+
+  // MCP Presets
+  mcpPresets: "/mcp-presets",
+  mcpPreset: (presetId: number) => `/mcp-presets/${presetId}`,
+
+  // MCP Configs (User)
+  mcpConfigs: "/mcp-configs",
+  mcpConfig: (configId: number) => `/mcp-configs/${configId}`,
+
+  // Skill Presets
+  skillPresets: "/skill-presets",
+  skillPreset: (presetId: number) => `/skill-presets/${presetId}`,
+
+  // Skill Installs (User)
+  skillInstalls: "/skill-installs",
+  skillInstall: (installId: number) => `/skill-installs/${installId}`,
+
+  // Callback
+  callback: "/callback",
+  callbackHealth: "/callback/health",
+
+  // Schedules
+  schedules: "/schedules",
+
+  // Messages
+  message: (messageId: number) => `/messages/${messageId}`,
+
+  // Tool Executions
+  toolExecution: (executionId: string) => `/tool-executions/${executionId}`,
+
+  // Other
   projects: "/projects",
   project: (projectId: string) => `/projects/${projectId}`,
   skills: "/skills",
-  schedules: "/schedules",
   health: "/health",
+  root: "/",
 };
 
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
