@@ -13,6 +13,12 @@ class ErrorCode(Enum):
 
     BALANCE_INSUFFICIENT = (10101, "Insufficient balance")
     OPERATION_NOT_ALLOWED = (10102, "Operation not allowed")
+    ENV_VAR_NOT_FOUND = (11001, "Environment variable not found")
+    ENV_VAR_ALREADY_EXISTS = (11002, "Environment variable already exists")
+    MCP_PRESET_NOT_FOUND = (12001, "MCP preset not found")
+    MCP_PRESET_CREATE_FORBIDDEN = (12002, "MCP preset creation forbidden")
+    SKILL_PRESET_NOT_FOUND = (13001, "Skill preset not found")
+    SKILL_PRESET_CREATE_FORBIDDEN = (13002, "Skill preset creation forbidden")
 
     INTERNAL_ERROR = (50000, "Internal server error")
     DATABASE_ERROR = (50101, "Database operation failed")

@@ -7,6 +7,7 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     Integer,
+    JSON,
     String,
     Text,
     func,
@@ -48,6 +49,7 @@ class AgentRun(Base, TimestampMixin):
     schedule_mode: Mapped[str] = mapped_column(
         String(50), default="immediate", nullable=False, index=True
     )
+    config_snapshot: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     scheduled_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

@@ -26,6 +26,7 @@ class RunResponse(BaseModel):
     progress: int
     schedule_mode: str
     scheduled_at: datetime
+    config_snapshot: dict | None = None
     claimed_by: str | None
     lease_expires_at: datetime | None
     attempts: int

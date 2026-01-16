@@ -5,8 +5,13 @@ from sqlalchemy.orm import Session
 from app.core.errors.error_codes import ErrorCode
 from app.core.errors.exceptions import AppException
 from app.repositories.message_repository import MessageRepository
+from app.repositories.mcp_preset_repository import McpPresetRepository
 from app.repositories.run_repository import RunRepository
 from app.repositories.session_repository import SessionRepository
+from app.repositories.skill_preset_repository import SkillPresetRepository
+from app.repositories.user_mcp_config_repository import UserMcpConfigRepository
+from app.repositories.user_skill_install_repository import UserSkillInstallRepository
+from app.schemas.session import TaskConfig
 from app.schemas.task import TaskEnqueueRequest, TaskEnqueueResponse
 
 
@@ -66,6 +71,7 @@ class TaskService:
         self, db: Session, user_id: str, request: TaskEnqueueRequest
     ) -> TaskEnqueueResponse:
         """Enqueue a new run for a session (create session if needed)."""
+        base_config: dict | None = None
         if request.session_id:
             db_session = SessionRepository.get_by_id(db, request.session_id)
             if not db_session:
@@ -78,14 +84,24 @@ class TaskService:
                     error_code=ErrorCode.FORBIDDEN,
                     message="Session does not belong to the user",
                 )
+            base_config = db_session.config_snapshot or {}
+            merged_config = self._build_config_snapshot(
+                db, user_id, request.config, base_config=base_config
+            )
         else:
-            config_dict = request.config.model_dump() if request.config else None
+            base_config = {}
+            merged_config = self._build_config_snapshot(
+                db, user_id, request.config, base_config=base_config
+            )
+            config_dict = merged_config
             db_session = SessionRepository.create(
                 session_db=db,
                 user_id=user_id,
                 config=config_dict,
             )
             db.flush()
+        if merged_config is not None:
+            db_session.config_snapshot = merged_config
 
         prompt = request.prompt.strip()
         if not prompt:
@@ -116,6 +132,7 @@ class TaskService:
             user_message_id=db_message.id,
             schedule_mode=schedule_mode,
             scheduled_at=scheduled_at,
+            config_snapshot=merged_config,
         )
 
         db_session.status = "pending"
@@ -129,3 +146,75 @@ class TaskService:
             run_id=db_run.id,
             status=db_run.status,
         )
+
+    def _build_config_snapshot(
+        self,
+        db: Session,
+        user_id: str,
+        task_config: TaskConfig | None,
+        *,
+        base_config: dict | None = None,
+    ) -> dict | None:
+        merged_base: dict = dict(base_config or {})
+        if task_config is not None:
+            request_config = task_config.model_dump()
+            merged_base = self._merge_config_map(merged_base, request_config)
+
+        default_mcp = self._build_user_mcp_defaults(db, user_id)
+        default_skills = self._build_user_skill_defaults(db, user_id)
+
+        merged_mcp = self._merge_config_map(
+            default_mcp, merged_base.get("mcp_config") or {}
+        )
+        merged_skills = self._merge_config_map(
+            default_skills, merged_base.get("skill_files") or {}
+        )
+
+        merged_base["mcp_config"] = merged_mcp
+        merged_base["skill_files"] = merged_skills
+        return merged_base or None
+
+    @staticmethod
+    def _merge_config_map(defaults: dict, overrides: dict) -> dict:
+        if not overrides:
+            return dict(defaults)
+        merged: dict = dict(defaults)
+        for key, value in overrides.items():
+            if value is None:
+                merged.pop(key, None)
+                continue
+            if isinstance(value, dict) and isinstance(merged.get(key), dict):
+                merged[key] = {**merged[key], **value}
+            else:
+                merged[key] = value
+        return merged
+
+    def _build_user_mcp_defaults(self, db: Session, user_id: str) -> dict:
+        defaults: dict = {}
+        configs = UserMcpConfigRepository.list_by_user(db, user_id)
+        for config in configs:
+            if not config.enabled:
+                continue
+            preset = McpPresetRepository.get_by_id(db, config.preset_id)
+            if not preset or not preset.is_active:
+                continue
+            entry = {"$ref": f"mcp-preset:{preset.name}"}
+            if config.overrides:
+                entry.update(config.overrides)
+            defaults[preset.name] = entry
+        return defaults
+
+    def _build_user_skill_defaults(self, db: Session, user_id: str) -> dict:
+        defaults: dict = {}
+        installs = UserSkillInstallRepository.list_by_user(db, user_id)
+        for install in installs:
+            if not install.enabled:
+                continue
+            preset = SkillPresetRepository.get_by_id(db, install.preset_id)
+            if not preset or not preset.is_active:
+                continue
+            entry = {"$ref": f"skill-preset:{preset.name}", "enabled": True}
+            if install.overrides:
+                entry.update(install.overrides)
+            defaults[preset.name] = entry
+        return defaults

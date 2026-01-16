@@ -17,6 +17,7 @@ class RunRepository:
         user_message_id: int,
         schedule_mode: str = "immediate",
         scheduled_at: datetime | None = None,
+        config_snapshot: dict | None = None,
     ) -> AgentRun:
         """Creates a new run.
 
@@ -29,6 +30,7 @@ class RunRepository:
             progress=0,
             schedule_mode=schedule_mode,
             attempts=0,
+            config_snapshot=config_snapshot,
         )
         if scheduled_at is not None:
             run.scheduled_at = scheduled_at

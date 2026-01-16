@@ -119,7 +119,7 @@ class RunService:
             run=RunResponse.model_validate(db_run),
             user_id=db_session.user_id,
             prompt=prompt,
-            config_snapshot=db_session.config_snapshot,
+            config_snapshot=db_run.config_snapshot or db_session.config_snapshot,
             sdk_session_id=db_session.sdk_session_id,
         )
 
