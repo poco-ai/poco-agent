@@ -2,7 +2,11 @@
 
 import { useState } from "react";
 import { SkillsHeader } from "@/features/skills/components/skills-header";
-import { MOCK_PRESETS, MOCK_INSTALLS, SkillsGrid } from "@/features/skills/components/skills-grid";
+import {
+  MOCK_PRESETS,
+  MOCK_INSTALLS,
+  SkillsGrid,
+} from "@/features/skills/components/skills-grid";
 
 import type { SkillPreset, UserSkillInstall } from "@/features/skills/types";
 import { toast } from "sonner";
@@ -21,8 +25,12 @@ export function SkillsPageClient({
   const [loadingId, setLoadingId] = useState<number | null>(null);
 
   // State for presets and installs
-  const [presets] = useState<SkillPreset[]>(initialPresets.length > 0 ? initialPresets : MOCK_PRESETS);
-  const [installs, setInstalls] = useState<UserSkillInstall[]>(initialInstalls.length > 0 ? initialInstalls : MOCK_INSTALLS);
+  const [presets] = useState<SkillPreset[]>(
+    initialPresets.length > 0 ? initialPresets : MOCK_PRESETS,
+  );
+  const [installs, setInstalls] = useState<UserSkillInstall[]>(
+    initialInstalls.length > 0 ? initialInstalls : MOCK_INSTALLS,
+  );
 
   const handleToggleEnabled = async (installId: number, enabled: boolean) => {
     const install = installs.find((i: UserSkillInstall) => i.id === installId);
@@ -35,7 +43,11 @@ export function SkillsPageClient({
     setLoadingId(installId);
 
     // Optimistic update
-    setInstalls((prev: UserSkillInstall[]) => prev.map((i: UserSkillInstall) => i.id === installId ? { ...i, enabled } : i));
+    setInstalls((prev: UserSkillInstall[]) =>
+      prev.map((i: UserSkillInstall) =>
+        i.id === installId ? { ...i, enabled } : i,
+      ),
+    );
 
     try {
       // Simulate API call
@@ -43,17 +55,25 @@ export function SkillsPageClient({
 
       toast.success(`${skillName} Skill ${enabled ? "已启用" : "已停用"}`, {
         icon: enabled
-          ? React.createElement(CheckCircle2, { className: "size-4 text-foreground" })
-          : React.createElement(CircleOff, { className: "size-4 text-muted-foreground" }),
+          ? React.createElement(CheckCircle2, {
+              className: "size-4 text-foreground",
+            })
+          : React.createElement(CircleOff, {
+              className: "size-4 text-muted-foreground",
+            }),
       });
 
       // Trigger success haptic feedback
       if (typeof window !== "undefined" && "vibrate" in navigator) {
         navigator.vibrate(50);
       }
-    } catch (error) {
+    } catch {
       // Rollback
-      setInstalls((prev: UserSkillInstall[]) => prev.map((i: UserSkillInstall) => i.id === installId ? { ...i, enabled: !enabled } : i));
+      setInstalls((prev: UserSkillInstall[]) =>
+        prev.map((i: UserSkillInstall) =>
+          i.id === installId ? { ...i, enabled: !enabled } : i,
+        ),
+      );
       toast.error("操作失败");
     } finally {
       setLoadingId(null);
@@ -84,13 +104,15 @@ export function SkillsPageClient({
       setInstalls((prev) => [...prev, newInstall]);
 
       toast.success(`${skillName} Skill 已安装`, {
-        icon: React.createElement(CheckCircle2, { className: "size-4 text-foreground" }),
+        icon: React.createElement(CheckCircle2, {
+          className: "size-4 text-foreground",
+        }),
       });
 
       if (typeof window !== "undefined" && "vibrate" in navigator) {
         navigator.vibrate(50);
       }
-    } catch (error) {
+    } catch {
       toast.error("安装失败");
     } finally {
       setLoadingId(null);
@@ -99,7 +121,9 @@ export function SkillsPageClient({
 
   const handleUninstall = async (installId: number) => {
     const install = installs.find((i: UserSkillInstall) => i.id === installId);
-    const preset = presets.find((p: SkillPreset) => p.id === install?.preset_id);
+    const preset = presets.find(
+      (p: SkillPreset) => p.id === install?.preset_id,
+    );
     const skillName = preset?.display_name || preset?.name || "Skill";
 
     setLoadingId(installId);
@@ -115,7 +139,7 @@ export function SkillsPageClient({
       if (typeof window !== "undefined" && "vibrate" in navigator) {
         navigator.vibrate(50);
       }
-    } catch (error) {
+    } catch {
       toast.error("卸载失败");
     } finally {
       setLoadingId(null);

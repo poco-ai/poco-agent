@@ -11,7 +11,6 @@ import { HomeHeader } from "./home-header";
 import { TaskComposer } from "./task-composer";
 import { ConnectorsBar } from "./connectors-bar";
 import { createSessionAction } from "@/features/chat/actions/session-actions";
-import type { InputFile } from "@/features/chat/types/api/session";
 import type { TaskSendOptions } from "./task-composer";
 
 import { useAppShell } from "@/components/shared/app-shell-context";

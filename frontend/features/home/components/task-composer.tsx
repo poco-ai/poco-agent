@@ -22,7 +22,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuLabel,
-  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { FileCard } from "@/components/shared/file-card";
 import { mcpService } from "@/features/mcp/services/mcp-service";

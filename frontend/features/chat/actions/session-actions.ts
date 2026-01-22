@@ -1,23 +1,27 @@
 import { z } from "zod";
 import { chatService } from "@/features/chat/services/chat-service";
 
-const inputFileSchema = z.object({
-  id: z.string().optional().nullable(),
-  type: z.string().optional(),
-  name: z.string(),
-  source: z.string(),
-  size: z.number().optional().nullable(),
-  content_type: z.string().optional().nullable(),
-  path: z.string().optional().nullable(),
-}).passthrough();
+const inputFileSchema = z
+  .object({
+    id: z.string().optional().nullable(),
+    type: z.string().optional(),
+    name: z.string(),
+    source: z.string(),
+    size: z.number().optional().nullable(),
+    content_type: z.string().optional().nullable(),
+    path: z.string().optional().nullable(),
+  })
+  .passthrough();
 
-const configSchema = z.object({
-  repo_url: z.string().optional(),
-  git_branch: z.string().optional(),
-  mcp_config: z.record(z.string(), z.unknown()).optional(),
-  skill_files: z.record(z.string(), z.unknown()).optional(),
-  input_files: z.array(inputFileSchema).optional(),
-}).passthrough();
+const configSchema = z
+  .object({
+    repo_url: z.string().optional().nullable(),
+    git_branch: z.string().optional(),
+    mcp_config: z.record(z.string(), z.boolean()).optional(),
+    skill_files: z.record(z.string(), z.unknown()).optional(),
+    input_files: z.array(inputFileSchema).optional(),
+  })
+  .passthrough();
 
 const createSessionSchema = z
   .object({
@@ -59,7 +63,8 @@ export type SendMessageInput = z.infer<typeof sendMessageSchema>;
 export async function createSessionAction(input: CreateSessionInput) {
   const { prompt, config, projectId } = createSessionSchema.parse(input);
   const hasInputFiles = Boolean(config?.input_files?.length);
-  const finalPrompt = prompt.trim() || (hasInputFiles ? "Uploaded files" : prompt);
+  const finalPrompt =
+    prompt.trim() || (hasInputFiles ? "Uploaded files" : prompt);
   const result = await chatService.createSession(
     finalPrompt,
     config,

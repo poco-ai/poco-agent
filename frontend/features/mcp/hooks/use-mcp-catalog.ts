@@ -86,15 +86,20 @@ export function useMcpCatalog() {
             prev.map((item) => (item.id === install.id ? updated : item)),
           );
           toast.success(
-            `${serverName} MCP ${updated.enabled
-              ? t("library.mcpLibrary.toasts.enabled")
-              : t("library.mcpLibrary.toasts.disabled")
+            `${serverName} MCP ${
+              updated.enabled
+                ? t("library.mcpLibrary.toasts.enabled")
+                : t("library.mcpLibrary.toasts.disabled")
             }`,
             {
               icon: updated.enabled
-                ? React.createElement(CheckCircle2, { className: "size-4 text-foreground" })
-                : React.createElement(CircleOff, { className: "size-4 text-muted-foreground" }),
-            }
+                ? React.createElement(CheckCircle2, {
+                    className: "size-4 text-foreground",
+                  })
+                : React.createElement(CircleOff, {
+                    className: "size-4 text-muted-foreground",
+                  }),
+            },
           );
           // Trigger success haptic feedback
           if (typeof window !== "undefined" && "vibrate" in navigator) {
@@ -111,9 +116,14 @@ export function useMcpCatalog() {
               item.server_id === serverId && item.id === -1 ? created : item,
             ),
           );
-          toast.success(`${serverName} MCP ${t("library.mcpLibrary.toasts.enabled")}`, {
-            icon: React.createElement(CheckCircle2, { className: "size-4 text-green-500" }),
-          });
+          toast.success(
+            `${serverName} MCP ${t("library.mcpLibrary.toasts.enabled")}`,
+            {
+              icon: React.createElement(CheckCircle2, {
+                className: "size-4 text-green-500",
+              }),
+            },
+          );
           // Trigger success haptic feedback
           if (typeof window !== "undefined" && "vibrate" in navigator) {
             navigator.vibrate(50);
@@ -132,7 +142,9 @@ export function useMcpCatalog() {
           );
         } else {
           setInstalls((prev) =>
-            prev.filter((item) => !(item.server_id === serverId && item.id === -1)),
+            prev.filter(
+              (item) => !(item.server_id === serverId && item.id === -1),
+            ),
           );
         }
         toast.error(t("library.mcpLibrary.toasts.error"));
@@ -140,7 +152,7 @@ export function useMcpCatalog() {
         setLoadingId(null);
       }
     },
-    [installs, t],
+    [installs, servers, t],
   );
 
   const updateServer = useCallback(

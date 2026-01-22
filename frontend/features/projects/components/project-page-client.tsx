@@ -6,13 +6,19 @@ import { useRouter } from "next/navigation";
 import { useT } from "@/lib/i18n/client";
 
 import { useAutosizeTextarea } from "@/features/home/hooks/use-autosize-textarea";
-import { createSessionAction } from "@/features/chat/actions/session-actions";
-import type { InputFile } from "@/features/chat/types/api/session";
+import {
+  createSessionAction,
+  type CreateSessionInput,
+} from "@/features/chat/actions/session-actions";
+import type { ProjectItem, TaskHistoryItem } from "@/features/projects/types";
 
 import { ProjectHeader } from "@/features/projects/components/project-header";
 import { KeyboardHints } from "@/features/home/components/keyboard-hints";
 import { QuickActions } from "@/features/home/components/quick-actions";
-import { TaskComposer } from "@/features/home/components/task-composer";
+import {
+  TaskComposer,
+  type TaskSendOptions,
+} from "@/features/home/components/task-composer";
 import { useAppShell } from "@/components/shared/app-shell-context";
 
 interface ProjectPageClientProps {
@@ -26,7 +32,7 @@ export function ProjectPageClient({ projectId }: ProjectPageClientProps) {
   const { lng, projects, taskHistory, addTask, updateProject, deleteProject } =
     useAppShell();
   const currentProject = React.useMemo(
-    () => projects.find((p) => p.id === projectId) || projects[0],
+    () => projects.find((p: ProjectItem) => p.id === projectId) || projects[0],
     [projects, projectId],
   );
 
@@ -41,21 +47,26 @@ export function ProjectPageClient({ projectId }: ProjectPageClientProps) {
   }, []);
 
   const handleSendTask = React.useCallback(
-    async (files?: InputFile[]) => {
-      const inputFiles = files ?? [];
+    async (options?: TaskSendOptions) => {
+      const inputFiles = options?.attachments ?? [];
+      const mcpConfig = options?.mcp_config;
       if ((inputValue.trim() === "" && inputFiles.length === 0) || isSubmitting)
         return;
 
       setIsSubmitting(true);
       try {
+        const config: CreateSessionInput["config"] = {};
+        if (inputFiles.length > 0) {
+          config.input_files = inputFiles;
+        }
+        if (mcpConfig && Object.keys(mcpConfig).length > 0) {
+          config.mcp_config = mcpConfig;
+        }
+
         const session = await createSessionAction({
           prompt: inputValue,
           projectId,
-          config: inputFiles.length
-            ? {
-                input_files: inputFiles,
-              }
-            : undefined,
+          config: Object.keys(config).length > 0 ? config : undefined,
         });
 
         localStorage.setItem(`session_prompt_${session.sessionId}`, inputValue);
@@ -121,7 +132,7 @@ export function ProjectPageClient({ projectId }: ProjectPageClientProps) {
             <p className="mt-2 text-sm text-muted-foreground">
               {t("project.subtitle", {
                 count: taskHistory.filter(
-                  (task) => task.projectId === projectId,
+                  (task: TaskHistoryItem) => task.projectId === projectId,
                 ).length,
               })}
             </p>
