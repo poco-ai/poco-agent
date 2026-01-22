@@ -9,7 +9,6 @@ import {
   FileText,
   Figma,
   Database,
-  Zap,
   ChevronRight,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -28,8 +27,6 @@ import {
 import { FileCard } from "@/components/shared/file-card";
 import { mcpService } from "@/features/mcp/services/mcp-service";
 import type { McpServer, UserMcpInstall } from "@/features/mcp/types";
-import { skillsService } from "@/features/skills/services/skills-service";
-import type { SkillPreset, UserSkillInstall } from "@/features/skills/types";
 import { McpSelectorDialog } from "./mcp-selector-dialog";
 
 const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
@@ -60,12 +57,9 @@ export function TaskComposer({
   const [mcpConfig, setMcpConfig] = React.useState<Record<string, boolean>>({});
   const [isMcpDialogOpen, setIsMcpDialogOpen] = React.useState(false);
 
-  // Load real MCP and Skill data
+  // Load real MCP data
   const [mcps, setMcps] = React.useState<
     Array<{ server: McpServer; install: UserMcpInstall | undefined }>
-  >([]);
-  const [skills, setSkills] = React.useState<
-    Array<{ preset: SkillPreset; install: UserSkillInstall | undefined }>
   >([]);
   const [isLoadingTools, setIsLoadingTools] = React.useState(false);
 
@@ -74,25 +68,16 @@ export function TaskComposer({
     const loadTools = async () => {
       setIsLoadingTools(true);
       try {
-        const [serversData, installsData, presetsData, skillsInstallsData] =
-          await Promise.all([
-            mcpService.listServers(),
-            mcpService.listInstalls(),
-            skillsService.listPresets(),
-            skillsService.listInstalls(),
-          ]);
+        const [serversData, installsData] = await Promise.all([
+          mcpService.listServers(),
+          mcpService.listInstalls(),
+        ]);
 
         const mcpList = serversData.map((server) => ({
           server,
           install: installsData.find((i) => i.server_id === server.id),
         }));
         setMcps(mcpList);
-
-        const skillList = presetsData.map((preset) => ({
-          preset,
-          install: skillsInstallsData.find((i) => i.preset_id === preset.id),
-        }));
-        setSkills(skillList);
       } catch (error) {
         console.error("Failed to load tools:", error);
       } finally {
@@ -180,7 +165,6 @@ export function TaskComposer({
   const enabledMcpCount = mcps.filter(
     (m) => m.install?.enabled && (mcpConfig[m.server.id] ?? true),
   ).length;
-  const enabledSkillCount = skills.filter((s) => s.install?.enabled).length;
 
   return (
     <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
@@ -328,41 +312,6 @@ export function TaskComposer({
                       "hero.mcpSelector.noServers",
                       "No MCP servers installed",
                     )}
-                  </span>
-                </DropdownMenuItem>
-              )}
-
-              <DropdownMenuSeparator />
-
-              {/* Skills Group */}
-              <DropdownMenuLabel>
-                <div className="flex items-center justify-between">
-                  <span>Skills</span>
-                  <span className="text-xs text-muted-foreground">
-                    {enabledSkillCount}/{skills.filter((s) => s.install).length}
-                  </span>
-                </div>
-              </DropdownMenuLabel>
-              {skills.filter((s) => s.install).length > 0 ? (
-                skills
-                  .filter((s) => s.install)
-                  .map((s) => (
-                    <DropdownMenuItem
-                      key={s.preset.id}
-                      disabled
-                      className="opacity-50 cursor-not-allowed"
-                    >
-                      <Zap className="mr-2 size-4" />
-                      <span className="flex-1">{s.preset.display_name}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {t("hero.comingSoon")}
-                      </span>
-                    </DropdownMenuItem>
-                  ))
-              ) : (
-                <DropdownMenuItem disabled className="opacity-50">
-                  <span className="text-sm text-muted-foreground">
-                    No skills installed
                   </span>
                 </DropdownMenuItem>
               )}
