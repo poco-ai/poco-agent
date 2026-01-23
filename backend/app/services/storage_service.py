@@ -1,5 +1,6 @@
 import json
 import logging
+from pathlib import Path
 from typing import Any
 
 import boto3
@@ -112,5 +113,17 @@ class S3StorageService:
             raise AppException(
                 error_code=ErrorCode.EXTERNAL_SERVICE_ERROR,
                 message="Failed to upload file",
+                details={"key": key, "error": str(exc)},
+            ) from exc
+
+    def download_file(self, *, key: str, destination: Path) -> None:
+        try:
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            self.client.download_file(self.bucket, key, str(destination))
+        except (ClientError, BotoCoreError) as exc:
+            logger.error(f"Failed to download object {key}: {exc}")
+            raise AppException(
+                error_code=ErrorCode.EXTERNAL_SERVICE_ERROR,
+                message="Failed to download file",
                 details={"key": key, "error": str(exc)},
             ) from exc

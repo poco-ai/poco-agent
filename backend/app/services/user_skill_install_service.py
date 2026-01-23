@@ -1,10 +1,9 @@
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.errors.error_codes import ErrorCode
 from app.core.errors.exceptions import AppException
 from app.models.user_skill_install import UserSkillInstall
-from app.repositories.skill_preset_repository import SkillPresetRepository
+from app.repositories.skill_repository import SkillRepository
 from app.repositories.user_skill_install_repository import UserSkillInstallRepository
 from app.schemas.user_skill_install import (
     UserSkillInstallCreateRequest,
@@ -23,36 +22,29 @@ class UserSkillInstallService:
     def create_install(
         self, db: Session, user_id: str, request: UserSkillInstallCreateRequest
     ) -> UserSkillInstallResponse:
-        preset = SkillPresetRepository.get_by_id(db, request.preset_id)
-        if not preset or (
-            preset.source != "system" and preset.owner_user_id != user_id
-        ):
+        skill = SkillRepository.get_by_id(db, request.skill_id)
+        if not skill or (skill.scope != "system" and skill.owner_user_id != user_id):
             raise AppException(
-                error_code=ErrorCode.SKILL_PRESET_NOT_FOUND,
-                message=f"Skill preset not found: {request.preset_id}",
+                error_code=ErrorCode.SKILL_NOT_FOUND,
+                message=f"Skill not found: {request.skill_id}",
             )
-        if not preset.is_active:
+        existing = UserSkillInstallRepository.get_by_user_and_skill(
+            db, user_id, request.skill_id
+        )
+        if existing:
             raise AppException(
                 error_code=ErrorCode.BAD_REQUEST,
-                message="Skill preset is inactive",
+                message="Skill install already exists for skill",
             )
 
         install = UserSkillInstall(
             user_id=user_id,
-            preset_id=request.preset_id,
+            skill_id=request.skill_id,
             enabled=request.enabled,
-            overrides=request.overrides,
         )
-        try:
-            UserSkillInstallRepository.create(db, install)
-            db.commit()
-            db.refresh(install)
-        except IntegrityError as exc:
-            db.rollback()
-            raise AppException(
-                error_code=ErrorCode.BAD_REQUEST,
-                message="Skill install already exists for preset",
-            ) from exc
+        UserSkillInstallRepository.create(db, install)
+        db.commit()
+        db.refresh(install)
 
         return self._to_response(install)
 
@@ -72,8 +64,6 @@ class UserSkillInstallService:
 
         if request.enabled is not None:
             install.enabled = request.enabled
-        if request.overrides is not None:
-            install.overrides = request.overrides
 
         db.commit()
         db.refresh(install)
@@ -94,9 +84,8 @@ class UserSkillInstallService:
         return UserSkillInstallResponse(
             id=install.id,
             user_id=install.user_id,
-            preset_id=install.preset_id,
+            skill_id=install.skill_id,
             enabled=install.enabled,
-            overrides=install.overrides,
             created_at=install.created_at,
             updated_at=install.updated_at,
         )

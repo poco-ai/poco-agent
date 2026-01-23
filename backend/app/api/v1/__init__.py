@@ -6,6 +6,7 @@ from app.api.v1 import (
     env_vars,
     internal_env_vars,
     internal_mcp_config,
+    internal_skill_config,
     internal_user_input_requests,
     mcp_servers,
     messages,
@@ -14,7 +15,8 @@ from app.api.v1 import (
     schedules,
     sessions,
     skill_installs,
-    skill_presets,
+    skill_imports,
+    skills,
     tasks,
     tool_executions,
     user_input_requests,
@@ -37,10 +39,12 @@ api_v1_router.include_router(attachments.router)
 api_v1_router.include_router(env_vars.router)
 api_v1_router.include_router(internal_env_vars.router)
 api_v1_router.include_router(internal_mcp_config.router)
+api_v1_router.include_router(internal_skill_config.router)
 api_v1_router.include_router(internal_user_input_requests.router)
 api_v1_router.include_router(mcp_servers.router)
 api_v1_router.include_router(user_mcp_installs.router)
-api_v1_router.include_router(skill_presets.router)
+api_v1_router.include_router(skills.router)
+api_v1_router.include_router(skill_imports.router)
 api_v1_router.include_router(skill_installs.router)
 api_v1_router.include_router(user_input_requests.router)
 

@@ -8,7 +8,6 @@ from app.repositories.message_repository import MessageRepository
 from app.repositories.project_repository import ProjectRepository
 from app.repositories.run_repository import RunRepository
 from app.repositories.session_repository import SessionRepository
-from app.repositories.skill_preset_repository import SkillPresetRepository
 from app.repositories.user_mcp_install_repository import UserMcpInstallRepository
 from app.repositories.user_skill_install_repository import UserSkillInstallRepository
 from app.schemas.session import TaskConfig
@@ -173,18 +172,24 @@ class TaskService:
         # Never persist full MCP server configs inside session/run snapshots.
         # They may contain sensitive values and are not needed for the UI.
         merged_base.pop("mcp_config", None)
+        # Legacy field (no longer used after switching to skill_ids).
+        merged_base.pop("skill_files", None)
 
         base_mcp_server_ids = self._normalize_mcp_server_ids(
             merged_base.get("mcp_server_ids")
         )
+        base_skill_ids = self._normalize_skill_ids(merged_base.get("skill_ids"))
 
         mcp_toggles: dict[str, bool] | None = None
+        skill_toggles: dict[str, bool] | None = None
         if task_config is not None:
             # Only merge fields explicitly provided by the caller to avoid
             # overriding existing session config with schema defaults.
             request_config = task_config.model_dump(exclude_unset=True)
             # Extract mcp_config toggles before merging (don't merge as dict)
             mcp_toggles = request_config.pop("mcp_config", None)
+            # Extract skill_config toggles before merging (don't merge as dict)
+            skill_toggles = request_config.pop("skill_config", None)
             merged_base = self._merge_config_map(merged_base, request_config)
 
         if mcp_toggles is not None:
@@ -198,10 +203,14 @@ class TaskService:
                 db, user_id
             )
 
-        merged_base["skill_files"] = self._merge_config_map(
-            self._build_user_skill_defaults(db, user_id),
-            merged_base.get("skill_files") or {},
-        )
+        if skill_toggles is not None:
+            merged_base["skill_ids"] = self._build_user_skill_ids_with_toggles(
+                db, user_id, skill_toggles
+            )
+        elif base_skill_ids is not None:
+            merged_base["skill_ids"] = base_skill_ids
+        else:
+            merged_base["skill_ids"] = self._build_user_skill_ids_defaults(db, user_id)
         return merged_base or None
 
     @staticmethod
@@ -221,6 +230,25 @@ class TaskService:
 
     @staticmethod
     def _normalize_mcp_server_ids(value: object) -> list[int] | None:
+        if not isinstance(value, list):
+            return None
+        result: list[int] = []
+        for item in value:
+            if isinstance(item, int):
+                result.append(item)
+                continue
+            if isinstance(item, str):
+                item = item.strip()
+                if not item:
+                    continue
+                try:
+                    result.append(int(item))
+                except ValueError:
+                    continue
+        return result
+
+    @staticmethod
+    def _normalize_skill_ids(value: object) -> list[int] | None:
         if not isinstance(value, list):
             return None
         result: list[int] = []
@@ -264,17 +292,26 @@ class TaskService:
                 result.append(install.server_id)
         return result
 
-    def _build_user_skill_defaults(self, db: Session, user_id: str) -> dict:
-        defaults: dict = {}
+    def _build_user_skill_ids_defaults(self, db: Session, user_id: str) -> list[int]:
+        """Return enabled skill ids from user's installations."""
+        result: list[int] = []
         installs = UserSkillInstallRepository.list_by_user(db, user_id)
         for install in installs:
-            if not install.enabled:
+            if install.enabled:
+                result.append(install.skill_id)
+        return result
+
+    def _build_user_skill_ids_with_toggles(
+        self, db: Session, user_id: str, toggles: dict[str, bool]
+    ) -> list[int]:
+        """Return enabled skill ids from user's installations with task-level toggles."""
+        result: list[int] = []
+        installs = UserSkillInstallRepository.list_by_user(db, user_id)
+        for install in installs:
+            if str(install.skill_id) in toggles:
+                if toggles[str(install.skill_id)]:
+                    result.append(install.skill_id)
                 continue
-            preset = SkillPresetRepository.get_by_id(db, install.preset_id)
-            if not preset or not preset.is_active:
-                continue
-            entry = {"$ref": f"skill-preset:{preset.name}", "enabled": True}
-            if install.overrides:
-                entry.update(install.overrides)
-            defaults[preset.name] = entry
-        return defaults
+            if install.enabled:
+                result.append(install.skill_id)
+        return result

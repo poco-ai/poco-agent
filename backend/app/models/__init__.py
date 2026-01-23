@@ -6,7 +6,7 @@ from app.models.agent_session import AgentSession
 from app.models.env_var import UserEnvVar
 from app.models.mcp_server import McpServer
 from app.models.project import Project
-from app.models.skill_preset import SkillPreset
+from app.models.skill import Skill
 from app.models.tool_execution import ToolExecution
 from app.models.usage_log import UsageLog
 from app.models.user_mcp_install import UserMcpInstall
@@ -22,7 +22,7 @@ __all__ = [
     "UserEnvVar",
     "McpServer",
     "Project",
-    "SkillPreset",
+    "Skill",
     "ToolExecution",
     "UsageLog",
     "UserMcpInstall",

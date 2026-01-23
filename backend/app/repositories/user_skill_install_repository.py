@@ -18,14 +18,14 @@ class UserSkillInstallRepository:
         )
 
     @staticmethod
-    def get_by_user_and_preset(
-        session_db: Session, user_id: str, preset_id: int
+    def get_by_user_and_skill(
+        session_db: Session, user_id: str, skill_id: int
     ) -> UserSkillInstall | None:
         return (
             session_db.query(UserSkillInstall)
             .filter(
                 UserSkillInstall.user_id == user_id,
-                UserSkillInstall.preset_id == preset_id,
+                UserSkillInstall.skill_id == skill_id,
             )
             .first()
         )

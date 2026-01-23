@@ -17,8 +17,9 @@ class ErrorCode(Enum):
     ENV_VAR_ALREADY_EXISTS = (11002, "Environment variable already exists")
     MCP_SERVER_NOT_FOUND = (12001, "MCP server not found")
     MCP_SERVER_ALREADY_EXISTS = (12002, "MCP server already exists")
-    SKILL_PRESET_NOT_FOUND = (13001, "Skill preset not found")
-    SKILL_PRESET_CREATE_FORBIDDEN = (13002, "Skill preset creation forbidden")
+    SKILL_NOT_FOUND = (13001, "Skill not found")
+    SKILL_ALREADY_EXISTS = (13002, "Skill already exists")
+    SKILL_MODIFY_FORBIDDEN = (13003, "Skill modification forbidden")
     PROJECT_NOT_FOUND = (14001, "Project not found")
 
     INTERNAL_ERROR = (50000, "Internal server error")

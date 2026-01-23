@@ -15,7 +15,9 @@ class TaskConfig(BaseModel):
     # MCP server enable/disable toggles (true=enabled, false=disabled).
     # Servers not in this dict use their default enabled state from user installations.
     mcp_config: dict[str, bool] = Field(default_factory=dict)
-    skill_files: dict = Field(default_factory=dict)
+    # Skill enable/disable toggles (true=enabled, false=disabled).
+    # Skills not in this dict use their default enabled state from user installations.
+    skill_config: dict[str, bool] = Field(default_factory=dict)
     input_files: list[InputFile] = Field(default_factory=list)
 
 
