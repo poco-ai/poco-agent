@@ -11,20 +11,25 @@ import type { ConnectorType } from "../model/connectors";
  * Displays an expandable card that shows MCP, Skill, and Apps sections
  * Can optionally show connectors dialog
  */
-interface ConnectorsBarProps {
+export interface ConnectorsBarProps {
   showDialog?: boolean;
   defaultTab?: ConnectorType;
+  forceExpanded?: boolean;
 }
 
 export function ConnectorsBar({
   showDialog = false,
   defaultTab = "app",
+  forceExpanded = false,
 }: ConnectorsBarProps = {}) {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
     <div className="mt-4 w-full">
-      <CardNav triggerText="将您的工具连接到 Poco" />
+      <CardNav
+        triggerText="将您的工具连接到 Poco"
+        forceExpanded={forceExpanded}
+      />
       {showDialog && (
         <ConnectorsDialog
           open={isOpen}

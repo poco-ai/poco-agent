@@ -22,9 +22,13 @@ export function HomePageClient() {
 
   const [inputValue, setInputValue] = React.useState("");
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [isInputFocused, setIsInputFocused] = React.useState(false);
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
 
   useAutosizeTextarea(textareaRef, inputValue);
+
+  // Determine if connectors bar should be expanded
+  const shouldExpandConnectors = isInputFocused || inputValue.trim().length > 0;
 
   const handleSendTask = React.useCallback(
     async (options?: TaskSendOptions) => {
@@ -102,9 +106,11 @@ export function HomePageClient() {
             onChange={setInputValue}
             onSend={handleSendTask}
             isSubmitting={isSubmitting}
+            onFocus={() => setIsInputFocused(true)}
+            onBlur={() => setIsInputFocused(false)}
           />
 
-          <ConnectorsBar />
+          <ConnectorsBar forceExpanded={shouldExpandConnectors} />
         </div>
       </div>
     </>

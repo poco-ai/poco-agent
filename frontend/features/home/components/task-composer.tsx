@@ -41,12 +41,16 @@ export function TaskComposer({
   onChange,
   onSend,
   isSubmitting,
+  onFocus,
+  onBlur,
 }: {
   textareaRef: React.RefObject<HTMLTextAreaElement | null>;
   value: string;
   onChange: (value: string) => void;
   onSend: (options?: TaskSendOptions) => void | Promise<void>;
   isSubmitting?: boolean;
+  onFocus?: () => void;
+  onBlur?: () => void;
 }) {
   const { t } = useT("translation");
   const isComposing = React.useRef(false);
@@ -202,6 +206,8 @@ export function TaskComposer({
             });
           }}
           onPaste={handlePaste}
+          onFocus={onFocus}
+          onBlur={onBlur}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               if (e.shiftKey) {

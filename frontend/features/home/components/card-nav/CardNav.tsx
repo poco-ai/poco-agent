@@ -1,6 +1,12 @@
 "use client";
 
-import { useLayoutEffect, useRef, useState, useCallback } from "react";
+import {
+  useLayoutEffect,
+  useRef,
+  useState,
+  useCallback,
+  useEffect,
+} from "react";
 import { useRouter } from "next/navigation";
 import { gsap } from "gsap";
 import {
@@ -21,6 +27,7 @@ import { cn } from "@/lib/utils";
 export interface CardNavProps {
   triggerText?: string;
   className?: string;
+  forceExpanded?: boolean;
 }
 
 interface InstalledItem {
@@ -38,6 +45,7 @@ interface InstalledItem {
 export function CardNav({
   triggerText = "将您的工具连接到 Poco",
   className = "",
+  forceExpanded = false,
 }: CardNavProps) {
   const router = useRouter();
   const { lng } = useAppShell();
@@ -205,6 +213,15 @@ export function CardNav({
     });
   }, [isExpanded]);
 
+  // Handle forceExpanded prop
+  useEffect(() => {
+    if (forceExpanded) {
+      openMenu();
+    } else if (!isHoveringRef.current) {
+      closeMenu();
+    }
+  }, [forceExpanded, openMenu, closeMenu]);
+
   const handleMouseEnter = useCallback(() => {
     isHoveringRef.current = true;
     openMenu();
@@ -213,11 +230,11 @@ export function CardNav({
   const handleMouseLeave = useCallback(() => {
     isHoveringRef.current = false;
     closeTimeoutRef.current = setTimeout(() => {
-      if (!isHoveringRef.current) {
+      if (!isHoveringRef.current && !forceExpanded) {
         closeMenu();
       }
     }, 50);
-  }, [closeMenu]);
+  }, [closeMenu, forceExpanded]);
 
   const setCardRef = (index: number) => (el: HTMLDivElement | null) => {
     cardsRef.current[index] = el;
