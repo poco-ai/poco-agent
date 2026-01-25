@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { getExecutionSessionAction } from "@/features/chat/actions/query-actions";
 import { useAdaptivePolling } from "./use-adaptive-polling";
 import type { ExecutionSession } from "@/features/chat/types";
+import { playTaskCompleteSound } from "@/lib/utils/sound";
 
 interface UseExecutionSessionOptions {
   /**
@@ -139,6 +140,8 @@ export function useExecutionSession({
 
   // Log when polling stops and trigger callback
   const hasStoppedRef = useRef(false);
+  const prevStatusRef = useRef<string | null>(null);
+
   useEffect(() => {
     if (
       session &&
@@ -151,11 +154,27 @@ export function useExecutionSession({
           "color: #f59e0b; font-weight: bold;",
         );
         hasStoppedRef.current = true;
+
+        // Only play sound if the status actually transitioned to completed
+        // while the component was mounted (i.e. not during initial load of an already completed session)
+        if (
+          session.status === "completed" &&
+          prevStatusRef.current !== null &&
+          ["accepted", "running"].includes(prevStatusRef.current)
+        ) {
+          playTaskCompleteSound();
+        }
+
         onPollingStop();
       }
     } else if (session && ["accepted", "running"].includes(session.status)) {
       // Reset ref when session becomes active again
       hasStoppedRef.current = false;
+    }
+
+    // Update previous status ref
+    if (session) {
+      prevStatusRef.current = session.status;
     }
   }, [session, sessionId, onPollingStop]);
 

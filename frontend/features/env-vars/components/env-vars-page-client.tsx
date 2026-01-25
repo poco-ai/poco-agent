@@ -11,6 +11,7 @@ import {
 
 import { useEnvVarsStore } from "@/features/env-vars/hooks/use-env-vars-store";
 import type { EnvVar } from "@/features/env-vars/types";
+import { PullToRefresh } from "@/components/ui/pull-to-refresh";
 
 export function EnvVarsPageClient() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -34,44 +35,45 @@ export function EnvVarsPageClient() {
         }}
       />
 
-      <div className="flex flex-1 flex-col px-6 py-6">
-        <div className="w-full max-w-6xl mx-auto">
-          {envVarStore.isLoading ? (
-            <div className="flex items-center justify-center py-20">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-foreground/20" />
-            </div>
-          ) : (
-            <EnvVarsGrid
-              envVars={envVarStore.envVars}
-              savingKey={envVarStore.savingEnvKey}
-              onDelete={(id) => {
-                envVarStore.removeEnvVar(id);
-              }}
-              onEdit={(envVar: EnvVar) => {
-                setDialogMode("edit");
-                setDialogInitialKey(envVar.key);
-                setDialogInitialDesc(envVar.description);
-                setIsAddDialogOpen(true);
-              }}
-              onOverrideSystem={(key: string) => {
-                const existingUser = envVarStore.envVars.find(
-                  (v) => v.scope === "user" && v.key === key,
-                );
-                if (existingUser) {
+      <div className="flex flex-1 flex-col overflow-hidden">
+        <PullToRefresh
+          onRefresh={envVarStore.refreshEnvVars}
+          isLoading={envVarStore.isLoading}
+        >
+          <div className="flex flex-1 flex-col px-6 py-6 overflow-auto">
+            <div className="w-full max-w-6xl mx-auto">
+              <EnvVarsGrid
+                envVars={envVarStore.envVars}
+                savingKey={envVarStore.savingEnvKey}
+                onDelete={(id) => {
+                  envVarStore.removeEnvVar(id);
+                }}
+                onEdit={(envVar: EnvVar) => {
                   setDialogMode("edit");
-                  setDialogInitialKey(existingUser.key);
-                  setDialogInitialDesc(existingUser.description);
+                  setDialogInitialKey(envVar.key);
+                  setDialogInitialDesc(envVar.description);
                   setIsAddDialogOpen(true);
-                  return;
-                }
-                setDialogMode("override");
-                setDialogInitialKey(key);
-                setDialogInitialDesc(undefined);
-                setIsAddDialogOpen(true);
-              }}
-            />
-          )}
-        </div>
+                }}
+                onOverrideSystem={(key: string) => {
+                  const existingUser = envVarStore.envVars.find(
+                    (v) => v.scope === "user" && v.key === key,
+                  );
+                  if (existingUser) {
+                    setDialogMode("edit");
+                    setDialogInitialKey(existingUser.key);
+                    setDialogInitialDesc(existingUser.description);
+                    setIsAddDialogOpen(true);
+                    return;
+                  }
+                  setDialogMode("override");
+                  setDialogInitialKey(key);
+                  setDialogInitialDesc(undefined);
+                  setIsAddDialogOpen(true);
+                }}
+              />
+            </div>
+          </div>
+        </PullToRefresh>
       </div>
 
       <AddEnvVarDialog

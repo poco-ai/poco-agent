@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { uploadAttachment } from "@/features/attachments/services/attachment-service";
 import type { InputFile } from "@/features/chat/types";
 import { FileCard } from "@/components/shared/file-card";
+import { playFileUploadSound } from "@/lib/utils/sound";
 
 interface ChatInputProps {
   value: string;
@@ -89,6 +90,7 @@ export function ChatInput({
       const uploadedFile = await uploadAttachment(file);
       setAttachments((prev) => [...prev, uploadedFile]);
       toast.success(t("hero.toasts.uploadSuccess", "文件上传成功"));
+      playFileUploadSound();
     } catch (error) {
       console.error("Upload failed:", error);
       toast.error(t("hero.toasts.uploadFailed", "文件上传失败"));
@@ -120,6 +122,7 @@ export function ChatInput({
       const uploadedFile = await uploadAttachment(file);
       setAttachments((prev) => [...prev, uploadedFile]);
       toast.success(t("hero.toasts.uploadSuccess", "文件上传成功"));
+      playFileUploadSound();
     } catch (error) {
       console.error("Upload failed:", error);
       toast.error(t("hero.toasts.uploadFailed", "文件上传失败"));

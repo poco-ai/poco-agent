@@ -20,9 +20,10 @@ import {
 import { mcpService } from "@/features/mcp/services/mcp-service";
 import { skillsService } from "@/features/skills/services/skills-service";
 import type { McpServer, UserMcpInstall } from "@/features/mcp/types";
-import type { Skill, UserSkillInstall } from "@/features/skills/types";
+import { Skill, UserSkillInstall } from "@/features/skills/types";
 import { useAppShell } from "@/components/shared/app-shell-context";
 import { cn } from "@/lib/utils";
+import { playMcpInstallSound } from "@/lib/utils/sound";
 
 export interface CardNavProps {
   triggerText?: string;
@@ -124,6 +125,9 @@ export function CardNav({
               : install,
           ),
         );
+        if (!currentEnabled) {
+          playMcpInstallSound();
+        }
       } catch (error) {
         console.error("[CardNav] Failed to toggle MCP:", error);
       }
@@ -145,6 +149,9 @@ export function CardNav({
               : install,
           ),
         );
+        if (!currentEnabled) {
+          playMcpInstallSound();
+        }
       } catch (error) {
         console.error("[CardNav] Failed to toggle Skill:", error);
       }

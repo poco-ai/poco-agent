@@ -1,16 +1,6 @@
 import { uploadAttachment } from "@/features/attachments/services/attachment-service";
 import type { InputFile } from "@/features/chat/types/api/session";
-import {
-  Loader2,
-  ArrowUp,
-  Mic,
-  Plus,
-  SlidersHorizontal,
-  FileText,
-  Figma,
-  Database,
-  ChevronRight,
-} from "lucide-react";
+import { Loader2, ArrowUp, Mic, Plus, FileText, Figma } from "lucide-react";
 import { toast } from "sonner";
 import * as React from "react";
 import { useT } from "@/lib/i18n/client";
@@ -21,18 +11,14 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
 import { FileCard } from "@/components/shared/file-card";
-import { mcpService } from "@/features/mcp/services/mcp-service";
-import type { McpServer, UserMcpInstall } from "@/features/mcp/types";
-import { McpSelectorDialog } from "./mcp-selector-dialog";
+import { playFileUploadSound } from "@/lib/utils/sound";
 
 const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
 
 export interface TaskSendOptions {
   attachments?: InputFile[];
-  mcp_config?: Record<string, boolean>;
 }
 
 export function TaskComposer({
@@ -57,39 +43,6 @@ export function TaskComposer({
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = React.useState(false);
   const [attachments, setAttachments] = React.useState<InputFile[]>([]);
-  const [mcpConfig, setMcpConfig] = React.useState<Record<string, boolean>>({});
-  const [isMcpDialogOpen, setIsMcpDialogOpen] = React.useState(false);
-
-  // Load real MCP data
-  const [mcps, setMcps] = React.useState<
-    Array<{ server: McpServer; install: UserMcpInstall | undefined }>
-  >([]);
-  const [isLoadingTools, setIsLoadingTools] = React.useState(false);
-
-  // Load tools on mount
-  React.useEffect(() => {
-    const loadTools = async () => {
-      setIsLoadingTools(true);
-      try {
-        const [serversData, installsData] = await Promise.all([
-          mcpService.listServers(),
-          mcpService.listInstalls(),
-        ]);
-
-        const mcpList = serversData.map((server) => ({
-          server,
-          install: installsData.find((i) => i.server_id === server.id),
-        }));
-        setMcps(mcpList);
-      } catch (error) {
-        console.error("Failed to load tools:", error);
-      } finally {
-        setIsLoadingTools(false);
-      }
-    };
-
-    loadTools();
-  }, []);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -109,6 +62,7 @@ export function TaskComposer({
       const newAttachments = [...attachments, uploadedFile];
       setAttachments(newAttachments);
       toast.success(t("hero.toasts.uploadSuccess"));
+      playFileUploadSound();
     } catch (error) {
       console.error("Upload failed:", error);
       toast.error(t("hero.toasts.uploadFailed"));
@@ -146,6 +100,7 @@ export function TaskComposer({
       const newAttachments = [...attachments, uploadedFile];
       setAttachments(newAttachments);
       toast.success(t("hero.toasts.uploadSuccess"));
+      playFileUploadSound();
     } catch (error) {
       console.error("Upload failed:", error);
       toast.error(t("hero.toasts.uploadFailed"));
@@ -158,16 +113,9 @@ export function TaskComposer({
     if (isSubmitting || isUploading) return;
     if (!value.trim() && attachments.length === 0) return;
 
-    onSend({ attachments, mcp_config: mcpConfig });
+    onSend({ attachments });
     setAttachments([]);
-    // Reset MCP config after sending (back to default all enabled)
-    setMcpConfig({});
-  }, [attachments, isSubmitting, isUploading, onSend, value, mcpConfig]);
-
-  // Count enabled items
-  const enabledMcpCount = mcps.filter(
-    (m) => m.install?.enabled && (mcpConfig[m.server.id] ?? true),
-  ).length;
+  }, [attachments, isSubmitting, isUploading, onSend, value]);
 
   return (
     <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
@@ -269,59 +217,6 @@ export function TaskComposer({
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                disabled={isLoadingTools}
-                className="size-9 rounded-xl hover:bg-accent"
-                title={t("hero.tools")}
-              >
-                {isLoadingTools ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <SlidersHorizontal className="size-4" />
-                )}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-56">
-              {/* MCP Group */}
-              <DropdownMenuLabel>
-                <div className="flex items-center justify-between">
-                  <span>MCP</span>
-                  <span className="text-xs text-muted-foreground">
-                    {enabledMcpCount}/{mcps.filter((m) => m.install).length}
-                  </span>
-                </div>
-              </DropdownMenuLabel>
-              {mcps.filter((m) => m.install).length > 0 ? (
-                mcps
-                  .filter((m) => m.install)
-                  .map((m) => (
-                    <DropdownMenuItem
-                      key={m.server.id}
-                      onClick={() => setIsMcpDialogOpen(true)}
-                      className="cursor-pointer"
-                    >
-                      <Database className="mr-2 size-4" />
-                      <span className="flex-1">{m.server.name}</span>
-                      <ChevronRight className="size-3 text-muted-foreground" />
-                    </DropdownMenuItem>
-                  ))
-              ) : (
-                <DropdownMenuItem disabled className="opacity-50">
-                  <span className="text-sm text-muted-foreground">
-                    {t(
-                      "hero.mcpSelector.noServers",
-                      "No MCP servers installed",
-                    )}
-                  </span>
-                </DropdownMenuItem>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
         </div>
 
         {/* 右侧操作按钮 */}
@@ -351,14 +246,6 @@ export function TaskComposer({
           </Button>
         </div>
       </div>
-
-      {/* MCP Selector Dialog */}
-      <McpSelectorDialog
-        open={isMcpDialogOpen}
-        onOpenChange={setIsMcpDialogOpen}
-        mcpConfig={mcpConfig}
-        onMcpConfigChange={setMcpConfig}
-      />
     </div>
   );
 }

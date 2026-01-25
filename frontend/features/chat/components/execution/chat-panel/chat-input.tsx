@@ -11,6 +11,7 @@ import {
 import { toast } from "sonner";
 import { FileCard } from "@/components/shared/file-card";
 import { useT } from "@/lib/i18n/client";
+import { playFileUploadSound } from "@/lib/utils/sound";
 
 interface ChatInputProps {
   onSend: (content: string, attachments?: InputFile[]) => void;
@@ -91,6 +92,7 @@ export function ChatInput({ onSend, disabled = false }: ChatInputProps) {
       const uploadedFile = await uploadAttachment(file);
       setAttachments((prev) => [...prev, uploadedFile]);
       toast.success("文件上传成功");
+      playFileUploadSound(); // Play sound on successful upload
     } catch (error) {
       console.error("Upload failed:", error);
       toast.error("文件上传失败");
@@ -121,7 +123,7 @@ export function ChatInput({ onSend, disabled = false }: ChatInputProps) {
               key={i}
               file={file}
               onRemove={() => removeAttachment(i)}
-              className="w-48 bg-background border-dashed"
+              className="w-48 bg-background"
             />
           ))}
         </div>

@@ -9,6 +9,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n/client";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { playTaskCompleteSound } from "@/lib/utils/sound";
 import type {
   UserInputQuestion,
   UserInputRequest,
@@ -138,6 +139,7 @@ export function UserInputRequestCard({
     try {
       await onSubmit(answers);
       toast.success(t("chat.askUserSubmitted", "已提交答案"));
+      playTaskCompleteSound();
     } catch (error) {
       console.error("Submit AskUserQuestion failed:", error);
       toast.error(t("chat.askUserFailed", "提交失败，请重试"));

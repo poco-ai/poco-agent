@@ -6,6 +6,7 @@ import { McpHeader } from "@/features/mcp/components/mcp-header";
 import { McpGrid } from "@/features/mcp/components/mcp-grid";
 import { McpSettingsDialog } from "@/features/mcp/components/mcp-settings-dialog";
 import { useMcpCatalog } from "@/features/mcp/hooks/use-mcp-catalog";
+import { PullToRefresh } from "@/components/ui/pull-to-refresh";
 
 export function McpPageClient() {
   const {
@@ -17,6 +18,8 @@ export function McpPageClient() {
     toggleInstall,
     updateServer,
     createServer,
+    refresh,
+    isLoading,
     loadingId,
   } = useMcpCatalog();
   const [isCreating, setIsCreating] = useState(false);
@@ -30,16 +33,20 @@ export function McpPageClient() {
     <>
       <McpHeader onAddMcp={() => setIsCreating(true)} />
 
-      <div className="flex flex-1 flex-col px-6 py-6 overflow-auto">
-        <div className="w-full max-w-4xl mx-auto">
-          <McpGrid
-            servers={servers}
-            installs={installs}
-            loadingId={loadingId}
-            onToggleInstall={toggleInstall}
-            onEditServer={(server) => setSelectedServer(server)}
-          />
-        </div>
+      <div className="flex flex-1 flex-col overflow-hidden">
+        <PullToRefresh onRefresh={refresh} isLoading={isLoading}>
+          <div className="flex flex-1 flex-col px-6 py-6 overflow-auto">
+            <div className="w-full max-w-4xl mx-auto">
+              <McpGrid
+                servers={servers}
+                installs={installs}
+                loadingId={loadingId}
+                onToggleInstall={toggleInstall}
+                onEditServer={(server) => setSelectedServer(server)}
+              />
+            </div>
+          </div>
+        </PullToRefresh>
       </div>
 
       {(activeItem || isCreating) && (

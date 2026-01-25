@@ -9,6 +9,7 @@ import { mcpService } from "@/features/mcp/services/mcp-service";
 import { useEnvVarsStore } from "@/features/env-vars/hooks/use-env-vars-store";
 import { useT } from "@/lib/i18n/client";
 import { CheckCircle2, CircleOff } from "lucide-react";
+import { playMcpInstallSound } from "@/lib/utils/sound";
 
 export interface McpDisplayItem {
   server: McpServer;
@@ -101,6 +102,10 @@ export function useMcpCatalog() {
                   }),
             },
           );
+          // Play sound on enable
+          if (updated.enabled) {
+            playMcpInstallSound();
+          }
           // Trigger success haptic feedback
           if (typeof window !== "undefined" && "vibrate" in navigator) {
             navigator.vibrate(50);
@@ -124,6 +129,8 @@ export function useMcpCatalog() {
               }),
             },
           );
+          // Play sound on installation
+          playMcpInstallSound();
           // Trigger success haptic feedback
           if (typeof window !== "undefined" && "vibrate" in navigator) {
             navigator.vibrate(50);
@@ -218,6 +225,7 @@ export function useMcpCatalog() {
     toggleInstall,
     updateServer,
     createServer,
+    refresh,
     loadingId,
     savingEnvKey: envVarStore.savingEnvKey,
     refreshEnvVars: envVarStore.refreshEnvVars,

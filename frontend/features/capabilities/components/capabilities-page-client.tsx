@@ -8,7 +8,7 @@ export function CapabilitiesPageClient() {
     <>
       <CapabilitiesHeader />
 
-      <div className="flex flex-1 flex-col px-6 py-10">
+      <div className="flex-1 overflow-y-scroll scrollbar-hide px-6 py-10">
         <div className="w-full max-w-6xl mx-auto">
           <CapabilitiesGrid />
         </div>

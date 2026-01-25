@@ -223,6 +223,16 @@
   }
 }
 
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none; /* Chrome, Safari and Opera */
+  }
+}
+
 /* 
  * React Doc Viewer Animation Isolation
  * 防止 tw-animate-css 的动画变量影响 react-doc-viewer 的渲染

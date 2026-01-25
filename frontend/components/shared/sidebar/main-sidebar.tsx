@@ -3,7 +3,6 @@
 import * as React from "react";
 import { useRouter, useParams } from "next/navigation";
 import {
-  MessageSquare,
   MoreHorizontal,
   PanelLeftClose,
   PanelLeftOpen,
@@ -380,11 +379,11 @@ export function MainSidebar({
               {/* 折叠状态下：默认显示 Logo，悬停显示展开按钮 */}
               <button
                 onClick={toggleSidebar}
-                className="group/logo flex size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground transition-colors hover:bg-sidebar-primary/90"
+                className="group/logo relative flex size-8 items-center justify-center overflow-hidden rounded-lg bg-sidebar-primary text-sidebar-primary-foreground shadow-md transition-all hover:shadow-lg active:scale-95 active:shadow-sm"
                 type="button"
               >
-                <MessageSquare className="size-4 group-data-[collapsible=icon]:group-hover/logo:hidden" />
-                <PanelLeftOpen className="hidden size-4 group-data-[collapsible=icon]:group-hover/logo:block" />
+                <Sparkles className="size-4 transition-opacity group-data-[collapsible=icon]:group-hover/logo:opacity-0" />
+                <PanelLeftOpen className="absolute hidden size-4 group-data-[collapsible=icon]:group-hover/logo:block" />
               </button>
               <span
                 onClick={() => router.push(lng ? `/${lng}/home` : "/")}

@@ -6,10 +6,7 @@ import { useRouter } from "next/navigation";
 import { useT } from "@/lib/i18n/client";
 
 import { useAutosizeTextarea } from "@/features/home/hooks/use-autosize-textarea";
-import {
-  createSessionAction,
-  type CreateSessionInput,
-} from "@/features/chat/actions/session-actions";
+import { createSessionAction } from "@/features/chat/actions/session-actions";
 import type { ProjectItem, TaskHistoryItem } from "@/features/projects/types";
 
 import { ProjectHeader } from "@/features/projects/components/project-header";
@@ -49,18 +46,21 @@ export function ProjectPageClient({ projectId }: ProjectPageClientProps) {
   const handleSendTask = React.useCallback(
     async (options?: TaskSendOptions) => {
       const inputFiles = options?.attachments ?? [];
-      const mcpConfig = options?.mcp_config;
-      if ((inputValue.trim() === "" && inputFiles.length === 0) || isSubmitting)
+      if (
+        (inputValue.trim() === "" && inputFiles.length === 0) ||
+        isSubmitting
+      ) {
         return;
+      }
 
       setIsSubmitting(true);
+      console.log("[Project] Sending task:", inputValue);
+
       try {
-        const config: CreateSessionInput["config"] = {};
+        // Build config object
+        const config: Record<string, unknown> = {};
         if (inputFiles.length > 0) {
           config.input_files = inputFiles;
-        }
-        if (mcpConfig && Object.keys(mcpConfig).length > 0) {
-          config.mcp_config = mcpConfig;
         }
 
         const session = await createSessionAction({
@@ -68,6 +68,7 @@ export function ProjectPageClient({ projectId }: ProjectPageClientProps) {
           projectId,
           config: Object.keys(config).length > 0 ? config : undefined,
         });
+        console.log("session", session);
 
         localStorage.setItem(`session_prompt_${session.sessionId}`, inputValue);
 

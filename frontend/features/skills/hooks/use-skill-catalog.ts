@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import type { Skill, UserSkillInstall } from "@/features/skills/types";
 import { skillsService } from "@/features/skills/services/skills-service";
 import { useT } from "@/lib/i18n/client";
+import { playMcpInstallSound } from "@/lib/utils/sound";
 
 export interface SkillDisplayItem {
   skill: Skill;
@@ -54,6 +55,7 @@ export function useSkillCatalog() {
         toast.success(
           t("library.skillsManager.toasts.installed", "技能已安装"),
         );
+        playMcpInstallSound();
       } catch (error) {
         console.error("[Skills] install failed:", error);
         toast.error(
@@ -90,6 +92,14 @@ export function useSkillCatalog() {
   const setEnabled = useCallback(
     async (installId: number, enabled: boolean) => {
       setLoadingId(installId);
+      // Find skill name for toast message
+      const install = installs.find((i) => i.id === installId);
+      const skill = install
+        ? skills.find((s) => s.id === install.skill_id)
+        : null;
+      const skillName =
+        skill?.name || t("library.skillsManager.unknownSkill", "未知技能");
+
       // Optimistic update
       setInstalls((prev) =>
         prev.map((i) => (i.id === installId ? { ...i, enabled } : i)),
@@ -103,9 +113,12 @@ export function useSkillCatalog() {
         );
         toast.success(
           enabled
-            ? t("library.skillsManager.toasts.enabled", "技能已启用")
-            : t("library.skillsManager.toasts.disabled", "技能已停用"),
+            ? `${skillName} ${t("library.skillsManager.toasts.enabled", "已启用")}`
+            : `${skillName} ${t("library.skillsManager.toasts.disabled", "已停用")}`,
         );
+        if (enabled) {
+          playMcpInstallSound();
+        }
       } catch (error) {
         console.error("[Skills] setEnabled failed:", error);
         // Rollback
@@ -121,7 +134,7 @@ export function useSkillCatalog() {
         setLoadingId(null);
       }
     },
-    [t],
+    [t, installs, skills],
   );
 
   const items: SkillDisplayItem[] = useMemo(() => {

@@ -33,7 +33,6 @@ export function HomePageClient() {
   const handleSendTask = React.useCallback(
     async (options?: TaskSendOptions) => {
       const inputFiles = options?.attachments ?? [];
-      const mcpConfig = options?.mcp_config;
       if (
         (inputValue.trim() === "" && inputFiles.length === 0) ||
         isSubmitting
@@ -42,16 +41,13 @@ export function HomePageClient() {
       }
 
       setIsSubmitting(true);
-      console.log("[Home] Sending task:", inputValue, "MCP config:", mcpConfig);
+      console.log("[Home] Sending task:", inputValue);
 
       try {
         // Build config object
         const config: Record<string, unknown> = {};
         if (inputFiles.length > 0) {
           config.input_files = inputFiles;
-        }
-        if (mcpConfig && Object.keys(mcpConfig).length > 0) {
-          config.mcp_config = mcpConfig;
         }
 
         // 1. Call create session API
