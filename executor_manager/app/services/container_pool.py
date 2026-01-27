@@ -46,6 +46,7 @@ class ContainerPool:
         Returns:
             (executor_url, container_id)
         """
+        overall_started = time.perf_counter()
         published_host = (
             self.settings.executor_published_host or ""
         ).strip() or "localhost"
@@ -57,24 +58,61 @@ class ContainerPool:
             self.session_to_container[session_id] = container_id
 
             port_info = container.ports["8000/tcp"][0]
+            logger.info(
+                "timing",
+                extra={
+                    "step": "container_reuse_total",
+                    "duration_ms": int((time.perf_counter() - overall_started) * 1000),
+                    "session_id": session_id,
+                    "user_id": user_id,
+                    "container_id": container_id,
+                    "container_mode": container_mode,
+                },
+            )
             return f"http://{published_host}:{port_info['HostPort']}", container_id
 
         container_id = f"exec-{session_id[:8]}"
         container_name = f"executor-{session_id[:8]}"
 
         # 清理可能存在的同名容器
+        step_started = time.perf_counter()
+        removed_stale = False
         try:
             old_container = self.docker_client.containers.get(container_name)
             logger.warning(f"Removing stale container {container_name}")
             old_container.remove(force=True)
+            removed_stale = True
         except docker.errors.NotFound:
             pass
+        logger.info(
+            "timing",
+            extra={
+                "step": "container_cleanup_stale",
+                "duration_ms": int((time.perf_counter() - step_started) * 1000),
+                "session_id": session_id,
+                "user_id": user_id,
+                "container_id": container_id,
+                "container_name": container_name,
+                "removed": removed_stale,
+            },
+        )
 
         logger.info(f"Creating new container {container_id} (mode: {container_mode})")
 
+        step_started = time.perf_counter()
         workspace_volume = self.workspace_manager.get_workspace_volume(
             user_id=user_id,
             session_id=session_id,
+        )
+        logger.info(
+            "timing",
+            extra={
+                "step": "container_prepare_workspace_volume",
+                "duration_ms": int((time.perf_counter() - step_started) * 1000),
+                "session_id": session_id,
+                "user_id": user_id,
+                "container_id": container_id,
+            },
         )
 
         labels = {
@@ -85,6 +123,7 @@ class ContainerPool:
             "container_mode": container_mode,
         }
 
+        step_started = time.perf_counter()
         container = self.docker_client.containers.run(
             image=self.settings.executor_image,
             name=container_name,
@@ -103,12 +142,25 @@ class ContainerPool:
             labels=labels,
             extra_hosts={"host.docker.internal": "host-gateway"},
         )
+        logger.info(
+            "timing",
+            extra={
+                "step": "container_docker_run",
+                "duration_ms": int((time.perf_counter() - step_started) * 1000),
+                "session_id": session_id,
+                "user_id": user_id,
+                "container_id": container_id,
+                "container_name": container_name,
+                "image": self.settings.executor_image,
+            },
+        )
 
         self.containers[container_id] = container
         self.session_to_container[session_id] = container_id
 
         self._wait_for_container_ready(container)
 
+        step_started = time.perf_counter()
         container.reload()
         port_info = container.ports.get("8000/tcp")
         if not port_info:
@@ -116,6 +168,17 @@ class ContainerPool:
                 error_code=ErrorCode.CONTAINER_START_FAILED,
                 message=f"Container {container_name} has no port mapping",
             )
+        logger.info(
+            "timing",
+            extra={
+                "step": "container_get_port_mapping",
+                "duration_ms": int((time.perf_counter() - step_started) * 1000),
+                "session_id": session_id,
+                "user_id": user_id,
+                "container_id": container_id,
+                "container_name": container_name,
+            },
+        )
         host_port = port_info[0]["HostPort"]
         executor_url = f"http://{published_host}:{host_port}"
 
@@ -123,6 +186,19 @@ class ContainerPool:
 
         logger.info(
             f"Container {container_id} started for session {session_id} on port {host_port}"
+        )
+        logger.info(
+            "timing",
+            extra={
+                "step": "container_create_total",
+                "duration_ms": int((time.perf_counter() - overall_started) * 1000),
+                "session_id": session_id,
+                "user_id": user_id,
+                "container_id": container_id,
+                "container_name": container_name,
+                "container_mode": container_mode,
+                "host_port": host_port,
+            },
         )
         return executor_url, container_id
 
@@ -132,14 +208,36 @@ class ContainerPool:
         timeout: int = 30,
     ) -> None:
         """Wait for container to start."""
-        start = time.time()
+        started = time.perf_counter()
+        attempts = 0
 
-        while time.time() - start < timeout:
+        while time.perf_counter() - started < timeout:
+            attempts += 1
             container.reload()
             if container.status == "running":
+                logger.info(
+                    "timing",
+                    extra={
+                        "step": "container_wait_running",
+                        "duration_ms": int((time.perf_counter() - started) * 1000),
+                        "attempts": attempts,
+                        "container_name": container.name,
+                        "status": container.status,
+                    },
+                )
                 return
             time.sleep(1)
 
+        logger.warning(
+            "timing",
+            extra={
+                "step": "container_wait_running_timeout",
+                "duration_ms": int((time.perf_counter() - started) * 1000),
+                "attempts": attempts,
+                "container_name": container.name,
+                "status": container.status,
+            },
+        )
         raise AppException(
             error_code=ErrorCode.CONTAINER_START_FAILED,
             message=f"Container {container.name} failed to start within {timeout}s",
@@ -151,20 +249,42 @@ class ContainerPool:
         timeout: int = 60,
     ) -> None:
         """Wait for executor HTTP service to be ready."""
-        start = time.time()
+        started = time.perf_counter()
+        attempts = 0
         health_url = f"{executor_url}/health"
 
-        while time.time() - start < timeout:
+        while time.perf_counter() - started < timeout:
+            attempts += 1
             try:
                 with httpx.Client(timeout=2.0) as client:
                     response = client.get(health_url)
                     if response.status_code == 200:
+                        logger.info(
+                            "timing",
+                            extra={
+                                "step": "container_wait_service_ready",
+                                "duration_ms": int(
+                                    (time.perf_counter() - started) * 1000
+                                ),
+                                "attempts": attempts,
+                                "executor_url": executor_url,
+                            },
+                        )
                         logger.info(f"Executor service ready at {executor_url}")
                         return
             except httpx.RequestError:
                 pass
             time.sleep(1)
 
+        logger.warning(
+            "timing",
+            extra={
+                "step": "container_wait_service_ready_timeout",
+                "duration_ms": int((time.perf_counter() - started) * 1000),
+                "attempts": attempts,
+                "executor_url": executor_url,
+            },
+        )
         raise AppException(
             error_code=ErrorCode.CONTAINER_START_FAILED,
             message=f"Executor service at {executor_url} not ready within {timeout}s",

@@ -178,7 +178,10 @@ class RunPullService:
 
         try:
             resolved_config = await self.config_resolver.resolve(
-                user_id, config_snapshot
+                user_id,
+                config_snapshot,
+                session_id=session_id,
+                run_id=str(run_id),
             )
             staged_skills = self.skill_stager.stage_skills(
                 user_id=user_id,

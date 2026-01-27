@@ -1,4 +1,6 @@
+import logging
 import re
+import time
 from typing import Any
 
 from app.core.errors.error_codes import ErrorCode
@@ -7,6 +9,7 @@ from app.services.backend_client import BackendClient
 
 
 _ENV_PATTERN = re.compile(r"\$\{([^}]+)\}")
+logger = logging.getLogger(__name__)
 
 
 def _resolve_env_value(value: Any, env_map: dict[str, str]) -> Any:
@@ -47,23 +50,88 @@ class ConfigResolver:
     def __init__(self, backend_client: BackendClient | None = None) -> None:
         self.backend_client = backend_client or BackendClient()
 
-    async def resolve(self, user_id: str, config_snapshot: dict) -> dict:
-        env_map = await self._get_env_map(user_id)
+    async def resolve(
+        self,
+        user_id: str,
+        config_snapshot: dict,
+        *,
+        session_id: str | None = None,
+        task_id: str | None = None,
+        run_id: str | None = None,
+    ) -> dict:
+        started = time.perf_counter()
+        ctx = {
+            "user_id": user_id,
+            "session_id": session_id,
+            "task_id": task_id,
+            "run_id": run_id,
+        }
 
+        step_started = time.perf_counter()
+        env_map = await self._get_env_map(user_id)
+        logger.info(
+            "timing",
+            extra={
+                "step": "config_resolve_env_map",
+                "duration_ms": int((time.perf_counter() - step_started) * 1000),
+                **ctx,
+            },
+        )
+
+        step_started = time.perf_counter()
         mcp_config = await self._resolve_effective_mcp_config(user_id, config_snapshot)
+        logger.info(
+            "timing",
+            extra={
+                "step": "config_resolve_mcp_config",
+                "duration_ms": int((time.perf_counter() - step_started) * 1000),
+                "mcp_servers": len(mcp_config) if isinstance(mcp_config, dict) else 0,
+                **ctx,
+            },
+        )
+
+        step_started = time.perf_counter()
         skill_files = await self._resolve_effective_skill_files(
             user_id, config_snapshot
         )
+        logger.info(
+            "timing",
+            extra={
+                "step": "config_resolve_skill_files",
+                "duration_ms": int((time.perf_counter() - step_started) * 1000),
+                "skills": len(skill_files) if isinstance(skill_files, dict) else 0,
+                **ctx,
+            },
+        )
         input_files = config_snapshot.get("input_files") or []
 
+        step_started = time.perf_counter()
         resolved_mcp = self._resolve_mcp(mcp_config, env_map)
         resolved_skills = self._resolve_skills(skill_files, env_map)
         resolved_inputs = _resolve_env_value(input_files, env_map)
+        logger.info(
+            "timing",
+            extra={
+                "step": "config_resolve_render",
+                "duration_ms": int((time.perf_counter() - step_started) * 1000),
+                "input_files": len(input_files) if isinstance(input_files, list) else 0,
+                **ctx,
+            },
+        )
 
         resolved = dict(config_snapshot)
         resolved["mcp_config"] = resolved_mcp
         resolved["skill_files"] = resolved_skills
         resolved["input_files"] = resolved_inputs
+
+        logger.info(
+            "timing",
+            extra={
+                "step": "config_resolve_total",
+                "duration_ms": int((time.perf_counter() - started) * 1000),
+                **ctx,
+            },
+        )
         return resolved
 
     async def _get_env_map(self, user_id: str) -> dict[str, str]:

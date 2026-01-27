@@ -1,10 +1,12 @@
 import logging
+import time
 import uuid
 
 import httpx
 
 from app.core.errors.error_codes import ErrorCode
 from app.core.errors.exceptions import AppException
+from app.core.observability.request_context import get_request_id, get_trace_id
 from app.core.settings import get_settings
 from app.scheduler.scheduler_config import scheduler
 from app.scheduler.task_dispatcher import TaskDispatcher
@@ -47,6 +49,9 @@ class TaskService:
         from app.services.backend_client import BackendClient
 
         task_id = str(uuid.uuid4())
+        started = time.perf_counter()
+        request_id = get_request_id()
+        trace_id = get_trace_id()
 
         try:
             backend_client = BackendClient()
@@ -54,13 +59,35 @@ class TaskService:
             # Continue existing session or create new one
             if session_id:
                 # Get existing session info
+                step_started = time.perf_counter()
                 session_data = await self.get_session_status(session_id)
+                logger.info(
+                    "timing",
+                    extra={
+                        "step": "task_create_get_session_status",
+                        "duration_ms": int((time.perf_counter() - step_started) * 1000),
+                        "task_id": task_id,
+                        "session_id": session_id,
+                        "user_id": user_id,
+                    },
+                )
                 sdk_session_id = session_data.sdk_session_id
                 logger.info(f"Reusing existing session {session_id} for task {task_id}")
             else:
                 # Create new session
+                step_started = time.perf_counter()
                 session_info = await backend_client.create_session(
                     user_id=user_id, config=config
+                )
+                logger.info(
+                    "timing",
+                    extra={
+                        "step": "task_create_backend_create_session",
+                        "duration_ms": int((time.perf_counter() - step_started) * 1000),
+                        "task_id": task_id,
+                        "session_id": session_info.get("session_id"),
+                        "user_id": user_id,
+                    },
                 )
                 session_id = session_info["session_id"]
                 sdk_session_id = session_info.get("sdk_session_id")
@@ -72,6 +99,7 @@ class TaskService:
 
             if container_id or container_mode == "persistent":
                 container_pool = TaskDispatcher.get_container_pool()
+                step_started = time.perf_counter()
                 (
                     container_url,
                     container_id,
@@ -81,15 +109,58 @@ class TaskService:
                     container_mode=container_mode,
                     container_id=container_id,
                 )
+                logger.info(
+                    "timing",
+                    extra={
+                        "step": "task_create_get_or_create_container",
+                        "duration_ms": int((time.perf_counter() - step_started) * 1000),
+                        "task_id": task_id,
+                        "session_id": session_id,
+                        "user_id": user_id,
+                        "container_id": container_id,
+                        "container_mode": container_mode,
+                    },
+                )
 
+            enqueued_at = time.perf_counter()
+            step_started = time.perf_counter()
             scheduler.add_job(
                 TaskDispatcher.dispatch,
-                args=[task_id, session_id, prompt, config, sdk_session_id],
+                args=[
+                    task_id,
+                    session_id,
+                    prompt,
+                    config,
+                    sdk_session_id,
+                    request_id,
+                    trace_id,
+                    enqueued_at,
+                ],
                 id=task_id,
                 replace_existing=True,
             )
+            logger.info(
+                "timing",
+                extra={
+                    "step": "task_create_scheduler_add_job",
+                    "duration_ms": int((time.perf_counter() - step_started) * 1000),
+                    "task_id": task_id,
+                    "session_id": session_id,
+                    "user_id": user_id,
+                },
+            )
 
             logger.info(f"Task {task_id} scheduled for execution")
+            logger.info(
+                "timing",
+                extra={
+                    "step": "task_create_total",
+                    "duration_ms": int((time.perf_counter() - started) * 1000),
+                    "task_id": task_id,
+                    "session_id": session_id,
+                    "user_id": user_id,
+                },
+            )
 
             return TaskCreateResponse(
                 task_id=task_id,
