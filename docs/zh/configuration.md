@@ -119,6 +119,6 @@ Docker Compose 默认使用 `rustfs/rustfs:latest` 作为本地 S3 兼容实现�
 - `S3_PORT`（默认 `9000`）
 - `S3_CONSOLE_PORT`（默认 `9001`）
 - `RUSTFS_DATA_DIR`：数据目录（默认 `./oss_data`，宿主机路径，会 bind mount 到容器的 `/data`）
-- `RUSTFS_DATA_DIR` 在 Linux 上需要保证宿主机目录可写；如果目录不存在被 Docker 以 `root:root` 创建，可能导致 `Permission denied (os error 13)`。
+- RustFS 以非 root 用户 `rustfs`（UID/GID=10001）运行；宿主机目录需为 `10001:10001`，否则可能导致 `Permission denied (os error 13)`。
 - `S3_ACCESS_KEY` / `S3_SECRET_KEY`：用于访问 S3 API 的凭证（需与 rustfs 配置一致）
 - `S3_BUCKET`：bucket 名称（默认 `poco`，可通过 `rustfs-init`（profile: `init`）创建或在控制台手动创建）

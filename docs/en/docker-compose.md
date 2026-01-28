@@ -26,8 +26,8 @@ For first-time setup, use the script to prepare `.env`, directories, permissions
 The script will:
 
 - Copy `.env.example` -> `.env` if missing
-- Write/fill `RUSTFS_DATA_DIR` / `S3_*` / `CORS_ORIGINS(JSON)` / `DOCKER_GID`
-- Create `oss_data/` and `tmp_workspace/` and try to fix permissions
+- Detects and writes `DOCKER_GID`; other keys are only written when flags are provided (e.g. `--data-dir` / `--s3-*` / `--cors-origins`)
+- Create `oss_data/` and `tmp_workspace/`; tries to chown `oss_data/` to `10001:10001` (RustFS user) by default
 - Write `.gitignore` into `oss_data/` and `tmp_workspace/` (content is `*`)
 - Pull the executor image and start services by default
 - Create `S3_BUCKET` via `rustfs-init`
@@ -37,6 +37,7 @@ Common flags:
 - `--no-pull-executor`: skip pulling executor image
 - `--no-start`: only prepare env and directories
 - `--no-init-bucket`: skip bucket creation
+- `--no-chown-rustfs`: skip chowning `oss_data/` to `10001:10001`
 
 After running the script, check `.env` and fill required values (e.g. `ANTHROPIC_AUTH_TOKEN`).
 
@@ -102,13 +103,13 @@ docker compose --profile debug up -d executor
 
 - `rustfs` bind-mounts `${RUSTFS_DATA_DIR}` to `/data`
 - Default `RUSTFS_DATA_DIR=./oss_data` (repo root)
-- If the host directory doesn't exist, Docker may create it as `root:root` (mode `755`), and a non-root rustfs process will fail with:
+- RustFS runs as non-root user `rustfs` (UID/GID=10001); if the host directory isn't owned by `10001:10001`, it can fail with:
   `Io error: Permission denied (os error 13)`
 - Fix it on the host (example uses repo `oss_data/`):
 
 ```bash
 mkdir -p oss_data
-sudo chown -R "$(id -u)":"$(id -g)" oss_data
+sudo chown -R 10001:10001 oss_data
 ```
 
 5. Public URL for RustFS presigned URLs:

@@ -26,8 +26,8 @@
 脚本会：
 
 - 复制 `.env.example` -> `.env`（若不存在）
-- 写入/补齐 `RUSTFS_DATA_DIR` / `S3_*` / `CORS_ORIGINS(JSON)` / `DOCKER_GID`
-- 创建 `oss_data/` 与 `tmp_workspace/` 并尝试修正权限
+- 自动检测并写入 `DOCKER_GID`；其余仅在传参时写入（如 `--data-dir` / `--s3-*` / `--cors-origins`）
+- 创建 `oss_data/` 与 `tmp_workspace/`；默认尝试将 `oss_data/` chown 为 `10001:10001`（RustFS 用户）
 - 为 `oss_data/` 与 `tmp_workspace/` 写入 `.gitignore`（内容为 `*`）
 - 默认拉取 executor 镜像并启动服务
 - 通过 `rustfs-init` 创建 `S3_BUCKET`
@@ -37,6 +37,7 @@
 - `--no-pull-executor`：跳过拉取 executor 镜像
 - `--no-start`：只准备环境与目录，不启动服务
 - `--no-init-bucket`：跳过创建 bucket
+- `--no-chown-rustfs`：跳过将 `oss_data/` 改为 `10001:10001`
 
 执行脚本后请检查并填写 `.env` 中的必需项（如 `ANTHROPIC_AUTH_TOKEN`）。
 
@@ -102,13 +103,13 @@ docker compose --profile debug up -d executor
 
 - `rustfs` 会把 `${RUSTFS_DATA_DIR}` bind mount 到容器的 `/data`
 - 默认 `RUSTFS_DATA_DIR=./oss_data`（仓库根目录）
-- 如果宿主机目录不存在，Docker 可能会用 `root:root` 创建它（权限通常是 `755`），而 `rustfs` 进程若以非 root 运行就会报：
+- RustFS 容器以非 root 用户 `rustfs`（UID/GID=10001）运行；如果宿主机目录不是 `10001:10001`，可能会报：
   `Io error: Permission denied (os error 13)`
 - 解决：先在宿主机创建/修正权限（示例以仓库根目录 `oss_data/` 为例）：
 
 ```bash
 mkdir -p oss_data
-sudo chown -R "$(id -u)":"$(id -g)" oss_data
+sudo chown -R 10001:10001 oss_data
 ```
 
 5. RustFS 预签名 URL 对外地址：

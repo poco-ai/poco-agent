@@ -122,6 +122,6 @@ Docker Compose uses `rustfs/rustfs:latest` as the local S3-compatible implementa
 - `S3_PORT` (default `9000`)
 - `S3_CONSOLE_PORT` (default `9001`)
 - `RUSTFS_DATA_DIR`: data directory (default `./oss_data`, host path, bind-mounted to `/data`)
-- On Linux, `RUSTFS_DATA_DIR` must be writable. If Docker creates it as `root:root`, you may hit `Permission denied (os error 13)`.
+- RustFS runs as non-root user `rustfs` (UID/GID=10001). The host directory should be owned by `10001:10001` or you may hit `Permission denied (os error 13)`.
 - `S3_ACCESS_KEY` / `S3_SECRET_KEY`: credentials for S3 API (must match rustfs config)
 - `S3_BUCKET`: bucket name (default `poco`, can be created via `rustfs-init` profile or console)
