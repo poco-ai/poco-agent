@@ -68,14 +68,14 @@ Join our WeChat group for updates and discussion:
 
 One command to start **backend / executor-manager / frontend** with **postgres + rustfs(S3)**:
 
-```bash
-docker compose up -d --build
-```
+> **Note**: The Executor Manager dynamically creates executor containers to run tasks. For faster first task execution, consider pulling the executor image beforehand:
+>
+> ```bash
+> docker pull ghcr.io/poco-ai/poco-executor:latest
+> ```
 
-Build the executor image (required for running tasks; manager spawns executor containers via docker.sock):
-
 ```bash
-docker compose build executor
+docker compose up -d
 ```
 
 Default URLs:

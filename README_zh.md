@@ -64,14 +64,14 @@ Demo3：移动端也能流畅使用。
 
 一条命令启动 **backend / executor-manager / frontend**，并带上 **postgres + rustfs(S3)**：
 
-```bash
-docker compose up -d --build
-```
+> **注意**：Executor Manager 会动态创建 executor 容器来执行任务。建议先拉取 executor 镜像以加快首次任务执行：
+>
+> ```bash
+> docker pull ghcr.io/poco-ai/poco-executor:latest
+> ```
 
-构建 executor 镜像（执行任务必需；manager 会通过 docker.sock 动态拉起 executor 容器）：
-
 ```bash
-docker compose build executor
+docker compose up -d
 ```
 
 默认访问地址：

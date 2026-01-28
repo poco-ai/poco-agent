@@ -54,12 +54,8 @@ services:
       exit 0;
 
   backend:
-    image: ${BACKEND_IMAGE:-poco-backend:local}
-    build:
-      context: .
-      dockerfile: docker/backend/Dockerfile
-      args:
-        APP_UID: ${APP_UID:-1000}
+    # Default to pulling from GHCR; override via BACKEND_IMAGE if needed.
+    image: ${BACKEND_IMAGE:-ghcr.io/poco-ai/poco-backend:latest}
     restart: unless-stopped
     depends_on:
       postgres:
@@ -100,12 +96,8 @@ services:
       - "${BACKEND_PORT:-8000}:8000"
 
   executor-manager:
-    image: ${EXECUTOR_MANAGER_IMAGE:-poco-executor-manager:local}
-    build:
-      context: .
-      dockerfile: docker/executor_manager/Dockerfile
-      args:
-        APP_UID: ${APP_UID:-1000}
+    # Default to pulling from GHCR; override via EXECUTOR_MANAGER_IMAGE if needed.
+    image: ${EXECUTOR_MANAGER_IMAGE:-ghcr.io/poco-ai/poco-executor-manager:latest}
     restart: unless-stopped
     depends_on:
       backend:
@@ -126,7 +118,8 @@ services:
       ANTHROPIC_BASE_URL: ${ANTHROPIC_BASE_URL:-https://api.anthropic.com}
       DEFAULT_MODEL: ${DEFAULT_MODEL:-claude-sonnet-4-20250514}
 
-      EXECUTOR_IMAGE: ${EXECUTOR_IMAGE:-poco-executor:local}
+      # Image used by the manager to spawn executor containers via docker.sock.
+      EXECUTOR_IMAGE: ${EXECUTOR_IMAGE:-ghcr.io/poco-ai/poco-executor:latest}
       # Manager accesses executor containers through published host ports.
       EXECUTOR_PUBLISHED_HOST: ${EXECUTOR_PUBLISHED_HOST:-host.docker.internal}
 
@@ -167,39 +160,9 @@ services:
     ports:
       - "${EXECUTOR_MANAGER_PORT:-8001}:8001"
 
-  # Build the executor image for the manager to spawn ephemeral containers.
-  executor:
-    # Debug-only service: the manager spawns short-lived executor containers on demand
-    # via docker.sock. This long-running container is only needed for local debugging.
-    profiles: ["debug"]
-    image: ${EXECUTOR_IMAGE:-poco-executor:local}
-    build:
-      context: .
-      dockerfile: docker/executor/Dockerfile
-    restart: unless-stopped
-    environment:
-      ANTHROPIC_AUTH_TOKEN: ${ANTHROPIC_AUTH_TOKEN:-}
-      ANTHROPIC_BASE_URL: ${ANTHROPIC_BASE_URL:-https://api.anthropic.com}
-      DEFAULT_MODEL: ${DEFAULT_MODEL:-claude-sonnet-4-20250514}
-      WORKSPACE_PATH: /workspace
-    volumes:
-      - executor_workspace:/workspace
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    ports:
-      # 8000 is used by backend; map executor API elsewhere for local debugging.
-      - "${EXECUTOR_PORT:-8002}:8000"
-      # noVNC / code-server are on 8080 in the sandbox image.
-      - "${EXECUTOR_SANDBOX_PORT:-8081}:8080"
-
   frontend:
-    image: ${FRONTEND_IMAGE:-poco-frontend:local}
-    build:
-      context: .
-      dockerfile: docker/frontend/Dockerfile
-      args:
-        NEXT_PUBLIC_SESSION_POLLING_INTERVAL: ${NEXT_PUBLIC_SESSION_POLLING_INTERVAL:-2500}
-        NEXT_PUBLIC_MESSAGE_POLLING_INTERVAL: ${NEXT_PUBLIC_MESSAGE_POLLING_INTERVAL:-2500}
+    # Default to pulling from GHCR; override via FRONTEND_IMAGE if needed.
+    image: ${FRONTEND_IMAGE:-ghcr.io/poco-ai/poco-frontend:latest}
     restart: unless-stopped
     depends_on:
       backend:
@@ -212,4 +175,3 @@ services:
 
 volumes:
   postgres_data:
-  executor_workspace:

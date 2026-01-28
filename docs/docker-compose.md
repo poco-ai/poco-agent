@@ -4,7 +4,7 @@
 
 - `backend`（FastAPI）
 - `executor-manager`（FastAPI + APScheduler，会通过 Docker API 拉起 `executor` 容器）
-- `executor`（仅用于 **构建镜像** + 本地调试；默认不启动，真正执行时由 manager 动态创建）
+- `executor`（仅用于本地调试；默认不启动，真正执行时由 manager 动态创建）
 - `frontend`（Next.js）
 - `postgres`
 - `rustfs`（默认 `rustfs/rustfs:latest`，S3 兼容）+ `rustfs-init`（创建 bucket，可选）
@@ -13,21 +13,27 @@
 
 - Docker Desktop / Docker Engine
 - Docker Compose v2（`docker compose` 命令）
+- 若 GHCR 镜像为私有：先执行 `docker login ghcr.io`
 
 ## 启动（本地开发/自部署）
 
 在仓库根目录执行：
 
 ```bash
-docker compose up -d --build
+docker compose up -d
 ```
 
-首次启动会构建 `backend` / `executor-manager` / `frontend` 镜像，并拉取 Postgres/RustFS 镜像。
+默认会从 GHCR（`ghcr.io`）拉取 `backend` / `executor-manager` / `frontend` 镜像，并拉取 Postgres/RustFS 镜像。`executor` 服务默认不启动（`debug` profile），但 `executor-manager` 在执行任务时会使用 `EXECUTOR_IMAGE` 拉起 executor 容器（本机缺镜像时会自动 pull）。
 
-如果你要让 `executor-manager` 能动态拉起 executor 容器（执行任务），还需要 **提前构建 executor 镜像**：
+如果你要固定版本（例如 `v0.1.0`），可通过环境变量覆盖镜像 tag（示例）：
 
 ```bash
-docker compose build executor
+export BACKEND_IMAGE=ghcr.io/poco-ai/poco-backend:v0.1.0
+export EXECUTOR_MANAGER_IMAGE=ghcr.io/poco-ai/poco-executor-manager:v0.1.0
+export EXECUTOR_IMAGE=ghcr.io/poco-ai/poco-executor:v0.1.0
+export FRONTEND_IMAGE=ghcr.io/poco-ai/poco-frontend:v0.1.0
+
+docker compose up -d
 ```
 
 ## 访问地址（默认端口）
@@ -83,6 +89,13 @@ sudo chown -R "$(id -u)":"$(id -g)" oss_data
 
 ```bash
 docker compose logs -f backend executor-manager
+```
+
+更新到最新镜像（或拉取你指定的 tag）：
+
+```bash
+docker compose pull
+docker compose up -d
 ```
 
 停止：
