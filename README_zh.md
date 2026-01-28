@@ -62,17 +62,25 @@ Demo3：移动端也能流畅使用。
 
 ## 快速开始（Docker Compose）
 
-一条命令启动 **backend / executor-manager / frontend**，并带上 **postgres + rustfs(S3)**：
+首次推荐使用一键初始化脚本（准备 `.env`、目录/权限、拉取 executor 镜像并创建 bucket）：
 
-> **注意**：Executor Manager 会动态创建 executor 容器来执行任务。建议先拉取 executor 镜像以加快首次任务执行：
->
-> ```bash
-> docker pull ghcr.io/poco-ai/poco-executor:latest
-> ```
+```bash
+./scripts/quickstart.sh
+```
+
+执行后请编辑 `.env` 填写必需项（如 `ANTHROPIC_AUTH_TOKEN`），若使用了 `--no-start` 再执行启动。
+
+手动启动：
 
 ```bash
 docker compose up -d
 ```
+
+> **注意**：Executor Manager 会动态创建 executor 容器。脚本默认会拉取 executor 镜像；若不使用脚本，可手动拉取：
+>
+> ```bash
+> docker pull ghcr.io/poco-ai/poco-executor:latest
+> ```
 
 默认访问地址：
 
@@ -82,6 +90,5 @@ docker compose up -d
 
 更多说明：
 
-- Docker Compose：`docs/docker-compose.md`
-- 环境变量配置：`docs/configuration.md`
-- 镜像发布（GitHub Actions）：`docs/image-publishing.md`
+- Docker Compose：`docs/zh/docker-compose.md`
+- 环境变量配置：`docs/zh/configuration.md`

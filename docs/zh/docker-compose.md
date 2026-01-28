@@ -15,7 +15,33 @@
 - Docker Compose v2（`docker compose` 命令）
 - 若 GHCR 镜像为私有：先执行 `docker login ghcr.io`
 
-## 启动（本地开发/自部署）
+## 推荐：一键初始化脚本（首次运行）
+
+如果是首次配置，推荐使用脚本自动完成 `.env`、目录、权限、镜像拉取与 bucket 创建：
+
+```bash
+./scripts/quickstart.sh
+```
+
+脚本会：
+
+- 复制 `.env.example` -> `.env`（若不存在）
+- 写入/补齐 `RUSTFS_DATA_DIR` / `S3_*` / `CORS_ORIGINS(JSON)` / `DOCKER_GID`
+- 创建 `oss_data/` 与 `tmp_workspace/` 并尝试修正权限
+- 默认拉取 executor 镜像并启动服务
+- 通过 `rustfs-init` 创建 `S3_BUCKET`
+
+常用参数：
+
+- `--no-pull-executor`：跳过拉取 executor 镜像
+- `--no-start`：只准备环境与目录，不启动服务
+- `--no-init-bucket`：跳过创建 bucket
+
+执行脚本后请检查并填写 `.env` 中的必需项（如 `ANTHROPIC_AUTH_TOKEN`）。
+
+如果你更偏好手动启动，继续按下方步骤执行。
+
+## 手动启动（本地开发/自部署）
 
 在仓库根目录执行：
 
@@ -74,6 +100,7 @@ docker compose --profile debug up -d executor
 4. RustFS 数据目录权限（Linux 常见坑）：
 
 - `rustfs` 会把 `${RUSTFS_DATA_DIR}` bind mount 到容器的 `/data`
+- 默认 `RUSTFS_DATA_DIR=./oss_data`（仓库根目录）
 - 如果宿主机目录不存在，Docker 可能会用 `root:root` 创建它（权限通常是 `755`），而 `rustfs` 进程若以非 root 运行就会报：
   `Io error: Permission denied (os error 13)`
 - 解决：先在宿主机创建/修正权限（示例以仓库根目录 `oss_data/` 为例）：
@@ -82,6 +109,11 @@ docker compose --profile debug up -d executor
 mkdir -p oss_data
 sudo chown -R "$(id -u)":"$(id -g)" oss_data
 ```
+
+5. RustFS 预签名 URL 对外地址：
+
+- Backend 会用 `S3_PUBLIC_ENDPOINT` 生成给浏览器访问的预签名 URL，Compose 默认是 `http://localhost:9000`
+- 如果你通过域名/非 9000 端口访问 RustFS，需要调整 `S3_PUBLIC_ENDPOINT`
 
 ## 常用操作
 
@@ -114,7 +146,7 @@ docker compose down -v
 
 大多数配置都通过环境变量完成（例如 `ANTHROPIC_AUTH_TOKEN`、`S3_*`、`INTERNAL_API_TOKEN` 等）。
 
-详见：`docs/configuration.md`。
+详见：`./configuration.md`。
 
 ## 可选：自动创建 bucket
 

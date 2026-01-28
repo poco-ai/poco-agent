@@ -18,12 +18,13 @@
 常用：
 
 - `HOST`（默认 `0.0.0.0`）、`PORT`（默认 `8000`）
-- `CORS_ORIGINS`：逗号分隔的允许来源列表，示例：`http://localhost:3000,http://127.0.0.1:3000`
+- `CORS_ORIGINS`：允许来源列表（JSON 数组），示例：`["http://localhost:3000","http://127.0.0.1:3000"]`
 - `EXECUTOR_MANAGER_URL`：Executor Manager 地址，示例：`http://executor-manager:8001`
+- `S3_PUBLIC_ENDPOINT`：对外可访问的 S3 地址，用于生成给浏览器的预签名 URL（本地可用 `http://localhost:9000`）。未设置则使用 `S3_ENDPOINT`
 - `S3_REGION`（默认 `us-east-1`）
 - `S3_FORCE_PATH_STYLE`（默认 `true`，对 MinIO/RustFS 一般需要）
 - `S3_PRESIGN_EXPIRES`：预签名 URL 过期秒数（默认 `300`）
-- `OPENAI_API_KEY`：可选（如果后端有用到 OpenAI 能力）
+- `OPENAI_API_KEY`：可选（用于会话标题自动生成等；未设置则禁用标题生成）
 - `OPENAI_BASE_URL`：可选（自定义 OpenAI 兼容网关）
 - `OPENAI_DEFAULT_MODEL`（默认 `gpt-4o-mini`）
 - `MAX_UPLOAD_SIZE_MB`（默认 `100`）
@@ -117,7 +118,7 @@ Docker Compose 默认使用 `rustfs/rustfs:latest` 作为本地 S3 兼容实现�
 - `RUSTFS_IMAGE`：对象存储镜像（默认 `rustfs/rustfs:latest`）
 - `S3_PORT`（默认 `9000`）
 - `S3_CONSOLE_PORT`（默认 `9001`）
-- `RUSTFS_DATA_DIR`：数据目录（默认 `/data`，会 bind mount 到容器的 `/data`）
+- `RUSTFS_DATA_DIR`：数据目录（默认 `./oss_data`，宿主机路径，会 bind mount 到容器的 `/data`）
 - `RUSTFS_DATA_DIR` 在 Linux 上需要保证宿主机目录可写；如果目录不存在被 Docker 以 `root:root` 创建，可能导致 `Permission denied (os error 13)`。
 - `S3_ACCESS_KEY` / `S3_SECRET_KEY`：用于访问 S3 API 的凭证（需与 rustfs 配置一致）
 - `S3_BUCKET`：bucket 名称（默认 `poco`，可通过 `rustfs-init`（profile: `init`）创建或在控制台手动创建）

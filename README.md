@@ -66,17 +66,25 @@ Join our WeChat group for updates and discussion:
 
 ## Quickstart (Docker Compose)
 
-One command to start **backend / executor-manager / frontend** with **postgres + rustfs(S3)**:
+Recommended for first-time setup (prepares `.env`, directories, permissions, pulls executor image, and creates the bucket):
 
-> **Note**: The Executor Manager dynamically creates executor containers to run tasks. For faster first task execution, consider pulling the executor image beforehand:
->
-> ```bash
-> docker pull ghcr.io/poco-ai/poco-executor:latest
-> ```
+```bash
+./scripts/quickstart.sh
+```
+
+After running, edit `.env` and set required values (e.g. `ANTHROPIC_AUTH_TOKEN`), then start services if you used `--no-start`.
+
+Manual start:
 
 ```bash
 docker compose up -d
 ```
+
+> **Note**: The Executor Manager dynamically creates executor containers. The bootstrap script pulls the executor image by default. If you skip the script, you can pull it manually:
+>
+> ```bash
+> docker pull ghcr.io/poco-ai/poco-executor:latest
+> ```
 
 Default URLs:
 
@@ -86,6 +94,5 @@ Default URLs:
 
 Docs:
 
-- Docker Compose: `docs/docker-compose.md`
-- Environment variables: `docs/configuration.md`
-- Image publishing (GitHub Actions): `docs/image-publishing.md`
+- Docker Compose: `docs/en/docker-compose.md`
+- Environment variables: `docs/en/configuration.md`

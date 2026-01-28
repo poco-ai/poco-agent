@@ -36,7 +36,7 @@ services:
       - "${S3_PORT:-9000}:9000"
       - "${S3_CONSOLE_PORT:-9001}:9001"
     volumes:
-      - ${RUSTFS_DATA_DIR:-/data}:/data
+      - ${RUSTFS_DATA_DIR:-./oss_data}:/data
 
   rustfs-init:
     image: ${RUSTFS_INIT_IMAGE:-minio/mc:latest}
@@ -48,10 +48,12 @@ services:
       S3_SECRET_KEY: ${S3_SECRET_KEY:-poco-secret}
       S3_BUCKET: ${S3_BUCKET:-poco}
     entrypoint: ["/bin/sh", "-c"]
-    command: >
-      until mc alias set rustfs http://rustfs:9000 "$$S3_ACCESS_KEY" "$$S3_SECRET_KEY"; do sleep 2; done;
-      mc mb -p "rustfs/$$S3_BUCKET" || true;
-      exit 0;
+    command:
+      - |
+        until mc alias set rustfs http://rustfs:9000 "$S3_ACCESS_KEY" "$S3_SECRET_KEY"; do
+          sleep 2
+        done
+        mc mb -p "rustfs/$S3_BUCKET" || true
 
   backend:
     # Default to pulling from GHCR; override via BACKEND_IMAGE if needed.
@@ -68,12 +70,13 @@ services:
       RUN_MIGRATIONS: ${RUN_MIGRATIONS:-true}
 
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-poco}
-      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
+      CORS_ORIGINS: ${CORS_ORIGINS:-'["http://localhost:3000","http://127.0.0.1:3000"]'}
       SECRET_KEY: ${BACKEND_SECRET_KEY:-change-this-secret-key-in-production}
       INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:-change-this-token-in-production}
       EXECUTOR_MANAGER_URL: http://executor-manager:8001
 
       S3_ENDPOINT: ${S3_ENDPOINT:-http://rustfs:9000}
+      S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT:-http://localhost:9000}
       S3_ACCESS_KEY: ${S3_ACCESS_KEY:-poco}
       S3_SECRET_KEY: ${S3_SECRET_KEY:-poco-secret}
       S3_REGION: ${S3_REGION:-us-east-1}
