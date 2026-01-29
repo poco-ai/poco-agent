@@ -13,6 +13,9 @@ class TaskEnqueueRequest(BaseModel):
     config: TaskConfig | None = None
     session_id: UUID | None = None
     project_id: UUID | None = None
+    # Claude Code permission mode for this run (stored on agent_runs).
+    # "plan" enables planning-only mode until ExitPlanMode is approved.
+    permission_mode: str = "default"
     schedule_mode: str = "immediate"
     timezone: str | None = None
     scheduled_at: datetime | None = None

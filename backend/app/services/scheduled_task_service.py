@@ -449,6 +449,7 @@ class ScheduledTaskService:
             session_db=db,
             session_id=session_id,
             user_message_id=db_message.id,
+            permission_mode="default",
             schedule_mode="scheduled",
             scheduled_at=scheduled_at,
             config_snapshot=run_snapshot or None,

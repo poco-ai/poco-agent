@@ -46,6 +46,9 @@ class AgentRun(Base, TimestampMixin):
     status: Mapped[str] = mapped_column(
         String(50), default="queued", nullable=False, index=True
     )
+    permission_mode: Mapped[str] = mapped_column(
+        String(50), default="default", nullable=False, index=True
+    )
     progress: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
     schedule_mode: Mapped[str] = mapped_column(

@@ -25,6 +25,7 @@ class RunResponse(BaseModel):
     session_id: UUID
     user_message_id: int
     status: str
+    permission_mode: str
     progress: int
     schedule_mode: str
     scheduled_task_id: UUID | None = None

@@ -141,6 +141,20 @@ class TaskService:
                 message="Prompt cannot be empty",
             )
 
+        permission_mode = (request.permission_mode or "default").strip()
+        if not permission_mode:
+            permission_mode = "default"
+        if permission_mode not in {
+            "default",
+            "acceptEdits",
+            "plan",
+            "bypassPermissions",
+        }:
+            raise AppException(
+                error_code=ErrorCode.BAD_REQUEST,
+                message=f"Invalid permission_mode: {permission_mode}",
+            )
+
         user_message_content = {
             "_type": "UserMessage",
             "content": [{"_type": "TextBlock", "text": prompt}],
@@ -169,6 +183,7 @@ class TaskService:
             session_db=db,
             session_id=db_session.id,
             user_message_id=db_message.id,
+            permission_mode=permission_mode,
             schedule_mode=schedule_mode,
             scheduled_at=scheduled_at,
             config_snapshot=run_config_snapshot,
