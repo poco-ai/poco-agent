@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import {
-  ChevronDown,
   ChevronRight,
   Folder,
   MoreHorizontal,
@@ -167,48 +166,43 @@ export function CollapsibleProjectItem({
                   onClick={(e) => e.stopPropagation()}
                 />
               )}
-              {/* 折叠按钮 */}
-              <span
-                role="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onToggle();
-                }}
-                className="size-4 shrink-0 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-              >
-                {isExpanded ? (
-                  <ChevronDown className="size-3 transition-transform" />
-                ) : (
-                  <ChevronRight className="size-3 transition-transform" />
-                )}
-              </span>
-
-              {/* 项目图标和名称 */}
-              <div
-                className="flex flex-1 items-center gap-3 min-w-0"
-                onClick={(e) => {
-                  if (longPressTriggeredRef.current) {
-                    e.preventDefault();
+              <div className="flex flex-1 items-center gap-1.5 min-w-0">
+                <span
+                  role="button"
+                  onClick={(e) => {
                     e.stopPropagation();
-                    longPressTriggeredRef.current = false;
-                    return;
-                  }
-                  e.stopPropagation();
-                  if (isSelectionMode) {
-                    onToggleProjectSelection?.(project.id);
-                  } else {
-                    onProjectClick();
-                  }
-                }}
-              >
-                <Folder
+                    onToggle();
+                  }}
+                  className="size-5 shrink-0 flex items-center justify-center text-muted-foreground/70 hover:text-foreground hover:bg-sidebar-accent rounded-sm transition-all cursor-pointer group/toggle"
+                >
+                  <Folder className="size-4 group-hover/project-item:hidden" />
+                  <ChevronRight
+                    className={cn(
+                      "size-4 hidden group-hover/project-item:block transition-transform duration-200",
+                      isExpanded && "rotate-90",
+                    )}
+                  />
+                </span>
+
+                <span
                   className={cn(
-                    "size-4 text-muted-foreground group-data-[collapsible=icon]:hidden",
+                    "flex-1 truncate cursor-pointer",
                     isOver && "text-primary",
                   )}
-                />
-                <span
-                  className={cn("flex-1 truncate", isOver && "text-primary")}
+                  onClick={(e) => {
+                    if (longPressTriggeredRef.current) {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      longPressTriggeredRef.current = false;
+                      return;
+                    }
+                    e.stopPropagation();
+                    if (isSelectionMode) {
+                      onToggleProjectSelection?.(project.id);
+                    } else {
+                      onProjectClick();
+                    }
+                  }}
                 >
                   {project.name}
                 </span>
