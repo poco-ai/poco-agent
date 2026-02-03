@@ -404,20 +404,110 @@ class ContainerPool:
             pass
 
     async def cancel_task(self, session_id: str) -> None:
-        """Cancel task and stop container."""
+        """Cancel task and stop the executor container.
+
+        Note: container bookkeeping is in-memory. When the service restarts or runs with
+        multiple workers, the session->container mapping may be missing. In that case,
+        fall back to resolving the container by Docker labels/name.
+        """
         logger.info(f"Cancelling task for session {session_id}")
 
         container_id = self.session_to_container.pop(session_id, None)
-        if not container_id:
+        containers_to_stop: list["Container"] = []
+        seen: set[str] = set()
+
+        tracked = self.containers.pop(container_id, None) if container_id else None
+        if tracked is not None:
+            containers_to_stop.append(tracked)
+            cid = getattr(tracked, "id", None)
+            if isinstance(cid, str) and cid:
+                seen.add(cid)
+
+        def _extend_unique(found: list["Container"]) -> None:
+            for c in found:
+                cid = getattr(c, "id", None)
+                if not isinstance(cid, str) or not cid:
+                    continue
+                if cid in seen:
+                    continue
+                seen.add(cid)
+                containers_to_stop.append(c)
+
+        # Prefer exact match by full session_id label.
+        try:
+            found = self.docker_client.containers.list(
+                all=True, filters={"label": f"session_id={session_id}"}
+            )
+            _extend_unique(found)
+        except Exception:
+            pass
+
+        # Best-effort: if we know the logical container_id label, try to locate by that label too.
+        if container_id:
+            try:
+                found = self.docker_client.containers.list(
+                    all=True, filters={"label": f"container_id={container_id}"}
+                )
+                _extend_unique(found)
+            except Exception:
+                pass
+
+        # Fallback to deterministic name (used by get_or_create_container).
+        try:
+            name = f"executor-{session_id[:8]}"
+            found = self.docker_client.containers.get(name)
+            _extend_unique([found])
+        except docker.errors.NotFound:
+            pass
+        except Exception:
+            pass
+
+        if not containers_to_stop:
+            logger.info(
+                "cancel_task_no_container_found",
+                extra={"session_id": session_id, "container_id": container_id},
+            )
             return
 
-        if container_id in self.containers:
-            container = self.containers.pop(container_id)
+        for container in containers_to_stop:
+            labels = getattr(container, "labels", None) or {}
+            logical_id = labels.get("container_id")
             try:
                 container.stop(timeout=10)
-                logger.info(f"Container {container_id} stopped")
+                logger.info(
+                    "container_stopped",
+                    extra={
+                        "session_id": session_id,
+                        "container_id": logical_id or container_id,
+                        "docker_id": container.id,
+                        "name": container.name,
+                    },
+                )
+            except docker.errors.NotFound:
+                # Best-effort: the container may have already been removed (auto_remove=True).
+                pass
             except Exception as e:
-                logger.error(f"Failed to stop container {container_id}: {e}")
+                logger.error(
+                    "container_stop_failed",
+                    extra={
+                        "session_id": session_id,
+                        "container_id": logical_id or container_id,
+                        "docker_id": getattr(container, "id", None),
+                        "name": getattr(container, "name", None),
+                        "error": str(e),
+                    },
+                )
+
+            # Clean up any stale bookkeeping for this logical container_id.
+            if isinstance(logical_id, str) and logical_id:
+                self.containers.pop(logical_id, None)
+                bound_sessions = [
+                    sid
+                    for sid, cid in self.session_to_container.items()
+                    if cid == logical_id
+                ]
+                for sid in bound_sessions:
+                    self.session_to_container.pop(sid, None)
 
     def get_container_stats(self) -> dict[str, int | list[dict]]:
         """Get container statistics."""
