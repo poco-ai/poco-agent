@@ -1,4 +1,4 @@
-name: opencode-review
+name: Opencode Pull Request Review
 
 on:
   pull_request:

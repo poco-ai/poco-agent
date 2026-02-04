@@ -1,4 +1,4 @@
-name: docker-images
+name: Docker Images CI/CD
 
 on:
   workflow_dispatch:
