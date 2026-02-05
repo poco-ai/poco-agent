@@ -64,6 +64,7 @@ async def run_task(req: TaskRun, background_tasks: BackgroundTasks) -> dict:
             "has_repo_url": bool((cfg.repo_url or "").strip()),
             "mcp_server_count": len(cfg.mcp_config or {}),
             "skill_count": len(cfg.skill_files or {}),
+            "subagent_count": len(cfg.agents or {}),
             "input_count": len(cfg.input_files or []),
         },
     )

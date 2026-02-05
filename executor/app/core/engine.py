@@ -1,11 +1,13 @@
 import logging
 import os
+import re
 import time
 from datetime import datetime, timedelta, timezone
 
 from claude_agent_sdk import ClaudeAgentOptions
 from claude_agent_sdk.client import ClaudeSDKClient
 from claude_agent_sdk.types import (
+    AgentDefinition as SdkAgentDefinition,
     HookContext,
     HookInput,
     HookMatcher,
@@ -34,6 +36,7 @@ from app.utils.browser import format_viewport_size, parse_viewport_size
 load_dotenv()
 
 logger = logging.getLogger(__name__)
+_SUBAGENT_NAME_PATTERN = re.compile(r"^[A-Za-z0-9._-]+$")
 
 
 class AgentExecutor:
@@ -230,6 +233,31 @@ class AgentExecutor:
             if config.browser_enabled:
                 mcp_servers = self._inject_playwright_mcp(mcp_servers)
 
+            agents: dict[str, SdkAgentDefinition] | None = None
+            if config.agents:
+                resolved: dict[str, SdkAgentDefinition] = {}
+                for name, definition in (config.agents or {}).items():
+                    if not isinstance(name, str):
+                        continue
+                    clean_name = name.strip()
+                    if (
+                        not clean_name
+                        or clean_name in {".", ".."}
+                        or not _SUBAGENT_NAME_PATTERN.fullmatch(clean_name)
+                    ):
+                        continue
+                    description = (definition.description or "").strip()
+                    prompt_text = (definition.prompt or "").strip()
+                    if not description or not prompt_text:
+                        continue
+                    resolved[clean_name] = SdkAgentDefinition(
+                        description=description,
+                        prompt=definition.prompt,
+                        tools=definition.tools,
+                        model=definition.model,
+                    )
+                agents = resolved or None
+
             options = ClaudeAgentOptions(
                 cwd=ctx.cwd,
                 resume=self.sdk_session_id,
@@ -239,17 +267,20 @@ class AgentExecutor:
                 allowed_tools=[
                     "Skill",
                     "Read",
+                    "Edit",
                     "Write",
                     "Bash",
                     "TodoWrite",
                     "Grep",
                     "Glob",
+                    "Task",
                 ],
                 mcp_servers=mcp_servers,
                 permission_mode=normalized_permission_mode,
                 model=os.environ["DEFAULT_MODEL"],
                 can_use_tool=can_use_tool,
                 hooks={"PreToolUse": [HookMatcher(matcher=None, hooks=[dummy_hook])]},
+                agents=agents,
             )
 
             async with ClaudeSDKClient(options=options) as client:

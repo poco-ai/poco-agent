@@ -15,6 +15,18 @@ class InputFile(BaseModel):
     path: str | None = None
 
 
+AgentModel = Literal["sonnet", "opus", "haiku", "inherit"]
+
+
+class AgentDefinition(BaseModel):
+    """Claude Agent SDK subagent definition (programmatic mode)."""
+
+    description: str
+    prompt: str
+    tools: list[str] | None = None
+    model: AgentModel | None = None
+
+
 class TaskConfig(BaseModel):
     repo_url: str | None = None
     git_branch: str = "main"
@@ -28,6 +40,7 @@ class TaskConfig(BaseModel):
     mcp_server_ids: list[int] = Field(default_factory=list)
     skill_files: dict = Field(default_factory=dict)
     skill_ids: list[int] = Field(default_factory=list)
+    agents: dict[str, AgentDefinition] = Field(default_factory=dict)
     input_files: list[InputFile] = Field(default_factory=list)
 
 
