@@ -70,6 +70,10 @@ export const API_ENDPOINTS = {
   slashCommands: "/slash-commands",
   slashCommand: (commandId: number) => `/slash-commands/${commandId}`,
 
+  // Sub Agents
+  subAgents: "/subagents",
+  subAgent: (subAgentId: number) => `/subagents/${subAgentId}`,
+
   // Callback
   callback: "/callback",
   callbackHealth: "/callback/health",

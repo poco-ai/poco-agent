@@ -526,6 +526,63 @@
         "error": "操作失败"
       }
     },
+    "subAgents": {
+      "card": {
+        "title": "子代理",
+        "description": "创建可复用的专门化子代理，用于上下文隔离与并行化。",
+        "feature1": "独立上下文，减少主对话噪音",
+        "feature2": "多子代理并发，加速复杂任务",
+        "feature3": "可限制工具与模型，提高可控性",
+        "action": "管理子代理"
+      },
+      "header": {
+        "title": "子代理",
+        "add": "添加子代理"
+      },
+      "searchPlaceholder": "搜索子代理...",
+      "summary": "子代理",
+      "enabled": "已启用",
+      "empty": "暂无子代理",
+      "mode": {
+        "raw": "Markdown",
+        "structured": "结构化"
+      },
+      "models": {
+        "inherit": "继承"
+      },
+      "delete": {
+        "title": "删除子代理？",
+        "description": "删除后将无法在会话中使用该子代理。"
+      },
+      "dialog": {
+        "createTitle": "新增子代理",
+        "editTitle": "编辑子代理"
+      },
+      "fields": {
+        "name": "名称",
+        "namePlaceholder": "code-reviewer",
+        "enabled": "启用",
+        "description": "描述",
+        "descriptionOptional": "描述（可选）",
+        "descriptionPlaceholder": "用于质量、安全和可维护性审查。",
+        "model": "模型",
+        "tools": "工具限制",
+        "toolsPlaceholder": "Read, Grep, Glob",
+        "toolsHint": "留空表示继承所有可用工具。",
+        "prompt": "系统提示",
+        "promptPlaceholder": "你是一位代码审查专家...",
+        "rawMarkdown": "Markdown 内容",
+        "rawMarkdownPlaceholder": "在这里粘贴完整的 .md（必须包含 YAML 前言，且 name 与上方一致）",
+        "rawMarkdownHint": "提示：raw 模式会以文件形式写入 ~/.claude/agents，并由 SDK 自动加载。"
+      },
+      "toasts": {
+        "loadError": "加载子代理列表失败",
+        "created": "子代理已创建",
+        "updated": "子代理已更新",
+        "deleted": "子代理已删除",
+        "error": "操作失败"
+      }
+    },
     "tags": {
       "system": "系统预设",
       "user": "我的技能"

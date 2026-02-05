@@ -9,6 +9,7 @@ import {
   Key,
   FileText,
   Command as CommandIcon,
+  Bot,
 } from "lucide-react";
 
 import { useT } from "@/lib/i18n/client";
@@ -121,6 +122,23 @@ export function CapabilitiesGrid() {
         ],
         actionLabel: t("library.slashCommands.card.action", "管理命令"),
         actionHref: "/capabilities/slash-commands",
+        comingSoon: false,
+      },
+      {
+        id: "sub-agents",
+        icon: <Bot className="size-6" />,
+        title: t("library.subAgents.card.title", "子代理"),
+        description: t(
+          "library.subAgents.card.description",
+          "创建可复用的专门化子代理，用于上下文隔离与并行化。",
+        ),
+        features: [
+          t("library.subAgents.card.feature1", "独立上下文，减少主对话噪音"),
+          t("library.subAgents.card.feature2", "多子代理并发，加速复杂任务"),
+          t("library.subAgents.card.feature3", "可限制工具与模型，提高可控性"),
+        ],
+        actionLabel: t("library.subAgents.card.action", "管理子代理"),
+        actionHref: "/capabilities/sub-agents",
         comingSoon: false,
       },
       {

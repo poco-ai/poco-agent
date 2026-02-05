@@ -526,6 +526,63 @@
         "error": "Action failed"
       }
     },
+    "subAgents": {
+      "card": {
+        "title": "Sub Agents",
+        "description": "Create reusable specialized sub agents for context isolation and parallelization.",
+        "feature1": "Isolated context to keep main chat clean",
+        "feature2": "Run multiple sub agents in parallel",
+        "feature3": "Limit tools/models for better control",
+        "action": "Manage Sub Agents"
+      },
+      "header": {
+        "title": "Sub Agents",
+        "add": "Add Sub Agent"
+      },
+      "searchPlaceholder": "Search sub agents...",
+      "summary": "Sub Agents",
+      "enabled": "Enabled",
+      "empty": "No sub agents yet",
+      "mode": {
+        "raw": "Markdown",
+        "structured": "Structured"
+      },
+      "models": {
+        "inherit": "Inherit"
+      },
+      "delete": {
+        "title": "Delete sub agent?",
+        "description": "After deletion, this sub agent will no longer be available in sessions."
+      },
+      "dialog": {
+        "createTitle": "Create sub agent",
+        "editTitle": "Edit sub agent"
+      },
+      "fields": {
+        "name": "Name",
+        "namePlaceholder": "code-reviewer",
+        "enabled": "Enabled",
+        "description": "Description",
+        "descriptionOptional": "Description (optional)",
+        "descriptionPlaceholder": "Used for quality, security, and maintainability reviews.",
+        "model": "Model",
+        "tools": "Tools",
+        "toolsPlaceholder": "Read, Grep, Glob",
+        "toolsHint": "Leave empty to inherit all available tools.",
+        "prompt": "System Prompt",
+        "promptPlaceholder": "You are an expert code reviewer...",
+        "rawMarkdown": "Markdown",
+        "rawMarkdownPlaceholder": "Paste the full .md here (YAML front matter required; name must match)",
+        "rawMarkdownHint": "Tip: raw mode is staged into ~/.claude/agents and loaded by the SDK."
+      },
+      "toasts": {
+        "loadError": "Failed to load sub agents",
+        "created": "Sub agent created",
+        "updated": "Sub agent updated",
+        "deleted": "Sub agent deleted",
+        "error": "Action failed"
+      }
+    },
     "tags": {
       "system": "Preset",
       "user": "My Skills"
