@@ -65,7 +65,9 @@ Required (otherwise it will not start or cannot dispatch tasks):
 
 Execution model (required to run tasks):
 
-- `ANTHROPIC_AUTH_TOKEN`: Claude API token
+- `ANTHROPIC_API_KEY` / `ANTHROPIC_AUTH_TOKEN`: configure exactly one credential
+  - Prefer `ANTHROPIC_API_KEY` for the official Anthropic API
+  - Use `ANTHROPIC_AUTH_TOKEN` only for bearer-token compatible gateways
 - `ANTHROPIC_BASE_URL` (default `https://api.anthropic.com`)
 - `DEFAULT_MODEL` (default `claude-sonnet-4-20250514`)
 
@@ -90,7 +92,7 @@ Workspace cleanup (optional):
 
 Required (when running tasks):
 
-- `ANTHROPIC_AUTH_TOKEN`: Claude API token
+- `ANTHROPIC_API_KEY` / `ANTHROPIC_AUTH_TOKEN`: configure exactly one credential
 - `ANTHROPIC_BASE_URL`: optional (same as above)
 - `DEFAULT_MODEL`: required (`executor/app/core/engine.py` reads `os.environ["DEFAULT_MODEL"]`)
 - `WORKSPACE_PATH`: workspace mount path (default `/workspace`)

@@ -48,7 +48,8 @@
 - `--no-init-bucket`：跳过创建 bucket
 - `--no-chown-rustfs`：跳过将 `oss_data/` 改为 `10001:10001`
 
-执行脚本后请确认 `.env` 里已设置 `ANTHROPIC_AUTH_TOKEN`。
+执行脚本后请确认 `.env` 里已设置 `ANTHROPIC_API_KEY` 或
+`ANTHROPIC_AUTH_TOKEN`（二选一）。
 
 如果你更偏好手动启动，继续按下方步骤执行。
 
@@ -178,7 +179,8 @@ docker compose down -v
 
 ## 配置入口
 
-大多数配置都通过环境变量完成（例如 `ANTHROPIC_AUTH_TOKEN`、`S3_*`、`INTERNAL_API_TOKEN` 等）。
+大多数配置都通过环境变量完成（例如 `ANTHROPIC_API_KEY` /
+`ANTHROPIC_AUTH_TOKEN`、`S3_*`、`INTERNAL_API_TOKEN` 等）。
 
 详见：`./configuration.md`。
 

@@ -48,7 +48,8 @@ Common flags:
 - `--no-init-bucket`: skip bucket creation
 - `--no-chown-rustfs`: skip chowning `oss_data/` to `10001:10001`
 
-After running the script, make sure `ANTHROPIC_AUTH_TOKEN` is set in `.env`.
+After running the script, make sure exactly one of `ANTHROPIC_API_KEY` or
+`ANTHROPIC_AUTH_TOKEN` is set in `.env`.
 
 If you prefer manual steps, continue below.
 
@@ -178,7 +179,8 @@ docker compose down -v
 
 ## Configuration
 
-Most configuration is via environment variables (e.g. `ANTHROPIC_AUTH_TOKEN`, `S3_*`, `INTERNAL_API_TOKEN`).
+Most configuration is via environment variables (e.g. `ANTHROPIC_API_KEY` /
+`ANTHROPIC_AUTH_TOKEN`, `S3_*`, `INTERNAL_API_TOKEN`).
 
 See: `./configuration.md`.
 

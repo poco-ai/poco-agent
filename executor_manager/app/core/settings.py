@@ -1,6 +1,6 @@
 from functools import lru_cache
 
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -85,6 +85,7 @@ class Settings(BaseSettings):
         default=360, alias="TASK_PULL_NIGHTLY_WINDOW_MINUTES"
     )
 
+    anthropic_api_key: str = Field(default="", alias="ANTHROPIC_API_KEY")
     anthropic_token: str = Field(default="", alias="ANTHROPIC_AUTH_TOKEN")
     anthropic_base_url: str = Field(
         default="https://api.anthropic.com", alias="ANTHROPIC_BASE_URL"
@@ -147,6 +148,24 @@ class Settings(BaseSettings):
         case_sensitive=False,
         extra="ignore",
     )
+
+    @model_validator(mode="after")
+    def validate_anthropic_credentials(self) -> "Settings":
+        """Ensure exactly one Anthropic credential is configured."""
+        has_api_key = bool((self.anthropic_api_key or "").strip())
+        has_auth_token = bool((self.anthropic_token or "").strip())
+
+        if has_api_key and has_auth_token:
+            raise ValueError(
+                "ANTHROPIC_API_KEY and ANTHROPIC_AUTH_TOKEN are mutually exclusive; "
+                "set only one."
+            )
+        if not has_api_key and not has_auth_token:
+            raise ValueError(
+                "Missing Anthropic credential; set either ANTHROPIC_API_KEY "
+                "or ANTHROPIC_AUTH_TOKEN."
+            )
+        return self
 
 
 @lru_cache

@@ -62,7 +62,9 @@
 
 执行模型（跑任务时必需）：
 
-- `ANTHROPIC_AUTH_TOKEN`：Claude API token
+- `ANTHROPIC_API_KEY` / `ANTHROPIC_AUTH_TOKEN`：二选一配置认证凭据
+  - 官方 Anthropic API 推荐使用 `ANTHROPIC_API_KEY`
+  - `ANTHROPIC_AUTH_TOKEN` 仅用于兼容 Bearer token 网关
 - `ANTHROPIC_BASE_URL`（默认 `https://api.anthropic.com`）
 - `DEFAULT_MODEL`（默认 `claude-sonnet-4-20250514`）
 
@@ -87,7 +89,7 @@
 
 必需（跑任务时）：
 
-- `ANTHROPIC_AUTH_TOKEN`：Claude API token
+- `ANTHROPIC_API_KEY` / `ANTHROPIC_AUTH_TOKEN`：二选一配置认证凭据
 - `ANTHROPIC_BASE_URL`：可选（同上）
 - `DEFAULT_MODEL`：必需（`executor/app/core/engine.py` 会读取 `os.environ["DEFAULT_MODEL"]`）
 - `WORKSPACE_PATH`：工作目录挂载点（默认 `/workspace`）

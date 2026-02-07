@@ -81,6 +81,7 @@ services:
       CALLBACK_TOKEN: ${CALLBACK_TOKEN:-change-this-token-in-production}
       INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:-change-this-token-in-production}
 
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       ANTHROPIC_AUTH_TOKEN: ${ANTHROPIC_AUTH_TOKEN:-}
       ANTHROPIC_BASE_URL: ${ANTHROPIC_BASE_URL:-https://api.anthropic.com}
       DEFAULT_MODEL: ${DEFAULT_MODEL:-claude-sonnet-4-20250514}
