@@ -432,10 +432,7 @@
 @media (max-width: 640px) {
   [data-slot="dialog-content"],
   [data-slot="alert-dialog-content"] {
-    width: auto !important;
-    max-width: min(
-      calc(100vw - var(--dialog-mobile-gutter, 2.5rem)),
-      var(--dialog-mobile-max, 32rem)
-    ) !important;
+    width: 80dvw !important;
+    max-width: 80dvw !important;
   }
 }
