@@ -7,18 +7,20 @@ requires-python = ">=3.12"
 license = { text = "MIT" }
 
 [tool.ruff]
-src = ["backend", "executor", "executor_manager"]
+src = ["backend", "executor", "executor_manager", "im"]
 
 [tool.pyrefly]
 
 project-includes = [
     "backend",
     "executor",
-    "executor_manager"
+    "executor_manager",
+    "im"
 ]
 
 search_path = [
     "backend",
     "executor",
-    "executor_manager"
+    "executor_manager",
+    "im"
 ]

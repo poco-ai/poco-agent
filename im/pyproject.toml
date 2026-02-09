@@ -1,0 +1,25 @@
+[project]
+name = "im"
+version = "0.1.0"
+description = "Independent IM integration service for Poco (polling-based)"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.128.0",
+    "httpx>=0.28.1",
+    "pydantic-settings>=2.12.0",
+    "sqlalchemy>=2.0.45",
+    "uvicorn>=0.40.0",
+]
+
+[tool.pyrefly]
+project-includes = [
+    "**/*.py*",
+    "**/*.ipynb",
+]
+
+search_path = ["."]
+
+[[tool.uv.index]]
+url = "https://pypi.tuna.tsinghua.edu.cn/simple"
+default = true

@@ -5,3 +5,7 @@
 .DS_Store
 uv.lock
 .spec-workflow/
+
+# Local IM service database (default sqlite)
+im.db
+im/*.db

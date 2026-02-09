@@ -181,5 +181,45 @@ services:
     ports:
       - "${FRONTEND_PORT:-3000}:3000"
 
+  im:
+    profiles: ["im"]
+    build:
+      context: .
+      dockerfile: docker/im/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_started
+    environment:
+      HOST: 0.0.0.0
+      PORT: 8002
+
+      DATABASE_URL: ${IM_DATABASE_URL:-sqlite:///./im.db}
+      BACKEND_URL: ${BACKEND_URL:-http://backend:8000}
+      BACKEND_USER_ID: ${BACKEND_USER_ID:-default}
+      FRONTEND_PUBLIC_URL: ${FRONTEND_PUBLIC_URL:-http://localhost:3000}
+      FRONTEND_DEFAULT_LANG: ${FRONTEND_DEFAULT_LANG:-zh}
+
+      POLL_USER_INPUT_INTERVAL_SECONDS: ${POLL_USER_INPUT_INTERVAL_SECONDS:-2}
+      POLL_SESSIONS_RECENT_INTERVAL_SECONDS: ${POLL_SESSIONS_RECENT_INTERVAL_SECONDS:-5}
+      POLL_SESSIONS_FULL_INTERVAL_SECONDS: ${POLL_SESSIONS_FULL_INTERVAL_SECONDS:-300}
+      POLL_HTTP_TIMEOUT_SECONDS: ${POLL_HTTP_TIMEOUT_SECONDS:-10}
+
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_WEBHOOK_SECRET_TOKEN: ${TELEGRAM_WEBHOOK_SECRET_TOKEN:-}
+
+      FEISHU_ENABLED: ${FEISHU_ENABLED:-true}
+      FEISHU_APP_ID: ${FEISHU_APP_ID:-}
+      FEISHU_APP_SECRET: ${FEISHU_APP_SECRET:-}
+      FEISHU_VERIFICATION_TOKEN: ${FEISHU_VERIFICATION_TOKEN:-}
+      FEISHU_OPEN_BASE_URL: ${FEISHU_OPEN_BASE_URL:-https://open.feishu.cn}
+
+      DINGTALK_ENABLED: ${DINGTALK_ENABLED:-true}
+      DINGTALK_WEBHOOK_TOKEN: ${DINGTALK_WEBHOOK_TOKEN:-}
+      DINGTALK_WEBHOOK_URL: ${DINGTALK_WEBHOOK_URL:-}
+
+    ports:
+      - "${IM_PORT:-8002}:8002"
+
 volumes:
   postgres_data:
