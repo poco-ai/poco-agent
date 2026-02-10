@@ -217,10 +217,14 @@ class PollerService:
         ch: Channel | None = db.get(Channel, channel_id)
         if not ch or not ch.enabled:
             return
-        destination = (
-            ChannelDeliveryRepository.get_send_address(db, channel_id=channel_id)
-            or ch.destination
-        )
+        # DingTalk sessionWebhook can expire; prefer stable conversationId for polling-based notifications.
+        if ch.provider == "dingtalk":
+            destination = ch.destination
+        else:
+            destination = (
+                ChannelDeliveryRepository.get_send_address(db, channel_id=channel_id)
+                or ch.destination
+            )
         await self.gateway.send_text(
             provider=ch.provider,
             destination=destination,

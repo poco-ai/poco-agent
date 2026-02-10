@@ -60,6 +60,18 @@ class Settings(BaseSettings):
     dingtalk_webhook_token: str | None = Field(
         default=None, alias="DINGTALK_WEBHOOK_TOKEN"
     )
+    dingtalk_stream_enabled: bool = Field(default=True, alias="DINGTALK_STREAM_ENABLED")
+    dingtalk_stream_subscribe_events: bool = Field(
+        default=False, alias="DINGTALK_STREAM_SUBSCRIBE_EVENTS"
+    )
+    # DingTalk OpenAPI (required for proactive messages via conversationId)
+    dingtalk_app_key: str | None = Field(default=None, alias="DINGTALK_APP_KEY")
+    dingtalk_app_secret: str | None = Field(default=None, alias="DINGTALK_APP_SECRET")
+    dingtalk_robot_code: str | None = Field(default=None, alias="DINGTALK_ROBOT_CODE")
+    dingtalk_open_base_url: str = Field(
+        default="https://api.dingtalk.com",
+        alias="DINGTALK_OPEN_BASE_URL",
+    )
 
     # Optional outbound-only webhook integrations (notifications only)
     feishu_webhook_url: str | None = Field(default=None, alias="FEISHU_WEBHOOK_URL")

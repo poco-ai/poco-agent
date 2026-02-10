@@ -50,6 +50,16 @@ FEISHU_OPEN_BASE_URL=https://open.feishu.cn
 # DingTalk
 DINGTALK_ENABLED=true
 DINGTALK_WEBHOOK_TOKEN=
+# Stream Mode（推荐，用于“收消息/事件推送/卡片回调”，无需公网 webhook）
+DINGTALK_STREAM_ENABLED=true
+# 可选：订阅全量事件（EVENT topic="*"），默认 false（事件较多）
+DINGTALK_STREAM_SUBSCRIBE_EVENTS=false
+# OpenAPI（推荐，用于“主动发消息/通知”，不依赖 sessionWebhook）
+DINGTALK_APP_KEY=
+DINGTALK_APP_SECRET=
+DINGTALK_ROBOT_CODE=
+DINGTALK_OPEN_BASE_URL=https://api.dingtalk.com
+# 可选：仅出站的固定 webhook（兜底/通知用，通常是“群自定义机器人”的 webhook）
 DINGTALK_WEBHOOK_URL=
 ```
 
@@ -57,7 +67,7 @@ DINGTALK_WEBHOOK_URL=
 
 - Telegram: `POST /api/v1/webhooks/telegram`
 - 飞书: `POST /api/v1/webhooks/feishu`
-- 钉钉: `POST /api/v1/webhooks/dingtalk`
+- 钉钉（Webhook 模式可选）：`POST /api/v1/webhooks/dingtalk`（如使用 Stream 模式则不需要配置公网回调）
 
 ### IM 命令
 
