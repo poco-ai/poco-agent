@@ -9,6 +9,7 @@ import {
   ChevronDown,
   ChevronRight,
   AppWindow,
+  Bot,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ToolUseBlock, ToolResultBlock } from "@/features/chat/types";
@@ -22,6 +23,7 @@ import { Badge } from "@/components/ui/badge";
 
 interface ToolChainProps {
   blocks: (ToolUseBlock | ToolResultBlock)[];
+  variant?: "tool" | "subagent";
 }
 
 interface ToolStepProps {
@@ -30,6 +32,11 @@ interface ToolStepProps {
   isOpen: boolean;
   onToggle: () => void;
 }
+
+type ToolStepPair = {
+  use: ToolUseBlock;
+  result?: ToolResultBlock;
+};
 
 const POCO_PLAYWRIGHT_MCP_PREFIX = "mcp____poco_playwright__";
 
@@ -57,12 +64,17 @@ function pickFirstString(
   return null;
 }
 
+function isTaskSubagentStep(step: ToolStepPair): boolean {
+  return step.use.name === "Task";
+}
+
 function ToolStep({ toolUse, toolResult, isOpen, onToggle }: ToolStepProps) {
   const { t } = useT("translation");
   const isCompleted = !!toolResult;
   const isError = toolResult?.is_error;
   const isLoading = !isCompleted;
   const isTaskTool = toolUse.name === "Task";
+  const isSubagentTool = isTaskTool;
 
   const playwrightBrowserMeta = React.useMemo(() => {
     if (!toolUse.name.startsWith(POCO_PLAYWRIGHT_MCP_PREFIX)) return null;
@@ -121,11 +133,8 @@ function ToolStep({ toolUse, toolResult, isOpen, onToggle }: ToolStepProps) {
         : typeof input["subagentType"] === "string"
           ? input["subagentType"]
           : "";
-    const description =
-      typeof input["description"] === "string" ? input["description"] : "";
     return {
       subagentType: subagentType.trim(),
-      description: description.trim(),
     };
   }, [isTaskTool, toolUse.input]);
 
@@ -152,9 +161,8 @@ function ToolStep({ toolUse, toolResult, isOpen, onToggle }: ToolStepProps) {
   const toolLabel = playwrightBrowserMeta
     ? `${t("chat.statusBar.browser")} (${playwrightBrowserMeta.toolName})`
     : toolUse.name;
-
-  const toolDescription =
-    taskMeta?.description || playwrightBrowserMeta?.summary || null;
+  const subagentName = taskMeta?.subagentType || toolUse.name;
+  const toolDescription = playwrightBrowserMeta?.summary || null;
 
   return (
     <div className="border border-border/50 rounded-md bg-muted/30 overflow-hidden mb-2 last:mb-0">
@@ -173,12 +181,13 @@ function ToolStep({ toolUse, toolResult, isOpen, onToggle }: ToolStepProps) {
           <div className="flex-1 min-w-0 flex items-center gap-2">
             {playwrightBrowserMeta ? (
               <AppWindow className="size-3.5 text-muted-foreground/80 shrink-0" />
+            ) : isSubagentTool ? (
+              <Bot className="size-3.5 text-muted-foreground/80 shrink-0" />
             ) : null}
             <span className="text-xs font-mono font-medium text-foreground truncate">
-              {toolLabel}
-              {taskMeta?.subagentType ? ` (${taskMeta.subagentType})` : ""}
+              {isSubagentTool ? subagentName : toolLabel}
             </span>
-            {toolDescription ? (
+            {!isSubagentTool && toolDescription ? (
               <span className="text-[11px] text-muted-foreground truncate">
                 {toolDescription}
               </span>
@@ -257,19 +266,17 @@ function ToolStep({ toolUse, toolResult, isOpen, onToggle }: ToolStepProps) {
   );
 }
 
-export function ToolChain({ blocks }: ToolChainProps) {
+export function ToolChain({ blocks, variant = "tool" }: ToolChainProps) {
   const { t } = useT("translation");
   const [openStepId, setOpenStepId] = React.useState<string | null>(null);
 
   // Group blocks into steps (Use + Result pair)
   const steps = React.useMemo(() => {
-    const result: { use: ToolUseBlock; result?: ToolResultBlock }[] = [];
-    const useMap = new Map<string, ToolUseBlock>();
+    const result: ToolStepPair[] = [];
 
     // First pass: find all uses
     for (const block of blocks) {
       if (block._type === "ToolUseBlock") {
-        useMap.set(block.id, block);
         result.push({ use: block });
       }
     }
@@ -285,6 +292,8 @@ export function ToolChain({ blocks }: ToolChainProps) {
     }
     return result;
   }, [blocks]);
+  const isSubagentChain =
+    variant === "subagent" || steps.every(isTaskSubagentStep);
 
   const isRunning = steps.some((s) => !s.result);
   // Initialize open if running, closed if completed (history)
@@ -316,8 +325,16 @@ export function ToolChain({ blocks }: ToolChainProps) {
       <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
         <CollapsibleTrigger className="flex items-center gap-2 w-full cursor-pointer select-none text-xs font-medium text-muted-foreground hover:text-foreground transition-colors group">
           <div className="flex items-center gap-1.5">
-            <SquareTerminal className="size-3.5" />
-            <span>{t("chat.toolExecution")}</span>
+            {isSubagentChain ? (
+              <Bot className="size-3.5" />
+            ) : (
+              <SquareTerminal className="size-3.5" />
+            )}
+            <span>
+              {isSubagentChain
+                ? t("chat.subagentExecution")
+                : t("chat.toolExecution")}
+            </span>
             {steps.length > 0 && (
               <span className="opacity-70">({steps.length})</span>
             )}

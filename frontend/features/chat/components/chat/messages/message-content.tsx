@@ -130,24 +130,37 @@ export function MessageContent({
   }
 
   // Handle array of blocks (Tools + Text)
-  // We need to group them: sequence of tool blocks -> ToolChain, sequence of text blocks -> Markdown
+  // We need to group them: sequence of tool/subagent blocks -> dedicated chain, sequence of text blocks -> Markdown
+  const toolUseTypeById = new Map<string, "tool" | "subagent">();
+  for (const block of content) {
+    if (block._type === "ToolUseBlock") {
+      toolUseTypeById.set(
+        block.id,
+        block.name === "Task" ? "subagent" : "tool",
+      );
+    }
+  }
+
   const groups: {
-    type: "text" | "tool" | "thinking";
+    type: "text" | "tool" | "subagent" | "thinking";
     blocks: MessageBlock[];
   }[] = [];
   let currentGroup: {
-    type: "text" | "tool" | "thinking";
+    type: "text" | "tool" | "subagent" | "thinking";
     blocks: MessageBlock[];
   } | null = null;
 
   for (const block of content) {
-    const isTool =
-      block._type === "ToolUseBlock" || block._type === "ToolResultBlock";
-    const type = isTool
-      ? "tool"
-      : block._type === "ThinkingBlock"
-        ? "thinking"
-        : "text";
+    let type: "text" | "tool" | "subagent" | "thinking";
+    if (block._type === "ToolUseBlock") {
+      type = block.name === "Task" ? "subagent" : "tool";
+    } else if (block._type === "ToolResultBlock") {
+      type = toolUseTypeById.get(block.tool_use_id) ?? "tool";
+    } else if (block._type === "ThinkingBlock") {
+      type = "thinking";
+    } else {
+      type = "text";
+    }
 
     if (!currentGroup || currentGroup.type !== type) {
       currentGroup = { type, blocks: [] };
@@ -159,11 +172,12 @@ export function MessageContent({
   return (
     <div className="w-full min-w-0 space-y-4 overflow-hidden">
       {groups.map((group, index) => {
-        if (group.type === "tool") {
+        if (group.type === "tool" || group.type === "subagent") {
           return (
             <ToolChain
               key={index}
               blocks={group.blocks as (ToolUseBlock | ToolResultBlock)[]}
+              variant={group.type}
             />
           );
         } else if (group.type === "thinking") {

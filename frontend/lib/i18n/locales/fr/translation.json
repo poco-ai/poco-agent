@@ -219,6 +219,7 @@
     "thinkingTitle": "Réflexion",
     "toolExecution": "Exécution d'outil",
     "subagentTranscript": "Transcription du sub-agent",
+    "subagentExecution": "Sous-agent",
     "input": "Entrée",
     "output": "Sortie",
     "scrollToLatestMessage": "Aller au dernier message",

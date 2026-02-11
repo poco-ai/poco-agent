@@ -220,6 +220,7 @@
     "thinkingTitle": "Denken",
     "toolExecution": "Tool-Ausführung",
     "subagentTranscript": "Subagent-Protokoll",
+    "subagentExecution": "Subagent",
     "input": "Eingabe",
     "output": "Ausgabe",
     "scrollToLatestMessage": "Zur neuesten Nachricht springen",

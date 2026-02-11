@@ -220,6 +220,7 @@
     "thinkingTitle": "思考过程",
     "toolExecution": "工具执行",
     "subagentTranscript": "子代理过程",
+    "subagentExecution": "子代理",
     "input": "输入",
     "output": "输出",
     "scrollToLatestMessage": "跳转到最新消息",

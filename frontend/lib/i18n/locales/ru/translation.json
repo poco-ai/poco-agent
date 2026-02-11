@@ -219,6 +219,7 @@
     "thinkingTitle": "Размышление",
     "toolExecution": "Выполнение инструмента",
     "subagentTranscript": "Транскрипция субагента",
+    "subagentExecution": "Субагент",
     "input": "Ввод",
     "output": "Вывод",
     "scrollToLatestMessage": "Перейти к последнему сообщению",

@@ -220,6 +220,7 @@
     "thinkingTitle": "Thinking",
     "toolExecution": "Tool Execution",
     "subagentTranscript": "Subagent transcript",
+    "subagentExecution": "Subagent",
     "input": "Input",
     "output": "Output",
     "scrollToLatestMessage": "Jump to latest message",

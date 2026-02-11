@@ -219,6 +219,7 @@
     "thinkingTitle": "思考中",
     "toolExecution": "ツール実行",
     "subagentTranscript": "サブエージェントの記録",
+    "subagentExecution": "サブエージェント",
     "input": "入力",
     "output": "出力",
     "scrollToLatestMessage": "最新メッセージにジャンプ",
