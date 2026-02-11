@@ -183,7 +183,7 @@ export function ChatInput({
           className="hidden"
           onChange={handleFileSelect}
         />
-        <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+        <div className="rounded-2xl border border-border bg-card shadow-sm">
           {/* Attachments */}
           {attachments.length > 0 && (
             <div className="flex flex-wrap gap-2 px-4 pt-4">
@@ -201,7 +201,7 @@ export function ChatInput({
           {/* Input area */}
           <div className="relative px-4 pb-3 pt-4">
             {slashAutocomplete.isOpen ? (
-              <div className="absolute bottom-full left-0 mb-2 w-full overflow-hidden rounded-lg border border-border bg-popover shadow-md">
+              <div className="absolute bottom-full left-0 z-50 mb-2 w-full overflow-hidden rounded-lg border border-border bg-popover shadow-md">
                 <div className="max-h-64 overflow-auto py-1">
                   {slashAutocomplete.suggestions.map((item, idx) => {
                     const selected = idx === slashAutocomplete.activeIndex;

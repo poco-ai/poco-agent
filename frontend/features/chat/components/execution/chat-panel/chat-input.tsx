@@ -212,9 +212,9 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
             ))}
           </div>
         )}
-        <div className="relative flex w-full min-w-0 items-center gap-2 overflow-hidden rounded-lg border border-border bg-card px-3 py-2">
+        <div className="relative flex w-full min-w-0 items-center gap-2 rounded-lg border border-border bg-card px-3 py-2">
           {slashAutocomplete.isOpen ? (
-            <div className="absolute bottom-full left-0 mb-2 w-full overflow-hidden rounded-lg border border-border bg-popover shadow-md">
+            <div className="absolute bottom-full left-0 z-50 mb-2 w-full overflow-hidden rounded-lg border border-border bg-popover shadow-md">
               <div className="max-h-64 overflow-auto py-1">
                 {slashAutocomplete.suggestions.map((item, idx) => {
                   const selected = idx === slashAutocomplete.activeIndex;

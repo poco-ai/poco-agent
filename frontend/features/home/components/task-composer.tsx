@@ -614,7 +614,7 @@ export function TaskComposer({
       {/* 输入区域 */}
       <div className="relative px-4 pb-3 pt-4">
         {slashAutocomplete.isOpen ? (
-          <div className="absolute bottom-full left-0 mb-2 w-full overflow-hidden rounded-lg border border-border bg-popover shadow-md">
+          <div className="absolute bottom-full left-0 z-50 mb-2 w-full overflow-hidden rounded-lg border border-border bg-popover shadow-md">
             <div className="max-h-64 overflow-auto py-1">
               {slashAutocomplete.suggestions.map((item, idx) => {
                 const selected = idx === slashAutocomplete.activeIndex;
