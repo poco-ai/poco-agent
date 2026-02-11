@@ -25,12 +25,15 @@ class PollerService:
         self.backend = BackendClient()
         self.formatter = MessageFormatter()
         self.gateway = NotificationGateway()
+        # Hint updated by the session-messages loop to gate user-input polling.
+        self._has_non_terminal_targets = True
 
     async def run_user_input_loop(self) -> None:
         interval = max(0.2, float(self.settings.poll_user_input_interval_seconds))
         while True:
             try:
-                await self._poll_user_input_requests()
+                if self._has_non_terminal_targets:
+                    await self._poll_user_input_requests()
             except asyncio.CancelledError:
                 raise
             except Exception:
@@ -157,8 +160,10 @@ class PollerService:
             return
 
         if not sessions:
+            self._has_non_terminal_targets = False
             return
 
+        has_non_terminal_targets = False
         db = SessionLocal()
         try:
             for item in sessions:
@@ -174,6 +179,7 @@ class PollerService:
                 )
                 if not target_channel_ids:
                     continue
+                has_non_terminal_targets = True
                 await self._emit_assistant_text_updates(
                     db,
                     session_id=session_id,
@@ -182,6 +188,7 @@ class PollerService:
                 )
         finally:
             db.close()
+        self._has_non_terminal_targets = has_non_terminal_targets
 
     async def _poll_sessions_page(self, *, limit: int, offset: int) -> int:
         try:
