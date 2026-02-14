@@ -1,5 +1,5 @@
 /**
- * LocalStorage封装，带类型安全和错误处理
+ * LocalStorage wrapper with type safety and error handling.
  */
 const PREFIX = "poco_";
 
@@ -11,7 +11,7 @@ export type StorageKey =
   | "connector_state";
 
 /**
- * 从localStorage读取数据
+ * Read a value from localStorage.
  */
 export function getLocalStorage<T>(key: StorageKey): T | null {
   if (typeof window === "undefined") return null;
@@ -25,7 +25,7 @@ export function getLocalStorage<T>(key: StorageKey): T | null {
 }
 
 /**
- * 写入数据到localStorage
+ * Write a value to localStorage.
  */
 export function setLocalStorage<T>(key: StorageKey, value: T): void {
   if (typeof window === "undefined") return;
@@ -38,7 +38,7 @@ export function setLocalStorage<T>(key: StorageKey, value: T): void {
 }
 
 /**
- * 从localStorage删除数据
+ * Remove a value from localStorage.
  */
 export function removeLocalStorage(key: StorageKey): void {
   if (typeof window === "undefined") return;
@@ -54,7 +54,7 @@ export function removeLocalStorage(key: StorageKey): void {
 }
 
 /**
- * 清空所有Poco相关的localStorage数据
+ * Clear all Poco-related localStorage entries.
  */
 export function clearLocalStorage(): void {
   if (typeof window === "undefined") return;

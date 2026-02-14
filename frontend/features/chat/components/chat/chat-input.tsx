@@ -320,7 +320,9 @@ export function ChatInput({
                             <span>{connector.title}</span>
                           </div>
                           {/* TODO: Implement connection logic */}
-                          <span className="text-xs font-medium">连接</span>
+                          <span className="text-xs font-medium">
+                            {t("hero.connect")}
+                          </span>
                         </div>
                       </DropdownMenuItem>
                     ));
@@ -351,7 +353,7 @@ export function ChatInput({
           </div>
         </div>
         <p className="text-xs text-muted-foreground mt-2 text-center">
-          Enter {t("hints.send")}，Shift + Enter {t("hints.newLine")}
+          {t("chat.inputPlaceholder")}
         </p>
       </div>
     </div>

@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { toast } from "sonner";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useT } from "@/lib/i18n/client";
 import { scheduledTasksService } from "@/features/scheduled-tasks/services/scheduled-tasks-service";
@@ -12,44 +13,29 @@ import type {
 } from "@/features/scheduled-tasks/types";
 import type { RunResponse } from "@/features/chat/types/api/run";
 
+const SCHEDULED_TASKS_QUERY_KEY = ["scheduledTasks"] as const;
+
 export function useScheduledTasksStore() {
   const { t } = useT("translation");
-  const [tasks, setTasks] = useState<ScheduledTask[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [savingId, setSavingId] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
-  const refresh = useCallback(async () => {
-    try {
-      const latest = await scheduledTasksService.list();
-      setTasks(latest);
-    } catch (error) {
-      console.error("[ScheduledTasks] refresh failed", error);
-      toast.error(t("library.scheduledTasks.toasts.error"));
-    }
-  }, [t]);
+  const tasksQuery = useQuery({
+    queryKey: SCHEDULED_TASKS_QUERY_KEY,
+    queryFn: () => scheduledTasksService.list(),
+  });
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setIsLoading(true);
-      try {
-        const data = await scheduledTasksService.list();
-        setTasks(data);
-      } catch (error) {
-        console.error("[ScheduledTasks] list failed", error);
-        toast.error(t("library.scheduledTasks.toasts.error"));
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchData();
-  }, [t]);
+  const tasks = tasksQuery.data ?? [];
 
   const createTask = useCallback(
     async (input: ScheduledTaskCreateInput): Promise<ScheduledTask | null> => {
       setSavingId("create");
       try {
         const created = await scheduledTasksService.create(input);
-        setTasks((prev) => [created, ...prev]);
+        queryClient.setQueryData<ScheduledTask[]>(
+          SCHEDULED_TASKS_QUERY_KEY,
+          (prev) => [created, ...(prev ?? [])],
+        );
         toast.success(t("library.scheduledTasks.toasts.created"));
         return created;
       } catch (error) {
@@ -60,7 +46,7 @@ export function useScheduledTasksStore() {
         setSavingId(null);
       }
     },
-    [t],
+    [queryClient, t],
   );
 
   const updateTask = useCallback(
@@ -68,10 +54,12 @@ export function useScheduledTasksStore() {
       setSavingId(taskId);
       try {
         const updated = await scheduledTasksService.update(taskId, input);
-        setTasks((prev) =>
-          prev.map((item) =>
-            item.scheduled_task_id === taskId ? updated : item,
-          ),
+        queryClient.setQueryData<ScheduledTask[]>(
+          SCHEDULED_TASKS_QUERY_KEY,
+          (prev) =>
+            (prev ?? []).map((item) =>
+              item.scheduled_task_id === taskId ? updated : item,
+            ),
         );
         toast.success(t("library.scheduledTasks.toasts.updated"));
       } catch (error) {
@@ -81,7 +69,7 @@ export function useScheduledTasksStore() {
         setSavingId(null);
       }
     },
-    [t],
+    [queryClient, t],
   );
 
   const removeTask = useCallback(
@@ -89,8 +77,10 @@ export function useScheduledTasksStore() {
       setSavingId(taskId);
       try {
         await scheduledTasksService.remove(taskId);
-        setTasks((prev) =>
-          prev.filter((item) => item.scheduled_task_id !== taskId),
+        queryClient.setQueryData<ScheduledTask[]>(
+          SCHEDULED_TASKS_QUERY_KEY,
+          (prev) =>
+            (prev ?? []).filter((item) => item.scheduled_task_id !== taskId),
         );
         toast.success(t("library.scheduledTasks.toasts.deleted"));
       } catch (error) {
@@ -100,7 +90,7 @@ export function useScheduledTasksStore() {
         setSavingId(null);
       }
     },
-    [t],
+    [queryClient, t],
   );
 
   const triggerTask = useCallback(
@@ -109,7 +99,9 @@ export function useScheduledTasksStore() {
       try {
         const resp = await scheduledTasksService.trigger(taskId);
         toast.success(t("library.scheduledTasks.toasts.triggered"));
-        await refresh();
+        await queryClient.invalidateQueries({
+          queryKey: SCHEDULED_TASKS_QUERY_KEY,
+        });
         return resp;
       } catch (error) {
         console.error("[ScheduledTasks] trigger failed", error);
@@ -119,7 +111,7 @@ export function useScheduledTasksStore() {
         setSavingId(null);
       }
     },
-    [t, refresh],
+    [queryClient, t],
   );
 
   const listRuns = useCallback(
@@ -135,9 +127,18 @@ export function useScheduledTasksStore() {
     [t],
   );
 
+  const refresh = useCallback(async () => {
+    try {
+      await tasksQuery.refetch();
+    } catch (error) {
+      console.error("[ScheduledTasks] refresh failed", error);
+      toast.error(t("library.scheduledTasks.toasts.error"));
+    }
+  }, [t, tasksQuery]);
+
   return {
     tasks,
-    isLoading,
+    isLoading: tasksQuery.isLoading,
     savingId,
     refresh,
     createTask,

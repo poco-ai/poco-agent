@@ -66,7 +66,7 @@ interface CollapsibleProjectItemProps {
 }
 
 /**
- * 可折叠的项目项，包含项目及其任务列表
+ * Collapsible project item with its task list.
  */
 export function CollapsibleProjectItem({
   project,
@@ -147,7 +147,7 @@ export function CollapsibleProjectItem({
         ref={setNodeRef}
         className={cn("relative w-full", isOver && "bg-primary/10")}
       >
-        {/* 项目标题行 */}
+        {/* Project header row */}
         <div className="relative group/project-card">
           <SidebarMenuButton
             asChild
@@ -220,14 +220,14 @@ export function CollapsibleProjectItem({
             </div>
           </SidebarMenuButton>
 
-          {/* 任务数量 - 默认显示，悬浮或下拉菜单打开时隐藏 */}
+          {/* Task count (visible by default; hidden on hover or when menu is open). */}
           {!isDropdownOpen && (
             <SidebarMenuBadge className="right-2 opacity-100 transition-opacity group-hover/project-card:opacity-0 group-focus-within/project-card:opacity-0 group-data-[collapsible=icon]:hidden">
               {tasks.length}
             </SidebarMenuBadge>
           )}
 
-          {/* 更多按钮 - 默认隐藏，悬浮时显示 */}
+          {/* More actions (hidden by default; shown on hover). */}
           {onRenameProject && !isSelectionMode && (
             <DropdownMenu
               open={isDropdownOpen}
@@ -271,7 +271,7 @@ export function CollapsibleProjectItem({
           )}
         </div>
 
-        {/* 任务列表（可折叠） */}
+        {/* Task list (collapsible) */}
         {isExpanded && (
           <div className="mt-0.5 min-w-0 max-w-[calc(var(--sidebar-width)-16px)] overflow-hidden">
             <TaskHistoryList

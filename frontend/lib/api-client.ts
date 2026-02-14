@@ -1,5 +1,6 @@
 import { ApiError } from "./errors";
 import type { ApiResponse } from "@/types";
+import { logger } from "@/lib/logger";
 
 export const API_PREFIX = "/api/v1";
 
@@ -151,10 +152,6 @@ async function resolveAuthToken(): Promise<string | null> {
     }
   }
 
-  if (typeof window === "undefined") {
-    return null;
-  }
-
   try {
     return (
       window.localStorage.getItem("access_token") ||
@@ -188,7 +185,7 @@ export async function apiFetch<T>(
   const baseUrl = getApiBaseUrl();
   const fullUrl = `${baseUrl}${API_PREFIX}${endpoint}`;
 
-  console.log(
+  logger.debug(
     `%c[API] ${options.method || "GET"} ${endpoint}`,
     "color: #0ea5e9; font-weight: bold;",
   );
@@ -232,7 +229,7 @@ export async function apiFetch<T>(
           ? String((payload as { message?: string }).message)
           : response.statusText;
 
-      console.log(
+      logger.debug(
         `%c[API] Error ${endpoint}`,
         "color: #ef4444; font-weight: bold;",
         { status: response.status, message, payload },
@@ -245,7 +242,7 @@ export async function apiFetch<T>(
       );
     }
 
-    console.log(
+    logger.debug(
       `%c[API] Success ${endpoint}`,
       "color: #22c55e; font-weight: bold;",
       payload,

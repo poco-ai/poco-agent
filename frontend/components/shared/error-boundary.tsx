@@ -4,7 +4,9 @@ import { Component, ReactNode } from "react";
 import { AlertTriangle, RefreshCw, Home } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { logError } from "@/lib/errors";
+import { isDev } from "@/lib/env";
 import { fallbackLng, languages } from "@/lib/i18n/settings";
+import { useT } from "@/lib/i18n/client";
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -23,18 +25,66 @@ interface NextJSErrorInfo extends React.ErrorInfo {
   digest?: string;
 }
 
-// Type declaration for import.meta.env
-declare global {
-  interface ImportMetaEnv {
-    readonly DEV: boolean;
-    readonly MODE: string;
-    readonly BASE_URL: string;
-    readonly PROD: boolean;
-    readonly SSR: boolean;
-  }
-  interface ImportMeta {
-    readonly env: ImportMetaEnv;
-  }
+type DefaultErrorFallbackProps = {
+  error: Error | null;
+  errorInfo: React.ErrorInfo | null;
+  onRetry: () => void;
+  onGoHome: () => void;
+  showDetails: boolean;
+};
+
+function DefaultErrorFallback({
+  error,
+  errorInfo,
+  onRetry,
+  onGoHome,
+  showDetails,
+}: DefaultErrorFallbackProps) {
+  const { t } = useT("translation");
+
+  return (
+    <div className="flex min-h-[400px] items-center justify-center p-4">
+      <div className="flex max-w-md flex-col items-center text-center">
+        <div className="mb-4 rounded-full bg-destructive/10 p-4">
+          <AlertTriangle className="h-12 w-12 text-destructive" />
+        </div>
+
+        <h2 className="mb-2 text-2xl font-semibold tracking-tight">
+          {t("errors.boundary.title")}
+        </h2>
+
+        <p className="mb-6 text-sm text-muted-foreground">
+          {error?.message || t("errors.boundary.description")}
+        </p>
+
+        {showDetails && error && (
+          <details className="mb-6 w-full rounded-lg bg-muted p-4 text-left">
+            <summary className="mb-2 cursor-pointer font-mono text-sm font-semibold">
+              {t("errors.boundary.details")}
+            </summary>
+            <pre className="overflow-auto text-xs">
+              <code>
+                {error.toString()}
+                {"\n"}
+                {errorInfo?.componentStack}
+              </code>
+            </pre>
+          </details>
+        )}
+
+        <div className="flex gap-3">
+          <Button onClick={onRetry} variant="default">
+            <RefreshCw className="mr-2 h-4 w-4" />
+            {t("errors.boundary.tryAgain")}
+          </Button>
+          <Button onClick={onGoHome} variant="outline">
+            <Home className="mr-2 h-4 w-4" />
+            {t("errors.boundary.goHome")}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 /**
@@ -108,50 +158,14 @@ export class ErrorBoundary extends Component<
         return this.props.fallback;
       }
 
-      // Default error UI
       return (
-        <div className="flex min-h-[400px] items-center justify-center p-4">
-          <div className="flex max-w-md flex-col items-center text-center">
-            <div className="mb-4 rounded-full bg-destructive/10 p-4">
-              <AlertTriangle className="h-12 w-12 text-destructive" />
-            </div>
-
-            <h2 className="mb-2 text-2xl font-semibold tracking-tight">
-              Something went wrong
-            </h2>
-
-            <p className="mb-6 text-sm text-muted-foreground">
-              {this.state.error?.message ||
-                "An unexpected error occurred. Please try again."}
-            </p>
-
-            {import.meta.env.DEV && this.state.error && (
-              <details className="mb-6 w-full rounded-lg bg-muted p-4 text-left">
-                <summary className="mb-2 cursor-pointer font-mono text-sm font-semibold">
-                  Error Details
-                </summary>
-                <pre className="overflow-auto text-xs">
-                  <code>
-                    {this.state.error.toString()}
-                    {"\n"}
-                    {this.state.errorInfo?.componentStack}
-                  </code>
-                </pre>
-              </details>
-            )}
-
-            <div className="flex gap-3">
-              <Button onClick={this.handleReset} variant="default">
-                <RefreshCw className="mr-2 h-4 w-4" />
-                Try Again
-              </Button>
-              <Button onClick={this.handleGoHome} variant="outline">
-                <Home className="mr-2 h-4 w-4" />
-                Go Home
-              </Button>
-            </div>
-          </div>
-        </div>
+        <DefaultErrorFallback
+          error={this.state.error}
+          errorInfo={this.state.errorInfo}
+          onRetry={this.handleReset}
+          onGoHome={this.handleGoHome}
+          showDetails={isDev}
+        />
       );
     }
 

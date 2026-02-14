@@ -7,6 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "check": "pnpm lint && pnpm typecheck && pnpm build",
     "format": "prettier --write ."
   },
   "dependencies": {
@@ -40,6 +42,7 @@
     "@radix-ui/react-toggle": "^1.1.10",
     "@radix-ui/react-toggle-group": "^1.1.11",
     "@radix-ui/react-tooltip": "^1.2.8",
+    "@tanstack/react-query": "^5.90.21",
     "accept-language": "^3.0.20",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

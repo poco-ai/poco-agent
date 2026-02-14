@@ -611,7 +611,7 @@ export function TaskComposer({
         }}
       />
 
-      {/* 输入区域 */}
+      {/* Input area */}
       <div className="relative px-4 pb-3 pt-4">
         {slashAutocomplete.isOpen ? (
           <div className="absolute bottom-full left-0 z-50 mb-2 w-full overflow-hidden rounded-lg border border-border bg-popover shadow-md">
@@ -737,9 +737,9 @@ export function TaskComposer({
         </div>
       ) : null}
 
-      {/* 底部工具栏 */}
+      {/* Footer toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-3 px-4 pb-4">
-        {/* 定时摘要靠左 */}
+        {/* Schedule summary (left) */}
         <div className="flex min-h-[36px] flex-1 items-center gap-2">
           {mode === "scheduled" ? (
             <Badge
@@ -763,7 +763,7 @@ export function TaskComposer({
           ) : null}
         </div>
 
-        {/* 操作按钮靠右 */}
+        {/* Action buttons (right) */}
         <div className="flex flex-wrap items-center justify-end gap-1">
           <Tooltip>
             <TooltipTrigger asChild>

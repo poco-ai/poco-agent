@@ -22,122 +22,38 @@ import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
 import { MarkdownCode, MarkdownPre } from "@/components/shared/markdown-code";
 import { SyntaxHighlighter, oneDark, oneLight } from "@/lib/markdown/prism";
+import {
+  DOC_VIEWER_TYPE_MAP,
+  DEFAULT_TEXT_LANGUAGE,
+  ensureAbsoluteUrl,
+  extractExtension,
+  getTextLanguage,
+} from "./document-viewer-utils";
 
 const dispatchCloseViewer = () => {
   if (typeof window === "undefined") return;
   window.dispatchEvent(new CustomEvent("close-document-viewer"));
 };
 
+function DocViewerLoading() {
+  const { t } = useT("translation");
+  return (
+    <div className="h-full flex items-center justify-center p-8 text-muted-foreground animate-pulse text-sm">
+      {t("artifacts.viewer.loadingEngine")}
+    </div>
+  );
+}
+
 const DocViewer = dynamic<DocViewerProps>(
   () => import("./doc-viewer-client").then((m) => m.DocViewerClient),
   {
     ssr: false,
-    loading: () => {
-      // eslint-disable-next-line react-hooks/rules-of-hooks
-      const { t } = useT("translation");
-      return (
-        <div className="h-full flex items-center justify-center p-8 text-muted-foreground animate-pulse text-sm">
-          {t("artifacts.viewer.loadingEngine")}
-        </div>
-      );
-    },
+    loading: () => <DocViewerLoading />,
   },
 );
 
-const DOC_VIEWER_TYPE_MAP: Record<string, string> = {
-  bmp: "bmp",
-  doc: "doc",
-  docx: "docx",
-  jpg: "jpg",
-  jpeg: "jpg",
-  pdf: "pdf",
-  png: "png",
-  ppt: "ppt",
-  pptx: "pptx",
-  tiff: "tiff",
-  xls: "xls",
-  xlsx: "xlsx",
-};
-
-const TEXT_LANGUAGE_MAP: Record<string, string> = {
-  txt: "text",
-  log: "text",
-  csv: "text",
-  md: "markdown",
-  markdown: "markdown",
-  mdown: "markdown",
-  mdx: "markdown",
-  py: "python",
-  pyw: "python",
-  js: "javascript",
-  jsx: "jsx",
-  ts: "typescript",
-  tsx: "tsx",
-  json: "json",
-  jsonc: "json",
-  html: "markup",
-  htm: "markup",
-  xml: "markup",
-  yml: "yaml",
-  yaml: "yaml",
-  sh: "bash",
-  bash: "bash",
-  zsh: "bash",
-  css: "css",
-  scss: "scss",
-  less: "less",
-  go: "go",
-  java: "java",
-  rb: "ruby",
-  php: "php",
-  swift: "swift",
-  kt: "kotlin",
-  kotlin: "kotlin",
-  cs: "csharp",
-  csharp: "csharp",
-  c: "c",
-  h: "c",
-  cpp: "cpp",
-  cxx: "cpp",
-  hpp: "cpp",
-  mm: "objectivec",
-  m: "objectivec",
-  ps1: "powershell",
-  dockerfile: "docker",
-  env: "ini",
-  ini: "ini",
-  cfg: "ini",
-  conf: "ini",
-  toml: "ini",
-  properties: "ini",
-  rs: "rust",
-  cjs: "javascript",
-  mjs: "javascript",
-};
-
-const MIME_LANGUAGE_RULES: Array<{ test: RegExp; language: string }> = [
-  { test: /^application\/json/i, language: "json" },
-  { test: /javascript/i, language: "javascript" },
-  { test: /typescript/i, language: "typescript" },
-  { test: /python/i, language: "python" },
-  { test: /markdown/i, language: "markdown" },
-  { test: /^text\/(plain|csv)/i, language: "text" },
-  { test: /(shell|bash|zsh)/i, language: "bash" },
-  { test: /(yaml|yml)/i, language: "yaml" },
-  { test: /(html|xml)/i, language: "markup" },
-  { test: /css/i, language: "css" },
-  { test: /java/i, language: "java" },
-  { test: /c\+\+/i, language: "cpp" },
-  { test: /\bc\b/i, language: "c" },
-  { test: /go/i, language: "go" },
-  { test: /rust/i, language: "rust" },
-  { test: /sql/i, language: "sql" },
-];
-
 const VIEW_CLASSNAME =
   "h-full w-full max-h-full animate-in fade-in duration-300 [--tw-enter-opacity:1] [--tw-enter-scale:1] [--tw-enter-translate-x:0] [--tw-enter-translate-y:0] overflow-hidden flex flex-col min-h-0";
-
-const DEFAULT_TEXT_LANGUAGE = "text";
 const NO_SOURCE_ERROR = "NO_SOURCE";
 
 type FileContentState =
@@ -225,50 +141,6 @@ const useFileTextContent = ({
   }, [file, fallbackUrl, refreshKey]);
 
   return { state, refetch } as const;
-};
-
-const ensureAbsoluteUrl = (url?: string | null) => {
-  if (!url) return undefined;
-  if (
-    url.startsWith("http") ||
-    url.startsWith("blob:") ||
-    url.startsWith("data:")
-  ) {
-    return url;
-  }
-  try {
-    if (typeof window !== "undefined") {
-      return new URL(url, window.location.origin).toString();
-    }
-    return url;
-  } catch (error) {
-    console.warn("[DocumentViewer] Failed to resolve URL", error);
-    return url;
-  }
-};
-
-const extractExtension = (file?: FileNode) => {
-  if (!file) return "";
-  const sources = [file.name, file.path, file.url].filter(Boolean) as string[];
-  for (const source of sources) {
-    const sanitized = source.split(/[?#]/)[0];
-    const parts = sanitized.split(".");
-    if (parts.length > 1) {
-      const ext = parts.pop()?.toLowerCase();
-      if (ext) return ext;
-    }
-  }
-  return "";
-};
-
-const getTextLanguage = (ext: string, mime?: string | null) => {
-  if (ext && TEXT_LANGUAGE_MAP[ext]) return TEXT_LANGUAGE_MAP[ext];
-  if (mime) {
-    const match = MIME_LANGUAGE_RULES.find(({ test }) => test.test(mime));
-    if (match) return match.language;
-    if (mime.startsWith("text/")) return DEFAULT_TEXT_LANGUAGE;
-  }
-  return undefined;
 };
 
 interface ViewerToolbarProps {
@@ -756,7 +628,7 @@ const DocumentViewerComponent = ({
         />
         <iframe
           src={resolvedUrl}
-          className="h-full w-full border-0 bg-white"
+          className="h-full w-full border-0 bg-background"
           title={file.name}
           sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"
         />

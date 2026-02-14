@@ -22,12 +22,12 @@ interface AppSidebarProps {
   onOpenSettings?: (tab?: SettingsTabId) => void;
 }
 
-// 默认空函数
+// Default no-op.
 const noop = () => {};
 
 /**
- * 统一的侧边栏组件，根据当前路由自动调整行为
- * 所有页面应使用此组件以保持侧边栏一致
+ * Unified sidebar component that adapts behavior based on the current route.
+ * All pages should use this component to keep the sidebar consistent.
  */
 export function AppSidebar({
   projects,
@@ -53,9 +53,9 @@ export function AppSidebar({
     return Array.isArray(value) ? value[0] : value;
   }, [params]);
 
-  // 处理新建任务
+  // Handle "new task".
   const handleNewTask = React.useCallback(() => {
-    // 在首页或其他页面，执行默认行为
+    // Execute the default behavior if no handler is provided.
     if (onNewTask) {
       onNewTask();
     } else {
@@ -64,7 +64,7 @@ export function AppSidebar({
     }
   }, [router, onNewTask, lng]);
 
-  // 处理创建项目
+  // Handle "create project".
   const handleCreateProject = React.useCallback(
     (name: string) => {
       onCreateProject?.(name);

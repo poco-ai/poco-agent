@@ -3,6 +3,15 @@
   "description": "多服务 AI 智能体执行平台",
   "home": "首页",
   "language": "语言",
+  "errors": {
+    "boundary": {
+      "title": "出错了",
+      "description": "发生了未知错误，请重试。",
+      "details": "错误详情",
+      "tryAgain": "重试",
+      "goHome": "返回首页"
+    }
+  },
   "sidebar": {
     "newTask": "新建任务",
     "search": "搜索",

@@ -3,6 +3,15 @@
   "description": "A multi-service AI agent execution platform",
   "home": "Home",
   "language": "Language",
+  "errors": {
+    "boundary": {
+      "title": "Something went wrong",
+      "description": "An unexpected error occurred. Please try again.",
+      "details": "Error Details",
+      "tryAgain": "Try Again",
+      "goHome": "Go Home"
+    }
+  },
   "sidebar": {
     "newTask": "New Task",
     "search": "Search",

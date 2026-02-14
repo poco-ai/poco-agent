@@ -238,7 +238,7 @@ export function MainSidebar({
     Set<string>
   >(new Set());
 
-  // 管理每个项目的折叠状态
+  // Track expanded/collapsed state for each project.
   const [expandedProjects, setExpandedProjects] = React.useState<Set<string>>(
     new Set(),
   );
@@ -262,13 +262,13 @@ export function MainSidebar({
     }
   }, [params?.id, taskHistory]);
 
-  // 过滤出未归类到项目的任务
+  // Tasks not assigned to any project.
   const unassignedTasks = React.useMemo(
     () => taskHistory.filter((task) => !task.projectId),
     [taskHistory],
   );
 
-  // 按项目分组任务
+  // Group tasks by project.
   const tasksByProject = React.useMemo(() => {
     const grouped = new Map<string, TaskHistoryItem[]>();
     taskHistory.forEach((task) => {
@@ -460,10 +460,10 @@ export function MainSidebar({
         className="border-r-0 bg-sidebar overflow-hidden"
       >
         <SidebarHeader className="gap-2 pb-2">
-          {/* Logo 和折叠按钮 */}
+          {/* Logo and collapse button */}
           <div className="mb-3 flex items-center justify-between pt-2 group-data-[collapsible=icon]:justify-start">
             <div className="flex items-center gap-3 group-data-[collapsible=icon]:gap-0">
-              {/* 折叠状态下：默认显示 Logo，悬停显示展开按钮 */}
+              {/* Collapsed: show logo by default; show expand icon on hover. */}
               <button
                 onClick={toggleSidebar}
                 className="group/logo relative flex size-8 items-center justify-center overflow-hidden rounded-lg bg-sidebar-primary text-sidebar-primary-foreground shadow-md transition-all hover:shadow-lg active:scale-95 active:shadow-sm"
@@ -491,7 +491,7 @@ export function MainSidebar({
 
           {!isSelectionMode && (
             <>
-              {/* 新建任务按钮 */}
+              {/* New task button */}
               <SidebarMenu className="group-data-[collapsible=icon]:px-0">
                 <SidebarMenuItem>
                   <SidebarMenuButton
@@ -512,9 +512,9 @@ export function MainSidebar({
 
               {TOP_NAV_ITEMS.map(({ id, labelKey, icon: Icon, href }) => {
                 const isDisabled = id === "search"; // Search temporarily disabled
-                // 根据不同的菜单项设置不同的动画效果
+                // Apply different icon animations per menu item.
                 const getIconAnimation = () => {
-                  if (isDisabled) return ""; // 禁用状态下不显示动画
+                  if (isDisabled) return ""; // No animation when disabled.
                   switch (id) {
                     case "capabilities":
                       return "transition-all duration-300 group-hover/menu-item:rotate-12 group-hover/menu-item:scale-110";
@@ -579,7 +579,7 @@ export function MainSidebar({
             isContentScrolled ? "border-border" : "border-transparent",
           )}
         >
-          {/* 项目列表 - 放在上面 */}
+          {/* Projects (top) */}
           <div className="flex flex-col">
             <Collapsible
               defaultOpen
@@ -642,7 +642,7 @@ export function MainSidebar({
           </div>
 
           <div className="flex flex-col">
-            {/* 所有任务（未归类） - 放在下面 */}
+            {/* All tasks (unassigned) (bottom) */}
             <DroppableAllTasksGroup
               title={t("sidebar.allTasks")}
               tasks={unassignedTasks}
@@ -719,7 +719,7 @@ export function MainSidebar({
               </span>
             </button>
           ) : (
-            /* 底部工具栏 - 正常模式 */
+            /* Footer toolbar (normal mode) */
             <div className="flex w-full items-center justify-between px-1 group-data-[collapsible=icon]:px-0">
               <Button
                 variant="ghost"

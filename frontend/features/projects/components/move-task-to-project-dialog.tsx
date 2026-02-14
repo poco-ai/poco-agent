@@ -69,7 +69,7 @@ export function MoveTaskToProjectDialog({
         <div className="grid gap-4 py-4">
           <ScrollArea className="max-h-[200px]">
             <div className="space-y-1 pr-4">
-              {/* "无项目"选项 - 移除任务的项目关联 */}
+              {/* "No project" option (remove task-project association). */}
               <button
                 type="button"
                 onClick={() => setSelectedProjectId(null)}
@@ -87,7 +87,7 @@ export function MoveTaskToProjectDialog({
                 <span>{t("projectDialogs.noProject")}</span>
               </button>
 
-              {/* 项目列表 */}
+              {/* Project list */}
               {projects.map((project) => (
                 <button
                   key={project.id}

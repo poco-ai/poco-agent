@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Manrope, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/shared/theme-provider";
+import { ReactQueryProvider } from "@/components/shared/react-query-provider";
 import { fallbackLng } from "@/lib/i18n/settings";
 import { Toaster } from "@/components/ui/sonner";
 
@@ -53,8 +54,10 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          {children}
-          <Toaster position="top-right" />
+          <ReactQueryProvider>
+            {children}
+            <Toaster position="top-right" />
+          </ReactQueryProvider>
         </ThemeProvider>
       </body>
     </html>

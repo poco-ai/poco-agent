@@ -3,6 +3,7 @@
  */
 
 import { AppError, NetworkError, ApiError, RateLimitError } from "./app-error";
+import { isDev } from "@/lib/env";
 
 /**
  * Parse API error response and create appropriate error
@@ -73,7 +74,7 @@ export function logError(
     timestamp: new Date().toISOString(),
   };
 
-  if (import.meta.env.DEV) {
+  if (isDev) {
     console.error("[Error]", errorInfo);
   }
 

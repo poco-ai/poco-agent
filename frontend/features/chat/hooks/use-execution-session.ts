@@ -3,6 +3,7 @@ import { getExecutionSessionAction } from "@/features/chat/actions/query-actions
 import { useAdaptivePolling } from "./use-adaptive-polling";
 import type { ExecutionSession } from "@/features/chat/types";
 import { playTaskCompleteSound } from "@/lib/utils/sound";
+import { getSessionPollingIntervalMs } from "@/lib/env";
 
 interface UseExecutionSessionOptions {
   /**
@@ -78,8 +79,7 @@ interface UseExecutionSessionReturn {
  */
 export function useExecutionSession({
   sessionId,
-  pollingInterval = Number(process.env.NEXT_PUBLIC_SESSION_POLLING_INTERVAL) ||
-    6000,
+  pollingInterval = getSessionPollingIntervalMs(),
   enableBackoff = true,
   onPollingStop,
 }: UseExecutionSessionOptions): UseExecutionSessionReturn {

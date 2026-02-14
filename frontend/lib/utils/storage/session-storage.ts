@@ -1,5 +1,5 @@
 /**
- * SessionStorage封装，带类型安全和错误处理
+ * SessionStorage wrapper with type safety and error handling.
  */
 const PREFIX = "poco_";
 
@@ -9,7 +9,7 @@ export type SessionStorageKey =
   | "filter_state";
 
 /**
- * 从sessionStorage读取数据
+ * Read a value from sessionStorage.
  */
 export function getSessionStorage<T>(key: SessionStorageKey): T | null {
   if (typeof window === "undefined") return null;
@@ -23,7 +23,7 @@ export function getSessionStorage<T>(key: SessionStorageKey): T | null {
 }
 
 /**
- * 写入数据到sessionStorage
+ * Write a value to sessionStorage.
  */
 export function setSessionStorage<T>(key: SessionStorageKey, value: T): void {
   if (typeof window === "undefined") return;
@@ -39,7 +39,7 @@ export function setSessionStorage<T>(key: SessionStorageKey, value: T): void {
 }
 
 /**
- * 从sessionStorage删除数据
+ * Remove a value from sessionStorage.
  */
 export function removeSessionStorage(key: SessionStorageKey): void {
   if (typeof window === "undefined") return;

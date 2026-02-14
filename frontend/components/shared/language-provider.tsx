@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import i18next from "@/lib/i18n/i18next";
 
-// 同步初始化语言，避免水合不匹配
+// Initialize language synchronously to avoid hydration mismatch.
 function initLanguage(lng: string) {
   if (i18next.resolvedLanguage !== lng) {
     i18next.changeLanguage(lng);
@@ -17,14 +17,14 @@ export function LanguageProvider({
   lng: string;
   children: React.ReactNode;
 }) {
-  // 使用 useState 的初始化函数确保在首次渲染前同步设置语言
+  // Use a useState initializer to set language before the first render.
   const [isReady] = useState(() => {
     initLanguage(lng);
     return true;
   });
 
   useEffect(() => {
-    // 语言变化时更新
+    // Update i18n language when the route language changes.
     if (i18next.resolvedLanguage !== lng) {
       i18next.changeLanguage(lng);
     }

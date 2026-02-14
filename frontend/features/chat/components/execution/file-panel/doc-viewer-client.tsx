@@ -11,14 +11,14 @@ import "react-pdf/dist/Page/AnnotationLayer.css";
 
 export type { DocViewerProps } from "react-doc-viewer";
 
-// 使用指定的 pdfjs-dist 版本 worker
+// Use a pinned pdfjs-dist worker version.
 const workerSrc = `https://unpkg.com/pdfjs-dist@4.3.136/build/pdf.worker.min.mjs`;
 
 let workerConfigured = false;
 
 /**
- * 初始化 PDF.js Worker 并配置全局错误抑制
- * 抑制 "TextLayer task cancelled" 等由于组件卸载导致的正常警告
+ * Configure the PDF.js worker and suppress noisy console warnings.
+ * This reduces expected warnings caused by component unmounts (e.g. "TextLayer task cancelled").
  */
 function configurePDFWorker() {
   if (workerConfigured || typeof window === "undefined") return;
@@ -26,7 +26,7 @@ function configurePDFWorker() {
   pdfjs.GlobalWorkerOptions.workerSrc = workerSrc;
   workerConfigured = true;
 
-  // 定义需要屏蔽的日志模式
+  // Define patterns to suppress.
   const suppressPatterns = [/TextLayer/, /task cancelled/, /AbortException/];
   const shouldSuppress = (args: unknown[]) =>
     args.some((arg) => suppressPatterns.some((p) => p.test(String(arg))));
@@ -34,18 +34,18 @@ function configurePDFWorker() {
   const originalWarn = console.warn;
   const originalError = console.error;
 
-  // 重写 console 方法以减少干扰
+  // Patch console methods to reduce noise.
   console.warn = (...args) =>
     shouldSuppress(args) ? null : originalWarn(...args);
   console.error = (...args) =>
     shouldSuppress(args) ? null : originalError(...args);
 }
 
-// 模块加载即配置
+// Configure on module load.
 configurePDFWorker();
 
 /**
- * 封装后的文档查看器客户端组件
+ * Client-side wrapper for the document viewer.
  */
 export function DocViewerClient(props: DocViewerProps) {
   return (
