@@ -5,6 +5,7 @@ from app.api.v1 import (
     callback,
     claude_md,
     env_vars,
+    models,
     internal_claude_md,
     internal_env_vars,
     internal_plugin_config,
@@ -50,6 +51,7 @@ api_v1_router.include_router(tool_executions.router)
 api_v1_router.include_router(attachments.router)
 api_v1_router.include_router(env_vars.router)
 api_v1_router.include_router(claude_md.router)
+api_v1_router.include_router(models.router)
 api_v1_router.include_router(internal_claude_md.router)
 api_v1_router.include_router(internal_env_vars.router)
 api_v1_router.include_router(internal_mcp_config.router)

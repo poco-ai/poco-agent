@@ -14,6 +14,8 @@ class TaskConfig(BaseModel):
     git_branch: str = "main"
     # Optional env var key holding a GitHub token (e.g. "GITHUB_TOKEN").
     git_token_env_key: str | None = None
+    # Optional explicit model override for this session/run.
+    model: str | None = None
     # Built-in browser capability toggle (Playwright MCP is injected internally by the executor).
     browser_enabled: bool = False
     # MCP server enable/disable toggles (true=enabled, false=disabled).

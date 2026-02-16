@@ -53,6 +53,7 @@ class Settings(BaseSettings):
     default_model: str = Field(
         default="claude-sonnet-4-20250514", alias="DEFAULT_MODEL"
     )
+    model_list: list[str] = Field(default_factory=list, alias="MODEL_LIST")
     max_upload_size_mb: int = Field(default=100, alias="MAX_UPLOAD_SIZE_MB")
 
     model_config = SettingsConfigDict(

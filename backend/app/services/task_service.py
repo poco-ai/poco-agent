@@ -3,6 +3,7 @@ from zoneinfo import ZoneInfo
 
 from sqlalchemy.orm import Session
 
+from app.core.settings import get_settings
 from app.core.errors.error_codes import ErrorCode
 from app.core.errors.exceptions import AppException
 from app.repositories.message_repository import MessageRepository
@@ -19,6 +20,55 @@ from app.schemas.task import TaskEnqueueRequest, TaskEnqueueResponse
 
 class TaskService:
     """Service layer for task enqueue operations."""
+
+    @staticmethod
+    def _validate_and_normalize_model(config: dict) -> None:
+        """Validate `model` override and normalize config in-place.
+
+        Rules:
+        - `model` unset/empty -> removed (use DEFAULT_MODEL)
+        - `model` equals settings.default_model -> removed (treat as default; do not pin)
+        - otherwise `model` must be in settings.model_list
+        """
+        if not isinstance(config, dict):
+            return
+
+        if "model" not in config:
+            return
+
+        raw = config.get("model")
+        if raw is None:
+            # Explicit null clears a previously pinned model.
+            config.pop("model", None)
+            return
+
+        if not isinstance(raw, str):
+            raise AppException(
+                error_code=ErrorCode.BAD_REQUEST,
+                message="model must be a string or null",
+            )
+
+        value = raw.strip()
+        if not value:
+            config.pop("model", None)
+            return
+
+        settings = get_settings()
+        default_model = (settings.default_model or "").strip()
+        if value == default_model:
+            # Treat selecting the default as "inherit", so the session follows future
+            # default_model changes instead of pinning the old value.
+            config.pop("model", None)
+            return
+
+        allowed = {m.strip() for m in (settings.model_list or []) if (m or "").strip()}
+        if value not in allowed:
+            raise AppException(
+                error_code=ErrorCode.BAD_REQUEST,
+                message=f"Invalid model: {value}",
+            )
+
+        config["model"] = value
 
     @staticmethod
     def _apply_project_repo_defaults(config: dict | None, project) -> dict | None:
@@ -297,6 +347,9 @@ class TaskService:
             # Extract plugin_config toggles before merging (don't merge as dict)
             plugin_toggles = request_config.pop("plugin_config", None)
             merged_base = self._merge_config_map(merged_base, request_config)
+
+        # Validate and normalize `model` after merging base + overrides.
+        self._validate_and_normalize_model(merged_base)
 
         if mcp_toggles is not None:
             merged_base["mcp_server_ids"] = (
