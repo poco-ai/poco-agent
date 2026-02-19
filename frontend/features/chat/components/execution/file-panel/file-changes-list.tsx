@@ -49,60 +49,50 @@ function FileChangesSummary({ fileChanges }: FileChangesSummaryProps) {
   );
 
   return (
-    <div className="flex flex-wrap items-center gap-3 px-4 py-3 bg-muted/30 border-b border-border text-sm">
-      <div className="flex items-center gap-2 min-w-0">
-        <span className="text-muted-foreground">
+    <div className="flex flex-wrap items-center gap-3 px-4 py-3 bg-muted/30 border-b border-border text-sm min-w-0 max-w-full overflow-hidden">
+      <div className="flex min-w-0 max-w-full items-center gap-2 overflow-hidden">
+        <span className="min-w-0 max-w-full truncate text-muted-foreground">
           {t("artifacts.summary.total")}
-        </span>
-        <span className="font-semibold">
-          {fileChanges.length} {t("artifacts.summary.totalFiles")}
         </span>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex min-w-0 max-w-full flex-wrap items-center gap-3 overflow-hidden">
         {summary.added > 0 && (
-          <div className="flex items-center gap-1.5 text-success">
+          <div className="flex min-w-0 max-w-full items-center gap-1.5 overflow-hidden text-success">
             <div className="w-2 h-2 rounded-full bg-success" />
-            <span>
+            <span className="min-w-0 max-w-full truncate">
               +{summary.added} {t("artifacts.summary.added")}
             </span>
           </div>
         )}
 
         {summary.modified > 0 && (
-          <div className="flex items-center gap-1.5 text-info">
+          <div className="flex min-w-0 max-w-full items-center gap-1.5 overflow-hidden text-info">
             <div className="w-2 h-2 rounded-full bg-info" />
-            <span>
+            <span className="min-w-0 max-w-full truncate">
               {summary.modified} {t("artifacts.summary.modified")}
             </span>
           </div>
         )}
 
         {summary.deleted > 0 && (
-          <div className="flex items-center gap-1.5 text-destructive">
+          <div className="flex min-w-0 max-w-full items-center gap-1.5 overflow-hidden text-destructive">
             <div className="w-2 h-2 rounded-full bg-destructive" />
-            <span>
+            <span className="min-w-0 max-w-full truncate">
               -{summary.deleted} {t("artifacts.summary.deleted")}
             </span>
           </div>
         )}
 
         {summary.renamed > 0 && (
-          <div className="flex items-center gap-1.5 text-renamed">
+          <div className="flex min-w-0 max-w-full items-center gap-1.5 overflow-hidden text-renamed">
             <div className="w-2 h-2 rounded-full bg-renamed" />
-            <span>
+            <span className="min-w-0 max-w-full truncate">
               {summary.renamed} {t("artifacts.summary.renamed")}
             </span>
           </div>
         )}
       </div>
-
-      {summary.totalLines > 0 && (
-        <div className="ml-auto text-xs text-muted-foreground">
-          {summary.totalLines.toLocaleString()}{" "}
-          {t("artifacts.summary.lineChanges")}
-        </div>
-      )}
     </div>
   );
 }
@@ -128,10 +118,10 @@ export function FileChangesList({
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full min-w-0 max-w-full overflow-hidden">
       <FileChangesSummary fileChanges={fileChanges} />
-      <ScrollArea className="flex-1">
-        <div className="px-4 py-4 space-y-3">
+      <ScrollArea className="flex-1 min-w-0 max-w-full overflow-hidden [&_[data-slot=scroll-area-viewport]]:overflow-x-hidden">
+        <div className="w-full min-w-0 max-w-full px-4 py-4 space-y-3">
           {fileChanges.map((change, index) => (
             <FileChangeCard
               key={`${change.path}-${index}`}
