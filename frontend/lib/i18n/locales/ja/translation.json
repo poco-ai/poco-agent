@@ -25,6 +25,8 @@
     "defaultUserName": "Pocoユーザー",
     "removeFromProject": "プロジェクトから外す",
     "batchOperations": "一括操作",
+    "holdToSelect": "長押しで選択",
+    "holdToExitSelect": "長押しで選択を終了",
     "moveToHere": "ここに移動",
     "plan": "Pro プラン"
   },
@@ -410,7 +412,6 @@
       "modified": "変更",
       "deleted": "削除",
       "renamed": "名前変更",
-      "lineChanges": "行変更",
       "totalfiles": "ファイル"
     }
   },

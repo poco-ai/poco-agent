@@ -15,7 +15,9 @@ export function useSidebarSelection(handlers: {
   onDeleteTask: (taskId: string) => Promise<void> | void;
   onDeleteProject?: (projectId: string) => Promise<void> | void;
 }) {
-  const [isSelectionMode, setIsSelectionMode] = React.useState(false);
+  const [selectionKind, setSelectionKind] = React.useState<
+    "tasks" | "projects" | null
+  >(null);
   const [selectedTaskIds, setSelectedTaskIds] = React.useState<Set<string>>(
     new Set(),
   );
@@ -23,10 +25,22 @@ export function useSidebarSelection(handlers: {
     Set<string>
   >(new Set());
 
+  const enterTaskSelectionMode = React.useCallback(() => {
+    setSelectionKind("tasks");
+    setSelectedTaskIds(new Set());
+    setSelectedProjectIds(new Set());
+  }, []);
+
+  const enterProjectSelectionMode = React.useCallback(() => {
+    setSelectionKind("projects");
+    setSelectedProjectIds(new Set());
+    setSelectedTaskIds(new Set());
+  }, []);
+
   // ---- Task selection ----
 
   const enableTaskSelectionMode = React.useCallback((taskId: string) => {
-    setIsSelectionMode(true);
+    setSelectionKind("tasks");
     setSelectedTaskIds(new Set([taskId]));
     setSelectedProjectIds(new Set());
   }, []);
@@ -43,7 +57,7 @@ export function useSidebarSelection(handlers: {
   // ---- Project selection ----
 
   const enableProjectSelectionMode = React.useCallback((projectId: string) => {
-    setIsSelectionMode(true);
+    setSelectionKind("projects");
     setSelectedProjectIds(new Set([projectId]));
     setSelectedTaskIds(new Set());
   }, []);
@@ -60,34 +74,38 @@ export function useSidebarSelection(handlers: {
   // ---- Cancel ----
 
   const cancelSelectionMode = React.useCallback(() => {
-    setIsSelectionMode(false);
+    setSelectionKind(null);
     setSelectedTaskIds(new Set());
     setSelectedProjectIds(new Set());
   }, []);
 
   // Escape key handler
   React.useEffect(() => {
-    if (!isSelectionMode) return;
+    if (!selectionKind) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") cancelSelectionMode();
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isSelectionMode, cancelSelectionMode]);
+  }, [selectionKind, cancelSelectionMode]);
 
   // ---- Batch delete ----
 
   const deleteSelectedItems = React.useCallback(async () => {
-    await Promise.all(
-      Array.from(selectedTaskIds).map((taskId) =>
-        Promise.resolve(handlers.onDeleteTask(taskId)),
-      ),
-    );
+    if (selectionKind === "tasks") {
+      await Promise.all(
+        Array.from(selectedTaskIds).map((taskId) =>
+          Promise.resolve(handlers.onDeleteTask(taskId)),
+        ),
+      );
+      setSelectedTaskIds(new Set());
+    }
 
-    if (handlers.onDeleteProject) {
+    if (selectionKind === "projects" && handlers.onDeleteProject) {
       for (const projectId of selectedProjectIds) {
         await handlers.onDeleteProject(projectId);
       }
+      setSelectedProjectIds(new Set());
     }
 
     cancelSelectionMode();
@@ -96,15 +114,26 @@ export function useSidebarSelection(handlers: {
     selectedProjectIds,
     handlers,
     cancelSelectionMode,
+    selectionKind,
   ]);
 
-  const selectedCount = selectedTaskIds.size + selectedProjectIds.size;
+  const selectedCount =
+    selectionKind === "tasks"
+      ? selectedTaskIds.size
+      : selectionKind === "projects"
+        ? selectedProjectIds.size
+        : 0;
 
   return {
-    isSelectionMode,
+    selectionKind,
+    isSelectionMode: selectionKind !== null,
+    isTaskSelectionMode: selectionKind === "tasks",
+    isProjectSelectionMode: selectionKind === "projects",
     selectedTaskIds,
     selectedProjectIds,
     selectedCount,
+    enterTaskSelectionMode,
+    enterProjectSelectionMode,
     enableTaskSelectionMode,
     toggleTaskSelection,
     enableProjectSelectionMode,

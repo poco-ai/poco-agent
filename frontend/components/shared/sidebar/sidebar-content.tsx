@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter, useParams } from "next/navigation";
-import { ChevronRight, Plus } from "lucide-react";
+import { CheckCheck, ChevronRight, Plus } from "lucide-react";
 import {
   Collapsible,
   CollapsibleContent,
@@ -26,6 +26,92 @@ import type { ProjectItem, TaskHistoryItem } from "@/features/projects/types";
 import { TaskHistoryList } from "./task-history-list";
 import { CollapsibleProjectItem } from "./collapsible-project-item";
 
+const LONG_PRESS_DURATION_MS = 650;
+
+interface LongPressActionButtonProps {
+  icon: React.ReactNode;
+  label: string;
+  onComplete: () => void;
+  disabled?: boolean;
+  durationMs?: number;
+  className?: string;
+}
+
+function LongPressActionButton({
+  icon,
+  label,
+  onComplete,
+  disabled,
+  durationMs = LONG_PRESS_DURATION_MS,
+  className,
+}: LongPressActionButtonProps) {
+  const timerRef = React.useRef<number | null>(null);
+  const completedRef = React.useRef(false);
+
+  const clearTimer = React.useCallback(() => {
+    if (timerRef.current !== null) {
+      window.clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+  }, []);
+
+  const handlePointerDown = React.useCallback(
+    (e: React.PointerEvent<HTMLButtonElement>) => {
+      if (disabled) return;
+      if (e.button !== 0) return;
+
+      completedRef.current = false;
+      clearTimer();
+      timerRef.current = window.setTimeout(() => {
+        if (completedRef.current) return;
+        completedRef.current = true;
+        onComplete();
+      }, durationMs);
+    },
+    [clearTimer, disabled, durationMs, onComplete],
+  );
+
+  const handlePointerEnd = React.useCallback(() => {
+    clearTimer();
+    completedRef.current = false;
+  }, [clearTimer]);
+
+  React.useEffect(() => () => clearTimer(), [clearTimer]);
+
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon"
+      disabled={disabled}
+      title={label}
+      aria-label={label}
+      onPointerDown={handlePointerDown}
+      onPointerUp={handlePointerEnd}
+      onPointerLeave={handlePointerEnd}
+      onPointerCancel={handlePointerEnd}
+      onClick={(e) => e.stopPropagation()}
+      onKeyDown={(e) => {
+        if (disabled) return;
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onComplete();
+        }
+      }}
+      className={cn(
+        "relative size-6 text-muted-foreground hover:text-foreground hover:bg-sidebar-accent",
+        className,
+      )}
+    >
+      <span className="relative size-5 flex items-center justify-center">
+        <span className="relative z-10 flex items-center justify-center">
+          {icon}
+        </span>
+      </span>
+    </Button>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Droppable "All Tasks" group
 // ---------------------------------------------------------------------------
@@ -38,9 +124,10 @@ interface DroppableAllTasksGroupProps {
   onMoveTaskToProject?: (taskId: string, projectId: string | null) => void;
   projects: ProjectItem[];
   isSelectionMode?: boolean;
+  isOtherSelectionMode?: boolean;
   selectedTaskIds?: Set<string>;
   onToggleTaskSelection?: (taskId: string) => void;
-  onEnableSelectionMode?: (taskId: string) => void;
+  onEnterSelectionMode?: () => void;
   onTaskNavigate?: () => void;
 }
 
@@ -52,9 +139,10 @@ function DroppableAllTasksGroup({
   onMoveTaskToProject,
   projects,
   isSelectionMode,
+  isOtherSelectionMode,
   selectedTaskIds,
   onToggleTaskSelection,
-  onEnableSelectionMode,
+  onEnterSelectionMode,
   onTaskNavigate,
 }: DroppableAllTasksGroupProps) {
   const { t } = useT("translation");
@@ -79,6 +167,17 @@ function DroppableAllTasksGroup({
               <ChevronRight className="size-4 transition-transform duration-200 group-data-[state=open]/collapsible-tasks:rotate-90" />
             </CollapsibleTrigger>
           </SidebarGroupLabel>
+          <LongPressActionButton
+            icon={<CheckCheck className="size-4" />}
+            label={
+              isSelectionMode
+                ? t("sidebar.holdToExitSelect")
+                : t("sidebar.holdToSelect")
+            }
+            disabled={isOtherSelectionMode}
+            onComplete={() => onEnterSelectionMode?.()}
+            className="opacity-0 group-hover/tasks-header:opacity-100 transition-opacity group-data-[collapsible=icon]:hidden"
+          />
         </div>
         <CollapsibleContent>
           <SidebarGroupContent className="p-2 pt-0 mt-0 group-data-[collapsible=icon]:mt-0">
@@ -91,7 +190,6 @@ function DroppableAllTasksGroup({
               isSelectionMode={isSelectionMode}
               selectedTaskIds={selectedTaskIds}
               onToggleTaskSelection={onToggleTaskSelection}
-              onEnableSelectionMode={onEnableSelectionMode}
               onNavigate={onTaskNavigate}
             />
             {isOver && (
@@ -120,13 +218,15 @@ interface SidebarContentSectionProps {
   onDeleteProject?: (projectId: string) => Promise<void> | void;
   onOpenCreateProjectDialog?: () => void;
   // Selection state (from useSidebarSelection)
-  isSelectionMode: boolean;
+  isTaskSelectionMode: boolean;
+  isProjectSelectionMode: boolean;
   selectedTaskIds: Set<string>;
   selectedProjectIds: Set<string>;
+  onEnterTaskSelectionMode: () => void;
+  onEnterProjectSelectionMode: () => void;
+  onCancelSelection: () => void;
   onToggleTaskSelection: (taskId: string) => void;
-  onEnableTaskSelectionMode: (taskId: string) => void;
   onToggleProjectSelection: (projectId: string) => void;
-  onEnableProjectSelectionMode: (projectId: string) => void;
 }
 
 export function SidebarContentSection({
@@ -138,13 +238,15 @@ export function SidebarContentSection({
   onRenameProject,
   onDeleteProject,
   onOpenCreateProjectDialog,
-  isSelectionMode,
+  isTaskSelectionMode,
+  isProjectSelectionMode,
   selectedTaskIds,
   selectedProjectIds,
+  onEnterTaskSelectionMode,
+  onEnterProjectSelectionMode,
+  onCancelSelection,
   onToggleTaskSelection,
-  onEnableTaskSelectionMode,
   onToggleProjectSelection,
-  onEnableProjectSelectionMode,
 }: SidebarContentSectionProps) {
   const { t } = useT("translation");
   const router = useRouter();
@@ -258,15 +360,32 @@ export function SidebarContentSection({
                   <ChevronRight className="size-4 transition-transform duration-200 group-data-[state=open]/collapsible-projects:rotate-90" />
                 </CollapsibleTrigger>
               </SidebarGroupLabel>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => onOpenCreateProjectDialog?.()}
-                className="absolute right-2 top-1/2 -translate-y-1/2 size-6 text-muted-foreground hover:text-foreground hover:bg-sidebar-accent opacity-0 group-hover/projects-header:opacity-100 transition-opacity"
-                title={t("sidebar.newProject")}
-              >
-                <Plus className="size-4" />
-              </Button>
+              <div className="flex items-center gap-1">
+                <LongPressActionButton
+                  icon={<CheckCheck className="size-4" />}
+                  label={
+                    isProjectSelectionMode
+                      ? t("sidebar.holdToExitSelect")
+                      : t("sidebar.holdToSelect")
+                  }
+                  disabled={isTaskSelectionMode}
+                  onComplete={
+                    isProjectSelectionMode
+                      ? onCancelSelection
+                      : onEnterProjectSelectionMode
+                  }
+                  className="opacity-0 group-hover/projects-header:opacity-100 transition-opacity"
+                />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => onOpenCreateProjectDialog?.()}
+                  className="size-6 text-muted-foreground hover:text-foreground hover:bg-sidebar-accent opacity-0 group-hover/projects-header:opacity-100 transition-opacity"
+                  title={t("sidebar.newProject")}
+                >
+                  <Plus className="size-4" />
+                </Button>
+              </div>
             </div>
             <CollapsibleContent className="data-[state=closed]:flex-none">
               <SidebarGroupContent className="mt-1 group-data-[collapsible=icon]:mt-0 p-2 pt-0">
@@ -285,15 +404,12 @@ export function SidebarContentSection({
                       allProjects={projects}
                       onRenameProject={handleRenameProject}
                       onDeleteProject={onDeleteProject}
-                      isSelectionMode={isSelectionMode}
+                      isProjectSelectionMode={isProjectSelectionMode}
+                      isTaskSelectionMode={isTaskSelectionMode}
                       selectedTaskIds={selectedTaskIds}
                       selectedProjectIds={selectedProjectIds}
                       onToggleTaskSelection={onToggleTaskSelection}
-                      onEnableSelectionMode={onEnableTaskSelectionMode}
                       onToggleProjectSelection={onToggleProjectSelection}
-                      onEnableProjectSelectionMode={
-                        onEnableProjectSelectionMode
-                      }
                       onTaskNavigate={closeMobileSidebar}
                     />
                   ))}
@@ -313,10 +429,13 @@ export function SidebarContentSection({
           onRenameTask={onRenameTask}
           onMoveTaskToProject={onMoveTaskToProject}
           projects={projects}
-          isSelectionMode={isSelectionMode}
+          isSelectionMode={isTaskSelectionMode}
+          isOtherSelectionMode={isProjectSelectionMode}
           selectedTaskIds={selectedTaskIds}
           onToggleTaskSelection={onToggleTaskSelection}
-          onEnableSelectionMode={onEnableTaskSelectionMode}
+          onEnterSelectionMode={
+            isTaskSelectionMode ? onCancelSelection : onEnterTaskSelectionMode
+          }
           onTaskNavigate={closeMobileSidebar}
         />
       </div>

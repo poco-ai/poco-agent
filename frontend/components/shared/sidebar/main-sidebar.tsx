@@ -10,10 +10,7 @@ import {
   closestCorners,
 } from "@dnd-kit/core";
 
-import {
-  Sidebar,
-  SidebarRail,
-} from "@/components/ui/sidebar";
+import { Sidebar, SidebarRail } from "@/components/ui/sidebar";
 
 import type { ProjectItem, TaskHistoryItem } from "@/features/projects/types";
 import type { SettingsTabId } from "@/features/settings/types";
@@ -118,10 +115,7 @@ export function MainSidebar({
         collapsible="icon"
         className="border-r-0 bg-sidebar overflow-hidden"
       >
-        <SidebarHeaderSection
-          onNewTask={onNewTask}
-          isSelectionMode={selection.isSelectionMode}
-        />
+        <SidebarHeaderSection onNewTask={onNewTask} />
 
         <SidebarContentSection
           projects={projects}
@@ -132,13 +126,15 @@ export function MainSidebar({
           onRenameProject={onRenameProject}
           onDeleteProject={onDeleteProject}
           onOpenCreateProjectDialog={onOpenCreateProjectDialog}
-          isSelectionMode={selection.isSelectionMode}
+          isTaskSelectionMode={selection.isTaskSelectionMode}
+          isProjectSelectionMode={selection.isProjectSelectionMode}
           selectedTaskIds={selection.selectedTaskIds}
           selectedProjectIds={selection.selectedProjectIds}
+          onEnterTaskSelectionMode={selection.enterTaskSelectionMode}
+          onEnterProjectSelectionMode={selection.enterProjectSelectionMode}
+          onCancelSelection={selection.cancelSelectionMode}
           onToggleTaskSelection={selection.toggleTaskSelection}
-          onEnableTaskSelectionMode={selection.enableTaskSelectionMode}
           onToggleProjectSelection={selection.toggleProjectSelection}
-          onEnableProjectSelectionMode={selection.enableProjectSelectionMode}
         />
 
         <SidebarFooterSection

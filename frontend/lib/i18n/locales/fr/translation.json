@@ -25,6 +25,8 @@
     "defaultUserName": "Utilisateur Poco",
     "removeFromProject": "Retirer du projet",
     "batchOperations": "Opérations groupées",
+    "holdToSelect": "Maintenir pour sélectionner",
+    "holdToExitSelect": "Maintenir pour quitter la sélection",
     "moveToHere": "Déplacer ici",
     "plan": "Forfait Pro"
   },
@@ -410,7 +412,6 @@
       "modified": "Modifié",
       "deleted": "Supprimé",
       "renamed": "Renommé",
-      "lineChanges": "modifications de lignes",
       "totalfiles": "fichiers"
     }
   },

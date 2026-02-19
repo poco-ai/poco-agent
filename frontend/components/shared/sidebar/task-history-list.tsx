@@ -55,7 +55,6 @@ interface DraggableTaskProps {
   isSelectionMode?: boolean;
   isSelected?: boolean;
   onToggleSelection?: (taskId: string) => void;
-  onEnableSelectionMode?: (taskId: string) => void;
   isNested?: boolean;
   onNavigate?: () => void;
 }
@@ -73,14 +72,11 @@ function DraggableTask({
   isSelectionMode,
   isSelected,
   onToggleSelection,
-  onEnableSelectionMode,
   isNested,
   onNavigate,
 }: DraggableTaskProps) {
   const { t } = useT("translation");
   const router = useRouter();
-  const longPressTimerRef = React.useRef<NodeJS.Timeout>(null);
-
   const { listeners, setNodeRef, isDragging } = useDraggable({
     id: task.id,
     data: {
@@ -92,43 +88,7 @@ function DraggableTask({
 
   const statusMeta = TASK_STATUS_META[task.status];
 
-  const longPressTriggeredRef = React.useRef(false);
-
-  // Handle long press interactions
-  const handlePointerDown = (e: React.PointerEvent) => {
-    if (isSelectionMode) return;
-
-    // Only left click
-    if (e.button !== 0) return;
-
-    longPressTriggeredRef.current = false;
-
-    longPressTimerRef.current = setTimeout(() => {
-      longPressTriggeredRef.current = true;
-      onEnableSelectionMode?.(task.id);
-    }, 500); // 500ms threshold
-  };
-
-  const handlePointerUp = () => {
-    if (longPressTimerRef.current) {
-      clearTimeout(longPressTimerRef.current);
-    }
-  };
-
-  const handlePointerLeave = () => {
-    if (longPressTimerRef.current) {
-      clearTimeout(longPressTimerRef.current);
-    }
-  };
-
   const handleClick = (e: React.MouseEvent) => {
-    if (longPressTriggeredRef.current) {
-      e.preventDefault();
-      e.stopPropagation();
-      longPressTriggeredRef.current = false;
-      return;
-    }
-
     if (isSelectionMode) {
       e.preventDefault();
       onToggleSelection?.(task.id);
@@ -156,9 +116,6 @@ function DraggableTask({
             isNested && SIDEBAR_CARD_NESTED_INSET_CLASS,
           )}
           onClick={handleClick}
-          onPointerDown={handlePointerDown}
-          onPointerUp={handlePointerUp}
-          onPointerLeave={handlePointerLeave}
           onKeyDown={(e) => {
             if (e.key === "Enter" || e.key === " ") {
               e.preventDefault();
@@ -191,9 +148,6 @@ function DraggableTask({
             )}
             tooltip={task.title}
             onClick={handleClick}
-            onPointerDown={handlePointerDown}
-            onPointerUp={handlePointerUp}
-            onPointerLeave={handlePointerLeave}
           >
             {/* 状态指示器和拖拽手柄 - 同一位置，hover 时切换 */}
             <div className="size-4 shrink-0 flex items-center justify-center relative">
@@ -319,7 +273,6 @@ export function TaskHistoryList({
   isSelectionMode = false,
   selectedTaskIds = new Set(),
   onToggleTaskSelection,
-  onEnableSelectionMode,
   isNested = false,
   onNavigate,
 }: {
@@ -331,7 +284,6 @@ export function TaskHistoryList({
   isSelectionMode?: boolean;
   selectedTaskIds?: Set<string>;
   onToggleTaskSelection?: (taskId: string) => void;
-  onEnableSelectionMode?: (taskId: string) => void;
   isNested?: boolean;
   onNavigate?: () => void;
 }) {
@@ -373,7 +325,6 @@ export function TaskHistoryList({
             isSelectionMode={isSelectionMode}
             isSelected={selectedTaskIds.has(task.id)}
             onToggleSelection={onToggleTaskSelection}
-            onEnableSelectionMode={onEnableSelectionMode}
             isNested={isNested}
             onNavigate={onNavigate}
           />

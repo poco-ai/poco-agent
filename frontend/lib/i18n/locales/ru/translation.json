@@ -25,6 +25,8 @@
     "defaultUserName": "Пользователь Poco",
     "removeFromProject": "Убрать из проекта",
     "batchOperations": "Пакетные операции",
+    "holdToSelect": "Нажмите и удерживайте для выбора",
+    "holdToExitSelect": "Нажмите и удерживайте, чтобы выйти из выбора",
     "moveToHere": "Переместить сюда",
     "plan": "Pro-план"
   },
@@ -410,7 +412,6 @@
       "modified": "Изменено",
       "deleted": "Удалено",
       "renamed": "Переименовано",
-      "lineChanges": "изменений строк",
       "totalfiles": "файлов"
     }
   },

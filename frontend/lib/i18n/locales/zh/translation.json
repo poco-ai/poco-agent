@@ -26,6 +26,8 @@
     "defaultUserName": "Poco 用户",
     "removeFromProject": "移出项目",
     "batchOperations": "批量操作",
+    "holdToSelect": "长按进入批量选择",
+    "holdToExitSelect": "长按退出批量选择",
     "moveToHere": "移动到这里",
     "plan": "专业版"
   },
@@ -411,7 +413,6 @@
       "modified": "修改",
       "deleted": "删除",
       "renamed": "重命名",
-      "lineChanges": "行变更",
       "totalFiles": "个文件",
       "totalfiles": "个文件"
     }

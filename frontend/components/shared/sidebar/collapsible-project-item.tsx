@@ -55,13 +55,12 @@ interface CollapsibleProjectItemProps {
   allProjects: ProjectItem[];
   onRenameProject?: (projectId: string, newName: string) => void;
   onDeleteProject?: (projectId: string) => Promise<void> | void;
-  isSelectionMode?: boolean;
+  isProjectSelectionMode?: boolean;
+  isTaskSelectionMode?: boolean;
   selectedTaskIds?: Set<string>;
   selectedProjectIds?: Set<string>;
   onToggleTaskSelection?: (taskId: string) => void;
-  onEnableSelectionMode?: (taskId: string) => void;
   onToggleProjectSelection?: (projectId: string) => void;
-  onEnableProjectSelectionMode?: (projectId: string) => void;
   onTaskNavigate?: () => void;
 }
 
@@ -80,13 +79,12 @@ export function CollapsibleProjectItem({
   allProjects,
   onRenameProject,
   onDeleteProject,
-  isSelectionMode,
+  isProjectSelectionMode,
+  isTaskSelectionMode,
   selectedTaskIds,
   selectedProjectIds,
   onToggleTaskSelection,
-  onEnableSelectionMode,
   onToggleProjectSelection,
-  onEnableProjectSelectionMode,
   onTaskNavigate,
 }: CollapsibleProjectItemProps) {
   const { t } = useT("translation");
@@ -101,9 +99,6 @@ export function CollapsibleProjectItem({
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
   const [isDeleting, setIsDeleting] = React.useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = React.useState(false);
-  const longPressTimerRef = React.useRef<NodeJS.Timeout | null>(null);
-
-  const longPressTriggeredRef = React.useRef(false);
 
   const isSelected = selectedProjectIds?.has(project.id);
 
@@ -122,25 +117,6 @@ export function CollapsibleProjectItem({
     }
   };
 
-  const handlePointerDown = (e: React.PointerEvent) => {
-    if (isSelectionMode) return;
-    if (e.button !== 0) return;
-
-    longPressTriggeredRef.current = false;
-
-    longPressTimerRef.current = setTimeout(() => {
-      longPressTriggeredRef.current = true;
-      onEnableProjectSelectionMode?.(project.id);
-    }, 500);
-  };
-
-  const clearPointerTimer = () => {
-    if (longPressTimerRef.current) {
-      clearTimeout(longPressTimerRef.current);
-      longPressTimerRef.current = null;
-    }
-  };
-
   return (
     <SidebarMenuItem>
       <div
@@ -156,35 +132,46 @@ export function CollapsibleProjectItem({
               isOver && "bg-primary/20",
             )}
             tooltip={project.name}
-            onPointerDown={handlePointerDown}
-            onPointerUp={clearPointerTimer}
-            onPointerLeave={clearPointerTimer}
           >
             <div className="flex min-w-0 w-full items-center">
-              {isSelectionMode && (
-                <Checkbox
-                  checked={isSelected}
-                  onCheckedChange={() => onToggleProjectSelection?.(project.id)}
-                  className="size-4"
-                  onClick={(e) => e.stopPropagation()}
-                />
-              )}
               <div className="flex flex-1 items-center gap-1.5 min-w-0">
                 <span
                   role="button"
                   onClick={(e) => {
                     e.stopPropagation();
+                    if (isProjectSelectionMode) {
+                      onToggleProjectSelection?.(project.id);
+                      return;
+                    }
                     onToggle();
                   }}
-                  className="size-5 shrink-0 flex items-center justify-center text-muted-foreground/70 hover:text-foreground hover:bg-sidebar-accent rounded-sm transition-all cursor-pointer group/toggle"
+                  className={cn(
+                    "size-5 shrink-0 flex items-center justify-center rounded-sm transition-all cursor-pointer group/toggle",
+                    isProjectSelectionMode
+                      ? "text-sidebar-foreground"
+                      : "text-muted-foreground/70 hover:text-foreground hover:bg-sidebar-accent",
+                  )}
                 >
-                  <Folder className="size-4 hidden md:block md:group-hover/project-card:hidden" />
-                  <ChevronRight
-                    className={cn(
-                      "size-4 block transition-transform duration-200 md:hidden md:group-hover/project-card:block",
-                      isExpanded && "rotate-90",
-                    )}
-                  />
+                  {isProjectSelectionMode ? (
+                    <Checkbox
+                      checked={isSelected}
+                      onCheckedChange={() =>
+                        onToggleProjectSelection?.(project.id)
+                      }
+                      className="size-4"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  ) : (
+                    <>
+                      <Folder className="size-4 hidden md:block md:group-hover/project-card:hidden" />
+                      <ChevronRight
+                        className={cn(
+                          "size-4 block transition-transform duration-200 md:hidden md:group-hover/project-card:block",
+                          isExpanded && "rotate-90",
+                        )}
+                      />
+                    </>
+                  )}
                 </span>
 
                 <span
@@ -194,14 +181,8 @@ export function CollapsibleProjectItem({
                     isOver && "text-primary",
                   )}
                   onClick={(e) => {
-                    if (longPressTriggeredRef.current) {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      longPressTriggeredRef.current = false;
-                      return;
-                    }
                     e.stopPropagation();
-                    if (isSelectionMode) {
+                    if (isProjectSelectionMode) {
                       onToggleProjectSelection?.(project.id);
                     } else {
                       onProjectClick();
@@ -228,7 +209,7 @@ export function CollapsibleProjectItem({
           )}
 
           {/* 更多按钮 - 默认隐藏，悬浮时显示 */}
-          {onRenameProject && !isSelectionMode && (
+          {onRenameProject && !isProjectSelectionMode && (
             <DropdownMenu
               open={isDropdownOpen}
               onOpenChange={setIsDropdownOpen}
@@ -280,10 +261,9 @@ export function CollapsibleProjectItem({
               onRenameTask={onRenameTask}
               onMoveTaskToProject={onMoveTaskToProject}
               projects={allProjects}
-              isSelectionMode={isSelectionMode}
+              isSelectionMode={isTaskSelectionMode}
               selectedTaskIds={selectedTaskIds}
               onToggleTaskSelection={onToggleTaskSelection}
-              onEnableSelectionMode={onEnableSelectionMode}
               isNested
               onNavigate={onTaskNavigate}
             />

@@ -26,6 +26,8 @@
     "defaultUserName": "Poco User",
     "removeFromProject": "Remove from project",
     "batchOperations": "Batch Operations",
+    "holdToSelect": "Hold to select",
+    "holdToExitSelect": "Hold to exit selection",
     "moveToHere": "Move here",
     "plan": "Pro Plan"
   },
@@ -412,7 +414,6 @@
       "modified": "Modified",
       "deleted": "Deleted",
       "renamed": "Renamed",
-      "lineChanges": "line changes",
       "totalfiles": "files"
     }
   },
