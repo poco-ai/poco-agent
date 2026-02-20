@@ -14,6 +14,7 @@
 
 ## 前置条件
 
+- 最低配置：2C4G
 - Docker Desktop / Docker Engine
 - Docker Compose v2（`docker compose` 命令）
 - 若 GHCR 镜像为私有：先执行 `docker login ghcr.io`
@@ -46,7 +47,6 @@
 - `--no-chown-rustfs`：跳过将 `oss_data/` 改为 `10001:10001`
 
 执行脚本后请确认 `.env` 里已设置 `ANTHROPIC_API_KEY`。
-
 
 ## 方式二：手动启动（本地开发/自部署）
 
@@ -129,14 +129,17 @@ docker compose -f docker-compose.r2.yml --profile im up -d im
    - RustFS 容器以非 root 用户 `rustfs`（UID/GID=10001）运行；如果宿主机目录不是 `10001:10001`，可能会报：
      `Io error: Permission denied (os error 13)`
    - 解决：先在宿主机创建/修正权限（示例以仓库根目录 `oss_data/` 为例）：
+
    ```bash
    mkdir -p oss_data
    sudo chown -R 10001:10001 oss_data
    ```
+
 5. 预签名 URL 对外地址：
-  - Backend 会用 `S3_PUBLIC_ENDPOINT` 生成给浏览器访问的预签名 URL：
-    - 本地 rustfs（`docker-compose.yml`）默认是 `http://localhost:9000`
-    - Cloudflare R2（`docker-compose.r2.yml`）通常保持与 `S3_ENDPOINT` 一致，或填你的自定义域名
+
+- Backend 会用 `S3_PUBLIC_ENDPOINT` 生成给浏览器访问的预签名 URL：
+  - 本地 rustfs（`docker-compose.yml`）默认是 `http://localhost:9000`
+  - Cloudflare R2（`docker-compose.r2.yml`）通常保持与 `S3_ENDPOINT` 一致，或填你的自定义域名
 
 ## 常用操作
 
@@ -175,7 +178,6 @@ docker compose down -v
 - Backend: `http://localhost:8000`（OpenAPI: `/docs`）
 - Executor Manager: `http://localhost:8001`（OpenAPI: `/docs`）
 - RustFS(S3)（仅 `docker-compose.yml`）：`http://localhost:9000`（Console: `http://localhost:9001`）
-
 
 ### 配置入口
 
