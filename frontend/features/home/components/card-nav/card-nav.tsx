@@ -377,6 +377,30 @@ export function CardNav({
     [skillInstalls, t],
   );
 
+  const disableAllPlugins = useCallback(async () => {
+    const enabledIds = pluginInstalls
+      .filter((install) => install.enabled)
+      .map((install) => install.id);
+    if (enabledIds.length === 0) return;
+
+    try {
+      await pluginsService.bulkUpdateInstalls({
+        enabled: false,
+        install_ids: enabledIds,
+      });
+      setPluginInstalls((prev) =>
+        prev.map((install) =>
+          enabledIds.includes(install.id)
+            ? { ...install, enabled: false }
+            : install,
+        ),
+      );
+    } catch (error) {
+      console.error("[CardNav] Failed to disable presets:", error);
+      toast.error(t("hero.toasts.actionFailed"));
+    }
+  }, [pluginInstalls, t]);
+
   // Handle warning icon click
   const handleWarningClick = useCallback(
     (type: "mcp" | "skill", count: number) => {
@@ -491,22 +515,13 @@ export function CardNav({
     [navigateToCapabilityView],
   );
 
-  const handleCardKeyDown = useCallback(
-    (event: React.KeyboardEvent<HTMLDivElement>, viewId: CapabilityViewId) => {
-      if (event.key === "Enter" || event.key === " ") {
-        event.preventDefault();
-        navigateToCapabilityView(viewId);
-      }
-    },
-    [navigateToCapabilityView],
-  );
-
   const countEnabled = useCallback((items: InstalledItem[]) => {
     return items.reduce((count, item) => (item.enabled ? count + 1 : count), 0);
   }, []);
 
   const mcpEnabledCount = countEnabled(installedMcps);
   const skillEnabledCount = countEnabled(installedSkills);
+  const pluginEnabledCount = countEnabled(installedPlugins);
 
   const getToggleTooltip = (
     type: "mcp" | "skill" | "plugin",
@@ -526,6 +541,25 @@ export function CardNav({
     }
 
     return t(`cardNav.${isActive ? "turnOffAll" : "turnOnAll"}`);
+  };
+
+  const getOffOnlyTooltip = (
+    type: "mcp" | "skill" | "plugin",
+    hasItems: boolean,
+  ) => {
+    if (!hasItems) {
+      return t(
+        `cardNav.${
+          type === "mcp"
+            ? "noMcpInstalled"
+            : type === "skill"
+              ? "noSkillsInstalled"
+              : "noPluginsInstalled"
+        }`,
+      );
+    }
+
+    return t("cardNav.turnOffAll");
   };
 
   const renderAggregateToggle = (
@@ -550,6 +584,47 @@ export function CardNav({
               if (!hasItems) return;
               const nextEnable = isActive ? false : true;
               await toggleFn(nextEnable);
+            }}
+            className={cn(
+              "relative flex h-10 w-10 items-center justify-center rounded-2xl border transition-all duration-200",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/20",
+              !hasItems
+                ? "cursor-not-allowed border-border/40 bg-transparent text-muted-foreground/40"
+                : isHighlighted
+                  ? "border-border/60 bg-muted/70 text-foreground shadow-[0_6px_20px_-12px_rgba(var(--foreground),0.25)]"
+                  : "border-border/60 text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+            )}
+          >
+            <Power className="size-3.5" />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="top" sideOffset={4}>
+          <span>{tooltipLabel}</span>
+        </TooltipContent>
+      </Tooltip>
+    );
+  };
+
+  const renderOffOnlyToggle = (
+    type: "mcp" | "skill" | "plugin",
+    hasItems: boolean,
+    enabledCount: number,
+    toggleOffFn: () => Promise<void> | void,
+  ) => {
+    const tooltipLabel = getOffOnlyTooltip(type, hasItems);
+    const isHighlighted = enabledCount > 0;
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            aria-pressed={isHighlighted}
+            aria-label={tooltipLabel}
+            disabled={!hasItems}
+            onClick={async (event) => {
+              event.stopPropagation();
+              if (!hasItems) return;
+              await toggleOffFn();
             }}
             className={cn(
               "relative flex h-10 w-10 items-center justify-center rounded-2xl border transition-all duration-200",
@@ -670,22 +745,20 @@ export function CardNav({
             {/* MCP Card */}
             <div
               ref={setCardRef(0)}
-              role="button"
-              tabIndex={0}
-              aria-label={t("cardNav.mcp")}
-              onClick={() => handleCardClick("mcp")}
-              onKeyDown={(event) => handleCardKeyDown(event, "mcp")}
-              className="group relative flex min-w-[260px] shrink-0 flex-col rounded-lg border border-border/50 bg-muted/30 p-5 transition-all duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] hover:-translate-y-0.5 hover:bg-muted/40 hover:shadow-[0_4px_12px_-2px_rgba(var(--foreground),0.05)] min-h-[140px] md:min-w-0 md:shrink cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              className="group relative flex min-w-[260px] shrink-0 flex-col rounded-lg border border-border/50 bg-muted/30 p-5 transition-all duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] hover:-translate-y-0.5 hover:bg-muted/40 hover:shadow-[0_4px_12px_-2px_rgba(var(--foreground),0.05)] min-h-[140px] md:min-w-0 md:shrink"
             >
               <div className="mb-3 flex min-w-0 items-center justify-between gap-3">
-                <div className="flex min-w-0">
-                  <div className="flex h-10 min-w-0 items-center gap-2.5 rounded-2xl border border-border/50 bg-muted/60 px-3 text-foreground">
-                    <Server className="size-4 text-muted-foreground" />
-                    <span className="text-base font-semibold tracking-[-0.01em]">
-                      {t("cardNav.mcp")}
-                    </span>
-                  </div>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => handleCardClick("mcp")}
+                  className="flex h-10 min-w-0 items-center gap-2.5 rounded-2xl border border-border/50 bg-muted/60 px-3 text-foreground transition-all duration-200 hover:bg-muted/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/20"
+                  aria-label={t("cardNav.mcp")}
+                >
+                  <Server className="size-4 text-muted-foreground" />
+                  <span className="text-base font-semibold tracking-[-0.01em]">
+                    {t("cardNav.mcp")}
+                  </span>
+                </button>
                 <div className="flex shrink-0 items-center gap-1.5">
                   {renderAggregateToggle(
                     "mcp",
@@ -718,22 +791,20 @@ export function CardNav({
             {/* Skill Card */}
             <div
               ref={setCardRef(1)}
-              role="button"
-              tabIndex={0}
-              aria-label={t("cardNav.skills")}
-              onClick={() => handleCardClick("skills")}
-              onKeyDown={(event) => handleCardKeyDown(event, "skills")}
-              className="group relative flex min-w-[260px] shrink-0 flex-col rounded-lg border border-border/50 bg-muted/30 p-5 transition-all duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] hover:-translate-y-0.5 hover:bg-muted/40 hover:shadow-[0_4px_12px_-2px_rgba(var(--foreground),0.05)] min-h-[140px] md:min-w-0 md:shrink cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              className="group relative flex min-w-[260px] shrink-0 flex-col rounded-lg border border-border/50 bg-muted/30 p-5 transition-all duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] hover:-translate-y-0.5 hover:bg-muted/40 hover:shadow-[0_4px_12px_-2px_rgba(var(--foreground),0.05)] min-h-[140px] md:min-w-0 md:shrink"
             >
               <div className="mb-3 flex min-w-0 items-center justify-between gap-3">
-                <div className="flex min-w-0">
-                  <div className="flex h-10 min-w-0 items-center gap-2.5 rounded-2xl border border-border/50 bg-muted/60 px-3 text-foreground">
-                    <Sparkles className="size-4 text-muted-foreground" />
-                    <span className="text-base font-semibold tracking-[-0.01em]">
-                      {t("cardNav.skills")}
-                    </span>
-                  </div>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => handleCardClick("skills")}
+                  className="flex h-10 min-w-0 items-center gap-2.5 rounded-2xl border border-border/50 bg-muted/60 px-3 text-foreground transition-all duration-200 hover:bg-muted/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/20"
+                  aria-label={t("cardNav.skills")}
+                >
+                  <Sparkles className="size-4 text-muted-foreground" />
+                  <span className="text-base font-semibold tracking-[-0.01em]">
+                    {t("cardNav.skills")}
+                  </span>
+                </button>
                 <div className="flex shrink-0 items-center gap-1.5">
                   {renderAggregateToggle(
                     "skill",
@@ -766,19 +837,27 @@ export function CardNav({
             {/* Presets Card */}
             <div
               ref={setCardRef(2)}
-              role="button"
-              tabIndex={0}
-              aria-label={t("cardNav.plugins")}
-              onClick={() => handleCardClick("presets")}
-              onKeyDown={(event) => handleCardKeyDown(event, "presets")}
-              className="group relative flex min-w-[260px] shrink-0 flex-col rounded-lg border border-border/50 bg-muted/30 p-5 transition-all duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] hover:-translate-y-0.5 hover:bg-muted/40 hover:shadow-[0_4px_12px_-2px_rgba(var(--foreground),0.05)] min-h-[140px] md:min-w-0 md:shrink cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              className="group relative flex min-w-[260px] shrink-0 flex-col rounded-lg border border-border/50 bg-muted/30 p-5 transition-all duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] hover:-translate-y-0.5 hover:bg-muted/40 hover:shadow-[0_4px_12px_-2px_rgba(var(--foreground),0.05)] min-h-[140px] md:min-w-0 md:shrink"
             >
-              <div className="mb-3 flex min-w-0 items-center">
-                <div className="flex h-10 min-w-0 items-center gap-2.5 rounded-2xl border border-border/50 bg-muted/60 px-3 text-foreground">
+              <div className="mb-3 flex min-w-0 items-center justify-between gap-3">
+                <button
+                  type="button"
+                  onClick={() => handleCardClick("presets")}
+                  className="flex h-10 min-w-0 items-center gap-2.5 rounded-2xl border border-border/50 bg-muted/60 px-3 text-foreground transition-all duration-200 hover:bg-muted/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/20"
+                  aria-label={t("cardNav.plugins")}
+                >
                   <Plug className="size-4 text-muted-foreground" />
                   <span className="text-base font-semibold tracking-[-0.01em]">
                     {t("cardNav.plugins")}
                   </span>
+                </button>
+                <div className="flex shrink-0 items-center gap-1.5">
+                  {renderOffOnlyToggle(
+                    "plugin",
+                    installedPlugins.length > 0,
+                    pluginEnabledCount,
+                    disableAllPlugins,
+                  )}
                 </div>
               </div>
               {renderItemBadges(
