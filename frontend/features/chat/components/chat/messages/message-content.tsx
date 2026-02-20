@@ -3,11 +3,13 @@
 import * as React from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import remarkMath from "remark-math";
 import type { MessageBlock } from "@/features/chat/types";
 import type { ToolUseBlock, ToolResultBlock } from "@/features/chat/types";
 import { Brain } from "lucide-react";
 import { ToolChain } from "./tool-chain";
 import remarkBreaks from "remark-breaks";
+import rehypeKatex from "rehype-katex";
 import { MarkdownCode, MarkdownPre } from "@/components/shared/markdown-code";
 import { useT } from "@/lib/i18n/client";
 
@@ -68,7 +70,8 @@ export function MessageContent({
     return (
       <div className="prose prose-base dark:prose-invert w-full min-w-0 max-w-none overflow-hidden break-words break-all [&_pre]:whitespace-pre-wrap [&_pre]:break-words [&_code]:break-words [&_p]:break-words [&_p]:break-all [&_*]:break-words [&_*]:break-all">
         <ReactMarkdown
-          remarkPlugins={[remarkGfm, remarkBreaks]}
+          remarkPlugins={[remarkGfm, remarkBreaks, remarkMath]}
+          rehypePlugins={[rehypeKatex]}
           components={{
             pre: MarkdownPre,
             code: MarkdownCode,
@@ -219,7 +222,8 @@ export function MessageContent({
               className="prose prose-base dark:prose-invert w-full min-w-0 max-w-none overflow-hidden break-words break-all [&_pre]:whitespace-pre-wrap [&_pre]:break-words [&_code]:break-words [&_p]:break-words [&_p]:break-all [&_*]:break-words [&_*]:break-all"
             >
               <ReactMarkdown
-                remarkPlugins={[remarkGfm, remarkBreaks]}
+                remarkPlugins={[remarkGfm, remarkBreaks, remarkMath]}
+                rehypePlugins={[rehypeKatex]}
                 components={{
                   pre: MarkdownPre,
                   code: MarkdownCode,

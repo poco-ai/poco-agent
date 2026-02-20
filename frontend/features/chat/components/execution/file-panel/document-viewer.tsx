@@ -17,11 +17,13 @@ import type { DocViewerProps } from "react-doc-viewer";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
+import remarkMath from "remark-math";
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
 import { MarkdownCode, MarkdownPre } from "@/components/shared/markdown-code";
 import { SyntaxHighlighter, oneDark, oneLight } from "@/lib/markdown/prism";
 import { SkeletonItem } from "@/components/ui/skeleton-shimmer";
+import rehypeKatex from "rehype-katex";
 
 const dispatchCloseViewer = () => {
   if (typeof window === "undefined") return;
@@ -710,7 +712,8 @@ const MarkdownDocumentViewer = ({
         <div className="mx-auto w-full max-w-4xl px-6 py-8">
           <div className="prose prose-sm dark:prose-invert max-w-none break-words [&_*]:break-words">
             <ReactMarkdown
-              remarkPlugins={[remarkGfm, remarkBreaks]}
+              remarkPlugins={[remarkGfm, remarkBreaks, remarkMath]}
+              rehypePlugins={[rehypeKatex]}
               components={{
                 pre: MarkdownPre,
                 code: MarkdownCode,
