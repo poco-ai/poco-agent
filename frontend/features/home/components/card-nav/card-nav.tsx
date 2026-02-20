@@ -429,7 +429,7 @@ export function CardNav({
   const navigateToCapabilityView = useCallback(
     (viewId: CapabilityViewId) => {
       setPendingCapabilityView(viewId);
-      router.push(`/${lng}/capabilities`);
+      router.push(`/${lng}/capabilities?view=${viewId}`);
     },
     [lng, router],
   );

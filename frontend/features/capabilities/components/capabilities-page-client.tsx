@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { Suspense } from "react";
+import { useSearchParams, usePathname, useRouter } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { CapabilitiesLayoutProvider } from "@/features/capabilities/components/capabilities-layout-context";
 import { Button } from "@/components/ui/button";
@@ -19,17 +20,39 @@ import { useT } from "@/lib/i18n/client";
 export function CapabilitiesPageClient() {
   const { t } = useT("translation");
   const views = useCapabilityViews();
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const router = useRouter();
+  const viewFromUrl = searchParams.get("view");
   const [activeViewId, setActiveViewId] = React.useState<string>("skills");
   const [isDesktop, setIsDesktop] = React.useState(false);
   const [isMobileDetailVisible, setIsMobileDetailVisible] =
     React.useState(false);
+  const [enteredDetailViaView, setEnteredDetailViaView] = React.useState(false);
 
   React.useEffect(() => {
     if (!views.length) return;
 
+    const isMobile =
+      typeof window !== "undefined" &&
+      !window.matchMedia("(min-width: 768px)").matches;
+
+    if (viewFromUrl && views.some((view) => view.id === viewFromUrl)) {
+      setActiveViewId(viewFromUrl);
+      if (isMobile) {
+        setIsMobileDetailVisible(true);
+        setEnteredDetailViaView(true);
+      }
+      return;
+    }
+
     const pendingViewId = consumePendingCapabilityView();
     if (pendingViewId && views.some((view) => view.id === pendingViewId)) {
       setActiveViewId(pendingViewId);
+      if (isMobile) {
+        setIsMobileDetailVisible(true);
+        setEnteredDetailViaView(true);
+      }
       return;
     }
 
@@ -44,12 +67,24 @@ export function CapabilitiesPageClient() {
       views[0]?.id ??
       "skills";
     setActiveViewId(defaultViewId);
-  }, [views]);
+  }, [views, viewFromUrl]);
 
   React.useEffect(() => {
     if (!activeViewId) return;
     setLastCapabilityView(activeViewId);
   }, [activeViewId]);
+
+  // Only sync URL when there was no valid view in URL (we used pending/last/default).
+  // Do not overwrite an existing ?view= — that causes flicker (URL gets overwritten before state updates).
+  React.useEffect(() => {
+    if (!activeViewId || !views.length) return;
+    const urlHasValidView =
+      viewFromUrl && views.some((v) => v.id === viewFromUrl);
+    if (urlHasValidView) return;
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("view", activeViewId);
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  }, [activeViewId, pathname, router, searchParams, viewFromUrl, views]);
 
   React.useEffect(() => {
     if (typeof window === "undefined") return undefined;
@@ -87,11 +122,14 @@ export function CapabilitiesPageClient() {
   const handleSelectView = React.useCallback(
     (viewId: string) => {
       setActiveViewId(viewId);
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("view", viewId);
+      router.replace(`${pathname}?${params.toString()}`, { scroll: false });
       if (!isDesktop) {
         setIsMobileDetailVisible(true);
       }
     },
-    [isDesktop],
+    [isDesktop, pathname, router, searchParams],
   );
 
   const renderActiveView = (
@@ -118,6 +156,13 @@ export function CapabilitiesPageClient() {
     ? (activeView?.description ?? undefined)
     : t("library.subtitle");
   const backLabel = t("library.mobile.back");
+  const handleMobileBack = React.useCallback(() => {
+    if (enteredDetailViaView) {
+      router.back();
+    } else {
+      setIsMobileDetailVisible(false);
+    }
+  }, [router, enteredDetailViaView]);
   const mobileBackButton = showMobileBack ? (
     <Button
       type="button"
@@ -126,7 +171,7 @@ export function CapabilitiesPageClient() {
       className="text-muted-foreground"
       aria-label={backLabel}
       title={backLabel}
-      onClick={() => setIsMobileDetailVisible(false)}
+      onClick={handleMobileBack}
     >
       <ChevronLeft className="size-4" />
     </Button>
@@ -160,7 +205,7 @@ export function CapabilitiesPageClient() {
             <div className="min-h-0 flex-1 overflow-y-auto">
               {renderActiveView("mobile", {
                 isMobileDetail: true,
-                onMobileBack: () => setIsMobileDetailVisible(false),
+                onMobileBack: handleMobileBack,
                 mobileBackLabel: t("library.mobile.back"),
               })}
             </div>
