@@ -15,7 +15,6 @@ import {
   X,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { useTheme } from "next-themes";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
@@ -41,6 +40,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n/client";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useThemeMode } from "@/hooks/use-theme-mode";
 import { SettingsSidebar } from "@/features/settings/components/settings-sidebar";
 import { AccountSettingsTab } from "@/features/settings/components/tabs/account-settings-tab";
 import { ModelsSettingsTab } from "@/features/settings/components/tabs/models-settings-tab";
@@ -96,7 +96,7 @@ export function SettingsDialog({
   const { t } = useT("translation");
   const isMobile = useIsMobile();
   const router = useRouter();
-  const { theme, resolvedTheme, setTheme } = useTheme();
+  const { mode, setMode } = useThemeMode();
   const { backend, setBackend } = useBackendPreference();
   const { currentLanguage, changeLanguage } = useSettingsLanguage();
   const { profile, credits, isLoading } = useUserAccount();
@@ -240,8 +240,6 @@ export function SettingsDialog({
     ],
     [t],
   );
-
-  const themeSelection = theme === "system" ? (resolvedTheme ?? "dark") : theme;
 
   const mobileHeaderTitle = React.useMemo(() => {
     if (mobileView === "overview") return t("settings.dialogTitle");
@@ -427,9 +425,9 @@ export function SettingsDialog({
               backendOptions={backendOptions}
               onBackendChange={(value) => setBackend(value as BackendOption)}
               themeLabel={t("settings.theme")}
-              themeValue={(themeSelection ?? "dark") as "light" | "dark"}
+              themeValue={mode}
               themeOptions={themeOptions}
-              onThemeChange={(value) => setTheme(value as "light" | "dark")}
+              onThemeChange={setMode}
               languageLabel={t("settings.language")}
               languageValue={currentLanguage}
               languageOptions={languageOptions}

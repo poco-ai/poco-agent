@@ -11,12 +11,12 @@ import {
   Languages,
   SlidersHorizontal,
 } from "lucide-react";
-import { useTheme } from "next-themes";
 
 import { useT } from "@/lib/i18n/client";
 import { Button } from "@/components/ui/button";
 import { SidebarFooter, useSidebar } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useThemeMode } from "@/hooks/use-theme-mode";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -138,20 +138,21 @@ interface DesktopFooterProps {
 
 function DesktopFooter({ onOpenSettings }: DesktopFooterProps) {
   const { t } = useT("translation");
-  const { theme, setTheme } = useTheme();
+  const { mode, setMode } = useThemeMode();
   const { currentLanguage, changeLanguage } = useSettingsLanguage();
   const { backend, setBackend } = useBackendPreference();
 
   const handleThemeSelect = React.useCallback(
     (nextTheme: string) => {
-      if (nextTheme === "light" || nextTheme === "dark") setTheme(nextTheme);
+      if (nextTheme === "light" || nextTheme === "dark") setMode(nextTheme);
     },
-    [setTheme],
+    [setMode],
   );
 
   const handleBackendSelect = React.useCallback(
     (nextBackend: string) => {
-      if (nextBackend === "claude-code") setBackend(nextBackend as BackendOption);
+      if (nextBackend === "claude-code")
+        setBackend(nextBackend as BackendOption);
     },
     [setBackend],
   );
@@ -201,7 +202,7 @@ function DesktopFooter({ onOpenSettings }: DesktopFooterProps) {
           {/* Theme */}
           <DropdownMenuSub>
             <DropdownMenuSubTrigger>
-              {theme === "dark" ? (
+              {mode === "dark" ? (
                 <Moon className="size-4" />
               ) : (
                 <Sun className="size-4" />
@@ -210,7 +211,7 @@ function DesktopFooter({ onOpenSettings }: DesktopFooterProps) {
             </DropdownMenuSubTrigger>
             <DropdownMenuSubContent>
               <DropdownMenuRadioGroup
-                value={theme === "dark" ? "dark" : "light"}
+                value={mode}
                 onValueChange={handleThemeSelect}
               >
                 <DropdownMenuRadioItem value="light">
