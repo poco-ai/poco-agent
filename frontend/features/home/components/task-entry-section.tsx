@@ -5,6 +5,7 @@ import * as React from "react";
 import { ModeToggle } from "@/features/home/components/mode-toggle";
 import { TaskComposer } from "@/features/home/components/task-composer";
 import { ConnectorsBar } from "@/features/home/components/connectors-bar";
+import { KeyboardHints } from "@/features/home/components/keyboard-hints";
 import type { ComposerMode } from "@/features/home/components/task-composer";
 import { cn } from "@/lib/utils";
 
@@ -53,6 +54,10 @@ export function TaskEntrySection({
         <TaskComposer {...composerProps} mode={mode} />
 
         <ConnectorsBar forceExpanded={connectorsExpanded} />
+
+        {composerProps.value.length === 0 ? (
+          <KeyboardHints className="mt-4" />
+        ) : null}
       </div>
     </div>
   );

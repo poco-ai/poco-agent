@@ -48,6 +48,11 @@
     "voiceInput": "Saisie vocale",
     "send": "Envoyer",
     "placeholder": "Assignez une tâche ou posez une question",
+    "inputPrompts": {
+      "taskDefault": "Confiez n'importe quelle tâche à Poco",
+      "planDefault": "Créez un plan de tâche avec Poco",
+      "shortcutHint": "/ pour les commandes Slash, Shift+Enter pour une nouvelle ligne, Enter pour envoyer"
+    },
     "tools": "Connectez vos outils à Poco",
     "importLocal": "Importer depuis un fichier local",
     "importFigma": "Importer depuis Figma (coming soon)",
@@ -159,6 +164,7 @@
     "more": "Plus"
   },
   "hints": {
+    "slashCommand": "commande Slash",
     "send": "Envoyer",
     "newLine": "Nouvelle ligne",
     "separator": ","

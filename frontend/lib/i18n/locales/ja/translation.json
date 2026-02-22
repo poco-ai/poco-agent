@@ -48,6 +48,11 @@
     "voiceInput": "音声入力",
     "send": "送信",
     "placeholder": "タスクを入力するか、質問してください",
+    "inputPrompts": {
+      "taskDefault": "Poco にどんなタスクでも割り当てる",
+      "planDefault": "Poco と一緒にタスク計画を作成する",
+      "shortcutHint": "/ でスラッシュコマンド、Shift+Enter で改行、Enter で送信"
+    },
     "tools": "Poco にツールを接続",
     "importLocal": "ローカルファイルからインポート",
     "importFigma": "Figmaからインポート（近日公開）",
@@ -159,6 +164,7 @@
     "more": "その他"
   },
   "hints": {
+    "slashCommand": "スラッシュコマンドを使用",
     "send": "送信",
     "newLine": "改行",
     "separator": "、"

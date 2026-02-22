@@ -69,8 +69,6 @@ interface TaskComposerProps {
   }) => void | Promise<void>;
   onFocus?: () => void;
   onBlur?: () => void;
-  placeholderOverride?: string;
-  inlineKeyboardHint?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -98,8 +96,6 @@ export function TaskComposer({
   onRepoDefaultsSave,
   onFocus,
   onBlur,
-  placeholderOverride,
-  inlineKeyboardHint = false,
 }: TaskComposerProps) {
   const { t } = useT("translation");
   const { lng } = useAppShell();
@@ -147,12 +143,13 @@ export function TaskComposer({
     React.useState(true);
 
   // ---- Derived values ----
-  const placeholderText =
+  const firstLine =
     mode === "scheduled"
       ? t("library.scheduledTasks.placeholders.prompt")
       : mode === "plan"
-        ? t("hero.modes.planPlaceholder")
-        : placeholderOverride || t("hero.placeholder");
+        ? t("hero.inputPrompts.planDefault")
+        : t("hero.inputPrompts.taskDefault");
+  const placeholderText = firstLine;
 
   const scheduledSummary = React.useMemo(() => {
     const inferred = inferScheduleFromCron(scheduledCron);
@@ -411,27 +408,9 @@ export function TaskComposer({
           placeholder={placeholderText}
           className={cn(
             "min-h-[60px] max-h-[40vh] w-full resize-none border-0 bg-transparent dark:bg-transparent p-0 text-base shadow-none placeholder:text-muted-foreground/50 focus-visible:ring-0 disabled:opacity-50",
-            inlineKeyboardHint ? "pr-28" : undefined,
           )}
           rows={2}
         />
-        {inlineKeyboardHint && (
-          <div className="pointer-events-none absolute bottom-4 right-5 flex flex-wrap items-center gap-1 text-[11px] text-muted-foreground/70">
-            <kbd className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px]">
-              Enter
-            </kbd>
-            <span className="text-muted-foreground/60">
-              {t("hints.send")}
-              {t("hints.separator")}
-            </span>
-            <kbd className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px]">
-              Shift + Enter
-            </kbd>
-            <span className="text-muted-foreground/60">
-              {t("hints.newLine")}
-            </span>
-          </div>
-        )}
       </div>
 
       {/* Bottom toolbar */}

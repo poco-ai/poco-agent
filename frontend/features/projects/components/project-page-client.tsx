@@ -14,7 +14,6 @@ import type {
 } from "@/features/home/components/task-composer";
 
 import { ProjectHeader } from "@/features/projects/components/project-header";
-import { QUICK_ACTIONS } from "@/features/home/constants/constants";
 import { useAppShell } from "@/components/shared/app-shell-context";
 import { scheduledTasksService } from "@/features/scheduled-tasks/services/scheduled-tasks-service";
 import { toast } from "sonner";
@@ -64,40 +63,6 @@ export function ProjectPageClient({ projectId }: ProjectPageClientProps) {
       count: projectTaskCount,
     });
   }, [currentProject?.name, projectTaskCount, t]);
-
-  const promptHints = React.useMemo(
-    () =>
-      QUICK_ACTIONS.map((action) => t(action.labelKey)).filter(
-        (hint) => hint && hint.trim().length > 0,
-      ),
-    [t],
-  );
-  const [placeholderIndex, setPlaceholderIndex] = React.useState(0);
-
-  React.useEffect(() => {
-    if (promptHints.length <= 1) return;
-    const id = window.setInterval(() => {
-      setPlaceholderIndex((prev) =>
-        promptHints.length === 0 ? 0 : (prev + 1) % promptHints.length,
-      );
-    }, 4000);
-    return () => window.clearInterval(id);
-  }, [promptHints.length]);
-
-  React.useEffect(() => {
-    if (promptHints.length === 0) {
-      setPlaceholderIndex(0);
-      return;
-    }
-    if (placeholderIndex >= promptHints.length) {
-      setPlaceholderIndex(0);
-    }
-  }, [placeholderIndex, promptHints.length]);
-
-  const rotatingPlaceholder =
-    promptHints.length > 0
-      ? promptHints[placeholderIndex % promptHints.length]
-      : undefined;
 
   const handleSendTask = React.useCallback(
     async (options?: TaskSendOptions) => {
@@ -251,9 +216,6 @@ export function ProjectPageClient({ projectId }: ProjectPageClientProps) {
           onRepoDefaultsSave: async (payload) => {
             await updateProject(projectId, payload);
           },
-          placeholderOverride:
-            mode === "task" ? rotatingPlaceholder : undefined,
-          inlineKeyboardHint: true,
         }}
       />
     </div>

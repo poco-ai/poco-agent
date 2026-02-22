@@ -48,6 +48,11 @@
     "voiceInput": "Голосовой ввод",
     "send": "Отправить",
     "placeholder": "Назначьте задачу или задайте вопрос",
+    "inputPrompts": {
+      "taskDefault": "Поручите Poco любую задачу",
+      "planDefault": "Создайте план задачи вместе с Poco",
+      "shortcutHint": "/ для Slash Command, Shift+Enter для новой строки, Enter для отправки"
+    },
     "tools": "Подключите ваши инструменты к Poco",
     "importLocal": "Импорт из локального файла",
     "importFigma": "Импорт из Figma (скоро)",
@@ -159,6 +164,7 @@
     "more": "Ещё"
   },
   "hints": {
+    "slashCommand": "использовать Slash Command",
     "send": "Отправить",
     "newLine": "Новая строка",
     "separator": ","

@@ -49,6 +49,11 @@
     "voiceInput": "Voice input",
     "send": "Send",
     "placeholder": "Assign a task or ask any question",
+    "inputPrompts": {
+      "taskDefault": "Assign any task to Poco (Ask Poco Anything)",
+      "planDefault": "Create a task plan with Poco",
+      "shortcutHint": "/ for Slash Command, Shift+Enter for new line, Enter to send"
+    },
     "tools": "Connect your tools to Poco",
     "importLocal": "Import from local file",
     "importFigma": "Import from Figma (coming soon)",
@@ -160,6 +165,7 @@
     "more": "More"
   },
   "hints": {
+    "slashCommand": "use Slash Command",
     "send": "Send",
     "newLine": "New line",
     "separator": ","

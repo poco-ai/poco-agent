@@ -49,6 +49,11 @@
     "voiceInput": "语音输入",
     "send": "发送",
     "placeholder": "分配一个任务或提出任何问题",
+    "inputPrompts": {
+      "taskDefault": "给 Poco 分配任何任务",
+      "planDefault": "与 Poco 一起创建任务计划",
+      "shortcutHint": "/ 使用 Slash Command，shift+enter 换行，enter 发送"
+    },
     "tools": "将你的工具连接到 Poco",
     "importLocal": "从本地文件导入",
     "importFigma": "从 Figma 导入 (即将推出)",
@@ -160,6 +165,7 @@
     "more": "更多"
   },
   "hints": {
+    "slashCommand": "使用 Slash Command",
     "send": "发送",
     "newLine": "换行",
     "separator": "，"
