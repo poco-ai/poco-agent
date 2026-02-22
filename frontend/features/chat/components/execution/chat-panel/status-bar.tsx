@@ -216,7 +216,7 @@ export function StatusBar({
   return (
     <div
       className={cn(
-        "flex min-w-0 flex-wrap items-center gap-2 overflow-hidden border-t border-border bg-muted/20 px-4 py-2.5",
+        "flex min-w-0 flex-wrap items-center gap-2 overflow-hidden px-4 py-2.5",
         className,
       )}
     >
