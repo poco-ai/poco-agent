@@ -8,6 +8,7 @@ import { AssistantMessage } from "./messages/assistant-message";
 import { UserMessage } from "./messages/user-message";
 import type { ChatMessage, UsageResponse } from "@/features/chat/types";
 import { useT } from "@/lib/i18n/client";
+import { cn } from "@/lib/utils";
 
 export interface ChatMessageListProps {
   messages: ChatMessage[];
@@ -17,6 +18,8 @@ export interface ChatMessageListProps {
   gitBranch?: string | null;
   runUsageByUserMessageId?: Record<string, UsageResponse | null>;
   onEditMessage?: (content: string) => void;
+  contentPaddingClassName?: string;
+  scrollButtonClassName?: string;
 }
 
 export function ChatMessageList({
@@ -27,6 +30,8 @@ export function ChatMessageList({
   gitBranch,
   runUsageByUserMessageId,
   onEditMessage,
+  contentPaddingClassName,
+  scrollButtonClassName,
 }: ChatMessageListProps) {
   const { t } = useT("translation");
   const scrollRef = React.useRef<HTMLDivElement>(null);
@@ -165,7 +170,12 @@ export function ChatMessageList({
   return (
     <div className="relative h-full w-full min-w-0 overflow-hidden">
       <ScrollArea ref={scrollAreaRef} className="h-full w-full min-w-0">
-        <div className="w-full min-w-0 max-w-full space-y-4 px-6 py-6">
+        <div
+          className={cn(
+            "w-full min-w-0 max-w-full space-y-4 py-6",
+            contentPaddingClassName ?? "px-6",
+          )}
+        >
           {messages.map((message, index) => {
             if (message.role === "user") {
               return (
@@ -218,7 +228,12 @@ export function ChatMessageList({
 
       {/* Scroll to bottom button */}
       {showScrollButton && (
-        <div className="absolute bottom-6 right-6 z-10 animate-in fade-in slide-in-from-bottom-4 duration-300">
+        <div
+          className={cn(
+            "absolute bottom-6 right-6 z-10 animate-in fade-in slide-in-from-bottom-4 duration-300",
+            scrollButtonClassName,
+          )}
+        >
           <Button
             variant="outline"
             size="icon"

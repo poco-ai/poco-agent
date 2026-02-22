@@ -330,6 +330,7 @@ export function ChatPanel({
     t("chat.executionTitle");
   const headerDescription = session?.title?.trim() || t("chat.emptyStateDesc");
   const contentPaddingClass = isRightPanelCollapsed ? "px-[20%]" : "px-4";
+  const messagePaddingClass = isRightPanelCollapsed ? "px-[20%]" : "px-6";
 
   return (
     <div className="flex flex-col h-full bg-background min-w-0">
@@ -385,14 +386,11 @@ export function ChatPanel({
       )}
 
       {/* Message list */}
-      <div
-        className={cn(
-          "flex-1 min-h-0 min-w-0 overflow-hidden",
-          contentPaddingClass,
-        )}
-      >
+      <div className="flex-1 min-h-0 min-w-0 overflow-hidden">
         {isLoadingHistory ? (
-          <ChatHistorySkeleton />
+          <div className={cn("h-full", contentPaddingClass)}>
+            <ChatHistorySkeleton />
+          </div>
         ) : (
           <ChatMessageList
             messages={displayMessages}
@@ -402,6 +400,10 @@ export function ChatPanel({
             gitBranch={session?.config_snapshot?.git_branch ?? null}
             runUsageByUserMessageId={runUsageByUserMessageId}
             onEditMessage={handleEditMessage}
+            contentPaddingClassName={messagePaddingClass}
+            scrollButtonClassName={
+              isRightPanelCollapsed ? "right-[20%]" : undefined
+            }
           />
         )}
       </div>
