@@ -11,8 +11,11 @@ function Slider({
   value,
   min = 0,
   max = 100,
+  minVisibleRange = false,
   ...props
-}: React.ComponentProps<typeof SliderPrimitive.Root>) {
+}: React.ComponentProps<typeof SliderPrimitive.Root> & {
+  minVisibleRange?: boolean;
+}) {
   const _values = React.useMemo(
     () =>
       Array.isArray(value)
@@ -46,6 +49,8 @@ function Slider({
           data-slot="slider-range"
           className={cn(
             "bg-primary absolute data-[orientation=horizontal]:h-full data-[orientation=vertical]:w-full",
+            minVisibleRange &&
+              "data-[orientation=horizontal]:min-w-[2px] data-[orientation=vertical]:min-h-[2px]",
           )}
         />
       </SliderPrimitive.Track>

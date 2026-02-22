@@ -375,7 +375,8 @@
         "browser": "Navigateur",
         "terminal": "Terminal"
       },
-      "limitHint": "Affiche uniquement les {{limit}} premières étapes"
+      "limitHint": "Affiche uniquement les {{limit}} premières étapes",
+      "liveLabel": "En direct"
     },
     "browser": {
       "screenshotAlt": "Capture d'écran du navigateur",

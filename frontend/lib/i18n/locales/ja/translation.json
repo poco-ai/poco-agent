@@ -375,7 +375,8 @@
         "browser": "ブラウザ",
         "terminal": "ターミナル"
       },
-      "limitHint": "最初の{{limit}}手順のみ表示"
+      "limitHint": "最初の{{limit}}手順のみ表示",
+      "liveLabel": "リアルタイム"
     },
     "browser": {
       "screenshotAlt": "ブラウザスクリーンショット",

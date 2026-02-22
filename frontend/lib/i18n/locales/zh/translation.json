@@ -377,7 +377,8 @@
         "browser": "浏览器",
         "terminal": "终端"
       },
-      "limitHint": "仅展示前 {{limit}} 步"
+      "limitHint": "仅展示前 {{limit}} 步",
+      "liveLabel": "实时"
     },
     "browser": {
       "screenshotAlt": "浏览器截图",

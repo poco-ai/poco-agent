@@ -5,12 +5,10 @@ import {
   Monitor,
   CheckCircle2,
   XCircle,
-  ChevronsLeft,
   ChevronLeft,
   ChevronRight,
-  ChevronsRight,
-  Play,
   Pause,
+  Play,
   Layers,
   Globe,
   SquareTerminal,
@@ -123,6 +121,11 @@ function clampIndex(value: number, min: number, max: number): number {
   return value;
 }
 
+function getFrameAdvanceDelayMs(frame: ReplayFrame): number {
+  const baseMs = frame.kind === "browser" ? 1200 : 1800;
+  return Math.max(80, baseMs);
+}
+
 export function ComputerPanel({
   sessionId,
   sessionStatus,
@@ -231,10 +234,12 @@ export function ComputerPanel({
 
   const [replayFilter, setReplayFilter] = React.useState<ReplayFilter>("all");
   const [isPlaying, setIsPlaying] = React.useState(false);
+  const [isRealtimePlaying, setIsRealtimePlaying] = React.useState(false);
   const [followLatest, setFollowLatest] = React.useState(true);
   const [selectedFrameId, setSelectedFrameId] = React.useState<string | null>(
     null,
   );
+  const [sliderProgress, setSliderProgress] = React.useState(0);
 
   const replayFrames: ReplayFrame[] = React.useMemo(() => {
     if (replayFilter === "browser") {
@@ -252,17 +257,30 @@ export function ComputerPanel({
   }, [replayFrames, selectedFrameId]);
 
   const selectedFrame = selectedIndex >= 0 ? replayFrames[selectedIndex] : null;
+  const sliderMax = Math.max(0, replayFrames.length - 1);
+
+  const stopPlayback = React.useCallback(() => {
+    setIsPlaying(false);
+    setIsRealtimePlaying(false);
+  }, []);
 
   // Stop playback when filter changes (avoid surprising jumps).
   React.useEffect(() => {
-    setIsPlaying(false);
-  }, [replayFilter]);
+    stopPlayback();
+  }, [replayFilter, stopPlayback]);
+
+  // In live session mode, always follow latest frames instead of local replay controls.
+  React.useEffect(() => {
+    if (!isActive) return;
+    stopPlayback();
+    setFollowLatest(true);
+  }, [isActive, stopPlayback]);
 
   // Keep selection valid; default to the latest completed step (or latest any step).
   React.useEffect(() => {
     if (replayFrames.length === 0) {
       if (selectedFrameId !== null) setSelectedFrameId(null);
-      setIsPlaying(false);
+      stopPlayback();
       return;
     }
 
@@ -288,29 +306,71 @@ export function ComputerPanel({
       replayFrames[replayFrames.length - 1]!.execution.id;
     setSelectedFrameId(pick);
     setFollowLatest(true);
-    setIsPlaying(false);
-  }, [followLatest, isPlaying, replayFrames, selectedFrameId]);
+    stopPlayback();
+  }, [followLatest, isPlaying, replayFrames, selectedFrameId, stopPlayback]);
 
-  // Playback: advance to the next step using a step-based cadence (video-like, but not real video).
+  // Playback: advance frame-by-frame with a natural cadence.
   React.useEffect(() => {
     if (!isPlaying) return;
     if (!selectedFrame) return;
     if (selectedIndex < 0) return;
+
     if (selectedIndex >= replayFrames.length - 1) {
-      setIsPlaying(false);
+      if (isRealtimePlaying && isActive) {
+        // Keep realtime mode active while waiting for new frames.
+        return;
+      }
+      stopPlayback();
       return;
     }
 
-    const baseMs = selectedFrame.kind === "browser" ? 1200 : 1800;
-    const delayMs = Math.max(80, baseMs);
+    const delayMs = getFrameAdvanceDelayMs(selectedFrame);
     const id = window.setTimeout(() => {
       const next = replayFrames[selectedIndex + 1];
       if (next) {
         setSelectedFrameId(next.execution.id);
+        setFollowLatest(selectedIndex + 1 >= replayFrames.length - 1);
       }
     }, delayMs);
     return () => window.clearTimeout(id);
-  }, [isPlaying, replayFrames, selectedFrame, selectedIndex]);
+  }, [
+    isActive,
+    isPlaying,
+    replayFrames,
+    isRealtimePlaying,
+    selectedFrame,
+    selectedIndex,
+    stopPlayback,
+  ]);
+
+  // Smooth progress animation while playing so the slider doesn't jump.
+  React.useEffect(() => {
+    if (!isPlaying || !selectedFrame || selectedIndex < 0) {
+      setSliderProgress(Math.max(0, selectedIndex));
+      return;
+    }
+
+    if (selectedIndex >= replayFrames.length - 1) {
+      setSliderProgress(Math.max(0, selectedIndex));
+      return;
+    }
+
+    const delayMs = getFrameAdvanceDelayMs(selectedFrame);
+    const start = performance.now();
+    let rafId = 0;
+
+    const tick = (now: number) => {
+      const elapsed = now - start;
+      const ratio = Math.min(1, Math.max(0, elapsed / delayMs));
+      setSliderProgress(selectedIndex + ratio);
+      if (ratio < 1) {
+        rafId = window.requestAnimationFrame(tick);
+      }
+    };
+
+    rafId = window.requestAnimationFrame(tick);
+    return () => window.cancelAnimationFrame(rafId);
+  }, [isPlaying, replayFrames.length, selectedFrame, selectedIndex]);
 
   const selectedBrowserToolUseId =
     selectedFrame?.kind === "browser" &&
@@ -399,32 +459,52 @@ export function ComputerPanel({
     replayFrames.length > 0 &&
     selectedIndex >= 0 &&
     selectedIndex < replayFrames.length - 1;
+  const isLiveSession = isActive;
 
-  const goToIndex = (index: number) => {
+  const goToIndex = React.useCallback(
+    (index: number) => {
+      if (replayFrames.length === 0) return;
+      const safe = clampIndex(index, 0, replayFrames.length - 1);
+      const frame = replayFrames[safe];
+      if (!frame) return;
+      stopPlayback();
+      setSelectedFrameId(frame.execution.id);
+      setFollowLatest(safe === replayFrames.length - 1);
+    },
+    [replayFrames, stopPlayback],
+  );
+
+  const handleRealtimeToggle = React.useCallback(() => {
     if (replayFrames.length === 0) return;
-    const safe = clampIndex(index, 0, replayFrames.length - 1);
-    const frame = replayFrames[safe];
-    if (!frame) return;
-    setIsPlaying(false);
-    setSelectedFrameId(frame.execution.id);
-    setFollowLatest(safe === replayFrames.length - 1);
-  };
+    if (isPlaying && isRealtimePlaying) {
+      stopPlayback();
+      return;
+    }
+
+    const isAtEnd = selectedIndex >= replayFrames.length - 1;
+    if (isAtEnd) {
+      const firstFrame = replayFrames[0];
+      if (!firstFrame) return;
+      // Prevent keep-selection effect from snapping back to the latest frame.
+      setFollowLatest(false);
+      setSelectedFrameId(firstFrame.execution.id);
+      // Let selection update first so replay starts from frame 0 smoothly.
+      window.requestAnimationFrame(() => {
+        setIsRealtimePlaying(true);
+        setIsPlaying(true);
+        setFollowLatest(true);
+      });
+      return;
+    }
+
+    setIsRealtimePlaying(true);
+    setIsPlaying(true);
+    setFollowLatest(true);
+  }, [isPlaying, isRealtimePlaying, replayFrames, selectedIndex, stopPlayback]);
 
   const controls = (
     <div className="min-w-0 space-y-1">
       <div className="flex min-w-0 items-center gap-2 overflow-hidden">
-        <Button
-          type="button"
-          variant="outline"
-          size="icon-sm"
-          onClick={() => goToIndex(0)}
-          disabled={replayFrames.length === 0 || selectedIndex <= 0}
-          title={t("computer.replay.controls.first")}
-          aria-label={t("computer.replay.controls.first")}
-          className="shrink-0"
-        >
-          <ChevronsLeft className="size-4" />
-        </Button>
         <Button
           type="button"
           variant="outline"
@@ -442,24 +522,21 @@ export function ComputerPanel({
           type="button"
           variant="outline"
           size="icon-sm"
-          onClick={() => {
-            if (replayFrames.length === 0) return;
-            setIsPlaying(!isPlaying);
-          }}
+          onClick={handleRealtimeToggle}
           disabled={replayFrames.length === 0}
           title={
-            isPlaying
+            isPlaying && isRealtimePlaying
               ? t("computer.replay.controls.pause")
               : t("computer.replay.controls.play")
           }
           aria-label={
-            isPlaying
+            isPlaying && isRealtimePlaying
               ? t("computer.replay.controls.pause")
               : t("computer.replay.controls.play")
           }
           className="shrink-0"
         >
-          {isPlaying ? (
+          {isPlaying && isRealtimePlaying ? (
             <Pause className="size-4" />
           ) : (
             <Play className="size-4" />
@@ -478,33 +555,13 @@ export function ComputerPanel({
         >
           <ChevronRight className="size-4" />
         </Button>
-        <Button
-          type="button"
-          variant="outline"
-          size="icon-sm"
-          onClick={() => {
-            if (replayFrames.length === 0) return;
-            setIsPlaying(false);
-            setFollowLatest(true);
-            const last = replayFrames[replayFrames.length - 1];
-            if (last) setSelectedFrameId(last.execution.id);
-          }}
-          disabled={
-            replayFrames.length === 0 ||
-            selectedIndex >= replayFrames.length - 1
-          }
-          title={t("computer.replay.controls.latest")}
-          aria-label={t("computer.replay.controls.latest")}
-          className="shrink-0"
-        >
-          <ChevronsRight className="size-4" />
-        </Button>
 
         <div className="min-w-0 flex-1 pl-1">
           <Slider
             min={0}
-            max={Math.max(0, replayFrames.length - 1)}
-            value={[Math.max(0, selectedIndex)]}
+            max={sliderMax}
+            value={[clampIndex(sliderProgress, 0, sliderMax)]}
+            minVisibleRange
             onValueChange={(value) => {
               const nextIndex = value[0] ?? 0;
               goToIndex(nextIndex);
@@ -728,22 +785,29 @@ export function ComputerPanel({
       ) : null}
       <div className="flex-1 min-h-0 overflow-hidden p-3 sm:p-4">
         <div className="h-full min-h-0 flex flex-col gap-3">
-          <div className="flex-1 min-h-0 overflow-hidden rounded-xl border bg-card">
+          <div className="relative flex-1 min-h-0 overflow-hidden rounded-xl border bg-card">
             {viewer}
+            {isLiveSession ? (
+              <div className="absolute bottom-2 right-2 rounded-full border bg-card/90 px-2 py-0.5 text-[11px] font-medium text-primary shadow-sm">
+                {t("computer.replay.liveLabel")}
+              </div>
+            ) : null}
           </div>
 
-          {controls}
+          {!isLiveSession ? controls : null}
 
-          {hasMultipleTypes ? (
-            <div className="h-[220px] min-w-0 overflow-hidden rounded-xl border bg-card flex">
-              <div className="shrink-0 border-r p-1">{filterToggleGroup}</div>
-              <div className="flex-1 min-w-0">{timelineList}</div>
-            </div>
-          ) : (
-            <div className="h-[220px] min-w-0 overflow-hidden rounded-xl border bg-card">
-              {timelineList}
-            </div>
-          )}
+          {!isLiveSession ? (
+            hasMultipleTypes ? (
+              <div className="h-[220px] min-w-0 overflow-hidden rounded-xl border bg-card flex">
+                <div className="shrink-0 border-r p-1">{filterToggleGroup}</div>
+                <div className="flex-1 min-w-0">{timelineList}</div>
+              </div>
+            ) : (
+              <div className="h-[220px] min-w-0 overflow-hidden rounded-xl border bg-card">
+                {timelineList}
+              </div>
+            )
+          ) : null}
         </div>
       </div>
     </div>
