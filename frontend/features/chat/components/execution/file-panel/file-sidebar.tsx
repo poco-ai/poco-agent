@@ -87,6 +87,7 @@ function FileTreeItem({
       case "jsx":
       case "json":
       case "excalidraw":
+      case "drawio":
       case "py":
         return <FileCode className={cn("size-4", className)} />;
       case "jpg":

@@ -404,7 +404,7 @@
       "fetchError": "ドキュメントコンテンツの取得に失敗しました",
       "retry": "再試行",
       "selectFile": "プレビューするファイルを右から選択してください",
-      "supportedFormats": "PDF、Officeドキュメント、一般的な画像形式、XMind ファイル、.excalidraw ファイルをサポート",
+      "supportedFormats": "PDF、Officeドキュメント、一般的な画像形式、XMind ファイル、.excalidraw ファイル、.drawio ファイルをサポート",
       "processing": "ファイル処理",
       "notSupported": "この形式はプレビューをサポートしていません",
       "openInNewWindow": "新しいウィンドウで開く",

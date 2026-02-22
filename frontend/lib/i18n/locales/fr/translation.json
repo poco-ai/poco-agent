@@ -404,7 +404,7 @@
       "fetchError": "Échec de la récupération du contenu du document",
       "retry": "Réessayer",
       "selectFile": "Veuillez sélectionner un fichier à droite pour la prévisualisation",
-      "supportedFormats": "Supporte les PDF, documents Office, formats d'image courants, fichiers XMind et fichiers .excalidraw",
+      "supportedFormats": "Supporte les PDF, documents Office, formats d'image courants, fichiers XMind, fichiers .excalidraw et fichiers .drawio",
       "processing": "Traitement du fichier",
       "notSupported": "Prévisualisation non supportée pour ce format",
       "openInNewWindow": "Ouvrir dans une nouvelle fenêtre",

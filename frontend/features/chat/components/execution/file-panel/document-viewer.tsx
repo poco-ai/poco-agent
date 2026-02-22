@@ -216,6 +216,8 @@ function DocumentViewerOverlaySkeleton({ label }: { label: string }) {
 const DEFAULT_TEXT_LANGUAGE = "text";
 const NO_SOURCE_ERROR = "NO_SOURCE";
 const EXCALIDRAW_PARSE_ERROR = "EXCALIDRAW_PARSE_ERROR";
+const DRAWIO_VIEWER_BASE_URL = "https://app.diagrams.net/?lightbox=1";
+const DRAWIO_MAX_HASH_LENGTH = 1500000;
 const XMIND_SCRIPT_SRC =
   "https://unpkg.com/xmind-embed-viewer/dist/umd/xmind-embed-viewer.js";
 
@@ -431,6 +433,37 @@ const getTextLanguage = (ext: string, mime?: string | null) => {
 
 const isExcalidrawFile = (ext: string, mime?: string | null) =>
   ext === "excalidraw" || /excalidraw/i.test(mime ?? "");
+
+const isDrawioFile = (ext: string, mime?: string | null) =>
+  ext === "drawio" ||
+  /(?:vnd\.jgraph\.mxfile|drawio|diagrams\.net)/i.test(mime ?? "");
+
+const buildDrawioViewerUrl = ({
+  file,
+  sourceUrl,
+  rawData,
+}: {
+  file: FileNode;
+  sourceUrl?: string;
+  rawData?: string;
+}) => {
+  const title = file.name || file.path || "diagram.drawio";
+  const searchParams = new URLSearchParams({
+    title,
+  });
+  const prefix = `${DRAWIO_VIEWER_BASE_URL}&${searchParams.toString()}`;
+
+  if (typeof rawData === "string") {
+    const normalizedRaw = rawData.replace(/^\uFEFF/, "").trim();
+    const encodedRaw = encodeURIComponent(normalizedRaw);
+    if (encodedRaw.length <= DRAWIO_MAX_HASH_LENGTH) {
+      return `${prefix}#R${encodedRaw}`;
+    }
+  }
+
+  if (!sourceUrl) return undefined;
+  return `${prefix}#U${encodeURIComponent(sourceUrl)}`;
+};
 
 interface ViewerToolbarProps {
   file: FileNode;
@@ -977,6 +1010,112 @@ const ExcalidrawDocumentViewer = ({
   );
 };
 
+const DrawioDocumentViewer = ({
+  file,
+  resolvedUrl,
+  ensureFreshFile,
+}: {
+  file: FileNode;
+  resolvedUrl?: string;
+  ensureFreshFile?: (file: FileNode) => Promise<FileNode | undefined>;
+}) => {
+  const { t } = useT("translation");
+  const { state, refetch } = useFileTextContent({
+    file,
+    fallbackUrl: resolvedUrl,
+  });
+
+  const viewerUrl =
+    state.status === "success"
+      ? buildDrawioViewerUrl({
+          file,
+          sourceUrl: resolvedUrl,
+          rawData: state.content,
+        })
+      : undefined;
+
+  const handleDownload = async () => {
+    const refreshed = ensureFreshFile ? await ensureFreshFile(file) : file;
+    const url = ensureAbsoluteUrl(refreshed?.url ?? resolvedUrl);
+    if (!url) return;
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = refreshed?.name || refreshed?.path || "document";
+    link.click();
+  };
+
+  if (state.status === "idle" || state.status === "loading") {
+    return <DocumentViewerSkeleton label={t("artifacts.viewer.loadingDoc")} />;
+  }
+
+  if (state.status === "error") {
+    const isSourceError = state.code === "NO_SOURCE";
+    return (
+      <div className={VIEW_CLASSNAME}>
+        <StatusLayout
+          icon={File}
+          title={
+            isSourceError
+              ? t("artifacts.viewer.notSupported")
+              : t("artifacts.viewer.fetchError")
+          }
+          desc={isSourceError ? file.name : state.message}
+          action={
+            !isSourceError && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-4"
+                onClick={() => {
+                  if (ensureFreshFile) {
+                    void ensureFreshFile(file);
+                    return;
+                  }
+                  refetch();
+                }}
+              >
+                {t("artifacts.viewer.retry")}
+              </Button>
+            )
+          }
+        />
+      </div>
+    );
+  }
+
+  if (!viewerUrl) {
+    return (
+      <StatusLayout
+        icon={File}
+        title={t("artifacts.viewer.notSupported")}
+        desc={file.name}
+      />
+    );
+  }
+
+  return (
+    <div
+      className={cn(
+        VIEW_CLASSNAME,
+        "flex min-w-0 flex-col rounded-xl border bg-card shadow-sm",
+      )}
+    >
+      <DocumentViewerToolbar
+        file={file}
+        subtitle="DRAWIO"
+        resolvedUrl={resolvedUrl}
+        onDownload={handleDownload}
+      />
+      <iframe
+        src={viewerUrl}
+        className="h-full w-full border-0 bg-background"
+        title={file.name || file.path || "drawio-diagram"}
+        sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"
+      />
+    </div>
+  );
+};
+
 const XMindDocumentViewer = ({
   file,
   resolvedUrl,
@@ -1176,6 +1315,7 @@ const DocumentViewerComponent = ({
   const docType = DOC_VIEWER_TYPE_MAP[extension];
   const textLanguage = getTextLanguage(extension, file.mimeType);
   const excalidrawFile = isExcalidrawFile(extension, file.mimeType);
+  const drawioFile = isDrawioFile(extension, file.mimeType);
 
   const handleDownload = async () => {
     const refreshed = ensureFreshFile ? await ensureFreshFile(file) : file;
@@ -1224,6 +1364,16 @@ const DocumentViewerComponent = ({
   if (excalidrawFile) {
     return (
       <ExcalidrawDocumentViewer
+        file={file}
+        resolvedUrl={resolvedUrl}
+        ensureFreshFile={ensureFreshFile}
+      />
+    );
+  }
+
+  if (drawioFile) {
+    return (
+      <DrawioDocumentViewer
         file={file}
         resolvedUrl={resolvedUrl}
         ensureFreshFile={ensureFreshFile}
