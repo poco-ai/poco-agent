@@ -1,7 +1,12 @@
 "use client";
 
 import * as React from "react";
-import { MessageSquare, Pencil } from "lucide-react";
+import {
+  MessageSquare,
+  PanelRightClose,
+  PanelRightOpen,
+  Pencil,
+} from "lucide-react";
 import { ChatMessageList } from "../../chat/chat-message-list";
 import { TodoList } from "./todo-list";
 import { StatusBar } from "./status-bar";
@@ -31,6 +36,7 @@ import { useT } from "@/lib/i18n/client";
 import { toast } from "sonner";
 import { useTaskHistoryContext } from "@/features/projects/contexts/task-history-context";
 import { SkeletonCircle, SkeletonItem } from "@/components/ui/skeleton-shimmer";
+import { cn } from "@/lib/utils";
 
 interface ChatPanelProps {
   session: ExecutionSession | null;
@@ -39,6 +45,8 @@ interface ChatPanelProps {
   currentStep?: string;
   updateSession: (newSession: Partial<ExecutionSession>) => void;
   onIconClick?: () => void;
+  onToggleRightPanel?: () => void;
+  isRightPanelCollapsed?: boolean;
   hideHeader?: boolean;
 }
 
@@ -88,6 +96,8 @@ export function ChatPanel({
   currentStep,
   updateSession,
   onIconClick,
+  onToggleRightPanel,
+  isRightPanelCollapsed = false,
   hideHeader = false,
 }: ChatPanelProps) {
   const { t } = useT("translation");
@@ -302,6 +312,7 @@ export function ChatPanel({
   const hasBrowser = Boolean(
     session?.config_snapshot?.browser_enabled || statePatch?.browser?.enabled,
   );
+  const contentPaddingClass = isRightPanelCollapsed ? "px-[20%]" : "px-4";
 
   return (
     <div className="flex flex-col h-full bg-background min-w-0">
@@ -317,13 +328,33 @@ export function ChatPanel({
           description={session?.title || t("chat.emptyStateDesc")}
           onIconClick={onIconClick}
           action={
-            session?.session_id ? (
-              <PanelHeaderAction
-                onClick={() => setIsRenameDialogOpen(true)}
-                title={t("sidebar.rename")}
-              >
-                <Pencil className="size-4" />
-              </PanelHeaderAction>
+            session?.session_id || onToggleRightPanel ? (
+              <div className="flex items-center gap-1">
+                {session?.session_id ? (
+                  <PanelHeaderAction
+                    onClick={() => setIsRenameDialogOpen(true)}
+                    title={t("sidebar.rename")}
+                  >
+                    <Pencil className="size-4" />
+                  </PanelHeaderAction>
+                ) : null}
+                {onToggleRightPanel ? (
+                  <PanelHeaderAction
+                    onClick={onToggleRightPanel}
+                    title={
+                      isRightPanelCollapsed
+                        ? t("chat.expandRightPanel")
+                        : t("chat.collapseRightPanel")
+                    }
+                  >
+                    {isRightPanelCollapsed ? (
+                      <PanelRightOpen className="size-4" />
+                    ) : (
+                      <PanelRightClose className="size-4" />
+                    )}
+                  </PanelHeaderAction>
+                ) : null}
+              </div>
             ) : null
           }
         />
@@ -341,7 +372,12 @@ export function ChatPanel({
       )}
 
       {/* Message list */}
-      <div className="flex-1 min-h-0 min-w-0 overflow-hidden px-4">
+      <div
+        className={cn(
+          "flex-1 min-h-0 min-w-0 overflow-hidden",
+          contentPaddingClass,
+        )}
+      >
         {isLoadingHistory ? (
           <ChatHistorySkeleton />
         ) : (
@@ -358,7 +394,7 @@ export function ChatPanel({
       </div>
 
       {activeUserInput || stickyUserInput ? (
-        <div className="px-4 pb-3">
+        <div className={cn("pb-3", contentPaddingClass)}>
           {activeUserInput?.tool_name === "ExitPlanMode" ? (
             <PlanApprovalCard
               request={activeUserInput}
@@ -392,6 +428,7 @@ export function ChatPanel({
           skills={statePatch?.skills_used}
           mcpStatuses={statePatch?.mcp_status}
           browser={statePatch?.browser}
+          className={isRightPanelCollapsed ? "px-[20%]" : undefined}
         />
       )}
 
@@ -402,6 +439,7 @@ export function ChatPanel({
           onSend={sendPendingMessage}
           onModify={modifyPendingMessage}
           onDelete={deletePendingMessage}
+          className={isRightPanelCollapsed ? "px-[20%]" : undefined}
         />
       )}
 
@@ -414,6 +452,7 @@ export function ChatPanel({
         isCancelling={isCancelling}
         disabled={!session?.session_id || hasActiveUserInput || isCancelling}
         history={userPromptHistory}
+        className={isRightPanelCollapsed ? "px-[20%]" : undefined}
       />
 
       <RenameTaskDialog

@@ -139,6 +139,8 @@ export function ExecutionContainer({ sessionId }: ExecutionContainerProps) {
 
   const defaultRightTab = isSessionActive ? "computer" : "artifacts";
   const [rightTab, setRightTab] = React.useState<string>(defaultRightTab);
+  const [isRightPanelCollapsed, setIsRightPanelCollapsed] =
+    React.useState(false);
   const didManualSwitchRef = React.useRef(false);
   const prevDefaultRef = React.useRef<string>(defaultRightTab);
   const lastSessionIdRef = React.useRef<string | null>(null);
@@ -161,6 +163,23 @@ export function ExecutionContainer({ sessionId }: ExecutionContainerProps) {
       setRightTab(defaultRightTab);
     }
   }, [defaultRightTab]);
+
+  React.useEffect(() => {
+    if (isMobile) return;
+
+    const handleToggleRightPanel = (event: KeyboardEvent) => {
+      if (!event.ctrlKey) return;
+      if (event.key.toLowerCase() !== "l") return;
+      event.preventDefault();
+      event.stopPropagation();
+      setIsRightPanelCollapsed((prev) => !prev);
+    };
+
+    window.addEventListener("keydown", handleToggleRightPanel, true);
+    return () => {
+      window.removeEventListener("keydown", handleToggleRightPanel, true);
+    };
+  }, [isMobile]);
 
   // Loading state
   if (isLoading) {
@@ -284,6 +303,20 @@ export function ExecutionContainer({ sessionId }: ExecutionContainerProps) {
     </TabsList>
   );
 
+  const chatPanel = (
+    <ChatPanel
+      session={session}
+      statePatch={session?.state_patch}
+      progress={session?.progress}
+      currentStep={session?.state_patch.current_step ?? undefined}
+      updateSession={updateSession}
+      isRightPanelCollapsed={isRightPanelCollapsed}
+      onToggleRightPanel={() =>
+        setIsRightPanelCollapsed((collapsed) => !collapsed)
+      }
+    />
+  );
+
   return (
     <div className="flex h-dvh min-h-0 min-w-0 overflow-hidden bg-background select-text">
       <ResizablePanelGroup direction="horizontal" className="min-h-0 min-w-0">
@@ -294,69 +327,67 @@ export function ExecutionContainer({ sessionId }: ExecutionContainerProps) {
           className="min-h-0 min-w-0 overflow-hidden"
         >
           <div className="h-full w-full min-h-0 min-w-0 flex flex-col overflow-hidden">
-            <ChatPanel
-              session={session}
-              statePatch={session?.state_patch}
-              progress={session?.progress}
-              currentStep={session?.state_patch.current_step ?? undefined}
-              updateSession={updateSession}
-            />
+            {chatPanel}
           </div>
         </ResizablePanel>
 
-        <ResizableHandle withHandle />
+        {!isRightPanelCollapsed ? (
+          <>
+            <ResizableHandle withHandle />
 
-        {/* Right panel - Artifacts (55%) */}
-        <ResizablePanel
-          defaultSize={55}
-          minSize={30}
-          className="min-h-0 min-w-0 overflow-hidden"
-        >
-          <div className="h-full w-full min-h-0 min-w-0 flex flex-col overflow-hidden bg-muted/30">
-            <Tabs
-              value={rightTab}
-              onValueChange={(value) => {
-                didManualSwitchRef.current = true;
-                setRightTab(value);
-              }}
-              className="h-full min-h-0 flex flex-col"
+            {/* Right panel - Artifacts (55%) */}
+            <ResizablePanel
+              defaultSize={55}
+              minSize={30}
+              className="min-h-0 min-w-0 overflow-hidden"
             >
-              <PanelHeader
-                content={
-                  <div className="flex min-w-0 items-center overflow-hidden">
-                    {tabsSwitch}
-                  </div>
-                }
-              />
-              <div className="flex-1 min-h-0 overflow-hidden">
-                <TabsContent
-                  value="computer"
-                  className="h-full min-h-0 data-[state=inactive]:hidden"
+              <div className="h-full w-full min-h-0 min-w-0 flex flex-col overflow-hidden bg-muted/30">
+                <Tabs
+                  value={rightTab}
+                  onValueChange={(value) => {
+                    didManualSwitchRef.current = true;
+                    setRightTab(value);
+                  }}
+                  className="h-full min-h-0 flex flex-col"
                 >
-                  <ComputerPanel
-                    sessionId={sessionId}
-                    sessionStatus={session?.status}
-                    browserEnabled={browserEnabled}
-                    hideHeader
-                  />
-                </TabsContent>
-                <TabsContent
-                  value="artifacts"
-                  className="h-full min-h-0 data-[state=inactive]:hidden"
-                >
-                  <ArtifactsPanel
-                    fileChanges={
-                      session?.state_patch.workspace_state?.file_changes
+                  <PanelHeader
+                    content={
+                      <div className="flex min-w-0 items-center overflow-hidden">
+                        {tabsSwitch}
+                      </div>
                     }
-                    sessionId={sessionId}
-                    sessionStatus={session?.status}
-                    hideHeader
                   />
-                </TabsContent>
+                  <div className="flex-1 min-h-0 overflow-hidden">
+                    <TabsContent
+                      value="computer"
+                      className="h-full min-h-0 data-[state=inactive]:hidden"
+                    >
+                      <ComputerPanel
+                        sessionId={sessionId}
+                        sessionStatus={session?.status}
+                        browserEnabled={browserEnabled}
+                        hideHeader
+                      />
+                    </TabsContent>
+                    <TabsContent
+                      value="artifacts"
+                      className="h-full min-h-0 data-[state=inactive]:hidden"
+                    >
+                      <ArtifactsPanel
+                        fileChanges={
+                          session?.state_patch.workspace_state?.file_changes
+                        }
+                        sessionId={sessionId}
+                        sessionStatus={session?.status}
+                        hideHeader
+                      />
+                    </TabsContent>
+                  </div>
+                </Tabs>
               </div>
-            </Tabs>
-          </div>
-        </ResizablePanel>
+            </ResizablePanel>
+          </>
+        ) : null}
       </ResizablePanelGroup>
     </div>
   );

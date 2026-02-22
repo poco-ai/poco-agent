@@ -56,6 +56,31 @@ export function AppShell({
     setIsSettingsOpen(true);
   }, []);
 
+  const toggleSettingsByHotkey = React.useCallback(() => {
+    setIsSettingsOpen((prev) => {
+      const next = !prev;
+      if (!next) {
+        setSettingsTabRequest(null);
+      }
+      return next;
+    });
+  }, []);
+
+  React.useEffect(() => {
+    const handleOpenSettingsShortcut = (event: KeyboardEvent) => {
+      if (!event.ctrlKey) return;
+      if (!(event.key === "," || event.code === "Comma")) return;
+      event.preventDefault();
+      event.stopPropagation();
+      toggleSettingsByHotkey();
+    };
+
+    window.addEventListener("keydown", handleOpenSettingsShortcut, true);
+    return () => {
+      window.removeEventListener("keydown", handleOpenSettingsShortcut, true);
+    };
+  }, [toggleSettingsByHotkey]);
+
   const handleSettingsOpenChange = React.useCallback((nextOpen: boolean) => {
     setIsSettingsOpen(nextOpen);
     if (!nextOpen) {

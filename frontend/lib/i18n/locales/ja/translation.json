@@ -300,7 +300,9 @@
       "Transmuting",
       "Vibing",
       "Working"
-    ]
+    ],
+    "collapseRightPanel": "Collapse output panel",
+    "expandRightPanel": "Expand output panel"
   },
   "status": {
     "pending": "待機中",
@@ -1084,7 +1086,8 @@
       "account": "アカウント",
       "settings": "設定",
       "models": "モデル",
-      "usage": "使用状況"
+      "usage": "使用状況",
+      "shortcuts": "Shortcuts"
     },
     "upgrade": "アップグレード",
     "credits": "クレジット",
@@ -1123,7 +1126,48 @@
     "french": "Français",
     "japanese": "日本語",
     "german": "Deutsch",
-    "russian": "Русский"
+    "russian": "Русский",
+    "shortcuts": {
+      "title": "Keyboard Shortcuts",
+      "description": "Read-only shortcut reference for the current app version.",
+      "currentPlatform": "Current: {{platform}}",
+      "alternatePlatform": "Also on {{platform}}",
+      "or": "or",
+      "platform": {
+        "mac": "macOS",
+        "windows": "Windows"
+      },
+      "items": {
+        "toggleMainSidebar": {
+          "action": "Toggle main sidebar",
+          "hint": "Collapse or expand the primary left sidebar."
+        },
+        "togglePlanMode": {
+          "action": "Switch mode (planning)",
+          "hint": "Cycle composer mode while the main input is focused."
+        },
+        "switchPromptHistory": {
+          "action": "Browse prompt history",
+          "hint": "Use in chat input to recall previous prompts."
+        },
+        "slashCommand": {
+          "action": "Slash command",
+          "hint": "Type / to open slash command suggestions."
+        },
+        "search": {
+          "action": "Global search",
+          "hint": "Open or close global search dialog."
+        },
+        "toggleOutputPanel": {
+          "action": "Toggle output panel",
+          "hint": "Collapse or expand computer/artifacts panel in chat."
+        },
+        "openSettings": {
+          "action": "Open settings",
+          "hint": "Open the settings dialog."
+        }
+      }
+    }
   },
   "validation": {
     "projectNameRequired": "プロジェクト名を入力してください",

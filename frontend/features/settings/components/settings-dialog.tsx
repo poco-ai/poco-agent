@@ -6,6 +6,7 @@ import {
   ChevronLeft,
   ChevronRight,
   HelpCircle,
+  Keyboard,
   Languages,
   LogOut,
   Palette,
@@ -44,6 +45,7 @@ import { useThemeMode } from "@/hooks/use-theme-mode";
 import { SettingsSidebar } from "@/features/settings/components/settings-sidebar";
 import { AccountSettingsTab } from "@/features/settings/components/tabs/account-settings-tab";
 import { ModelsSettingsTab } from "@/features/settings/components/tabs/models-settings-tab";
+import { ShortcutsSettingsTab } from "@/features/settings/components/tabs/shortcuts-settings-tab";
 import { UsageSettingsTab } from "@/features/settings/components/tabs/usage-settings-tab";
 import {
   useBackendPreference,
@@ -207,6 +209,11 @@ export function SettingsDialog({
       { icon: User, label: t("settings.sidebar.account"), id: "account" },
       { icon: Server, label: t("settings.sidebar.models"), id: "models" },
       { icon: Activity, label: t("settings.sidebar.usage"), id: "usage" },
+      {
+        icon: Keyboard,
+        label: t("settings.sidebar.shortcuts"),
+        id: "shortcuts",
+      },
     ],
     [t],
   );
@@ -311,7 +318,12 @@ export function SettingsDialog({
       return;
     }
 
-    if (view === "account" || view === "models" || view === "usage") {
+    if (
+      view === "account" ||
+      view === "models" ||
+      view === "usage" ||
+      view === "shortcuts"
+    ) {
       setActiveTab(view);
     }
 
@@ -346,7 +358,11 @@ export function SettingsDialog({
       );
     }
 
-    return <UsageSettingsTab />;
+    if (activeTab === "usage") {
+      return <UsageSettingsTab />;
+    }
+
+    return <ShortcutsSettingsTab />;
   };
 
   const renderMobileSecondary = () => (
@@ -493,8 +509,12 @@ function MobileSettingsOverview({
   onOpenHelp,
   onLogout,
 }: MobileSettingsOverviewProps) {
-  const accountItems = sidebarItems.filter((item) => item.id !== "models");
-  const modelItems = sidebarItems.filter((item) => item.id === "models");
+  const accountItems = sidebarItems.filter(
+    (item) => item.id === "account" || item.id === "usage",
+  );
+  const generalItems = sidebarItems.filter(
+    (item) => item.id === "models" || item.id === "shortcuts",
+  );
 
   return (
     <div className="flex-1 space-y-5 overflow-y-auto pb-2">
@@ -510,7 +530,7 @@ function MobileSettingsOverview({
       </SettingCard>
 
       <SettingCard title={generalGroupTitle}>
-        {modelItems.map((item) => (
+        {generalItems.map((item) => (
           <SettingNavRow
             key={item.id}
             icon={item.icon}

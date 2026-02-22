@@ -16,6 +16,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { useT } from "@/lib/i18n/client";
+import { cn } from "@/lib/utils";
 
 import type { PendingMessage } from "./hooks/use-pending-messages";
 
@@ -24,6 +25,7 @@ interface PendingMessageListProps {
   onSend: (index: number) => void;
   onModify: (index: number) => void;
   onDelete: (index: number) => void;
+  className?: string;
 }
 
 export function PendingMessageList({
@@ -31,6 +33,7 @@ export function PendingMessageList({
   onSend,
   onModify,
   onDelete,
+  className,
 }: PendingMessageListProps) {
   const { t } = useT("translation");
   const [isOpen, setIsOpen] = React.useState(true);
@@ -38,7 +41,7 @@ export function PendingMessageList({
   if (messages.length === 0) return null;
 
   return (
-    <div className="px-4 pb-2">
+    <div className={cn("px-4 pb-2", className)}>
       <div className="rounded-lg border border-border bg-card/50 shadow-sm overflow-hidden">
         <Collapsible open={isOpen} onOpenChange={setIsOpen} className="w-full">
           <div className="flex items-center justify-between px-3 py-2 bg-muted/20">

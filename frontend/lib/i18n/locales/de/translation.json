@@ -301,7 +301,9 @@
       "Transmuting",
       "Vibing",
       "Working"
-    ]
+    ],
+    "collapseRightPanel": "Collapse output panel",
+    "expandRightPanel": "Expand output panel"
   },
   "status": {
     "pending": "Ausstehend",
@@ -1088,7 +1090,8 @@
       "account": "Konto",
       "settings": "Einstellungen",
       "models": "Modelle",
-      "usage": "Nutzung"
+      "usage": "Nutzung",
+      "shortcuts": "Shortcuts"
     },
     "upgrade": "Upgrade",
     "credits": "Guthaben",
@@ -1127,7 +1130,48 @@
     "french": "Französisch",
     "japanese": "Japanisch",
     "german": "Deutsch",
-    "russian": "Russisch"
+    "russian": "Russisch",
+    "shortcuts": {
+      "title": "Keyboard Shortcuts",
+      "description": "Read-only shortcut reference for the current app version.",
+      "currentPlatform": "Current: {{platform}}",
+      "alternatePlatform": "Also on {{platform}}",
+      "or": "or",
+      "platform": {
+        "mac": "macOS",
+        "windows": "Windows"
+      },
+      "items": {
+        "toggleMainSidebar": {
+          "action": "Toggle main sidebar",
+          "hint": "Collapse or expand the primary left sidebar."
+        },
+        "togglePlanMode": {
+          "action": "Switch mode (planning)",
+          "hint": "Cycle composer mode while the main input is focused."
+        },
+        "switchPromptHistory": {
+          "action": "Browse prompt history",
+          "hint": "Use in chat input to recall previous prompts."
+        },
+        "slashCommand": {
+          "action": "Slash command",
+          "hint": "Type / to open slash command suggestions."
+        },
+        "search": {
+          "action": "Global search",
+          "hint": "Open or close global search dialog."
+        },
+        "toggleOutputPanel": {
+          "action": "Toggle output panel",
+          "hint": "Collapse or expand computer/artifacts panel in chat."
+        },
+        "openSettings": {
+          "action": "Open settings",
+          "hint": "Open the settings dialog."
+        }
+      }
+    }
   },
   "validation": {
     "projectNameRequired": "Bitte gib einen Projektnamen ein",

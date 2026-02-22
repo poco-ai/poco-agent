@@ -36,6 +36,7 @@ import type {
 } from "@/features/chat/types";
 import { useT } from "@/lib/i18n/client";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { cn } from "@/lib/utils";
 
 interface StatusBarProps {
   // Runtime execution data (deprecated, now using configSnapshot)
@@ -44,6 +45,7 @@ interface StatusBarProps {
   browser?: BrowserState | null;
   // Configuration snapshot from session creation
   configSnapshot?: ConfigSnapshot | null;
+  className?: string;
 }
 
 export function StatusBar({
@@ -51,6 +53,7 @@ export function StatusBar({
   mcpStatuses = [],
   browser = null,
   configSnapshot,
+  className,
 }: StatusBarProps) {
   const { t } = useT("translation");
   const [mcpServers, setMcpServers] = React.useState<McpServer[]>([]);
@@ -211,7 +214,12 @@ export function StatusBar({
   };
 
   return (
-    <div className="flex min-w-0 flex-wrap items-center gap-2 overflow-hidden border-t border-border bg-muted/20 px-4 py-2.5">
+    <div
+      className={cn(
+        "flex min-w-0 flex-wrap items-center gap-2 overflow-hidden border-t border-border bg-muted/20 px-4 py-2.5",
+        className,
+      )}
+    >
       <TooltipProvider delayDuration={200}>
         {/* Browser Card */}
         {hasBrowser && (

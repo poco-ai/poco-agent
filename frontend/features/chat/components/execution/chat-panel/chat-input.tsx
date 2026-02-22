@@ -6,7 +6,7 @@ import {
   useImperativeHandle,
   forwardRef,
 } from "react";
-import { SendHorizontal, Plus, Loader2, Pause } from "lucide-react";
+import { ArrowUp, Plus, Loader2, Pause } from "lucide-react";
 import { uploadAttachment } from "@/features/attachments/services/attachment-service";
 import type { InputFile } from "@/features/chat/types";
 import { toast } from "sonner";
@@ -28,6 +28,7 @@ interface ChatInputProps {
   isCancelling?: boolean;
   disabled?: boolean;
   history?: string[];
+  className?: string;
 }
 
 export interface ChatInputRef {
@@ -48,6 +49,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
       isCancelling = false,
       disabled = false,
       history = [],
+      className,
     },
     ref,
   ) => {
@@ -252,7 +254,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
     const showCancel = Boolean(onCancel) && canCancel && !hasDraft;
 
     return (
-      <div className="shrink-0 min-w-0 px-4 pb-4 pt-2">
+      <div className={cn("shrink-0 min-w-0 px-4 pb-4 pt-2", className)}>
         <input
           type="file"
           ref={fileInputRef}
@@ -387,7 +389,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
               aria-label={t("hero.send")}
               title={t("hero.send")}
             >
-              <SendHorizontal className="size-4" />
+              <ArrowUp className="size-4" />
             </button>
           )}
         </div>
