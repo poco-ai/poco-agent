@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { ExternalLink, HelpCircle, Sparkles } from "lucide-react";
+import Image from "next/image";
+import { ExternalLink, HelpCircle } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n/client";
@@ -26,9 +27,20 @@ export function SettingsSidebar({
   return (
     <div className="w-64 shrink-0 border-r border-border bg-muted/30">
       <div className="flex h-full flex-col">
-        <div className="flex items-center gap-2 p-4 text-lg font-semibold">
-          <Sparkles className="size-5 text-foreground" />
-          <span>Poco</span>
+        <div className="flex items-center gap-2 px-4 py-3">
+          <span className="flex size-6.5 shrink-0 items-center justify-center">
+            <Image
+              src="/logo.svg"
+              alt="Poco"
+              width={26}
+              height={26}
+              sizes="26px"
+              className="size-full object-cover"
+            />
+          </span>
+          <span className="text-2xl font-bold leading-none tracking-tight text-foreground font-brand">
+            Poco
+          </span>
         </div>
 
         <div className="min-h-0 flex-1 space-y-0.5 overflow-y-auto px-2 py-2">
