@@ -13,7 +13,6 @@ import type {
   Skill,
   UserSkillInstall,
 } from "@/features/capabilities/skills/types";
-import { formatSourceLabel } from "@/features/capabilities/utils/source";
 import { useT } from "@/lib/i18n/client";
 import { CapabilityCreateCard } from "@/features/capabilities/components/capability-create-card";
 import { CapabilitySourceAvatar } from "@/features/capabilities/components/capability-source-avatar";
@@ -152,10 +151,6 @@ export function SkillsGrid({
                           : t("library.skillsManager.scope.user")}
                       </Badge>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1 truncate">
-                      {t("library.skillsManager.fields.source")}:{" "}
-                      {formatSourceLabel(skill.source, t)}
-                    </p>
                   </div>
 
                   {isInstalled && install ? (

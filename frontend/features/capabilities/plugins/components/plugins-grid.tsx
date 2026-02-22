@@ -12,7 +12,6 @@ import type {
   Plugin,
   UserPluginInstall,
 } from "@/features/capabilities/plugins/types";
-import { formatSourceLabel } from "@/features/capabilities/utils/source";
 import { useT } from "@/lib/i18n/client";
 import { CapabilityCreateCard } from "@/features/capabilities/components/capability-create-card";
 import { CapabilitySourceAvatar } from "@/features/capabilities/components/capability-source-avatar";
@@ -152,10 +151,6 @@ export function PluginsGrid({
                         {plugin.description}
                       </p>
                     )}
-                    <p className="text-xs text-muted-foreground mt-1 truncate">
-                      {t("library.pluginsManager.fields.source")}:{" "}
-                      {formatSourceLabel(plugin.source, t)}
-                    </p>
                   </div>
 
                   {isInstalled && install ? (
