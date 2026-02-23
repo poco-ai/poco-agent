@@ -28,6 +28,48 @@ interface FileSidebarProps {
   embedded?: boolean;
 }
 
+const isSameOriginUrl = (url: string) => {
+  try {
+    return (
+      new URL(url, window.location.origin).origin === window.location.origin
+    );
+  } catch {
+    return false;
+  }
+};
+
+const triggerDownload = (url: string, filename: string) => {
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
+
+const downloadFileFromUrl = async (url: string, filename: string) => {
+  const absoluteUrl = new URL(url, window.location.origin).toString();
+  try {
+    const response = await fetch(absoluteUrl, {
+      credentials: isSameOriginUrl(absoluteUrl) ? "include" : "omit",
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const blob = await response.blob();
+    const blobUrl = URL.createObjectURL(blob);
+    triggerDownload(blobUrl, filename);
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+  } catch (error) {
+    console.warn(
+      "[Artifacts] Failed to download as blob, fallback to direct URL",
+      error,
+    );
+    triggerDownload(absoluteUrl, filename);
+  }
+};
+
 function FileTreeItem({
   node,
   onSelect,
@@ -203,12 +245,7 @@ export function FileSidebar({
 
       if (response.url) {
         const filename = response.filename || `workspace-${sessionId}.zip`;
-        const link = document.createElement("a");
-        link.href = response.url;
-        link.download = filename;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        await downloadFileFromUrl(response.url, filename);
         toast.success(t("fileSidebar.downloadStarted"));
       } else {
         toast.error(t("fileSidebar.archiveNotAvailable"));

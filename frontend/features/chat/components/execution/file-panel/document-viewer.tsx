@@ -372,6 +372,46 @@ const isSameOriginUrl = (url: string) => {
   }
 };
 
+const triggerDownload = (url: string, filename: string) => {
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
+
+const downloadFileFromUrl = async ({
+  url,
+  filename,
+}: {
+  url?: string;
+  filename: string;
+}) => {
+  const absoluteUrl = ensureAbsoluteUrl(url);
+  if (!absoluteUrl) return;
+
+  try {
+    const response = await fetch(absoluteUrl, {
+      credentials: isSameOriginUrl(absoluteUrl) ? "include" : "omit",
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const blob = await response.blob();
+    const blobUrl = URL.createObjectURL(blob);
+    triggerDownload(blobUrl, filename);
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+  } catch (error) {
+    console.warn(
+      "[DocumentViewer] Failed to download as blob, fallback to direct URL",
+      error,
+    );
+    triggerDownload(absoluteUrl, filename);
+  }
+};
+
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
 
@@ -536,10 +576,10 @@ const DocumentViewerToolbar = ({
                 void onDownload();
                 return;
               }
-              const link = document.createElement("a");
-              link.href = resolvedUrl;
-              link.download = file.name || file.path || "document";
-              link.click();
+              void downloadFileFromUrl({
+                url: resolvedUrl,
+                filename: file.name || file.path || "document",
+              });
             }}
           >
             <Download className="size-4" />
@@ -577,12 +617,10 @@ const TextDocumentViewer = ({
 
   const handleDownload = async () => {
     const refreshed = ensureFreshFile ? await ensureFreshFile(file) : file;
-    const url = ensureAbsoluteUrl(refreshed?.url ?? resolvedUrl);
-    if (!url) return;
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = refreshed?.name || refreshed?.path || "document";
-    link.click();
+    await downloadFileFromUrl({
+      url: refreshed?.url ?? resolvedUrl,
+      filename: refreshed?.name || refreshed?.path || "document",
+    });
   };
 
   const handleCopy = React.useCallback(async () => {
@@ -719,12 +757,10 @@ const MarkdownDocumentViewer = ({
 
   const handleDownload = async () => {
     const refreshed = ensureFreshFile ? await ensureFreshFile(file) : file;
-    const url = ensureAbsoluteUrl(refreshed?.url ?? resolvedUrl);
-    if (!url) return;
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = refreshed?.name || refreshed?.path || "document";
-    link.click();
+    await downloadFileFromUrl({
+      url: refreshed?.url ?? resolvedUrl,
+      filename: refreshed?.name || refreshed?.path || "document",
+    });
   };
 
   const handleCopy = React.useCallback(async () => {
@@ -906,12 +942,10 @@ const ExcalidrawDocumentViewer = ({
 
   const handleDownload = async () => {
     const refreshed = ensureFreshFile ? await ensureFreshFile(file) : file;
-    const url = ensureAbsoluteUrl(refreshed?.url ?? resolvedUrl);
-    if (!url) return;
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = refreshed?.name || refreshed?.path || "document";
-    link.click();
+    await downloadFileFromUrl({
+      url: refreshed?.url ?? resolvedUrl,
+      filename: refreshed?.name || refreshed?.path || "document",
+    });
   };
 
   if (state.status === "idle" || state.status === "loading") {
@@ -1036,12 +1070,10 @@ const DrawioDocumentViewer = ({
 
   const handleDownload = async () => {
     const refreshed = ensureFreshFile ? await ensureFreshFile(file) : file;
-    const url = ensureAbsoluteUrl(refreshed?.url ?? resolvedUrl);
-    if (!url) return;
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = refreshed?.name || refreshed?.path || "document";
-    link.click();
+    await downloadFileFromUrl({
+      url: refreshed?.url ?? resolvedUrl,
+      filename: refreshed?.name || refreshed?.path || "document",
+    });
   };
 
   if (state.status === "idle" || state.status === "loading") {
@@ -1137,12 +1169,10 @@ const XMindDocumentViewer = ({
 
   const handleDownload = async () => {
     const refreshed = ensureFreshFile ? await ensureFreshFile(file) : file;
-    const url = ensureAbsoluteUrl(refreshed?.url ?? resolvedUrl);
-    if (!url) return;
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = refreshed?.name || refreshed?.path || "document";
-    link.click();
+    await downloadFileFromUrl({
+      url: refreshed?.url ?? resolvedUrl,
+      filename: refreshed?.name || refreshed?.path || "document",
+    });
   };
 
   React.useEffect(() => {
@@ -1319,12 +1349,10 @@ const DocumentViewerComponent = ({
 
   const handleDownload = async () => {
     const refreshed = ensureFreshFile ? await ensureFreshFile(file) : file;
-    const url = ensureAbsoluteUrl(refreshed?.url ?? resolvedUrl);
-    if (!url) return;
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = refreshed?.name || refreshed?.path || "document";
-    link.click();
+    await downloadFileFromUrl({
+      url: refreshed?.url ?? resolvedUrl,
+      filename: refreshed?.name || refreshed?.path || "document",
+    });
   };
 
   if (extension === "html" || extension === "htm") {
