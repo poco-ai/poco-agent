@@ -10,6 +10,7 @@ import { useArtifacts } from "./hooks/use-artifacts";
 import type { FileChange, FileNode } from "@/features/chat/types";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n/client";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
 interface ArtifactsPanelProps {
   fileChanges?: FileChange[];
@@ -47,6 +48,8 @@ export function ArtifactsPanel({
 }: ArtifactsPanelProps) {
   const { t } = useT("translation");
   const [isSidebarCollapsed, setIsSidebarCollapsed] = React.useState(false);
+  const [isExpandedPreviewOpen, setIsExpandedPreviewOpen] =
+    React.useState(false);
   const {
     files,
     selectedFile,
@@ -55,10 +58,24 @@ export function ArtifactsPanel({
     closeViewer,
     ensureFreshFile,
   } = useArtifacts({ sessionId, sessionStatus });
+  const openExpandedPreview = React.useCallback(() => {
+    setIsExpandedPreviewOpen(true);
+  }, []);
+
+  React.useEffect(() => {
+    if (viewMode !== "document" || !selectedFile) {
+      setIsExpandedPreviewOpen(false);
+    }
+  }, [selectedFile, viewMode]);
+
   const mainContent = (() => {
     if (viewMode === "document") {
       return (
-        <DocumentViewer file={selectedFile} ensureFreshFile={ensureFreshFile} />
+        <DocumentViewer
+          file={selectedFile}
+          ensureFreshFile={ensureFreshFile}
+          onOpenPreviewWindow={openExpandedPreview}
+        />
       );
     }
 
@@ -186,6 +203,28 @@ export function ArtifactsPanel({
           </div>
         )}
       </div>
+      <Dialog
+        open={isExpandedPreviewOpen && Boolean(selectedFile)}
+        onOpenChange={setIsExpandedPreviewOpen}
+      >
+        <DialogContent
+          className="h-[90vh] w-[80vw] max-w-[80vw] overflow-hidden border-0 bg-transparent p-0 shadow-none sm:max-w-[80vw]"
+          showCloseButton={false}
+        >
+          <DialogTitle className="sr-only">
+            {t("fileChange.previewFile")}
+          </DialogTitle>
+          <div className="h-full min-h-0 overflow-hidden">
+            <DocumentViewer
+              file={selectedFile}
+              ensureFreshFile={ensureFreshFile}
+              onClose={() => {
+                setIsExpandedPreviewOpen(false);
+              }}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

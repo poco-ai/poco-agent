@@ -10,6 +10,8 @@ import {
   Check,
   Copy,
   ChevronLeft,
+  Maximize2,
+  X,
 } from "lucide-react";
 import { useT } from "@/lib/i18n/client";
 import { Button } from "@/components/ui/button";
@@ -509,10 +511,12 @@ interface ViewerToolbarProps {
   file: FileNode;
   subtitle?: string;
   resolvedUrl?: string;
+  onClose?: () => void;
   onDownload?: () => void | Promise<void>;
   onCopy?: () => void;
   copyDisabled?: boolean;
   copyState?: "idle" | "copied";
+  onOpenPreviewWindow?: () => void;
 }
 
 const TOOLBAR_ICON_BUTTON_CLASS =
@@ -522,79 +526,116 @@ const DocumentViewerToolbar = ({
   file,
   subtitle,
   resolvedUrl,
+  onClose,
   onDownload,
   onCopy,
   copyDisabled,
   copyState = "idle",
-}: ViewerToolbarProps) => (
-  <div className="w-full border-b px-3 py-2 text-xs text-muted-foreground sm:px-4 overflow-hidden">
-    <div className="flex items-center gap-3 min-w-0 overflow-hidden">
-      <Button
-        size="icon"
-        variant="ghost"
-        className={`${TOOLBAR_ICON_BUTTON_CLASS} shrink-0`}
-        onClick={dispatchCloseViewer}
-      >
-        <ChevronLeft className="size-4" />
-      </Button>
-      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <span
-          className="text-sm font-medium text-foreground min-w-0 max-w-full truncate overflow-hidden"
-          title={file.name || file.path}
+  onOpenPreviewWindow,
+}: ViewerToolbarProps) => {
+  const { t } = useT("translation");
+
+  return (
+    <div className="w-full border-b px-3 py-2 text-xs text-muted-foreground sm:px-4 overflow-hidden">
+      <div className="flex items-center gap-3 min-w-0 overflow-hidden">
+        <Button
+          size="icon"
+          variant="ghost"
+          className={
+            onClose
+              ? "group relative h-3 w-3 shrink-0 rounded-full bg-destructive p-0 transition-colors hover:bg-destructive/90 active:bg-destructive focus-visible:ring-0 focus-visible:border-transparent focus-visible:outline-none"
+              : `${TOOLBAR_ICON_BUTTON_CLASS} shrink-0`
+          }
+          onClick={onClose ?? dispatchCloseViewer}
+          aria-label={t("common.close")}
         >
-          {file.name || file.path}
-        </span>
-        {subtitle && (
-          <span className="text-[11px] uppercase tracking-wide text-muted-foreground">
-            {subtitle}
+          {onClose ? (
+            <span
+              aria-hidden
+              className="pointer-events-none absolute inset-0 flex items-center justify-center"
+            >
+              <X
+                className="size-[8px] text-foreground/70 opacity-0 transition-opacity group-hover:opacity-100"
+                strokeWidth={2.5}
+              />
+            </span>
+          ) : (
+            <ChevronLeft className="size-4" />
+          )}
+        </Button>
+        <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+          <span
+            className="text-sm font-medium text-foreground min-w-0 max-w-full truncate overflow-hidden"
+            title={file.name || file.path}
+          >
+            {file.name || file.path}
           </span>
-        )}
-      </div>
-      <div className="ml-auto flex shrink-0 items-center gap-2">
-        {onCopy && (
-          <Button
-            size="icon"
-            variant="ghost"
-            className={TOOLBAR_ICON_BUTTON_CLASS}
-            onClick={onCopy}
-            disabled={copyDisabled}
-          >
-            {copyState === "copied" ? (
-              <Check className="size-4" />
-            ) : (
-              <Copy className="size-4" />
-            )}
-          </Button>
-        )}
-        {resolvedUrl && (
-          <Button
-            size="icon"
-            variant="ghost"
-            className={TOOLBAR_ICON_BUTTON_CLASS}
-            onClick={() => {
-              if (onDownload) {
-                void onDownload();
-                return;
-              }
-              void downloadFileFromUrl({
-                url: resolvedUrl,
-                filename: file.name || file.path || "document",
-              });
-            }}
-          >
-            <Download className="size-4" />
-          </Button>
-        )}
+          {subtitle && (
+            <span className="text-[11px] uppercase tracking-wide text-muted-foreground">
+              {subtitle}
+            </span>
+          )}
+        </div>
+        <div className="ml-auto flex shrink-0 items-center gap-2">
+          {onCopy && (
+            <Button
+              size="icon"
+              variant="ghost"
+              className={TOOLBAR_ICON_BUTTON_CLASS}
+              onClick={onCopy}
+              disabled={copyDisabled}
+            >
+              {copyState === "copied" ? (
+                <Check className="size-4" />
+              ) : (
+                <Copy className="size-4" />
+              )}
+            </Button>
+          )}
+          {resolvedUrl && (
+            <Button
+              size="icon"
+              variant="ghost"
+              className={TOOLBAR_ICON_BUTTON_CLASS}
+              onClick={() => {
+                if (onDownload) {
+                  void onDownload();
+                  return;
+                }
+                void downloadFileFromUrl({
+                  url: resolvedUrl,
+                  filename: file.name || file.path || "document",
+                });
+              }}
+            >
+              <Download className="size-4" />
+            </Button>
+          )}
+          {onOpenPreviewWindow && (
+            <Button
+              size="icon"
+              variant="ghost"
+              className={TOOLBAR_ICON_BUTTON_CLASS}
+              onClick={onOpenPreviewWindow}
+              aria-label={t("fileChange.previewFile")}
+              title={t("fileChange.previewFile")}
+            >
+              <Maximize2 className="size-4" />
+            </Button>
+          )}
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 interface TextDocumentViewerProps {
   file: FileNode;
   language?: string;
   resolvedUrl?: string;
   ensureFreshFile?: (file: FileNode) => Promise<FileNode | undefined>;
+  onClose?: () => void;
+  onOpenPreviewWindow?: () => void;
 }
 
 const TextDocumentViewer = ({
@@ -602,6 +643,8 @@ const TextDocumentViewer = ({
   language = DEFAULT_TEXT_LANGUAGE,
   resolvedUrl,
   ensureFreshFile,
+  onClose,
+  onOpenPreviewWindow,
 }: TextDocumentViewerProps) => {
   const { t } = useT("translation");
   const { resolvedTheme } = useTheme();
@@ -688,10 +731,12 @@ const TextDocumentViewer = ({
         file={file}
         subtitle={subtitle}
         resolvedUrl={resolvedUrl}
+        onClose={onClose}
         onDownload={handleDownload}
         onCopy={handleCopy}
         copyDisabled={false}
         copyState={copyState}
+        onOpenPreviewWindow={onOpenPreviewWindow}
       />
       <div className="flex-1 overflow-auto min-h-0 p-4">
         <SyntaxHighlighter
@@ -743,10 +788,14 @@ const MarkdownDocumentViewer = ({
   file,
   resolvedUrl,
   ensureFreshFile,
+  onClose,
+  onOpenPreviewWindow,
 }: {
   file: FileNode;
   resolvedUrl?: string;
   ensureFreshFile?: (file: FileNode) => Promise<FileNode | undefined>;
+  onClose?: () => void;
+  onOpenPreviewWindow?: () => void;
 }) => {
   const { t } = useT("translation");
   const { state, refetch } = useFileTextContent({
@@ -828,10 +877,12 @@ const MarkdownDocumentViewer = ({
         file={file}
         subtitle="MARKDOWN"
         resolvedUrl={resolvedUrl}
+        onClose={onClose}
         onDownload={handleDownload}
         onCopy={handleCopy}
         copyDisabled={false}
         copyState={copyState}
+        onOpenPreviewWindow={onOpenPreviewWindow}
       />
       <div className="flex-1 overflow-auto bg-background min-h-0">
         <div className="mx-auto w-full max-w-4xl px-6 py-8">
@@ -910,10 +961,14 @@ const ExcalidrawDocumentViewer = ({
   file,
   resolvedUrl,
   ensureFreshFile,
+  onClose,
+  onOpenPreviewWindow,
 }: {
   file: FileNode;
   resolvedUrl?: string;
   ensureFreshFile?: (file: FileNode) => Promise<FileNode | undefined>;
+  onClose?: () => void;
+  onOpenPreviewWindow?: () => void;
 }) => {
   const { t } = useT("translation");
   const { resolvedTheme } = useTheme();
@@ -1032,7 +1087,9 @@ const ExcalidrawDocumentViewer = ({
         file={file}
         subtitle="EXCALIDRAW"
         resolvedUrl={resolvedUrl}
+        onClose={onClose}
         onDownload={handleDownload}
+        onOpenPreviewWindow={onOpenPreviewWindow}
       />
       <div className="flex-1 min-h-0 overflow-hidden bg-background">
         <ExcalidrawViewer
@@ -1048,10 +1105,14 @@ const DrawioDocumentViewer = ({
   file,
   resolvedUrl,
   ensureFreshFile,
+  onClose,
+  onOpenPreviewWindow,
 }: {
   file: FileNode;
   resolvedUrl?: string;
   ensureFreshFile?: (file: FileNode) => Promise<FileNode | undefined>;
+  onClose?: () => void;
+  onOpenPreviewWindow?: () => void;
 }) => {
   const { t } = useT("translation");
   const { state, refetch } = useFileTextContent({
@@ -1136,7 +1197,9 @@ const DrawioDocumentViewer = ({
         file={file}
         subtitle="DRAWIO"
         resolvedUrl={resolvedUrl}
+        onClose={onClose}
         onDownload={handleDownload}
+        onOpenPreviewWindow={onOpenPreviewWindow}
       />
       <iframe
         src={viewerUrl}
@@ -1152,10 +1215,14 @@ const XMindDocumentViewer = ({
   file,
   resolvedUrl,
   ensureFreshFile,
+  onClose,
+  onOpenPreviewWindow,
 }: {
   file: FileNode;
   resolvedUrl?: string;
   ensureFreshFile?: (file: FileNode) => Promise<FileNode | undefined>;
+  onClose?: () => void;
+  onOpenPreviewWindow?: () => void;
 }) => {
   const { t } = useT("translation");
   const containerRef = React.useRef<HTMLDivElement | null>(null);
@@ -1293,7 +1360,9 @@ const XMindDocumentViewer = ({
         file={file}
         subtitle="XMIND"
         resolvedUrl={resolvedUrl}
+        onClose={onClose}
         onDownload={handleDownload}
+        onOpenPreviewWindow={onOpenPreviewWindow}
       />
       <div className="relative flex-1 min-h-0 overflow-hidden">
         <div ref={containerRef} className="h-full w-full bg-background" />
@@ -1310,11 +1379,15 @@ const XMindDocumentViewer = ({
 interface DocumentViewerProps {
   file?: FileNode;
   ensureFreshFile?: (file: FileNode) => Promise<FileNode | undefined>;
+  onClose?: () => void;
+  onOpenPreviewWindow?: () => void;
 }
 
 const DocumentViewerComponent = ({
   file,
   ensureFreshFile,
+  onClose,
+  onOpenPreviewWindow,
 }: DocumentViewerProps) => {
   const { t } = useT("translation");
 
@@ -1367,7 +1440,9 @@ const DocumentViewerComponent = ({
           file={file}
           subtitle="HTML PREVIEW"
           resolvedUrl={resolvedUrl}
+          onClose={onClose}
           onDownload={handleDownload}
+          onOpenPreviewWindow={onOpenPreviewWindow}
         />
         <iframe
           src={resolvedUrl}
@@ -1385,6 +1460,8 @@ const DocumentViewerComponent = ({
         file={file}
         resolvedUrl={resolvedUrl}
         ensureFreshFile={ensureFreshFile}
+        onClose={onClose}
+        onOpenPreviewWindow={onOpenPreviewWindow}
       />
     );
   }
@@ -1395,6 +1472,8 @@ const DocumentViewerComponent = ({
         file={file}
         resolvedUrl={resolvedUrl}
         ensureFreshFile={ensureFreshFile}
+        onClose={onClose}
+        onOpenPreviewWindow={onOpenPreviewWindow}
       />
     );
   }
@@ -1405,6 +1484,8 @@ const DocumentViewerComponent = ({
         file={file}
         resolvedUrl={resolvedUrl}
         ensureFreshFile={ensureFreshFile}
+        onClose={onClose}
+        onOpenPreviewWindow={onOpenPreviewWindow}
       />
     );
   }
@@ -1423,7 +1504,9 @@ const DocumentViewerComponent = ({
           file={file}
           subtitle={subtitle}
           resolvedUrl={documentUri}
+          onClose={onClose}
           onDownload={handleDownload}
+          onOpenPreviewWindow={onOpenPreviewWindow}
         />
         <div className="flex-1 overflow-hidden bg-black/5">
           <DocViewer
@@ -1443,6 +1526,8 @@ const DocumentViewerComponent = ({
         file={file}
         resolvedUrl={resolvedUrl}
         ensureFreshFile={ensureFreshFile}
+        onClose={onClose}
+        onOpenPreviewWindow={onOpenPreviewWindow}
       />
     );
   }
@@ -1454,6 +1539,8 @@ const DocumentViewerComponent = ({
         language={textLanguage}
         resolvedUrl={resolvedUrl}
         ensureFreshFile={ensureFreshFile}
+        onClose={onClose}
+        onOpenPreviewWindow={onOpenPreviewWindow}
       />
     );
   }

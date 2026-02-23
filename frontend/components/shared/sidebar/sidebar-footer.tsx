@@ -61,7 +61,7 @@ function SelectionFooter({
         variant="ghost"
         size="icon"
         onClick={onCancel}
-        className="size-8 text-muted-foreground hover:bg-sidebar-accent"
+        className="size-8 text-muted-foreground hover:bg-sidebar-accent focus-visible:ring-0 focus-visible:border-transparent focus-visible:outline-none"
         title={t("common.cancel")}
       >
         <X className="size-4" />
@@ -74,7 +74,7 @@ function SelectionFooter({
         size="icon"
         onClick={onDelete}
         disabled={selectedCount === 0}
-        className="size-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+        className="size-8 text-destructive hover:text-destructive hover:bg-destructive/10 focus-visible:ring-0 focus-visible:border-transparent focus-visible:outline-none"
         title={t("common.delete")}
       >
         <Trash2 className="size-4" />
@@ -176,7 +176,7 @@ function DesktopFooter({
         variant="ghost"
         size="icon"
         onClick={onOpenSettings}
-        className="size-8 text-muted-foreground hover:bg-sidebar-accent"
+        className="size-8 text-muted-foreground hover:bg-sidebar-accent focus-visible:ring-0 focus-visible:border-transparent focus-visible:outline-none"
         title={t("sidebar.settings")}
       >
         <SlidersHorizontal className="size-4" />
@@ -187,7 +187,7 @@ function DesktopFooter({
           <Button
             variant="ghost"
             size="icon"
-            className="size-8 text-muted-foreground hover:bg-sidebar-accent"
+            className="size-8 text-muted-foreground hover:bg-sidebar-accent focus-visible:ring-0 focus-visible:border-transparent focus-visible:outline-none"
             title={t("settings.dialogTitle")}
             data-onboarding="sidebar-quick-menu"
           >

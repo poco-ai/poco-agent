@@ -112,7 +112,7 @@ export function SidebarHeaderSection({ onNewTask }: SidebarHeaderSectionProps) {
             variant="ghost"
             size="icon"
             onClick={toggleSidebar}
-            className="size-8 shrink-0 text-sidebar-foreground hover:bg-sidebar-accent"
+            className="size-8 shrink-0 text-sidebar-foreground hover:bg-sidebar-accent focus-visible:ring-0 focus-visible:border-transparent focus-visible:outline-none"
           >
             <PanelLeftClose className="size-4" />
           </Button>
@@ -128,7 +128,7 @@ export function SidebarHeaderSection({ onNewTask }: SidebarHeaderSectionProps) {
               closeMobileSidebar();
             }}
             data-onboarding="sidebar-new-task"
-            className="h-[36px] min-w-0 max-w-[calc(var(--sidebar-width)-16px)] w-full justify-start gap-3 rounded-[10px] px-3 py-[7.5px] text-muted-foreground transition-colors hover:bg-sidebar-accent group-data-[collapsible=icon]:w-[var(--sidebar-width-icon)] group-data-[collapsible=icon]:max-w-[var(--sidebar-width-icon)] group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0 group/new-task"
+            className="h-[36px] min-w-0 max-w-[calc(var(--sidebar-width)-16px)] w-full justify-start gap-3 rounded-[10px] px-3 py-[7.5px] text-muted-foreground transition-colors hover:bg-sidebar-accent focus-visible:ring-0 focus-visible:outline-none group-data-[collapsible=icon]:w-[var(--sidebar-width-icon)] group-data-[collapsible=icon]:max-w-[var(--sidebar-width-icon)] group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0 group/new-task"
             tooltip={t("sidebar.newTask")}
           >
             <PenSquare className="size-4 shrink-0 transition-transform duration-200 group-hover/new-task:rotate-12 group-hover/new-task:scale-110" />
@@ -159,7 +159,7 @@ export function SidebarHeaderSection({ onNewTask }: SidebarHeaderSectionProps) {
                   id === "capabilities" ? "sidebar-capabilities" : undefined
                 }
                 className={cn(
-                  "h-[36px] min-w-0 max-w-[calc(var(--sidebar-width)-16px)] w-full justify-start gap-3 rounded-[10px] px-3 py-[7.5px] text-muted-foreground transition-colors hover:bg-sidebar-accent group-data-[collapsible=icon]:w-[var(--sidebar-width-icon)] group-data-[collapsible=icon]:max-w-[var(--sidebar-width-icon)] group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0",
+                  "h-[36px] min-w-0 max-w-[calc(var(--sidebar-width)-16px)] w-full justify-start gap-3 rounded-[10px] px-3 py-[7.5px] text-muted-foreground transition-colors hover:bg-sidebar-accent focus-visible:ring-0 focus-visible:outline-none group-data-[collapsible=icon]:w-[var(--sidebar-width-icon)] group-data-[collapsible=icon]:max-w-[var(--sidebar-width-icon)] group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0",
                   isDisabled &&
                     "opacity-50 cursor-not-allowed hover:bg-transparent",
                 )}
