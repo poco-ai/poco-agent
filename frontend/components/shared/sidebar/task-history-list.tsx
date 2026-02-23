@@ -119,7 +119,7 @@ function DraggableTask({
           data-slot="sidebar-menu-button"
           data-sidebar="menu-button"
           className={cn(
-            "flex w-full min-w-0 items-center cursor-pointer outline-hidden focus-visible:ring-2 focus-visible:ring-sidebar-ring rounded-md",
+            "flex w-full min-w-0 items-center cursor-pointer outline-hidden rounded-md",
             SIDEBAR_CARD_BASE_CLASS,
             isNested && SIDEBAR_CARD_NESTED_INSET_CLASS,
           )}
@@ -210,7 +210,7 @@ function DraggableTask({
                     (e.currentTarget as HTMLElement).click();
                   }
                 }}
-                className="absolute top-1/2 right-2 -translate-y-1/2 shrink-0 size-5 flex items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground opacity-0 transition-opacity group-hover/task-card:opacity-100 data-[state=open]:opacity-100 group-data-[collapsible=icon]:hidden cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring z-10"
+                className="absolute top-1/2 right-2 -translate-y-1/2 shrink-0 size-5 flex items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground opacity-0 transition-opacity group-hover/task-card:opacity-100 data-[state=open]:opacity-100 group-data-[collapsible=icon]:hidden cursor-pointer focus-visible:outline-none z-10"
               >
                 <MoreHorizontal className="size-3.5" />
               </div>

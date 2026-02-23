@@ -543,7 +543,7 @@ const DocumentViewerToolbar = ({
           variant="ghost"
           className={
             onClose
-              ? "group relative h-3 w-3 shrink-0 rounded-full bg-destructive p-0 transition-colors hover:bg-destructive/90 active:bg-destructive focus-visible:ring-0 focus-visible:border-transparent focus-visible:outline-none"
+              ? "group relative h-3 w-3 shrink-0 rounded-full bg-destructive p-0 transition-colors focus-visible:ring-0 focus-visible:border-transparent focus-visible:outline-none"
               : `${TOOLBAR_ICON_BUTTON_CLASS} shrink-0`
           }
           onClick={onClose ?? dispatchCloseViewer}
@@ -555,8 +555,8 @@ const DocumentViewerToolbar = ({
               className="pointer-events-none absolute inset-0 flex items-center justify-center"
             >
               <X
-                className="size-[8px] text-foreground/70 opacity-0 transition-opacity group-hover:opacity-100"
-                strokeWidth={2.5}
+                className="size-[9px] text-muted-foreground opacity-0 transition-opacity duration-150 group-hover:opacity-100"
+                strokeWidth={2.75}
               />
             </span>
           ) : (
