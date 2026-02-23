@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import {
-  SquareTerminal,
   CheckCircle2,
   XCircle,
   Loader2,
@@ -23,7 +22,6 @@ import { Badge } from "@/components/ui/badge";
 
 interface ToolChainProps {
   blocks: (ToolUseBlock | ToolResultBlock)[];
-  variant?: "tool" | "subagent";
   sessionStatus?: string;
 }
 
@@ -63,10 +61,6 @@ function pickFirstString(
     }
   }
   return null;
-}
-
-function isTaskSubagentStep(step: ToolStepPair): boolean {
-  return step.use.name === "Task";
 }
 
 function ToolStep({ toolUse, toolResult, isOpen, onToggle }: ToolStepProps) {
@@ -267,11 +261,7 @@ function ToolStep({ toolUse, toolResult, isOpen, onToggle }: ToolStepProps) {
   );
 }
 
-export function ToolChain({
-  blocks,
-  variant = "tool",
-  sessionStatus,
-}: ToolChainProps) {
+export function ToolChain({ blocks, sessionStatus }: ToolChainProps) {
   const { t } = useT("translation");
   const [openStepId, setOpenStepId] = React.useState<string | null>(null);
 
@@ -336,86 +326,21 @@ export function ToolChain({
     terminalToolResultIsError,
     terminalToolResultText,
   ]);
-  const isSubagentChain =
-    variant === "subagent" || steps.every(isTaskSubagentStep);
-
-  const isRunning = steps.some((s) => !s.result);
-  const hasError = steps.some((s) => !!s.result?.is_error);
-  // Initialize open if running, closed if completed (history)
-  const [isExpanded, setIsExpanded] = React.useState(isRunning);
-  const prevIsRunning = React.useRef(isRunning);
-
-  // Auto-open the running step
-  // Auto-open the running step logic removed per user request
-  // React.useEffect(() => {
-  //   const runningStep = steps.find((s) => !s.result);
-  //   if (runningStep) {
-  //     setOpenStepId(runningStep.use.id);
-  //   }
-  // }, [steps]);
-
-  // Auto-expand when new tool call starts (do NOT auto-collapse when finished)
-  React.useEffect(() => {
-    // If we transitioned from not running to running (new tool call), auto-expand
-    if (!prevIsRunning.current && isRunning) {
-      setIsExpanded(true);
-    }
-    prevIsRunning.current = isRunning;
-  }, [isRunning]);
-
   if (steps.length === 0) return null;
 
   return (
-    <div className="w-full my-2 rounded-md border border-border/60 bg-muted/20 px-3 py-2">
-      <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
-        <CollapsibleTrigger className="flex items-center gap-2 w-full cursor-pointer select-none text-xs font-medium text-muted-foreground hover:text-foreground transition-colors group">
-          <div className="flex items-center gap-1.5">
-            {isSubagentChain ? (
-              <Bot className="size-3.5" />
-            ) : (
-              <SquareTerminal className="size-3.5" />
-            )}
-            <span>
-              {isSubagentChain
-                ? t("chat.subagentExecution")
-                : t("chat.toolExecution")}
-            </span>
-            {steps.length > 0 && (
-              <span className="opacity-70">({steps.length})</span>
-            )}
-          </div>
-
-          {/* Show little badges if collapsed */}
-          {!isExpanded && (
-            <div className="flex items-center gap-1 ml-auto">
-              {/* Just show one badge to indicate status if not expanded */}
-              {isRunning ? (
-                <Loader2 className="size-3 animate-spin text-primary" />
-              ) : hasError ? (
-                <XCircle className="size-3 text-destructive" />
-              ) : (
-                <CheckCircle2 className="size-3 text-primary" />
-              )}
-            </div>
-          )}
-        </CollapsibleTrigger>
-
-        <CollapsibleContent>
-          <div className="space-y-1 mt-2 border-t border-border/50 pt-2">
-            {steps.map((step) => (
-              <ToolStep
-                key={step.use.id}
-                toolUse={step.use}
-                toolResult={step.result}
-                isOpen={openStepId === step.use.id}
-                onToggle={() =>
-                  setOpenStepId(openStepId === step.use.id ? null : step.use.id)
-                }
-              />
-            ))}
-          </div>
-        </CollapsibleContent>
-      </Collapsible>
+    <div className="w-full my-2">
+      {steps.map((step) => (
+        <ToolStep
+          key={step.use.id}
+          toolUse={step.use}
+          toolResult={step.result}
+          isOpen={openStepId === step.use.id}
+          onToggle={() =>
+            setOpenStepId(openStepId === step.use.id ? null : step.use.id)
+          }
+        />
+      ))}
     </div>
   );
 }

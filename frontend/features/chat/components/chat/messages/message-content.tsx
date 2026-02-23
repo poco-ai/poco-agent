@@ -182,7 +182,6 @@ export function MessageContent({
             <ToolChain
               key={index}
               blocks={group.blocks as (ToolUseBlock | ToolResultBlock)[]}
-              variant={group.type}
               sessionStatus={sessionStatus}
             />
           );
