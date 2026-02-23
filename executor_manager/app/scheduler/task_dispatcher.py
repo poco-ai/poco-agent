@@ -25,6 +25,23 @@ from app.services.sub_agent_stager import SubAgentStager
 logger = logging.getLogger(__name__)
 
 
+def _extract_enabled_skill_names(skills: object) -> list[str]:
+    if not isinstance(skills, dict):
+        return []
+
+    names: set[str] = set()
+    for raw_name, spec in skills.items():
+        if not isinstance(raw_name, str):
+            continue
+        name = raw_name.strip()
+        if not name:
+            continue
+        if isinstance(spec, dict) and spec.get("enabled") is False:
+            continue
+        names.add(name)
+    return sorted(names)
+
+
 class TaskDispatcher:
     """Task dispatcher with container pool integration."""
 
@@ -177,8 +194,10 @@ class TaskDispatcher:
             )
 
             step_started = time.perf_counter()
+            skill_names = _extract_enabled_skill_names(staged_skills)
             resolved_commands = await backend_client.resolve_slash_commands(
-                user_id=user_id
+                user_id=user_id,
+                skill_names=skill_names,
             )
             staged_commands = slash_command_stager.stage_commands(
                 user_id=user_id,

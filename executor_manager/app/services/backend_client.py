@@ -191,10 +191,15 @@ class BackendClient:
             return data.get("data", {}) or {}
 
     async def resolve_slash_commands(
-        self, user_id: str, names: list[str] | None = None
+        self,
+        user_id: str,
+        names: list[str] | None = None,
+        skill_names: list[str] | None = None,
     ) -> dict[str, str]:
         """Resolve enabled slash commands for execution (rendered markdown)."""
         payload: dict = {"names": names or []}
+        if skill_names is not None:
+            payload["skill_names"] = skill_names
         async with httpx.AsyncClient() as client:
             response = await client.post(
                 f"{self.base_url}/api/v1/internal/slash-commands/resolve",
