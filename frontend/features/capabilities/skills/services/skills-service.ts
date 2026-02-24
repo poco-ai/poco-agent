@@ -1,4 +1,5 @@
 import { apiClient, API_ENDPOINTS } from "@/lib/api-client";
+import { SLASH_COMMAND_SUGGESTIONS_INVALIDATED_EVENT } from "@/features/capabilities/slash-commands/services/slash-commands-service";
 import type {
   SkillInstallCreateInput,
   SkillInstallUpdateInput,
@@ -13,6 +14,11 @@ import type {
   SkillImportCommitEnqueueResponse,
   SkillImportJobStatusResponse,
 } from "@/features/capabilities/skills/types";
+
+function emitSlashCommandSuggestionsInvalidated(): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new Event(SLASH_COMMAND_SUGGESTIONS_INVALIDATED_EVENT));
+}
 
 export const skillsService = {
   listSkills: async (options?: { revalidate?: number }): Promise<Skill[]> => {
@@ -31,20 +37,29 @@ export const skillsService = {
   },
 
   createSkill: async (input: SkillCreateInput): Promise<Skill> => {
-    return apiClient.post<Skill>(API_ENDPOINTS.skills, input);
+    const created = await apiClient.post<Skill>(API_ENDPOINTS.skills, input);
+    emitSlashCommandSuggestionsInvalidated();
+    return created;
   },
 
   updateSkill: async (
     skillId: number,
     input: SkillUpdateInput,
   ): Promise<Skill> => {
-    return apiClient.patch<Skill>(API_ENDPOINTS.skill(skillId), input);
+    const updated = await apiClient.patch<Skill>(
+      API_ENDPOINTS.skill(skillId),
+      input,
+    );
+    emitSlashCommandSuggestionsInvalidated();
+    return updated;
   },
 
   deleteSkill: async (skillId: number): Promise<Record<string, unknown>> => {
-    return apiClient.delete<Record<string, unknown>>(
+    const removed = await apiClient.delete<Record<string, unknown>>(
       API_ENDPOINTS.skill(skillId),
     );
+    emitSlashCommandSuggestionsInvalidated();
+    return removed;
   },
 
   listInstalls: async (options?: {
@@ -58,34 +73,45 @@ export const skillsService = {
   createInstall: async (
     input: SkillInstallCreateInput,
   ): Promise<UserSkillInstall> => {
-    return apiClient.post<UserSkillInstall>(API_ENDPOINTS.skillInstalls, input);
+    const created = await apiClient.post<UserSkillInstall>(
+      API_ENDPOINTS.skillInstalls,
+      input,
+    );
+    emitSlashCommandSuggestionsInvalidated();
+    return created;
   },
 
   updateInstall: async (
     installId: number,
     input: SkillInstallUpdateInput,
   ): Promise<UserSkillInstall> => {
-    return apiClient.patch<UserSkillInstall>(
+    const updated = await apiClient.patch<UserSkillInstall>(
       API_ENDPOINTS.skillInstall(installId),
       input,
     );
+    emitSlashCommandSuggestionsInvalidated();
+    return updated;
   },
 
   bulkUpdateInstalls: async (
     input: SkillInstallBulkUpdateInput,
   ): Promise<SkillInstallBulkUpdateResponse> => {
-    return apiClient.patch<SkillInstallBulkUpdateResponse>(
+    const updated = await apiClient.patch<SkillInstallBulkUpdateResponse>(
       API_ENDPOINTS.skillInstallsBulk,
       input,
     );
+    emitSlashCommandSuggestionsInvalidated();
+    return updated;
   },
 
   deleteInstall: async (
     installId: number,
   ): Promise<Record<string, unknown>> => {
-    return apiClient.delete<Record<string, unknown>>(
+    const removed = await apiClient.delete<Record<string, unknown>>(
       API_ENDPOINTS.skillInstall(installId),
     );
+    emitSlashCommandSuggestionsInvalidated();
+    return removed;
   },
 
   importDiscover: async (

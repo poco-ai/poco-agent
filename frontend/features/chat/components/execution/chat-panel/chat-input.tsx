@@ -296,19 +296,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
                           : "hover:bg-accent/50",
                       )}
                     >
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="font-mono">{item.command}</span>
-                        {item.argument_hint ? (
-                          <span className="text-xs text-muted-foreground font-mono truncate">
-                            {item.argument_hint}
-                          </span>
-                        ) : null}
-                      </div>
-                      {item.description ? (
-                        <div className="text-xs text-muted-foreground truncate">
-                          {item.description}
-                        </div>
-                      ) : null}
+                      <span className="font-mono">{item.command}</span>
                     </button>
                   );
                 })}

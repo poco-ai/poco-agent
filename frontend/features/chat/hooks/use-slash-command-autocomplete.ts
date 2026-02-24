@@ -4,11 +4,15 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type RefObject,
 } from "react";
 
-import { slashCommandsService } from "@/features/capabilities/slash-commands/services/slash-commands-service";
+import {
+  slashCommandsService,
+  SLASH_COMMAND_SUGGESTIONS_INVALIDATED_EVENT,
+} from "@/features/capabilities/slash-commands/services/slash-commands-service";
 import type { SlashCommandSuggestion as BackendSlashCommandSuggestion } from "@/features/capabilities/slash-commands/types";
 
 export type SlashCommandSuggestionSource = "builtin" | "custom" | "skill";
@@ -20,12 +24,6 @@ export interface SlashCommandSuggestion {
   argument_hint?: string | null;
   source: SlashCommandSuggestionSource;
 }
-
-const BUILTIN_COMMANDS: SlashCommandSuggestion[] = [
-  { command: "/compact", name: "compact", source: "builtin" },
-  { command: "/clear", name: "clear", source: "builtin" },
-  { command: "/help", name: "help", source: "builtin" },
-];
 
 type TokenInfo = {
   token: string;
@@ -63,28 +61,58 @@ export function useSlashCommandAutocomplete({
   const [dynamicSuggestions, setDynamicSuggestions] = useState<
     BackendSlashCommandSuggestion[]
   >([]);
+  const isMountedRef = useRef(true);
   const [dismissedToken, setDismissedToken] = useState<string | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
 
+  const loadSuggestions = useCallback(async (forceFresh = false) => {
+    try {
+      const list = await slashCommandsService.listSuggestions({
+        revalidate: 0,
+        cacheBust: forceFresh ? Date.now() : undefined,
+      });
+      if (!isMountedRef.current) return;
+      setDynamicSuggestions(list);
+    } catch (error) {
+      // Autocomplete should be best-effort and never break chat input showing/sending.
+      console.warn("[SlashCommands] autocomplete list failed:", error);
+    }
+  }, []);
+
   useEffect(() => {
-    let cancelled = false;
-    const load = async () => {
-      try {
-        const list = await slashCommandsService.listSuggestions({
-          revalidate: 0,
-        });
-        if (cancelled) return;
-        setDynamicSuggestions(list);
-      } catch (error) {
-        // Autocomplete should be best-effort and never break chat input showing/sending.
-        console.warn("[SlashCommands] autocomplete list failed:", error);
-      }
-    };
-    load();
+    isMountedRef.current = true;
     return () => {
-      cancelled = true;
+      isMountedRef.current = false;
     };
   }, []);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void loadSuggestions(true);
+    }, 0);
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [loadSuggestions]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const handleSuggestionsInvalidated = () => {
+      void loadSuggestions(true);
+    };
+
+    window.addEventListener(
+      SLASH_COMMAND_SUGGESTIONS_INVALIDATED_EVENT,
+      handleSuggestionsInvalidated,
+    );
+    return () => {
+      window.removeEventListener(
+        SLASH_COMMAND_SUGGESTIONS_INVALIDATED_EVENT,
+        handleSuggestionsInvalidated,
+      );
+    };
+  }, [loadSuggestions]);
 
   const tokenInfo = useMemo(() => extractToken(value), [value]);
 
@@ -99,7 +127,7 @@ export function useSlashCommandAutocomplete({
       }),
     );
 
-    const merged = [...BUILTIN_COMMANDS, ...mappedDynamic];
+    const merged = [...mappedDynamic];
     const unique = new Map<string, SlashCommandSuggestion>();
     for (const item of merged) {
       unique.set(item.command, item);

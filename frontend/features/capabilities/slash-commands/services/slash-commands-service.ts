@@ -6,6 +6,14 @@ import type {
   SlashCommandUpdateInput,
 } from "@/features/capabilities/slash-commands/types";
 
+export const SLASH_COMMAND_SUGGESTIONS_INVALIDATED_EVENT =
+  "poco:slash-command-suggestions-invalidated";
+
+function emitSlashCommandSuggestionsInvalidated(): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new Event(SLASH_COMMAND_SUGGESTIONS_INVALIDATED_EVENT));
+}
+
 export const slashCommandsService = {
   list: async (options?: { revalidate?: number }): Promise<SlashCommand[]> => {
     return apiClient.get<SlashCommand[]>(API_ENDPOINTS.slashCommands, {
@@ -15,13 +23,16 @@ export const slashCommandsService = {
 
   listSuggestions: async (options?: {
     revalidate?: number;
+    cacheBust?: string | number;
   }): Promise<SlashCommandSuggestion[]> => {
-    return apiClient.get<SlashCommandSuggestion[]>(
-      API_ENDPOINTS.slashCommandSuggestions,
-      {
-        next: { revalidate: options?.revalidate },
-      },
-    );
+    const endpoint =
+      options?.cacheBust !== undefined && options?.cacheBust !== null
+        ? `${API_ENDPOINTS.slashCommandSuggestions}?_t=${encodeURIComponent(String(options.cacheBust))}`
+        : API_ENDPOINTS.slashCommandSuggestions;
+    return apiClient.get<SlashCommandSuggestion[]>(endpoint, {
+      cache: "no-store",
+      next: { revalidate: options?.revalidate },
+    });
   },
 
   get: async (
@@ -34,22 +45,31 @@ export const slashCommandsService = {
   },
 
   create: async (input: SlashCommandCreateInput): Promise<SlashCommand> => {
-    return apiClient.post<SlashCommand>(API_ENDPOINTS.slashCommands, input);
+    const created = await apiClient.post<SlashCommand>(
+      API_ENDPOINTS.slashCommands,
+      input,
+    );
+    emitSlashCommandSuggestionsInvalidated();
+    return created;
   },
 
   update: async (
     commandId: number,
     input: SlashCommandUpdateInput,
   ): Promise<SlashCommand> => {
-    return apiClient.patch<SlashCommand>(
+    const updated = await apiClient.patch<SlashCommand>(
       API_ENDPOINTS.slashCommand(commandId),
       input,
     );
+    emitSlashCommandSuggestionsInvalidated();
+    return updated;
   },
 
   remove: async (commandId: number): Promise<Record<string, unknown>> => {
-    return apiClient.delete<Record<string, unknown>>(
+    const removed = await apiClient.delete<Record<string, unknown>>(
       API_ENDPOINTS.slashCommand(commandId),
     );
+    emitSlashCommandSuggestionsInvalidated();
+    return removed;
   },
 };
