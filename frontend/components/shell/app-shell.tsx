@@ -4,20 +4,21 @@ import * as React from "react";
 
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "./sidebar/app-sidebar";
-import { SettingsDialog } from "@/features/settings/components/settings-dialog";
-import type {
-  SettingsTabId,
-  SettingsTabRequest,
-} from "@/features/settings/types";
+import {
+  SettingsDialog,
+  type SettingsTabId,
+  type SettingsTabRequest,
+} from "@/features/settings";
 
-import { useProjects } from "@/features/projects/hooks/use-projects";
-import { useTaskHistory } from "@/features/projects/hooks/use-task-history";
-import { useProjectDeletion } from "@/features/projects/hooks/use-project-deletion";
+import {
+  TaskHistoryProvider,
+  useProjectDeletion,
+  useProjects,
+  useTaskHistory,
+} from "@/features/projects";
 
-import { TaskHistoryProvider } from "@/features/projects/contexts/task-history-context";
 import { AppShellProvider } from "./app-shell-context";
-import { OnboardingTour } from "@/features/onboarding/components/onboarding-tour";
-import { useOnboardingTour } from "@/features/onboarding/hooks/use-onboarding-tour";
+import { OnboardingTour, useOnboardingTour } from "@/features/onboarding";
 
 export function AppShell({
   lng,

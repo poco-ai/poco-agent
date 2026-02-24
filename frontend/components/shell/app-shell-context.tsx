@@ -2,8 +2,8 @@
 
 import * as React from "react";
 
-import type { ProjectItem, TaskHistoryItem } from "@/features/projects/types";
-import type { SettingsTabId } from "@/features/settings/types";
+import type { ProjectItem, TaskHistoryItem } from "@/features/projects";
+import type { SettingsTabId } from "@/features/settings";
 
 export type AddTaskOptions = {
   timestamp?: string;

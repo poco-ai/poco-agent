@@ -16,7 +16,11 @@ import {
   SidebarMenuAction,
   SidebarMenuBadge,
 } from "@/components/ui/sidebar";
-import type { ProjectItem, TaskHistoryItem } from "@/features/projects/types";
+import {
+  RenameProjectDialog,
+  type ProjectItem,
+  type TaskHistoryItem,
+} from "@/features/projects";
 import { TaskHistoryList } from "./task-history-list";
 import {
   SIDEBAR_CARD_TEXT_CLASS,
@@ -30,7 +34,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useT } from "@/lib/i18n/client";
-import { RenameProjectDialog } from "@/features/projects/components/rename-project-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   AlertDialog,

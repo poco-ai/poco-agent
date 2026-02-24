@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { CapabilitiesPageClient } from "@/features/capabilities/components/capabilities-page-client";
+import { CapabilitiesPageClient } from "@/features/capabilities";
 
 export default function CapabilitiesPage() {
   return (

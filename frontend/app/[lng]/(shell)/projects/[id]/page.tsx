@@ -1,4 +1,4 @@
-import { ProjectPageClient } from "@/features/projects/components/project-page-client";
+import { ProjectPageClient } from "@/features/projects";
 
 export default async function ProjectPage({
   params,

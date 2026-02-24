@@ -1,4 +1,4 @@
-import { ScheduledTaskDetailPageClient } from "@/features/scheduled-tasks/components/scheduled-task-detail-page-client";
+import { ScheduledTaskDetailPageClient } from "@/features/scheduled-tasks";
 
 export default async function ScheduledTaskDetailPage({
   params,

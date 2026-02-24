@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/sidebar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
-import type { ProjectItem, TaskHistoryItem } from "@/features/projects/types";
+import type { ProjectItem, TaskHistoryItem } from "@/features/projects";
 import { TaskHistoryList } from "./task-history-list";
 import { CollapsibleProjectItem } from "./collapsible-project-item";
 

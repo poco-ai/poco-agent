@@ -1,254 +1,30 @@
 "use client";
 
 import * as React from "react";
-import { CheckCircle2, XCircle } from "lucide-react";
 
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { SkeletonCircle, SkeletonItem } from "@/components/ui/skeleton-shimmer";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n/client";
 import type { ToolExecutionResponse } from "@/features/chat/types";
-import { SyntaxHighlighter } from "@/lib/markdown/prism";
-
-const TOOL_NAME_TRANSLATION_KEY_MAP: Record<string, string> = {
-  bash: "bash",
-  edit: "edit",
-  read: "read",
-  write: "write",
-  glob: "glob",
-  grep: "grep",
-};
-
-const codeTheme: Record<string, React.CSSProperties> = {
-  'pre[class*="language-"]': {
-    color: "var(--foreground)",
-    background: "transparent",
-  },
-  'code[class*="language-"]': {
-    color: "var(--foreground)",
-    background: "transparent",
-  },
-  comment: {
-    color: "var(--muted-foreground)",
-    fontStyle: "italic",
-  },
-  punctuation: {
-    color: "var(--muted-foreground)",
-  },
-  keyword: {
-    color: "var(--primary)",
-  },
-  builtin: {
-    color: "var(--primary)",
-  },
-  string: {
-    color: "var(--primary)",
-  },
-  number: {
-    color: "var(--chart-4)",
-  },
-  function: {
-    color: "var(--chart-2)",
-  },
-  operator: {
-    color: "var(--muted-foreground)",
-  },
-  variable: {
-    color: "var(--foreground)",
-  },
-};
+import {
+  ContentCodeBlock,
+  FieldRow,
+  ToolHeader,
+  ToolOutputSkeleton,
+} from "./generic-tool-viewer-shared";
+import {
+  TOOL_NAME_TRANSLATION_KEY_MAP,
+  guessCodeLanguage,
+  isRecord,
+  normalizeToolName,
+  parseToolOutputPayload,
+  stringifyForDisplay,
+  stripReadLineMarkers,
+} from "./generic-tool-viewer-utils";
 
 type GenericToolViewerProps = {
   execution: ToolExecutionResponse;
 };
-
-function normalizeToolName(name: string): string {
-  return name
-    .trim()
-    .toLowerCase()
-    .replace(/[\s_-]/g, "");
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
-}
-
-function parseJsonLike(value: unknown): unknown {
-  if (typeof value !== "string") return value;
-  const trimmed = value.trim();
-  if (!trimmed) return "";
-  try {
-    return JSON.parse(trimmed);
-  } catch {
-    return value;
-  }
-}
-
-function stringifyForDisplay(value: unknown): string {
-  if (typeof value === "string") return value;
-  try {
-    return JSON.stringify(value, null, 2);
-  } catch {
-    return String(value);
-  }
-}
-
-function extractTextParts(value: unknown): string[] {
-  if (typeof value === "string") return [value];
-
-  if (Array.isArray(value)) {
-    return value.flatMap((item) => extractTextParts(item));
-  }
-
-  if (!isRecord(value)) return [];
-
-  const parts: string[] = [];
-  if (typeof value.text === "string") parts.push(value.text);
-  if (Array.isArray(value.content)) {
-    parts.push(...extractTextParts(value.content));
-  }
-  return parts;
-}
-
-function parseToolOutputPayload(execution: ToolExecutionResponse): unknown {
-  const raw = execution.tool_output?.["content"];
-  const textParts = extractTextParts(raw);
-  if (textParts.length > 0) {
-    const joined = textParts.join("\n").trim();
-    if (joined) return parseJsonLike(joined);
-  }
-  return parseJsonLike(raw);
-}
-
-function stripReadLineMarkers(text: string): string {
-  const lineMarkerPattern = /^\s*\d+\s*(?:→|➜|->)\s?/;
-  if (!lineMarkerPattern.test(text)) return text;
-  return text
-    .split("\n")
-    .map((line) => line.replace(lineMarkerPattern, ""))
-    .join("\n");
-}
-
-function guessCodeLanguage(filePath?: string | null): string {
-  if (!filePath) return "text";
-  const extension = filePath.split(".").pop()?.toLowerCase();
-  if (!extension) return "text";
-  const map: Record<string, string> = {
-    ts: "typescript",
-    tsx: "tsx",
-    js: "javascript",
-    jsx: "jsx",
-    py: "python",
-    go: "go",
-    rs: "rust",
-    java: "java",
-    c: "c",
-    cpp: "cpp",
-    h: "cpp",
-    css: "css",
-    html: "html",
-    md: "markdown",
-    json: "json",
-    yaml: "yaml",
-    yml: "yaml",
-    toml: "toml",
-    sh: "bash",
-    zsh: "bash",
-    sql: "sql",
-    txt: "text",
-  };
-  return map[extension] ?? "text";
-}
-
-function FieldRow({
-  label,
-  value,
-}: {
-  label: string;
-  value: string | number | boolean | null | undefined;
-}) {
-  if (value === null || value === undefined || value === "") return null;
-  return (
-    <div className="flex items-start gap-2 text-xs">
-      <span className="text-muted-foreground shrink-0">{label}:</span>
-      <span className="break-all [overflow-wrap:anywhere]">
-        {String(value)}
-      </span>
-    </div>
-  );
-}
-
-function ToolOutputSkeleton({ label }: { label: string }) {
-  return (
-    <SkeletonItem className="h-20 min-h-0 w-full">
-      <span className="sr-only">{label}</span>
-    </SkeletonItem>
-  );
-}
-
-function ToolHeader({
-  execution,
-  title,
-  sectionLabel,
-}: {
-  execution: ToolExecutionResponse;
-  title: string;
-  sectionLabel: string;
-}) {
-  const isDone = Boolean(execution.tool_output);
-  const isError = execution.is_error;
-
-  return (
-    <div className="flex items-center gap-2">
-      <span className="text-[11px] uppercase tracking-wide text-muted-foreground">
-        {sectionLabel}
-      </span>
-      <span className="truncate text-xs font-medium text-foreground">
-        {title}
-      </span>
-      <span className="ml-auto shrink-0">
-        {!isDone ? (
-          <SkeletonCircle className="size-3.5" />
-        ) : isError ? (
-          <XCircle className="size-3.5 text-destructive" />
-        ) : (
-          <CheckCircle2 className="size-3.5 text-primary" />
-        )}
-      </span>
-    </div>
-  );
-}
-
-function ContentCodeBlock({
-  content,
-  language = "text",
-}: {
-  content: string;
-  language?: string;
-}) {
-  return (
-    <SyntaxHighlighter
-      language={language}
-      style={codeTheme}
-      wrapLongLines
-      customStyle={{
-        margin: 0,
-        padding: "0.75rem",
-        background: "transparent",
-        fontSize: "0.75rem",
-        lineHeight: "1.5",
-      }}
-      codeTagProps={{
-        style: {
-          background: "transparent",
-          fontFamily: "inherit",
-        },
-      }}
-    >
-      {content}
-    </SyntaxHighlighter>
-  );
-}
 
 function WriteToolViewer({
   execution,

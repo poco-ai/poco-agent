@@ -31,12 +31,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  useBackendPreference,
   type BackendOption,
-} from "@/features/settings/hooks/use-backend-preference";
-import { useSettingsLanguage } from "@/features/settings/hooks/use-settings-language";
-import { useUserAccount } from "@/features/user/hooks/use-user-account";
-import type { SettingsTabId } from "@/features/settings/types";
+  type SettingsTabId,
+  useBackendPreference,
+  useSettingsLanguage,
+} from "@/features/settings";
+import { useUserAccount } from "@/features/user";
 
 // ---------------------------------------------------------------------------
 // Selection mode footer

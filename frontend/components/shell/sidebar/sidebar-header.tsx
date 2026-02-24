@@ -22,7 +22,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { useSearchDialog } from "@/features/search/hooks/use-search-dialog";
+import { useSearchDialog } from "@/features/search";
 
 // ---------------------------------------------------------------------------
 // Navigation items

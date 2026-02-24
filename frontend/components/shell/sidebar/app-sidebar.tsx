@@ -2,12 +2,14 @@
 
 import * as React from "react";
 import { useParams, useRouter } from "next/navigation";
-import { GlobalSearchDialog } from "@/features/search/components/global-search-dialog";
-import { useSearchDialog } from "@/features/search/hooks/use-search-dialog";
-import { CreateProjectDialog } from "@/features/projects/components/create-project-dialog";
+import { GlobalSearchDialog, useSearchDialog } from "@/features/search";
+import {
+  CreateProjectDialog,
+  type ProjectItem,
+  type TaskHistoryItem,
+} from "@/features/projects";
 import { MainSidebar } from "./main-sidebar";
-import type { ProjectItem, TaskHistoryItem } from "@/features/projects/types";
-import type { SettingsTabId } from "@/features/settings/types";
+import type { SettingsTabId } from "@/features/settings";
 
 interface AppSidebarProps {
   projects: ProjectItem[];

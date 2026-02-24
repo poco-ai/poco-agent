@@ -29,10 +29,11 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { RenameTaskDialog } from "@/features/projects/components/rename-task-dialog";
-
-import { TASK_STATUS_META } from "@/features/projects/constants/task-status";
-import type { TaskHistoryItem } from "@/features/projects/types";
+import {
+  RenameTaskDialog,
+  TASK_STATUS_META,
+  type TaskHistoryItem,
+} from "@/features/projects";
 import {
   SIDEBAR_CARD_NESTED_INSET_CLASS,
   SIDEBAR_CARD_TEXT_CLASS,

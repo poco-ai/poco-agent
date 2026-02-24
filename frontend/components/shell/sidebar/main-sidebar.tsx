@@ -15,8 +15,8 @@ import {
 
 import { Sidebar, SidebarRail } from "@/components/ui/sidebar";
 
-import type { ProjectItem, TaskHistoryItem } from "@/features/projects/types";
-import type { SettingsTabId } from "@/features/settings/types";
+import type { ProjectItem, TaskHistoryItem } from "@/features/projects";
+import type { SettingsTabId } from "@/features/settings";
 
 import { SidebarHeaderSection } from "./sidebar-header";
 import { SidebarContentSection } from "./sidebar-content";
