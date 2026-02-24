@@ -6,12 +6,17 @@ import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import type { MessageBlock } from "@/features/chat/types";
 import type { ToolUseBlock, ToolResultBlock } from "@/features/chat/types";
-import { Brain } from "lucide-react";
+import { Brain, ChevronDown, ChevronRight } from "lucide-react";
 import { ToolChain } from "./tool-chain";
 import remarkBreaks from "remark-breaks";
 import rehypeKatex from "rehype-katex";
 import { MarkdownCode, MarkdownPre } from "@/components/shared/markdown-code";
 import { useT } from "@/lib/i18n/client";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 type LinkProps = {
   children?: React.ReactNode;
@@ -40,6 +45,9 @@ export function MessageContent({
   sessionStatus?: string;
 }) {
   const { t } = useT("translation");
+  const [openThinkingByGroup, setOpenThinkingByGroup] = React.useState<
+    Record<number, boolean>
+  >({});
 
   // Helper function to extract text content from message
   const getTextContent = (content: string | MessageBlock[]): string => {
@@ -192,22 +200,51 @@ export function MessageContent({
             .trim();
 
           if (!thinking) return null;
+          const isOpen = Boolean(openThinkingByGroup[index]);
 
           return (
-            <details
+            <div
               key={index}
-              className="rounded-md border border-border/60 bg-muted/20 px-3 py-2"
+              className="my-2 w-full min-w-0 max-w-full overflow-hidden"
             >
-              <summary className="cursor-pointer text-xs font-medium text-muted-foreground hover:text-foreground flex items-center gap-2 select-none">
-                <div className="flex items-center gap-1.5">
-                  <Brain className="size-3.5" />
-                  <span>{t("chat.thinkingTitle")}</span>
-                </div>
-              </summary>
-              <div className="mt-2 border-t border-border/50 pt-2 text-xs whitespace-pre-wrap break-words break-all font-mono text-foreground/90">
-                {thinking}
-              </div>
-            </details>
+              <Collapsible
+                open={isOpen}
+                onOpenChange={(open) =>
+                  setOpenThinkingByGroup((prev) => ({
+                    ...prev,
+                    [index]: open,
+                  }))
+                }
+              >
+                <CollapsibleTrigger className="flex w-full min-w-0 max-w-full items-center gap-2 overflow-hidden rounded-[0.5rem] border border-border/60 bg-card/70 px-3 py-1.5 text-left transition-colors hover:bg-muted/50">
+                  <span className="flex size-5 shrink-0 items-center justify-center rounded-md border border-border/60 bg-muted/30">
+                    <Brain className="size-3.5 text-muted-foreground" />
+                  </span>
+
+                  <div className="min-w-0 flex-1 overflow-hidden">
+                    <div className="truncate text-xs font-medium text-foreground">
+                      {t("chat.thinkingTitle")}
+                    </div>
+                  </div>
+
+                  <div className="flex shrink-0 items-center">
+                    {isOpen ? (
+                      <ChevronDown className="size-3.5 text-muted-foreground" />
+                    ) : (
+                      <ChevronRight className="size-3.5 text-muted-foreground" />
+                    )}
+                  </div>
+                </CollapsibleTrigger>
+
+                <CollapsibleContent>
+                  <div className="mt-2 min-w-0 max-w-full overflow-hidden rounded-[0.5rem] border border-border/60 bg-muted/20 p-3 text-xs">
+                    <pre className="whitespace-pre-wrap break-all font-mono text-xs text-foreground/90">
+                      {thinking}
+                    </pre>
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            </div>
           );
         } else {
           const text = group.blocks
