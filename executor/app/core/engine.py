@@ -99,6 +99,7 @@ class AgentExecutor:
                     prompt = f"{input_hint}\n\n{prompt}"
 
                 prompt = f"{prompt}\n\nCurrent working directory: {ctx.cwd}"
+                prompt = f"{prompt}\n\nPlease reply in the same language as the user's input unless explicitly requested otherwise."
 
                 prompt_appendix = build_prompt_appendix(
                     browser_enabled=config.browser_enabled
