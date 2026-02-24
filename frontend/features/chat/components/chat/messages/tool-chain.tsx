@@ -335,17 +335,27 @@ function ToolStep({ toolUse, toolResult, isOpen, onToggle }: ToolStepProps) {
     }
     return (toolUse.name || t("chat.toolCards.tools.tool")).trim();
   }, [browserMeta, mcpMeta, skillMeta, t, toolUse.name]);
+  const detailIcon = isOpen ? (
+    <ChevronDown className="size-3.5 text-muted-foreground" />
+  ) : (
+    <ChevronRight className="size-3.5 text-muted-foreground" />
+  );
 
   return (
     <div className="mb-2 min-w-0 max-w-full last:mb-0">
       <Collapsible open={isOpen} onOpenChange={onToggle}>
-        <CollapsibleTrigger className="flex w-full min-w-0 max-w-full items-center gap-2 overflow-hidden rounded-[0.5rem] border border-border/60 bg-card/70 px-3 py-1.5 text-left transition-colors hover:bg-muted/50">
-          <span className="flex size-5 shrink-0 items-center justify-center rounded-md border border-border/60 bg-muted/30">
-            {renderToolIcon(toolUse.name || "")}
+        <CollapsibleTrigger className="group/tool flex w-full min-w-0 max-w-full items-center gap-2 overflow-hidden rounded-[0.5rem] border border-border/60 bg-card/70 px-2.5 py-1 text-left transition-colors hover:bg-muted/50">
+          <span className="relative flex size-5 shrink-0 items-center justify-center rounded-md border border-border/60 bg-muted/30">
+            <span className="flex items-center justify-center transition-opacity md:group-hover/tool:opacity-0">
+              {renderToolIcon(toolUse.name || "")}
+            </span>
+            <span className="absolute inset-0 hidden items-center justify-center opacity-0 transition-opacity md:flex md:group-hover/tool:opacity-100">
+              {detailIcon}
+            </span>
           </span>
 
           <div className="min-w-0 flex-1 overflow-hidden">
-            <div className="truncate text-xs font-medium text-foreground">
+            <div className="truncate text-[11px] font-medium text-muted-foreground">
               {toolLabel}
             </div>
           </div>
@@ -358,21 +368,17 @@ function ToolStep({ toolUse, toolResult, isOpen, onToggle }: ToolStepProps) {
             >
               {stateIcon}
             </span>
-            {isOpen ? (
-              <ChevronDown className="size-3.5 text-muted-foreground" />
-            ) : (
-              <ChevronRight className="size-3.5 text-muted-foreground" />
-            )}
+            <span className="md:hidden">{detailIcon}</span>
           </div>
         </CollapsibleTrigger>
 
         <CollapsibleContent>
-          <div className="mt-2 min-w-0 max-w-full overflow-hidden rounded-[0.5rem] border border-border/60 bg-muted/20 p-3 text-xs">
+          <div className="mt-2 min-w-0 max-w-full overflow-hidden rounded-[0.5rem] border border-border/60 bg-muted/20 p-2.5 text-[11px] text-muted-foreground">
             <div className="mb-2 text-[10px] uppercase tracking-wide text-muted-foreground">
               {t("chat.input")}
             </div>
             <div className="min-w-0 max-w-full overflow-hidden rounded-lg border border-border/60 bg-background/60 p-2">
-              <pre className="whitespace-pre-wrap break-all font-mono text-xs text-foreground/90">
+              <pre className="whitespace-pre-wrap break-all font-mono text-[11px] text-muted-foreground/90">
                 {inputText}
               </pre>
             </div>
@@ -390,7 +396,7 @@ function ToolStep({ toolUse, toolResult, isOpen, onToggle }: ToolStepProps) {
                       : "border-border/60 bg-background/60",
                   )}
                 >
-                  <pre className="whitespace-pre-wrap break-all font-mono text-xs text-foreground/90">
+                  <pre className="whitespace-pre-wrap break-all font-mono text-[11px] text-muted-foreground/90">
                     {outputText}
                   </pre>
                 </div>
@@ -462,7 +468,7 @@ export function ToolChain({ blocks, sessionStatus }: ToolChainProps) {
   if (steps.length === 0) return null;
 
   return (
-    <div className="my-2 w-full min-w-0 max-w-full overflow-hidden">
+    <div className="my-2 w-full min-w-0 max-w-full overflow-hidden pl-5 md:max-w-[42rem]">
       {steps.map((step) => (
         <ToolStep
           key={step.use.id}
