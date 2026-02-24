@@ -9,6 +9,8 @@ from claude_agent_sdk import ClaudeAgentOptions
 from claude_agent_sdk.client import ClaudeSDKClient
 from claude_agent_sdk.types import (
     AgentDefinition as SdkAgentDefinition,
+)
+from claude_agent_sdk.types import (
     HookContext,
     HookInput,
     HookMatcher,
@@ -19,11 +21,6 @@ from claude_agent_sdk.types import (
 )
 from dotenv import load_dotenv
 
-from app.core.workspace import WorkspaceManager
-from app.core.user_input import UserInputClient
-from app.hooks.base import ExecutionContext
-from app.hooks.manager import HookManager
-from app.prompts import build_prompt_appendix
 from app.core.observability.request_context import (
     generate_request_id,
     generate_trace_id,
@@ -32,6 +29,11 @@ from app.core.observability.request_context import (
     set_request_id,
     set_trace_id,
 )
+from app.core.user_input import UserInputClient
+from app.core.workspace import WorkspaceManager
+from app.hooks.base import ExecutionContext
+from app.hooks.manager import HookManager
+from app.prompts import build_prompt_appendix
 from app.schemas.request import TaskConfig
 from app.schemas.state import BrowserState
 from app.utils.browser import format_viewport_size, parse_viewport_size
@@ -98,14 +100,17 @@ class AgentExecutor:
                 if input_hint:
                     prompt = f"{input_hint}\n\n{prompt}"
 
-                prompt = f"{prompt}\n\nCurrent working directory: {ctx.cwd}"
-                prompt = f"{prompt}\n\nPlease reply in the same language as the user's input unless explicitly requested otherwise."
-
                 prompt_appendix = build_prompt_appendix(
                     browser_enabled=config.browser_enabled
                 )
                 if prompt_appendix:
                     prompt = f"{prompt}\n\n{prompt_appendix}"
+
+                prompt = f"{prompt}\n\nPlease reply in the same language as the user's input unless explicitly requested otherwise."
+                prompt = (
+                    f"{prompt}\n\nCurrent working directory: {ctx.cwd}."
+                    "All operations must be performed within this directory only."
+                )
 
             async def dummy_hook(
                 input_data: HookInput, tool_use_id: str | None, context: HookContext
