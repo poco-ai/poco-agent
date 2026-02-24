@@ -14,8 +14,9 @@ import {
 } from "lucide-react";
 
 import { useT } from "@/lib/i18n/client";
+import { useMobileSidebar } from "@/hooks/use-mobile-sidebar";
 import { Button } from "@/components/ui/button";
-import { SidebarFooter, useSidebar } from "@/components/ui/sidebar";
+import { SidebarFooter } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useThemeMode, type ThemeMode } from "@/hooks/use-theme-mode";
 import {
@@ -306,12 +307,12 @@ export function SidebarFooterSection({
   onOpenSettings,
   onStartOnboarding,
 }: SidebarFooterSectionProps) {
-  const { isMobile, setOpenMobile } = useSidebar();
+  const { closeMobileSidebar, isMobile } = useMobileSidebar();
 
   const handleOpenSettings = React.useCallback(() => {
     onOpenSettings();
-    if (isMobile) setOpenMobile(false);
-  }, [isMobile, onOpenSettings, setOpenMobile]);
+    closeMobileSidebar();
+  }, [closeMobileSidebar, onOpenSettings]);
 
   return (
     <SidebarFooter

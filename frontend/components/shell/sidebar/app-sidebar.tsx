@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
+import { useLanguage } from "@/hooks/use-language";
 import { GlobalSearchDialog, useSearchDialog } from "@/features/search";
 import {
   CreateProjectDialog,
@@ -48,16 +49,10 @@ export function AppSidebar({
   onStartOnboarding,
 }: AppSidebarProps) {
   const router = useRouter();
-  const params = useParams();
+  const lng = useLanguage();
   const { isSearchOpen, setIsSearchOpen } = useSearchDialog();
   const [isCreateProjectDialogOpen, setIsCreateProjectDialogOpen] =
     React.useState(false);
-
-  const lng = React.useMemo(() => {
-    const value = params?.lng;
-    if (!value) return undefined;
-    return Array.isArray(value) ? value[0] : value;
-  }, [params]);
 
   // New task handling
   const handleNewTask = React.useCallback(() => {

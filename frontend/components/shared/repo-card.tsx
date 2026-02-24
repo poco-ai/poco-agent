@@ -1,5 +1,5 @@
-import { Github, X } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Github } from "lucide-react";
+import { BaseCard } from "./base-card";
 
 function deriveRepoLabel(url: string): string {
   const trimmed = url.trim();
@@ -42,53 +42,16 @@ export function RepoCard({
   const subtitle = trimmedBranch
     ? `${trimmedUrl} @${trimmedBranch}`
     : trimmedUrl;
-  const isClickable = Boolean(onOpen);
 
   return (
-    <div
-      role={isClickable ? "button" : undefined}
-      tabIndex={isClickable ? 0 : undefined}
-      onClick={isClickable ? onOpen : undefined}
-      onKeyDown={
-        isClickable
-          ? (e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                onOpen?.();
-              }
-            }
-          : undefined
-      }
-      className={cn(
-        "group relative flex items-center gap-2 rounded-lg border border-border bg-card p-2 text-sm shadow-sm transition-all hover:shadow-md",
-        isClickable ? "cursor-pointer" : "",
-        className,
-      )}
-      title={subtitle}
-    >
-      <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
-        <Github className="size-4" />
-      </div>
-
-      <div className="flex min-w-0 flex-1 flex-col">
-        <p className="truncate font-medium text-foreground" title={label}>
-          {label}
-        </p>
-        <p className="truncate text-xs text-muted-foreground">{subtitle}</p>
-      </div>
-
-      {showRemove && onRemove ? (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onRemove();
-          }}
-          className="absolute -right-2 -top-2 hidden size-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground shadow-sm transition-opacity group-hover:flex hover:bg-destructive/90"
-          type="button"
-        >
-          <X className="size-3" />
-        </button>
-      ) : null}
-    </div>
+    <BaseCard
+      icon={<Github className="size-4" />}
+      title={label}
+      subtitle={subtitle}
+      onClick={onOpen}
+      onRemove={onRemove}
+      showRemove={showRemove}
+      className={className}
+    />
   );
 }

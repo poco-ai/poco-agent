@@ -11,6 +11,8 @@ import {
 import { useDroppable } from "@dnd-kit/core";
 
 import { useT } from "@/lib/i18n/client";
+import { useLanguage } from "@/hooks/use-language";
+import { useMobileSidebar } from "@/hooks/use-mobile-sidebar";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
@@ -19,13 +21,14 @@ import {
   SidebarGroupContent,
   SidebarGroupLabel,
   SidebarMenu,
-  useSidebar,
 } from "@/components/ui/sidebar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 import type { ProjectItem, TaskHistoryItem } from "@/features/projects";
 import { TaskHistoryList } from "./task-history-list";
 import { CollapsibleProjectItem } from "./collapsible-project-item";
+import { useScrollState } from "./hooks/use-scroll-state";
+import { useProjectExpansion } from "./hooks/use-project-expansion";
 
 const LONG_PRESS_DURATION_MS = 650;
 
@@ -250,67 +253,13 @@ export function SidebarContentSection({
   const { t } = useT("translation");
   const router = useRouter();
   const params = useParams();
-  const { isMobile, setOpenMobile } = useSidebar();
-
-  const lng = React.useMemo(() => {
-    const value = params?.lng;
-    if (!value) return undefined;
-    return Array.isArray(value) ? value[0] : value;
-  }, [params]);
-
-  // Track scroll state for border
-  const [isContentScrolled, setIsContentScrolled] = React.useState(false);
-  const scrollAreaRef = React.useRef<HTMLDivElement>(null);
-  React.useEffect(() => {
-    const viewport = scrollAreaRef.current?.querySelector<HTMLElement>(
-      "[data-slot='scroll-area-viewport']",
-    );
-    if (!viewport) return;
-
-    const handleViewportScroll = () => {
-      setIsContentScrolled(viewport.scrollTop > 0);
-    };
-
-    handleViewportScroll();
-    viewport.addEventListener("scroll", handleViewportScroll, {
-      passive: true,
-    });
-    return () => {
-      viewport.removeEventListener("scroll", handleViewportScroll);
-    };
-  }, []);
-
-  // Project expand/collapse state
-  const [expandedProjects, setExpandedProjects] = React.useState<Set<string>>(
-    new Set(),
-  );
-
-  // Auto-expand project when navigating to a session
-  React.useEffect(() => {
-    const activeTaskId = params?.id;
-    if (activeTaskId && typeof activeTaskId === "string") {
-      const activeTask = taskHistory.find((task) => task.id === activeTaskId);
-      if (activeTask?.projectId) {
-        setExpandedProjects((prev) => {
-          if (!prev.has(activeTask.projectId!)) {
-            const next = new Set(prev);
-            next.add(activeTask.projectId!);
-            return next;
-          }
-          return prev;
-        });
-      }
-    }
-  }, [params?.id, taskHistory]);
-
-  const toggleProjectExpanded = React.useCallback((projectId: string) => {
-    setExpandedProjects((prev) => {
-      const next = new Set(prev);
-      if (next.has(projectId)) next.delete(projectId);
-      else next.add(projectId);
-      return next;
-    });
-  }, []);
+  const lng = useLanguage();
+  const { closeMobileSidebar } = useMobileSidebar();
+  const { scrollAreaRef, isContentScrolled } = useScrollState();
+  const { expandedProjects, toggleProjectExpanded } = useProjectExpansion({
+    taskHistory,
+    activeTaskId: params?.id as string | undefined,
+  });
 
   // Derived data
   const unassignedTasks = React.useMemo(
@@ -328,10 +277,6 @@ export function SidebarContentSection({
     });
     return grouped;
   }, [taskHistory]);
-
-  const closeMobileSidebar = React.useCallback(() => {
-    if (isMobile) setOpenMobile(false);
-  }, [isMobile, setOpenMobile]);
 
   const handleProjectClick = React.useCallback(
     (projectId: string) => {

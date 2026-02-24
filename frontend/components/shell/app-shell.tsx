@@ -4,11 +4,7 @@ import * as React from "react";
 
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "./sidebar/app-sidebar";
-import {
-  SettingsDialog,
-  type SettingsTabId,
-  type SettingsTabRequest,
-} from "@/features/settings";
+import { SettingsDialog } from "@/features/settings";
 
 import {
   TaskHistoryProvider,
@@ -19,6 +15,8 @@ import {
 
 import { AppShellProvider } from "./app-shell-context";
 import { OnboardingTour, useOnboardingTour } from "@/features/onboarding";
+import { useSettingsShortcut } from "./hooks/use-settings-shortcut";
+import { useProjectActions } from "./hooks/use-project-actions";
 
 export function AppShell({
   lng,
@@ -27,9 +25,12 @@ export function AppShell({
   lng: string;
   children: React.ReactNode;
 }) {
-  const [isSettingsOpen, setIsSettingsOpen] = React.useState(false);
-  const [settingsTabRequest, setSettingsTabRequest] =
-    React.useState<SettingsTabRequest | null>(null);
+  const {
+    isSettingsOpen,
+    settingsTabRequest,
+    openSettings,
+    handleSettingsOpenChange,
+  } = useSettingsShortcut();
 
   const { projects, addProject, updateProject, removeProject } = useProjects(
     {},
@@ -49,62 +50,13 @@ export function AppShell({
     moveTask,
     removeProject,
   });
+
+  const { handleRenameProject, handleDeleteProject } = useProjectActions({
+    updateProject,
+    deleteProject,
+  });
+
   const onboarding = useOnboardingTour();
-
-  const openSettings = React.useCallback((tab?: SettingsTabId) => {
-    if (tab) {
-      setSettingsTabRequest({ tab, requestId: Date.now() });
-    } else {
-      setSettingsTabRequest(null);
-    }
-    setIsSettingsOpen(true);
-  }, []);
-
-  const toggleSettingsByHotkey = React.useCallback(() => {
-    setIsSettingsOpen((prev) => {
-      const next = !prev;
-      if (!next) {
-        setSettingsTabRequest(null);
-      }
-      return next;
-    });
-  }, []);
-
-  React.useEffect(() => {
-    const handleOpenSettingsShortcut = (event: KeyboardEvent) => {
-      if (!event.ctrlKey) return;
-      if (!(event.key === "," || event.code === "Comma")) return;
-      event.preventDefault();
-      event.stopPropagation();
-      toggleSettingsByHotkey();
-    };
-
-    window.addEventListener("keydown", handleOpenSettingsShortcut, true);
-    return () => {
-      window.removeEventListener("keydown", handleOpenSettingsShortcut, true);
-    };
-  }, [toggleSettingsByHotkey]);
-
-  const handleSettingsOpenChange = React.useCallback((nextOpen: boolean) => {
-    setIsSettingsOpen(nextOpen);
-    if (!nextOpen) {
-      setSettingsTabRequest(null);
-    }
-  }, []);
-
-  const handleRenameProject = React.useCallback(
-    (projectId: string, newName: string) => {
-      updateProject(projectId, { name: newName });
-    },
-    [updateProject],
-  );
-
-  const handleDeleteProject = React.useCallback(
-    async (projectId: string) => {
-      await deleteProject(projectId);
-    },
-    [deleteProject],
-  );
 
   const contextValue = React.useMemo(
     () => ({

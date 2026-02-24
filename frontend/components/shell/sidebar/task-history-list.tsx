@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import {
   MoreHorizontal,
   FolderPlus,
@@ -12,6 +12,7 @@ import {
 import { useDraggable } from "@dnd-kit/core";
 
 import { useT } from "@/lib/i18n/client";
+import { useLanguage } from "@/hooks/use-language";
 import { cn } from "@/lib/utils";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
@@ -300,12 +301,7 @@ export function TaskHistoryList({
   isNested?: boolean;
   onNavigate?: () => void;
 }) {
-  const params = useParams();
-  const lng = React.useMemo(() => {
-    const value = params?.lng;
-    if (!value) return undefined;
-    return Array.isArray(value) ? value[0] : value;
-  }, [params]);
+  const lng = useLanguage();
 
   // Dialog states
   const [renameDialogOpen, setRenameDialogOpen] = React.useState(false);

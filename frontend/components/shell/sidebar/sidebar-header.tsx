@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Image from "next/image";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import {
   PanelLeftClose,
   PanelLeftOpen,
@@ -13,6 +13,8 @@ import {
 } from "lucide-react";
 
 import { useT } from "@/lib/i18n/client";
+import { useLanguage } from "@/hooks/use-language";
+import { useMobileSidebar } from "@/hooks/use-mobile-sidebar";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
@@ -62,19 +64,10 @@ interface SidebarHeaderSectionProps {
 export function SidebarHeaderSection({ onNewTask }: SidebarHeaderSectionProps) {
   const { t } = useT("translation");
   const router = useRouter();
-  const params = useParams();
-  const { toggleSidebar, isMobile, setOpenMobile } = useSidebar();
+  const lng = useLanguage();
+  const { toggleSidebar } = useSidebar();
+  const { closeMobileSidebar } = useMobileSidebar();
   const { searchKey } = useSearchDialog();
-
-  const lng = React.useMemo(() => {
-    const value = params?.lng;
-    if (!value) return undefined;
-    return Array.isArray(value) ? value[0] : value;
-  }, [params]);
-
-  const closeMobileSidebar = React.useCallback(() => {
-    if (isMobile) setOpenMobile(false);
-  }, [isMobile, setOpenMobile]);
 
   return (
     <SidebarHeader className="px-2 gap-2 pb-2">
