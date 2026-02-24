@@ -3,7 +3,7 @@
 import * as React from "react";
 
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
-import { AppSidebar } from "@/components/shared/sidebar/app-sidebar";
+import { AppSidebar } from "./sidebar/app-sidebar";
 import { SettingsDialog } from "@/features/settings/components/settings-dialog";
 import type {
   SettingsTabId,
@@ -15,7 +15,7 @@ import { useTaskHistory } from "@/features/projects/hooks/use-task-history";
 import { useProjectDeletion } from "@/features/projects/hooks/use-project-deletion";
 
 import { TaskHistoryProvider } from "@/features/projects/contexts/task-history-context";
-import { AppShellProvider } from "@/components/shared/app-shell-context";
+import { AppShellProvider } from "./app-shell-context";
 import { OnboardingTour } from "@/features/onboarding/components/onboarding-tour";
 import { useOnboardingTour } from "@/features/onboarding/hooks/use-onboarding-tour";
 

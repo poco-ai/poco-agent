@@ -1,4 +1,4 @@
-import { apiClient, API_ENDPOINTS } from "@/lib/api-client";
+import { apiClient, API_ENDPOINTS } from "@/services/api-client";
 import type { InputFile } from "@/features/chat/types";
 
 export async function uploadAttachment(file: File): Promise<InputFile> {

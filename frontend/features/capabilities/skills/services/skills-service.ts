@@ -1,4 +1,4 @@
-import { apiClient, API_ENDPOINTS } from "@/lib/api-client";
+import { apiClient, API_ENDPOINTS } from "@/services/api-client";
 import { SLASH_COMMAND_SUGGESTIONS_INVALIDATED_EVENT } from "@/features/capabilities/slash-commands/services/slash-commands-service";
 import type {
   SkillInstallCreateInput,

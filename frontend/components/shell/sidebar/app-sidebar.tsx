@@ -23,12 +23,14 @@ interface AppSidebarProps {
   onStartOnboarding?: () => void;
 }
 
-// 默认空函数
+// Default no-op handler
 const noop = () => {};
 
 /**
- * 统一的侧边栏组件，根据当前路由自动调整行为
- * 所有页面应使用此组件以保持侧边栏一致
+ * Unified sidebar wrapper.
+ *
+ * Automatically adapts behavior based on the current route to keep the sidebar
+ * consistent across pages.
  */
 export function AppSidebar({
   projects,
@@ -55,9 +57,9 @@ export function AppSidebar({
     return Array.isArray(value) ? value[0] : value;
   }, [params]);
 
-  // 处理新建任务
+  // New task handling
   const handleNewTask = React.useCallback(() => {
-    // 在首页或其他页面，执行默认行为
+    // Default behavior for pages without an explicit handler
     if (onNewTask) {
       onNewTask();
     } else {
@@ -66,7 +68,7 @@ export function AppSidebar({
     }
   }, [router, onNewTask, lng]);
 
-  // 处理创建项目
+  // Project creation handling
   const handleCreateProject = React.useCallback(
     (name: string) => {
       onCreateProject?.(name);

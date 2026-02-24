@@ -6,7 +6,7 @@ import { ArrowLeft, Pencil, Play, RefreshCw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { useT } from "@/lib/i18n/client";
-import { useAppShell } from "@/components/shared/app-shell-context";
+import { useAppShell } from "@/components/shell/app-shell-context";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import {

@@ -19,7 +19,7 @@ import type { ModelConfigResponse } from "@/features/chat/types";
 import { HomeHeader } from "./home-header";
 import { ConnectorsBar } from "@/features/connectors";
 
-import { useAppShell } from "@/components/shared/app-shell-context";
+import { useAppShell } from "@/components/shell/app-shell-context";
 import { toast } from "sonner";
 import { modelConfigService } from "@/features/home/services/model-config-service";
 

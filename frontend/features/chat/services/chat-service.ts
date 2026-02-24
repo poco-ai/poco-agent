@@ -9,7 +9,7 @@
  * - `./file-tree-builder.ts` – flat file list → hierarchical tree
  */
 
-import { apiClient, API_ENDPOINTS } from "@/lib/api-client";
+import { apiClient, API_ENDPOINTS } from "@/services/api-client";
 import type {
   ExecutionSession,
   FileNode,

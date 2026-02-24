@@ -1,4 +1,4 @@
-import type { AddTaskOptions } from "@/components/shared/app-shell-context";
+import type { AddTaskOptions } from "@/components/shell/app-shell-context";
 import type { InputFile } from "@/features/chat/types/api/session";
 import type { RunScheduleMode } from "@/features/task-composer/components/run-schedule-dialog";
 

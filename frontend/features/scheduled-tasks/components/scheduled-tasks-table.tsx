@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { Pencil, Play, Trash2 } from "lucide-react";
 
 import { useT } from "@/lib/i18n/client";
-import { useAppShell } from "@/components/shared/app-shell-context";
+import { useAppShell } from "@/components/shell/app-shell-context";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";

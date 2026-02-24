@@ -1,4 +1,4 @@
-import { AppShell } from "@/components/shared/app-shell";
+import { AppShell } from "@/components/shell/app-shell";
 
 export default async function ShellLayout({
   children,

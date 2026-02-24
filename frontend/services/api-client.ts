@@ -1,4 +1,4 @@
-import { ApiError } from "./errors";
+import { ApiError } from "@/lib/errors";
 import type { ApiResponse } from "@/types";
 
 // ---------------------------------------------------------------------------

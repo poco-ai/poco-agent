@@ -1,4 +1,4 @@
-import { apiClient, API_ENDPOINTS } from "@/lib/api-client";
+import { apiClient, API_ENDPOINTS } from "@/services/api-client";
 import type {
   EnvVar,
   EnvVarCreateInput,

@@ -22,7 +22,7 @@ import type {
   Plugin,
   UserPluginInstall,
 } from "@/features/capabilities/plugins/types";
-import { useAppShell } from "@/components/shared/app-shell-context";
+import { useAppShell } from "@/components/shell/app-shell-context";
 import { cn } from "@/lib/utils";
 import { playInstallSound } from "@/lib/utils/sound";
 import { useT } from "@/lib/i18n/client";

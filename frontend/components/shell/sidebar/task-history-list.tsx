@@ -157,9 +157,9 @@ function DraggableTask({
             tooltip={task.title}
             onClick={handleClick}
           >
-            {/* 状态指示器和拖拽手柄 - 同一位置，hover 时切换 */}
+            {/* Status indicator and drag handle - same slot, toggled on hover */}
             <div className="size-4 shrink-0 flex items-center justify-center relative">
-              {/* 默认显示：颜色点 - hover 时隐藏 */}
+              {/* Default: status dot (hidden on hover) */}
               <span
                 className={cn(
                   "size-2 shrink-0 rounded-full transition-opacity",
@@ -171,7 +171,7 @@ function DraggableTask({
               />
               <span className="sr-only">{t(statusMeta.labelKey)}</span>
 
-              {/* Hover 时显示：拖拽手柄 - 覆盖在颜色点上 */}
+              {/* Hover: drag handle (overlays the dot) */}
               <div
                 className="absolute inset-0 flex items-center justify-center text-muted-foreground opacity-0 group-hover/task-card:opacity-100 transition-opacity cursor-grab active:cursor-grabbing group-data-[collapsible=icon]:hidden"
                 {...listeners}
@@ -181,7 +181,7 @@ function DraggableTask({
               </div>
             </div>
 
-            {/* 文字 */}
+            {/* Text */}
             <div className="flex min-w-0 flex-1 items-center gap-2">
               <span className={SIDEBAR_CARD_TEXT_CLASS}>
                 {task.title || t("chat.newChat")}
@@ -194,7 +194,7 @@ function DraggableTask({
             </div>
           </SidebarMenuButton>
 
-          {/* 更多按钮 - 仅在非选择模式显示 */}
+          {/* More actions - only in non-selection mode */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <div

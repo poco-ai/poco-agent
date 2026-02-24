@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { PullToRefresh } from "@/components/ui/pull-to-refresh";
-import { useAppShell } from "@/components/shared/app-shell-context";
+import { useAppShell } from "@/components/shell/app-shell-context";
 import { CreateScheduledTaskDialog } from "@/features/scheduled-tasks/components/create-scheduled-task-dialog";
 import { ScheduledTaskEditDialog } from "@/features/scheduled-tasks/components/scheduled-task-edit-dialog";
 import { ScheduledTasksHeader } from "@/features/scheduled-tasks/components/scheduled-tasks-header";

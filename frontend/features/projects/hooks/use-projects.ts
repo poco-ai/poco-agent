@@ -14,7 +14,7 @@ import {
 import type {
   ProjectRepoDefaultsInput,
   ProjectUpdatesInput,
-} from "@/components/shared/app-shell-context";
+} from "@/components/shell/app-shell-context";
 
 interface UseProjectsOptions {
   initialProjects?: ProjectItem[];

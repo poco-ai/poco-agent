@@ -18,7 +18,7 @@ import type { ProjectItem, TaskHistoryItem } from "@/features/projects/types";
 
 import { ProjectHeader } from "@/features/projects/components/project-header";
 import { ConnectorsBar } from "@/features/connectors";
-import { useAppShell } from "@/components/shared/app-shell-context";
+import { useAppShell } from "@/components/shell/app-shell-context";
 import { toast } from "sonner";
 
 interface ProjectPageClientProps {

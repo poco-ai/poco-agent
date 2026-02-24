@@ -1,10 +1,15 @@
 import { FileText, File, Image as ImageIcon, Code, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { InputFile } from "@/features/chat/types";
 import { memo } from "react";
 
+export type FileCardFile = {
+  name: string;
+  size?: number | null;
+  content_type?: string | null;
+};
+
 interface FileCardProps {
-  file: InputFile;
+  file: FileCardFile;
   onRemove?: () => void;
   className?: string;
   showRemove?: boolean;
@@ -23,7 +28,7 @@ const getFileIconType = (fileName: string, mimeType?: string | null) => {
   return "file";
 };
 
-const FileIcon = memo(({ file }: { file: InputFile }) => {
+const FileIcon = memo(({ file }: { file: FileCardFile }) => {
   const iconType = getFileIconType(file.name, file.content_type);
 
   if (iconType === "image") return <ImageIcon className="size-4" />;

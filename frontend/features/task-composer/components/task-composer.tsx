@@ -16,7 +16,7 @@ import { ComposerToolbar } from "@/features/task-composer/components/composer-to
 import { RepoDialog } from "@/features/task-composer/components/repo-dialog";
 import { SlashAutocompleteDropdown } from "@/features/task-composer/components/slash-autocomplete-dropdown";
 import { useSlashCommandAutocomplete } from "@/features/chat/hooks/use-slash-command-autocomplete";
-import { useAppShell } from "@/components/shared/app-shell-context";
+import { useAppShell } from "@/components/shell/app-shell-context";
 import { useFileUpload } from "@/features/task-composer/hooks/use-file-upload";
 import type {
   ComposerMode,

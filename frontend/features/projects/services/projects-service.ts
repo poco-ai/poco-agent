@@ -1,4 +1,4 @@
-import { apiClient, API_ENDPOINTS } from "@/lib/api-client";
+import { apiClient, API_ENDPOINTS } from "@/services/api-client";
 import type { SessionResponse } from "@/features/chat/types";
 import { userInputService } from "@/features/chat/services/user-input-service";
 import type { ProjectItem, TaskHistoryItem } from "@/features/projects/types";
