@@ -23,6 +23,7 @@ from app.core.workspace import WorkspaceManager
 from app.core.user_input import UserInputClient
 from app.hooks.base import ExecutionContext
 from app.hooks.manager import HookManager
+from app.prompts import build_prompt_appendix
 from app.core.observability.request_context import (
     generate_request_id,
     generate_trace_id,
@@ -98,6 +99,12 @@ class AgentExecutor:
                     prompt = f"{input_hint}\n\n{prompt}"
 
                 prompt = f"{prompt}\n\nCurrent working directory: {ctx.cwd}"
+
+                prompt_appendix = build_prompt_appendix(
+                    browser_enabled=config.browser_enabled
+                )
+                if prompt_appendix:
+                    prompt = f"{prompt}\n\n{prompt_appendix}"
 
             async def dummy_hook(
                 input_data: HookInput, tool_use_id: str | None, context: HookContext
