@@ -12,7 +12,7 @@ import {
   MessageSquare,
   SquareTerminal,
   Pencil,
-  PenSquare,
+  FileEdit,
   FileText,
   Folder,
   Search,
@@ -66,6 +66,27 @@ type McpToolMeta = {
 
 type SkillToolMeta = {
   name: string | null;
+};
+
+const TOOL_NAME_TRANSLATION_KEY_MAP: Record<string, string> = {
+  skill: "skill",
+  task: "task",
+  askuserquestion: "askUserQuestion",
+  bash: "bash",
+  edit: "edit",
+  read: "read",
+  write: "write",
+  glob: "glob",
+  grep: "grep",
+  notebookedit: "notebookEdit",
+  webfetch: "webFetch",
+  websearch: "webSearch",
+  todowrite: "todoWrite",
+  bashoutput: "bashOutput",
+  killbash: "killBash",
+  exitplanmode: "exitPlanMode",
+  listmcpresources: "listMcpResources",
+  readmcpresource: "readMcpResource",
 };
 
 function parseJsonLike(value: unknown): unknown {
@@ -224,7 +245,7 @@ function renderToolIcon(toolName: string): React.ReactNode {
     case "read":
       return <FileText className="size-3.5 text-muted-foreground" />;
     case "write":
-      return <PenSquare className="size-3.5 text-muted-foreground" />;
+      return <FileEdit className="size-3.5 text-muted-foreground" />;
     case "glob":
       return <Folder className="size-3.5 text-muted-foreground" />;
     case "grep":
@@ -301,11 +322,16 @@ function ToolStep({ toolUse, toolResult, isOpen, onToggle }: ToolStepProps) {
       return `MCP（${mcpMeta.server}）`;
     }
     if (skillMeta) {
-      const base = (toolUse.name || "Skill").trim() || "Skill";
+      const base = t("chat.toolCards.tools.skill").trim();
       if (skillMeta.name) {
         return `${base}（${skillMeta.name}）`;
       }
       return base;
+    }
+    const normalizedName = normalizeToolName(toolUse.name || "");
+    const translationKey = TOOL_NAME_TRANSLATION_KEY_MAP[normalizedName];
+    if (translationKey) {
+      return t(`chat.toolCards.tools.${translationKey}`).trim();
     }
     return (toolUse.name || t("chat.toolCards.tools.tool")).trim();
   }, [browserMeta, mcpMeta, skillMeta, t, toolUse.name]);
@@ -313,8 +339,8 @@ function ToolStep({ toolUse, toolResult, isOpen, onToggle }: ToolStepProps) {
   return (
     <div className="mb-2 min-w-0 max-w-full last:mb-0">
       <Collapsible open={isOpen} onOpenChange={onToggle}>
-        <CollapsibleTrigger className="flex w-full min-w-0 max-w-full items-center gap-2 overflow-hidden rounded-[1.1rem] border border-border/60 bg-card/70 px-3 py-2.5 text-left transition-colors hover:bg-muted/50">
-          <span className="flex size-6 shrink-0 items-center justify-center rounded-md border border-border/60 bg-muted/30">
+        <CollapsibleTrigger className="flex w-full min-w-0 max-w-full items-center gap-2 overflow-hidden rounded-[0.5rem] border border-border/60 bg-card/70 px-3 py-1.5 text-left transition-colors hover:bg-muted/50">
+          <span className="flex size-5 shrink-0 items-center justify-center rounded-md border border-border/60 bg-muted/30">
             {renderToolIcon(toolUse.name || "")}
           </span>
 
@@ -326,7 +352,7 @@ function ToolStep({ toolUse, toolResult, isOpen, onToggle }: ToolStepProps) {
 
           <div className="flex shrink-0 items-center gap-2">
             <span
-              className="inline-flex size-6 items-center justify-center"
+              className="inline-flex size-5 items-center justify-center"
               aria-label={state}
               title={state}
             >
@@ -341,7 +367,7 @@ function ToolStep({ toolUse, toolResult, isOpen, onToggle }: ToolStepProps) {
         </CollapsibleTrigger>
 
         <CollapsibleContent>
-          <div className="mt-2 min-w-0 max-w-full overflow-hidden rounded-[1.1rem] border border-border/60 bg-muted/20 p-3 text-xs">
+          <div className="mt-2 min-w-0 max-w-full overflow-hidden rounded-[0.5rem] border border-border/60 bg-muted/20 p-3 text-xs">
             <div className="mb-2 text-[10px] uppercase tracking-wide text-muted-foreground">
               {t("chat.input")}
             </div>
