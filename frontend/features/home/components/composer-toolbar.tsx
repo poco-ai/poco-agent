@@ -10,6 +10,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useT } from "@/lib/i18n/client";
+import { cn } from "@/lib/utils";
 import type { ComposerMode } from "./task-composer";
 
 interface ComposerToolbarProps {
@@ -50,6 +51,16 @@ export function ComposerToolbar({
 }: ComposerToolbarProps) {
   const { t } = useT("translation");
   const disabled = isSubmitting || isUploading;
+  const browserTooltipTitle = browserEnabled
+    ? t("hero.browser.enabledTooltipTitle")
+    : t("hero.browser.disabledTooltipTitle");
+  const browserTooltipDescription = browserEnabled
+    ? t("hero.browser.enabledTooltipDescription")
+    : t("hero.browser.disabledTooltipDescription");
+  const browserButtonClassName = cn(
+    "size-9 rounded-xl transition-opacity hover:bg-accent",
+    !browserEnabled && "text-muted-foreground/50",
+  );
 
   return (
     <div className="flex w-full flex-wrap items-center justify-between gap-3">
@@ -131,19 +142,27 @@ export function ComposerToolbar({
           <TooltipTrigger asChild>
             <Button
               type="button"
-              variant={browserEnabled ? "secondary" : "ghost"}
+              variant="ghost"
               size="icon"
               disabled={disabled}
-              className="size-9 rounded-xl hover:bg-accent"
-              aria-label={t("hero.browser.toggle")}
-              title={t("hero.browser.toggle")}
+              className={browserButtonClassName}
+              aria-label={browserTooltipTitle}
+              title={browserTooltipTitle}
               onClick={onToggleBrowser}
             >
-              <Chrome className="size-4" />
+              <Chrome
+                className={cn("size-4", !browserEnabled && "opacity-55")}
+                strokeWidth={2}
+              />
             </Button>
           </TooltipTrigger>
-          <TooltipContent side="top" sideOffset={8}>
-            {t("hero.browser.toggle")}
+          <TooltipContent side="top" sideOffset={8} className="max-w-56">
+            <div className="space-y-1">
+              <p className="text-xs font-medium">{browserTooltipTitle}</p>
+              <p className="text-[11px] leading-relaxed text-background/80">
+                {browserTooltipDescription}
+              </p>
+            </div>
           </TooltipContent>
         </Tooltip>
 

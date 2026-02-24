@@ -106,7 +106,12 @@
       }
     },
     "browser": {
-      "toggle": "浏览器"
+      "toggle": "浏览器",
+      "enabledTooltipTitle": "浏览器已开启",
+      "enabledTooltipDescription": "Poco 会使用浏览器查看网页、提取页面信息，并完成网页相关操作。",
+      "disabledTooltipTitle": "浏览器已关闭",
+      "disabledTooltipDescription": "开启后，Poco 可以通过浏览器查看网页并执行网页相关任务。",
+      "enabledHint": "已开启"
     },
     "runSchedule": {
       "toggle": "发送时间",

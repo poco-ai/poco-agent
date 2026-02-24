@@ -106,7 +106,12 @@
       }
     },
     "browser": {
-      "toggle": "Browser"
+      "toggle": "Browser",
+      "enabledTooltipTitle": "Browser ist aktiviert",
+      "enabledTooltipDescription": "Poco verwendet den Browser, um Webseiten anzusehen, Seiteninformationen zu extrahieren und webbezogene Aufgaben auszuführen.",
+      "disabledTooltipTitle": "Browser ist deaktiviert",
+      "disabledTooltipDescription": "Aktiviere ihn, damit Poco den Browser für Webseiten und webbezogene Aufgaben nutzen kann.",
+      "enabledHint": "Aktiviert"
     },
     "runSchedule": {
       "toggle": "Ausführungszeit",

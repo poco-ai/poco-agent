@@ -105,7 +105,12 @@
       }
     },
     "browser": {
-      "toggle": "ブラウザ"
+      "toggle": "ブラウザ",
+      "enabledTooltipTitle": "ブラウザは有効です",
+      "enabledTooltipDescription": "Poco はブラウザを使って Web ページを閲覧し、ページ情報を取得し、Web 関連の操作を実行します。",
+      "disabledTooltipTitle": "ブラウザは無効です",
+      "disabledTooltipDescription": "有効にすると、Poco がブラウザで Web ページの閲覧や Web 関連タスクを実行できます。",
+      "enabledHint": "有効"
     },
     "runSchedule": {
       "toggle": "実行時間",

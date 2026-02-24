@@ -113,7 +113,7 @@ export function TaskComposer({
   });
 
   // ---- Browser toggle ----
-  const [browserEnabled, setBrowserEnabled] = React.useState(false);
+  const [browserEnabled, setBrowserEnabled] = React.useState(true);
 
   // ---- Repo state ----
   const [repoDialogOpen, setRepoDialogOpen] = React.useState(false);

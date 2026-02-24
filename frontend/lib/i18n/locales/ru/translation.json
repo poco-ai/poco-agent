@@ -100,7 +100,12 @@
       }
     },
     "browser": {
-      "toggle": "Браузер"
+      "toggle": "Браузер",
+      "enabledTooltipTitle": "Браузер включен",
+      "enabledTooltipDescription": "Poco будет использовать браузер для просмотра веб-страниц, извлечения информации со страниц и выполнения веб-задач.",
+      "disabledTooltipTitle": "Браузер выключен",
+      "disabledTooltipDescription": "Включите, чтобы Poco мог использовать браузер для просмотра веб-страниц и выполнения веб-задач.",
+      "enabledHint": "Включен"
     },
     "runSchedule": {
       "toggle": "Время выполнения",

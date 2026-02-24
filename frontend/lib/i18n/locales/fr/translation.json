@@ -105,7 +105,12 @@
       }
     },
     "browser": {
-      "toggle": "Navigateur"
+      "toggle": "Navigateur",
+      "enabledTooltipTitle": "Navigateur activé",
+      "enabledTooltipDescription": "Poco utilisera le navigateur pour consulter des pages web, extraire des informations de page et réaliser des actions liées au web.",
+      "disabledTooltipTitle": "Navigateur désactivé",
+      "disabledTooltipDescription": "Activez-le pour permettre à Poco d'utiliser le navigateur pour consulter des pages web et effectuer des tâches liées au web.",
+      "enabledHint": "Activé"
     },
     "runSchedule": {
       "toggle": "Heure d'exécution",
