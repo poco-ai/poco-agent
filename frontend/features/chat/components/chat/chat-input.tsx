@@ -12,7 +12,7 @@ import {
 import {
   AVAILABLE_CONNECTORS,
   type ConnectorType,
-} from "@/features/home/constants/connectors";
+} from "@/features/connectors";
 import { toast } from "sonner";
 import { uploadAttachment } from "@/features/attachments/services/attachment-service";
 import type { InputFile } from "@/features/chat/types";

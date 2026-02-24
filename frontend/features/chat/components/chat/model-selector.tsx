@@ -9,7 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { AVAILABLE_MODELS } from "@/features/home/constants/constants";
+import { AVAILABLE_MODELS } from "@/features/chat/constants/models";
 import type { ModelInfo } from "@/types";
 import { useT } from "@/lib/i18n/client";
 

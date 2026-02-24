@@ -17,7 +17,7 @@ import {
 import type { ModelConfigResponse } from "@/features/chat/types";
 
 import { HomeHeader } from "./home-header";
-import { ConnectorsBar } from "@/features/home/components/connectors-bar";
+import { ConnectorsBar } from "@/features/connectors";
 
 import { useAppShell } from "@/components/shared/app-shell-context";
 import { toast } from "sonner";

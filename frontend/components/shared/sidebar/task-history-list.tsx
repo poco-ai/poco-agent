@@ -31,7 +31,7 @@ import {
 } from "@/components/ui/sidebar";
 import { RenameTaskDialog } from "@/features/projects/components/rename-task-dialog";
 
-import { TASK_STATUS_META } from "@/features/home/constants/constants";
+import { TASK_STATUS_META } from "@/features/projects/constants/task-status";
 import type { TaskHistoryItem } from "@/features/projects/types";
 import {
   SIDEBAR_CARD_NESTED_INSET_CLASS,
@@ -63,12 +63,12 @@ interface DraggableTaskProps {
  * Individual draggable task item
  */
 
-// 颜色点状态：
-// 1. 待处理 pending → bg-muted-foreground/40
-// 2. 进行中 running → bg-primary/70 (带脉冲动画)
-// 3. 已完成 completed → bg-primary
-// 4. 失败 failed → bg-destructive
-// 5. 已取消 canceled → bg-chart-4 (黄色点)
+// Task status dot colors:
+// - pending   → bg-muted-foreground/40
+// - running   → bg-primary/70 (with pulse animation)
+// - completed → bg-primary
+// - failed    → bg-destructive
+// - canceled  → bg-chart-4/60
 
 function DraggableTask({
   task,
