@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { motion } from "motion/react";
 import { SquareTerminal, ListTodo, Clock } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -32,7 +33,7 @@ interface ModeToggleProps {
 }
 
 /**
- * Unified mode toggle with stable active-state highlighting.
+ * Unified mode toggle with animated background highlight.
  * Used on both mobile (above composer) and desktop (inside composer) so that
  * the visual interaction remains consistent across breakpoints.
  */
@@ -44,6 +45,7 @@ export function ModeToggle({
   showLabels = true,
 }: ModeToggleProps) {
   const { t } = useT("translation");
+  const highlightId = React.useId();
 
   return (
     <div
@@ -70,19 +72,24 @@ export function ModeToggle({
               "relative flex flex-1 items-center justify-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background",
               showLabels ? "gap-2 px-3 py-2 text-sm font-medium" : "px-2 py-2",
               disabled && "cursor-not-allowed opacity-50",
-              isActive
-                ? "bg-primary text-primary-foreground shadow-sm"
-                : "text-muted-foreground",
+              isActive ? "text-primary-foreground" : "text-muted-foreground",
             )}
           >
+            {isActive ? (
+              <motion.div
+                layoutId={`mode-toggle-highlight-${highlightId}`}
+                className="absolute inset-0 rounded-full bg-primary shadow-sm"
+                transition={{ type: "spring", stiffness: 440, damping: 40 }}
+              />
+            ) : null}
             <Icon
               className={cn(
-                "size-4",
+                "relative z-10 size-4 transition-none",
                 isActive ? "text-primary-foreground" : "text-muted-foreground",
               )}
             />
             {showLabels ? (
-              <span className="whitespace-nowrap">{label}</span>
+              <span className="relative z-10 whitespace-nowrap">{label}</span>
             ) : null}
           </button>
         );
