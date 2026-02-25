@@ -542,7 +542,7 @@
       "fetchError": "Failed to fetch document content",
       "retry": "Retry",
       "selectFile": "Please select a file from the right to preview",
-      "supportedFormats": "Supports PDF, Office documents, common image formats, XMind files, .excalidraw files, and .drawio files",
+      "supportedFormats": "Supports PDF, Office documents, common image formats, MP4 videos, XMind files, .excalidraw files, and .drawio files",
       "processing": "File processing",
       "notSupported": "Preview not supported for this format",
       "openInNewWindow": "Open in new window",

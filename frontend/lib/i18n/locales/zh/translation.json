@@ -542,7 +542,7 @@
       "fetchError": "无法获取文档内容",
       "retry": "重试",
       "selectFile": "请从右侧选择文件进行预览",
-      "supportedFormats": "支持 PDF、Office 文档、常见图片格式、XMind 文件、.excalidraw 文件和 .drawio 文件",
+      "supportedFormats": "支持 PDF、Office 文档、常见图片格式、MP4 视频、XMind 文件、.excalidraw 文件和 .drawio 文件",
       "processing": "文件处理中",
       "notSupported": "该格式暂不支持预览",
       "openInNewWindow": "新窗口打开",

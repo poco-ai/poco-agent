@@ -94,6 +94,8 @@ const MIME_LANGUAGE_RULES: Array<{ test: RegExp; language: string }> = [
   { test: /sql/i, language: "sql" },
 ];
 
+const VIDEO_EXTENSIONS = new Set(["mp4", "m4v", "mov", "webm", "ogv", "ogg"]);
+
 export const DEFAULT_TEXT_LANGUAGE = "text";
 export const NO_SOURCE_ERROR = "NO_SOURCE";
 export const EXCALIDRAW_PARSE_ERROR = "EXCALIDRAW_PARSE_ERROR";
@@ -326,6 +328,9 @@ export const isExcalidrawFile = (ext: string, mime?: string | null) =>
 export const isDrawioFile = (ext: string, mime?: string | null) =>
   ext === "drawio" ||
   /(?:vnd\.jgraph\.mxfile|drawio|diagrams\.net)/i.test(mime ?? "");
+
+export const isVideoFile = (ext: string, mime?: string | null) =>
+  VIDEO_EXTENSIONS.has(ext) || /^video\//i.test(mime ?? "");
 
 export const buildDrawioViewerUrl = ({
   file,

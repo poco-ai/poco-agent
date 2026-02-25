@@ -541,7 +541,7 @@
       "fetchError": "Dokumentinhalt konnte nicht abgerufen werden",
       "retry": "Wiederholen",
       "selectFile": "Bitte wähle eine Datei rechts zur Vorschau",
-      "supportedFormats": "Unterstützt PDF, Office-Dokumente, gängige Bildformate, XMind-Dateien, .excalidraw-Dateien und .drawio-Dateien",
+      "supportedFormats": "Unterstützt PDF, Office-Dokumente, gängige Bildformate, MP4-Videos, XMind-Dateien, .excalidraw-Dateien und .drawio-Dateien",
       "processing": "Dateiverarbeitung",
       "notSupported": "Vorschau für dieses Format nicht unterstützt",
       "openInNewWindow": "In neuem Fenster öffnen",

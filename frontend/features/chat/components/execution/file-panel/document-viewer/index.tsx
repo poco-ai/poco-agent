@@ -41,6 +41,7 @@ import {
   isDrawioFile,
   isExcalidrawFile,
   isSameOriginUrl,
+  isVideoFile,
   parseExcalidrawScene,
   useFileTextContent,
 } from "./utils";
@@ -131,7 +132,7 @@ function DocumentViewerSkeleton({ label }: { label: string }) {
 
 function DocumentViewerOverlaySkeleton({ label }: { label: string }) {
   return (
-    <div className="absolute inset-0 flex items-center justify-center bg-background/70">
+    <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-background/70">
       <div className="w-full max-w-md space-y-3 px-6">
         <SkeletonItem className="h-10 min-h-0 w-2/3" />
         <SkeletonItem className="h-32 min-h-0 w-full" />
@@ -881,6 +882,130 @@ const DrawioDocumentViewer = ({
   );
 };
 
+const VideoDocumentViewer = ({
+  file,
+  resolvedUrl,
+  ensureFreshFile,
+  onClose,
+  onOpenPreviewWindow,
+}: {
+  file: FileNode;
+  resolvedUrl?: string;
+  ensureFreshFile?: (file: FileNode) => Promise<FileNode | undefined>;
+  onClose?: () => void;
+  onOpenPreviewWindow?: () => void;
+}) => {
+  const { t } = useT("translation");
+  const [videoUrl, setVideoUrl] = React.useState<string | undefined>(
+    resolvedUrl,
+  );
+  const [status, setStatus] = React.useState<"loading" | "ready" | "error">(
+    resolvedUrl ? "loading" : "error",
+  );
+  const [version, setVersion] = React.useState(0);
+  const subtitle = (extractExtension(file) || "video").toUpperCase();
+  const videoType = file.mimeType?.startsWith("video/")
+    ? file.mimeType
+    : undefined;
+
+  const refreshVideo = React.useCallback(async () => {
+    const refreshed = ensureFreshFile ? await ensureFreshFile(file) : file;
+    const url = ensureAbsoluteUrl(refreshed?.url ?? resolvedUrl);
+    setVideoUrl(url);
+    setStatus(url ? "loading" : "error");
+    setVersion((current) => current + 1);
+  }, [ensureFreshFile, file, resolvedUrl]);
+
+  React.useEffect(() => {
+    void refreshVideo();
+  }, [refreshVideo]);
+
+  const handleDownload = async () => {
+    const refreshed = ensureFreshFile ? await ensureFreshFile(file) : file;
+    await downloadFileFromUrl({
+      url: refreshed?.url ?? videoUrl ?? resolvedUrl,
+      filename: refreshed?.name || refreshed?.path || "document",
+    });
+  };
+
+  if (!videoUrl) {
+    return (
+      <StatusLayout
+        icon={File}
+        title={t("artifacts.viewer.notSupported")}
+        desc={file.name}
+      />
+    );
+  }
+
+  if (status === "error") {
+    return (
+      <div className={VIEW_CLASSNAME}>
+        <StatusLayout
+          icon={File}
+          title={t("artifacts.viewer.fetchError")}
+          desc={file.name}
+          action={
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-4"
+              onClick={() => {
+                void refreshVideo();
+              }}
+            >
+              {t("artifacts.viewer.retry")}
+            </Button>
+          }
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={cn(
+        VIEW_CLASSNAME,
+        "flex min-w-0 flex-col rounded-xl border bg-card shadow-sm",
+      )}
+    >
+      <DocumentViewerToolbar
+        file={file}
+        subtitle={subtitle}
+        resolvedUrl={videoUrl}
+        onClose={onClose}
+        onDownload={handleDownload}
+        onOpenPreviewWindow={onOpenPreviewWindow}
+      />
+      <div className="relative flex-1 min-h-0 overflow-hidden bg-black">
+        <video
+          key={`${videoUrl}-${version}`}
+          className="h-full w-full"
+          controls
+          playsInline
+          preload="metadata"
+          onLoadedMetadata={() => {
+            setStatus("ready");
+          }}
+          onCanPlay={() => {
+            setStatus("ready");
+          }}
+          onError={() => {
+            setStatus("error");
+          }}
+        >
+          <source src={videoUrl} type={videoType} />
+        </video>
+        {status === "loading" && (
+          <DocumentViewerOverlaySkeleton
+            label={t("artifacts.viewer.loadingDoc")}
+          />
+        )}
+      </div>
+    </div>
+  );
+};
+
 const XMindDocumentViewer = ({
   file,
   resolvedUrl,
@@ -1089,6 +1214,7 @@ const DocumentViewerComponent = ({
   const textLanguage = getTextLanguage(extension, file.mimeType);
   const excalidrawFile = isExcalidrawFile(extension, file.mimeType);
   const drawioFile = isDrawioFile(extension, file.mimeType);
+  const videoFile = isVideoFile(extension, file.mimeType);
 
   const handleDownload = async () => {
     const refreshed = ensureFreshFile ? await ensureFreshFile(file) : file;
@@ -1151,6 +1277,18 @@ const DocumentViewerComponent = ({
   if (drawioFile) {
     return (
       <DrawioDocumentViewer
+        file={file}
+        resolvedUrl={resolvedUrl}
+        ensureFreshFile={ensureFreshFile}
+        onClose={onClose}
+        onOpenPreviewWindow={onOpenPreviewWindow}
+      />
+    );
+  }
+
+  if (videoFile) {
+    return (
+      <VideoDocumentViewer
         file={file}
         resolvedUrl={resolvedUrl}
         ensureFreshFile={ensureFreshFile}
