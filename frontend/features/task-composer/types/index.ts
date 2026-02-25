@@ -1,6 +1,6 @@
-import type { AddTaskOptions } from "@/components/shell/app-shell-context";
+import type { AddTaskOptions } from "@/features/projects/types";
 import type { InputFile } from "@/features/chat/types/api/session";
-import type { RunScheduleMode } from "@/features/task-composer/components/run-schedule-dialog";
+import type { RunScheduleMode } from "@/features/task-composer/model/run-schedule";
 
 export type ComposerMode = "plan" | "task" | "scheduled";
 export type RepoUsageMode = "session" | "create_project";

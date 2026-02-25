@@ -13,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { useT } from "@/lib/i18n/client";
-import { pluginsService } from "@/features/capabilities/plugins/services/plugins-service";
+import { pluginsService } from "@/features/capabilities/plugins/api/plugins-api";
 import type {
   PluginImportCandidate,
   PluginImportCommitResponse,

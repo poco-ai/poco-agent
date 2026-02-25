@@ -2,15 +2,12 @@
 
 import * as React from "react";
 
-import type { ProjectItem, TaskHistoryItem } from "@/features/projects";
+import type {
+  AddTaskOptions,
+  ProjectItem,
+  TaskHistoryItem,
+} from "@/features/projects";
 import type { SettingsTabId } from "@/features/settings";
-
-export type AddTaskOptions = {
-  timestamp?: string;
-  status?: TaskHistoryItem["status"];
-  projectId?: string;
-  id?: string;
-};
 
 export type ProjectRepoDefaultsInput = {
   repo_url?: string | null;

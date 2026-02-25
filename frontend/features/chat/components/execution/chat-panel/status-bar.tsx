@@ -22,9 +22,9 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { mcpService } from "@/features/capabilities/mcp/services/mcp-service";
-import { skillsService } from "@/features/capabilities/skills/services/skills-service";
-import { pluginsService } from "@/features/capabilities/plugins/services/plugins-service";
+import { mcpService } from "@/features/capabilities/mcp/api/mcp-api";
+import { skillsService } from "@/features/capabilities/skills/api/skills-api";
+import { pluginsService } from "@/features/capabilities/plugins/api/plugins-api";
 import type { McpServer } from "@/features/capabilities/mcp/types";
 import type { Skill } from "@/features/capabilities/skills/types";
 import type { Plugin } from "@/features/capabilities/plugins/types";

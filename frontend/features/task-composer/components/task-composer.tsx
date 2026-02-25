@@ -7,10 +7,7 @@ import {
   formatScheduleSummary,
   inferScheduleFromCron,
 } from "@/features/scheduled-tasks/utils/schedule";
-import {
-  RunScheduleDialog,
-  type RunScheduleMode,
-} from "@/features/task-composer/components/run-schedule-dialog";
+import { RunScheduleDialog } from "@/features/task-composer/components/run-schedule-dialog";
 import { ComposerAttachments } from "@/features/task-composer/components/composer-attachments";
 import { ComposerToolbar } from "@/features/task-composer/components/composer-toolbar";
 import { RepoDialog } from "@/features/task-composer/components/repo-dialog";
@@ -18,6 +15,7 @@ import { SlashAutocompleteDropdown } from "@/features/task-composer/components/s
 import { useSlashCommandAutocomplete } from "@/features/chat/hooks/use-slash-command-autocomplete";
 import { useAppShell } from "@/components/shell/app-shell-context";
 import { useFileUpload } from "@/features/task-composer/hooks/use-file-upload";
+import type { RunScheduleMode } from "@/features/task-composer/model/run-schedule";
 import type {
   ComposerMode,
   RepoUsageMode,

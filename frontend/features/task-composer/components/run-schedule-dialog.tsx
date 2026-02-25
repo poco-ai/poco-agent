@@ -20,14 +20,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
-export type RunScheduleMode = "immediate" | "scheduled" | "nightly";
-
-export interface RunScheduleValue {
-  schedule_mode: RunScheduleMode;
-  timezone: string;
-  scheduled_at: string | null;
-}
+import type {
+  RunScheduleMode,
+  RunScheduleValue,
+} from "@/features/task-composer/model/run-schedule";
 
 function pad2(value: number): string {
   return String(value).padStart(2, "0");

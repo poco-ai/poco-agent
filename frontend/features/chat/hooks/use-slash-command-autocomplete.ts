@@ -12,7 +12,7 @@ import {
 import {
   slashCommandsService,
   SLASH_COMMAND_SUGGESTIONS_INVALIDATED_EVENT,
-} from "@/features/capabilities/slash-commands/services/slash-commands-service";
+} from "@/features/capabilities/slash-commands/api/slash-commands-api";
 import type { SlashCommandSuggestion as BackendSlashCommandSuggestion } from "@/features/capabilities/slash-commands/types";
 
 export type SlashCommandSuggestionSource = "builtin" | "custom" | "skill";

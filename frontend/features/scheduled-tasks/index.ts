@@ -6,5 +6,5 @@ export { ScheduledTasksHeader } from "@/features/scheduled-tasks/components/sche
 export { ScheduledTasksPageClient } from "@/features/scheduled-tasks/components/scheduled-tasks-page-client";
 export { ScheduledTasksTable } from "@/features/scheduled-tasks/components/scheduled-tasks-table";
 export { useScheduledTasksStore } from "@/features/scheduled-tasks/hooks/use-scheduled-tasks-store";
-export { scheduledTasksService } from "@/features/scheduled-tasks/services/scheduled-tasks-service";
+export { scheduledTasksService } from "@/features/scheduled-tasks/api/scheduled-tasks-api";
 export type * from "@/features/scheduled-tasks/types";

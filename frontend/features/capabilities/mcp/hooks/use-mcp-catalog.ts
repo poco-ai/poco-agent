@@ -8,7 +8,7 @@ import type {
   McpServer,
   UserMcpInstall,
 } from "@/features/capabilities/mcp/types";
-import { mcpService } from "@/features/capabilities/mcp/services/mcp-service";
+import { mcpService } from "@/features/capabilities/mcp/api/mcp-api";
 import { useEnvVarsStore } from "@/features/capabilities/env-vars/hooks/use-env-vars-store";
 import { useT } from "@/lib/i18n/client";
 import {

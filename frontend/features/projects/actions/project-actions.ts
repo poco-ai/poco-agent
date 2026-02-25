@@ -2,7 +2,7 @@ import { z } from "zod";
 import {
   projectsService,
   tasksService,
-} from "@/features/projects/services/projects-service";
+} from "@/features/projects/api/projects-api";
 
 // Validation error messages - these will be replaced with proper i18n when the action is called
 // The actual error messages will come from the translation file

@@ -13,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { useT } from "@/lib/i18n/client";
-import { skillsService } from "@/features/capabilities/skills/services/skills-service";
+import { skillsService } from "@/features/capabilities/skills/api/skills-api";
 import type {
   SkillImportCandidate,
   SkillImportCommitResponse,

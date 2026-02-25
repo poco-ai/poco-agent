@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { chatService } from "@/features/chat/services/chat-service";
+import { chatService } from "@/features/chat/api/chat-api";
 
 // Validation error messages - translation keys that will be resolved by the caller
 const VALIDATION_ERRORS = {

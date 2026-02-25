@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { useT } from "@/lib/i18n/client";
-import { subAgentsService } from "@/features/capabilities/sub-agents/services/sub-agents-service";
+import { subAgentsService } from "@/features/capabilities/sub-agents/api/sub-agents-api";
 import type {
   SubAgent,
   SubAgentCreateInput,

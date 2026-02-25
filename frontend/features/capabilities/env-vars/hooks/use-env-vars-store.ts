@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { useT } from "@/lib/i18n/client";
-import { envVarsService } from "@/features/capabilities/env-vars/services/env-vars-service";
+import { envVarsService } from "@/features/capabilities/env-vars/api/env-vars-api";
 import type { EnvVar } from "@/features/capabilities/env-vars/types";
 
 export interface EnvVarUpsertInput {

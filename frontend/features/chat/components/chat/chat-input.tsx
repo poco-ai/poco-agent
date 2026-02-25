@@ -14,7 +14,7 @@ import {
   type ConnectorType,
 } from "@/features/connectors";
 import { toast } from "sonner";
-import { uploadAttachment } from "@/features/attachments/services/attachment-service";
+import { uploadAttachment } from "@/features/attachments/api/attachment-api";
 import type { InputFile } from "@/features/chat/types";
 import { FileCard } from "@/components/shared/file-card";
 import { playUploadSound } from "@/lib/utils/sound";

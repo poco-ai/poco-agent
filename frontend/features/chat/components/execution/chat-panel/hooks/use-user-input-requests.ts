@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { userInputService } from "@/features/chat/services/user-input-service";
+import { userInputService } from "@/features/chat/api/user-input-api";
 import type { UserInputRequest } from "@/features/chat/types";
 
 interface UseUserInputRequestsReturn {

@@ -20,7 +20,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { scheduledTasksService } from "@/features/scheduled-tasks/services/scheduled-tasks-service";
+import { scheduledTasksService } from "@/features/scheduled-tasks/api/scheduled-tasks-api";
 import type {
   ScheduledTask,
   ScheduledTaskUpdateInput,

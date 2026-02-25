@@ -9,7 +9,7 @@ import { useMcpCatalog } from "@/features/capabilities/mcp/hooks/use-mcp-catalog
 import { PullToRefresh } from "@/components/ui/pull-to-refresh";
 import { PaginatedGrid } from "@/components/ui/paginated-grid";
 import { usePagination } from "@/hooks/use-pagination";
-import { mcpService } from "@/features/capabilities/mcp/services/mcp-service";
+import { mcpService } from "@/features/capabilities/mcp/api/mcp-api";
 import { useT } from "@/lib/i18n/client";
 import { CapabilityContentShell } from "@/features/capabilities/components/capability-content-shell";
 import { HeaderSearchInput } from "@/components/shared/header-search-input";

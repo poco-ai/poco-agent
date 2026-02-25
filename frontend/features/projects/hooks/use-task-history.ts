@@ -6,7 +6,10 @@ import {
   moveTaskToProjectAction,
 } from "@/features/projects/actions/project-actions";
 import { renameSessionTitleAction } from "@/features/chat/actions/session-actions";
-import type { TaskHistoryItem } from "@/features/projects/types";
+import type {
+  AddTaskOptions,
+  TaskHistoryItem,
+} from "@/features/projects/types";
 import { useT } from "@/lib/i18n/client";
 import {
   getStartupPreloadPromise,
@@ -61,31 +64,20 @@ export function useTaskHistory(options: UseTaskHistoryOptions = {}) {
     fetchTasks();
   }, [fetchTasks]);
 
-  const addTask = useCallback(
-    (
-      title: string,
-      options?: {
-        timestamp?: string;
-        status?: TaskHistoryItem["status"];
-        projectId?: string;
-        id?: string;
-      },
-    ) => {
-      const newTask: TaskHistoryItem = {
-        // Use sessionId if provided, otherwise fallback to random (for optimistic updates)
-        id:
-          options?.id ||
-          `task-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-        title,
-        timestamp: options?.timestamp || new Date().toISOString(),
-        status: options?.status || "pending",
-        projectId: options?.projectId,
-      };
-      setTaskHistory((prev) => [newTask, ...prev]);
-      return newTask;
-    },
-    [],
-  );
+  const addTask = useCallback((title: string, options?: AddTaskOptions) => {
+    const newTask: TaskHistoryItem = {
+      // Use sessionId if provided, otherwise fallback to random (for optimistic updates)
+      id:
+        options?.id ||
+        `task-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+      title,
+      timestamp: options?.timestamp || new Date().toISOString(),
+      status: options?.status || "pending",
+      projectId: options?.projectId,
+    };
+    setTaskHistory((prev) => [newTask, ...prev]);
+    return newTask;
+  }, []);
 
   const touchTask = useCallback(
     (

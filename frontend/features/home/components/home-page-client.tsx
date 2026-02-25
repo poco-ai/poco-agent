@@ -21,7 +21,7 @@ import { ConnectorsBar } from "@/features/connectors";
 
 import { useAppShell } from "@/components/shell/app-shell-context";
 import { toast } from "sonner";
-import { modelConfigService } from "@/features/home/services/model-config-service";
+import { modelConfigService } from "@/features/home/api/model-config-api";
 
 const MODEL_STORAGE_KEY = "poco_selected_model";
 

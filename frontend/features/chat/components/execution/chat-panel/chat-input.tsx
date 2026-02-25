@@ -7,7 +7,7 @@ import {
   forwardRef,
 } from "react";
 import { ArrowUp, Plus, Loader2, Pause } from "lucide-react";
-import { uploadAttachment } from "@/features/attachments/services/attachment-service";
+import { uploadAttachment } from "@/features/attachments/api/attachment-api";
 import type { InputFile } from "@/features/chat/types";
 import { toast } from "sonner";
 import { FileCard } from "@/components/shared/file-card";

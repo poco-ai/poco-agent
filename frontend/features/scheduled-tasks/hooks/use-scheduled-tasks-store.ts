@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { useT } from "@/lib/i18n/client";
-import { scheduledTasksService } from "@/features/scheduled-tasks/services/scheduled-tasks-service";
+import { scheduledTasksService } from "@/features/scheduled-tasks/api/scheduled-tasks-api";
 import type {
   ScheduledTask,
   ScheduledTaskCreateInput,
