@@ -21,7 +21,7 @@ import type {
 import { CapabilityDialogContent } from "@/features/capabilities/components/capability-dialog-content";
 import { playInstallSound } from "@/lib/utils/sound";
 
-type SourceTab = "zip" | "github";
+type SourceTab = "zip" | "github" | "command";
 
 interface CandidateSelectionState {
   selected: boolean;
@@ -29,6 +29,37 @@ interface CandidateSelectionState {
 }
 
 const CANDIDATES_PAGE_SIZE = 5;
+const GITHUB_URL_PATTERN = /https?:\/\/github\.com\/[^\s'"]+/i;
+const SKILL_ARG_PATTERN =
+  /(?:^|\s)--skill(?:=|\s+)(?:"([^"]+)"|'([^']+)'|([^\s]+))/i;
+
+interface ParsedSkillImportInput {
+  githubUrl: string | null;
+  requestedSkill: string | null;
+}
+
+function parseSkillImportInput(
+  rawInput: string,
+): ParsedSkillImportInput | null {
+  const input = rawInput.trim();
+  if (!input) return null;
+
+  const githubUrlMatch = input.match(GITHUB_URL_PATTERN);
+  const githubUrl = (githubUrlMatch?.[0] ?? "").trim();
+
+  const skillArgMatch = input.match(SKILL_ARG_PATTERN);
+  const requestedSkill = (
+    skillArgMatch?.[1] ??
+    skillArgMatch?.[2] ??
+    skillArgMatch?.[3] ??
+    ""
+  ).trim();
+
+  return {
+    githubUrl: githubUrl || null,
+    requestedSkill: requestedSkill || null,
+  };
+}
 
 export interface SkillImportDialogProps {
   open: boolean;
@@ -45,6 +76,7 @@ export function SkillImportDialog({
   const [tab, setTab] = useState<SourceTab>("github");
   const [zipFile, setZipFile] = useState<File | null>(null);
   const [githubUrl, setGithubUrl] = useState("");
+  const [commandInput, setCommandInput] = useState("");
 
   const [archiveKey, setArchiveKey] = useState<string | null>(null);
   const [candidates, setCandidates] = useState<SkillImportCandidate[]>([]);
@@ -72,6 +104,7 @@ export function SkillImportDialog({
     setTab("github");
     setZipFile(null);
     setGithubUrl("");
+    setCommandInput("");
     setArchiveKey(null);
     setCandidates([]);
     setCandidatePage(1);
@@ -142,14 +175,24 @@ export function SkillImportDialog({
     setCommitError(null);
     try {
       const formData = new FormData();
+      const parsedGithubInput =
+        tab === "github" ? parseSkillImportInput(githubUrl) : null;
+      const parsedCommandInput =
+        tab === "command" ? parseSkillImportInput(commandInput) : null;
       if (tab === "zip") {
         if (!zipFile) {
           toast.error(t("library.skillsImport.toasts.missingZip"));
           return;
         }
         formData.append("file", zipFile);
+      } else if (tab === "command") {
+        if (!parsedCommandInput?.githubUrl) {
+          toast.error(t("library.skillsImport.toasts.invalidCommand"));
+          return;
+        }
+        formData.append("github_url", parsedCommandInput.githubUrl);
       } else {
-        const url = githubUrl.trim();
+        const url = parsedGithubInput?.githubUrl ?? githubUrl.trim();
         if (!url) {
           toast.error(t("library.skillsImport.toasts.missingGithubUrl"));
           return;
@@ -162,12 +205,61 @@ export function SkillImportDialog({
       setCandidates(resp.candidates || []);
       setCandidatePage(1);
 
+      const requestedSkillRaw =
+        tab === "github"
+          ? parsedGithubInput?.requestedSkill || null
+          : tab === "command"
+            ? parsedCommandInput?.requestedSkill || null
+            : null;
+      const requestedSkill = requestedSkillRaw?.toLowerCase() || null;
       const next: Record<string, CandidateSelectionState> = {};
+      let hasRequestedSkillMatch = false;
+      let matchedCandidatePage: number | null = null;
       for (const c of resp.candidates || []) {
+        const candidateName = (c.skill_name || "").toLowerCase();
+        const relativePath = c.relative_path.toLowerCase();
+        const relativePathLeaf =
+          c.relative_path === "."
+            ? ""
+            : c.relative_path.split("/").at(-1)?.toLowerCase() || "";
+        const isRequested =
+          !!requestedSkill &&
+          (candidateName === requestedSkill ||
+            relativePath === requestedSkill ||
+            relativePathLeaf === requestedSkill);
+        hasRequestedSkillMatch = hasRequestedSkillMatch || isRequested;
         next[c.relative_path] = {
-          selected: true,
-          nameOverride: "",
+          selected: requestedSkill ? isRequested : true,
+          nameOverride:
+            isRequested && c.requires_name ? requestedSkillRaw || "" : "",
         };
+      }
+
+      if (
+        requestedSkill &&
+        !hasRequestedSkillMatch &&
+        (resp.candidates || []).length === 1 &&
+        (resp.candidates || [])[0].requires_name
+      ) {
+        const rootCandidate = (resp.candidates || [])[0];
+        next[rootCandidate.relative_path] = {
+          selected: true,
+          nameOverride: requestedSkillRaw || "",
+        };
+      }
+
+      if (requestedSkill) {
+        const matchedIndex = (resp.candidates || []).findIndex(
+          (candidate) => next[candidate.relative_path]?.selected,
+        );
+        if (matchedIndex >= 0) {
+          matchedCandidatePage =
+            Math.floor(matchedIndex / CANDIDATES_PAGE_SIZE) + 1;
+        }
+      }
+
+      if (matchedCandidatePage) {
+        setCandidatePage(matchedCandidatePage);
       }
       setSelections(next);
 
@@ -355,6 +447,12 @@ export function SkillImportDialog({
                   {t("library.skillsImport.tabs.github")}
                 </TabsTrigger>
                 <TabsTrigger
+                  value="command"
+                  className="data-[state=inactive]:scale-[0.98]"
+                >
+                  {t("library.skillsImport.tabs.command")}
+                </TabsTrigger>
+                <TabsTrigger
                   value="zip"
                   className="data-[state=inactive]:scale-[0.98]"
                 >
@@ -385,6 +483,18 @@ export function SkillImportDialog({
                 />
                 <div className="text-xs text-muted-foreground/60">
                   {t("library.skillsImport.hints.github")}
+                </div>
+              </TabsContent>
+
+              <TabsContent value="command" className="space-y-3">
+                <Input
+                  value={commandInput}
+                  onChange={(e) => setCommandInput(e.target.value)}
+                  placeholder={t("library.skillsImport.placeholders.command")}
+                  className="text-muted-foreground/80 placeholder:text-muted-foreground/50"
+                />
+                <div className="text-xs text-muted-foreground/60">
+                  {t("library.skillsImport.hints.command")}
                 </div>
               </TabsContent>
             </Tabs>

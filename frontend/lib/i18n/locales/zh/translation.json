@@ -251,6 +251,13 @@
     "formulaCopied": "已复制",
     "editMessage": "编辑消息",
     "quoteModify": "引用修改",
+    "exportImage": "生成对话长图",
+    "exportLongImage": "导出长图",
+    "exportMultiImage": "导出多图",
+    "exportImageSuccess": "已生成对话长图",
+    "exportImageMultiSuccess": "已导出 {{count}} 张图片",
+    "exportImageEmpty": "暂无可导出的对话内容",
+    "exportImageFailed": "生成对话长图失败",
     "statusBar": {
       "browser": "浏览器",
       "openDesktop": "打开桌面",
@@ -1030,7 +1037,8 @@
       "title": "导入技能",
       "tabs": {
         "zip": "上传压缩包",
-        "github": "GitHub 地址"
+        "github": "GitHub 地址",
+        "command": "npx 命令导入"
       },
       "fields": {
         "zip": "Zip 文件",
@@ -1039,11 +1047,13 @@
       },
       "placeholders": {
         "githubUrl": "https://github.com/owner/repo",
-        "name": "例如：my-skill"
+        "name": "例如：my-skill",
+        "command": "npx skills add https://github.com/owner/repo --skill my-skill"
       },
       "hints": {
         "github": "默认尝试 main/master 分支（仅支持 github.com 公共仓库）",
-        "nameRequired": "检测到 SKILL.md 位于根目录，必须手动填写技能名称"
+        "nameRequired": "检测到 SKILL.md 位于根目录，必须手动填写技能名称",
+        "command": "粘贴 add 命令后将自动解析 GitHub 地址和 --skill 参数。"
       },
       "actions": {
         "back": "返回",
@@ -1087,7 +1097,8 @@
         "committed": "技能导入成功",
         "commitError": "导入失败，请稍后重试",
         "partialFailed": "部分技能导入失败，请查看详情",
-        "commitTimeout": "导入超时，请稍后重试"
+        "commitTimeout": "导入超时，请稍后重试",
+        "invalidCommand": "无法解析命令，请确保包含 github.com 地址。"
       },
       "progress": {
         "title": "导入进度",

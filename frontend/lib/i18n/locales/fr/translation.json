@@ -250,6 +250,13 @@
     "formulaCopied": "Copié",
     "editMessage": "Modifier le message",
     "quoteModify": "Répondre en citant",
+    "exportImage": "Generate conversation image",
+    "exportLongImage": "Export long image",
+    "exportMultiImage": "Export multiple images",
+    "exportImageSuccess": "Conversation image generated",
+    "exportImageMultiSuccess": "Exported {{count}} images",
+    "exportImageEmpty": "No conversation content to export",
+    "exportImageFailed": "Failed to generate conversation image",
     "statusBar": {
       "browser": "Navigateur",
       "openDesktop": "Ouvrir le bureau",
@@ -1017,7 +1024,8 @@
       "title": "Importer des compétences",
       "tabs": {
         "zip": "Uploader un Zip",
-        "github": "URL GitHub"
+        "github": "URL GitHub",
+        "command": "Importer via commande npx"
       },
       "fields": {
         "zip": "Fichier Zip",
@@ -1026,11 +1034,13 @@
       },
       "placeholders": {
         "githubUrl": "https://github.com/owner/repo",
-        "name": "ex. my-skill"
+        "name": "ex. my-skill",
+        "command": "npx skills add https://github.com/owner/repo --skill my-skill"
       },
       "hints": {
         "github": "Par défaut main/master (dépôts github.com publics uniquement)",
-        "nameRequired": "SKILL.md est à la racine de l'archive ; un nom est requis"
+        "nameRequired": "SKILL.md est à la racine de l'archive ; un nom est requis",
+        "command": "Collez une commande add, nous analyserons automatiquement l’URL GitHub et --skill."
       },
       "actions": {
         "back": "Retour",
@@ -1074,7 +1084,8 @@
         "committed": "Import réussi",
         "commitError": "Import échoué, veuillez réessayer plus tard",
         "partialFailed": "Certaines compétences n'ont pas pu être importées. Veuillez vérifier les détails.",
-        "commitTimeout": "Import expiré, veuillez réessayer plus tard"
+        "commitTimeout": "Import expiré, veuillez réessayer plus tard",
+        "invalidCommand": "Impossible de parser la commande. Veuillez inclure une URL github.com."
       },
       "progress": {
         "title": "Progression de l'import",

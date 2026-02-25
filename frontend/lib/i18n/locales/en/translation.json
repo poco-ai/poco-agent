@@ -251,6 +251,13 @@
     "formulaCopied": "Copied",
     "editMessage": "Edit message",
     "quoteModify": "Quote Reply",
+    "exportImage": "Generate conversation image",
+    "exportLongImage": "Export long image",
+    "exportMultiImage": "Export multiple images",
+    "exportImageSuccess": "Conversation image generated",
+    "exportImageMultiSuccess": "Exported {{count}} images",
+    "exportImageEmpty": "No conversation content to export",
+    "exportImageFailed": "Failed to generate conversation image",
     "statusBar": {
       "browser": "Browser",
       "openDesktop": "Open desktop",
@@ -1030,7 +1037,8 @@
       "title": "Import Skills",
       "tabs": {
         "zip": "Upload Zip",
-        "github": "GitHub URL"
+        "github": "GitHub URL",
+        "command": "Import via npx command"
       },
       "fields": {
         "zip": "Zip file",
@@ -1039,11 +1047,13 @@
       },
       "placeholders": {
         "githubUrl": "https://github.com/owner/repo",
-        "name": "e.g. my-skill"
+        "name": "e.g. my-skill",
+        "command": "npx skills add https://github.com/owner/repo --skill my-skill"
       },
       "hints": {
         "github": "Defaults to main/master (public github.com repos only)",
-        "nameRequired": "SKILL.md is at archive root; a name is required"
+        "nameRequired": "SKILL.md is at archive root; a name is required",
+        "command": "Paste an add command, and we will parse the GitHub URL and --skill automatically."
       },
       "actions": {
         "back": "Back",
@@ -1087,7 +1097,8 @@
         "committed": "Import succeeded",
         "commitError": "Import failed, please try again later",
         "partialFailed": "Some skills failed to import. Please review the details.",
-        "commitTimeout": "Import timed out, please try again later"
+        "commitTimeout": "Import timed out, please try again later",
+        "invalidCommand": "Unable to parse command. Please include a github.com URL."
       },
       "progress": {
         "title": "Import progress",

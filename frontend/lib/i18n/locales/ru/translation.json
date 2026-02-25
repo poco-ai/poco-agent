@@ -250,6 +250,13 @@
     "formulaCopied": "Скопировано",
     "editMessage": "Редактировать сообщение",
     "quoteModify": "Ответить с цитатой",
+    "exportImage": "Generate conversation image",
+    "exportLongImage": "Export long image",
+    "exportMultiImage": "Export multiple images",
+    "exportImageSuccess": "Conversation image generated",
+    "exportImageMultiSuccess": "Exported {{count}} images",
+    "exportImageEmpty": "No conversation content to export",
+    "exportImageFailed": "Failed to generate conversation image",
     "statusBar": {
       "browser": "Браузер",
       "openDesktop": "Открыть рабочий стол",
@@ -1017,7 +1024,8 @@
       "title": "Импорт навыков",
       "tabs": {
         "zip": "Загрузить Zip",
-        "github": "GitHub URL"
+        "github": "GitHub URL",
+        "command": "Импорт через npx-команду"
       },
       "fields": {
         "zip": "Zip-файл",
@@ -1026,11 +1034,13 @@
       },
       "placeholders": {
         "githubUrl": "https://github.com/owner/repo",
-        "name": "например, my-skill"
+        "name": "например, my-skill",
+        "command": "npx skills add https://github.com/owner/repo --skill my-skill"
       },
       "hints": {
         "github": "По умолчанию main/master (только публичные репозитории github.com)",
-        "nameRequired": "SKILL.md находится в корне архива; требуется имя"
+        "nameRequired": "SKILL.md находится в корне архива; требуется имя",
+        "command": "Вставьте команду add — мы автоматически извлечем GitHub URL и --skill."
       },
       "actions": {
         "back": "Назад",
@@ -1074,7 +1084,8 @@
         "committed": "Импорт выполнен успешно",
         "commitError": "Не удалось импортировать, попробуйте позже",
         "partialFailed": "Не удалось импортировать некоторые навыки. Пожалуйста, просмотрите детали.",
-        "commitTimeout": "Истекло время ожидания импорта, попробуйте позже"
+        "commitTimeout": "Истекло время ожидания импорта, попробуйте позже",
+        "invalidCommand": "Не удалось разобрать команду. Укажите URL с github.com."
       },
       "progress": {
         "title": "Прогресс импорта",

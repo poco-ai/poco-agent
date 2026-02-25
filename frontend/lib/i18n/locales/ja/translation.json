@@ -250,6 +250,13 @@
     "formulaCopied": "コピーしました",
     "editMessage": "メッセージを編集",
     "quoteModify": "引用して返信",
+    "exportImage": "Generate conversation image",
+    "exportLongImage": "Export long image",
+    "exportMultiImage": "Export multiple images",
+    "exportImageSuccess": "Conversation image generated",
+    "exportImageMultiSuccess": "Exported {{count}} images",
+    "exportImageEmpty": "No conversation content to export",
+    "exportImageFailed": "Failed to generate conversation image",
     "statusBar": {
       "browser": "ブラウザ",
       "openDesktop": "デスクトップを開く",
@@ -1017,7 +1024,8 @@
       "title": "スキルをインポート",
       "tabs": {
         "zip": "Zipをアップロード",
-        "github": "GitHub URL"
+        "github": "GitHub URL",
+        "command": "npx コマンド導入"
       },
       "fields": {
         "zip": "Zipファイル",
@@ -1026,11 +1034,13 @@
       },
       "placeholders": {
         "githubUrl": "https://github.com/owner/repo",
-        "name": "例：my-skill"
+        "name": "例：my-skill",
+        "command": "npx skills add https://github.com/owner/repo --skill my-skill"
       },
       "hints": {
         "github": "デフォルトはmain/master（パブリックgithub.comリポジトリのみ）",
-        "nameRequired": "SKILL.mdはアーカイブのルートにあります。名前が必要です"
+        "nameRequired": "SKILL.mdはアーカイブのルートにあります。名前が必要です",
+        "command": "add コマンドを貼り付けると、GitHub URL と --skill を自動解析します。"
       },
       "actions": {
         "back": "戻る",
@@ -1074,7 +1084,8 @@
         "committed": "インポートに成功しました",
         "commitError": "インポートに失敗しました。後でもう一度お試しください",
         "partialFailed": "一部のスキルのインポートに失敗しました。詳細を確認してください。",
-        "commitTimeout": "インポートがタイムアウトしました。後でもう一度お試しください"
+        "commitTimeout": "インポートがタイムアウトしました。後でもう一度お試しください",
+        "invalidCommand": "コマンドを解析できません。github.com の URL を含めてください。"
       },
       "progress": {
         "title": "インポートの進行状況",
