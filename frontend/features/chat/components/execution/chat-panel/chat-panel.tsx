@@ -2,6 +2,8 @@
 
 import * as React from "react";
 import {
+  Image as ImageIcon,
+  Loader2,
   MessageSquare,
   PanelRightClose,
   PanelRightOpen,
@@ -38,6 +40,16 @@ import { toast } from "sonner";
 import { useTaskHistoryContext } from "@/features/projects/contexts/task-history-context";
 import { SkeletonCircle, SkeletonItem } from "@/components/ui/skeleton-shimmer";
 import { cn } from "@/lib/utils";
+import {
+  exportConversationImage,
+  type ConversationImageExportMode,
+} from "./conversation-image-export";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface ChatPanelProps {
   session: ExecutionSession | null;
@@ -118,8 +130,10 @@ export function ChatPanel({
   const { t } = useT("translation");
   const { refreshTasks, touchTask } = useTaskHistoryContext();
   const [isCancelling, setIsCancelling] = React.useState(false);
+  const [isExportingImage, setIsExportingImage] = React.useState(false);
   const [isRenameDialogOpen, setIsRenameDialogOpen] = React.useState(false);
   const inputRef = React.useRef<ChatInputRef>(null);
+  const panelRootRef = React.useRef<HTMLDivElement>(null);
   const conversationRef = React.useRef<HTMLDivElement>(null);
   const quoteButtonRef = React.useRef<HTMLButtonElement>(null);
   const [quoteSelection, setQuoteSelection] =
@@ -448,9 +462,58 @@ export function ChatPanel({
   const headerDescription = session?.title?.trim() || t("chat.emptyStateDesc");
   const contentPaddingClass = isRightPanelCollapsed ? "px-[20%]" : "px-4";
   const messagePaddingClass = isRightPanelCollapsed ? "px-[20%]" : "px-6";
+  const canExportConversationImage =
+    !isLoadingHistory &&
+    (displayMessages.length > 0 || showTypingIndicator) &&
+    Boolean(session?.session_id);
+
+  const handleExportConversationImage = React.useCallback(
+    async (mode: ConversationImageExportMode) => {
+      if (!canExportConversationImage) return;
+      if (isExportingImage) return;
+      if (!panelRootRef.current) return;
+
+      setIsExportingImage(true);
+      try {
+        const result = await exportConversationImage({
+          panelElement: panelRootRef.current,
+          filename: headerDescription,
+          mode,
+        });
+
+        if (result.count === 0) {
+          toast.error(t("chat.exportImageEmpty"));
+          return;
+        }
+
+        if (result.mode === "multi") {
+          toast.success(
+            t("chat.exportImageMultiSuccess", {
+              count: result.count,
+            }),
+          );
+        } else {
+          toast.success(t("chat.exportImageSuccess"));
+        }
+      } catch (error) {
+        console.error(
+          "[ChatPanel] Failed to export conversation image:",
+          error,
+        );
+        toast.error(t("chat.exportImageFailed"));
+      } finally {
+        setIsExportingImage(false);
+      }
+    },
+    [canExportConversationImage, headerDescription, isExportingImage, t],
+  );
 
   return (
-    <div className="flex flex-col h-full bg-background min-w-0">
+    <div
+      ref={panelRootRef}
+      className="flex flex-col h-full bg-background min-w-0"
+      data-chat-panel-export
+    >
       {/* Header */}
       {!hideHeader ? (
         <PanelHeader
@@ -461,6 +524,42 @@ export function ChatPanel({
           action={
             session?.session_id || onToggleRightPanel ? (
               <div className="flex items-center gap-1">
+                {session?.session_id ? (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <PanelHeaderAction
+                        title={t("chat.exportImage")}
+                        disabled={
+                          !canExportConversationImage || isExportingImage
+                        }
+                      >
+                        {isExportingImage ? (
+                          <Loader2 className="size-4 animate-spin" />
+                        ) : (
+                          <ImageIcon className="size-4" />
+                        )}
+                      </PanelHeaderAction>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem
+                        onClick={() => handleExportConversationImage("long")}
+                        disabled={
+                          !canExportConversationImage || isExportingImage
+                        }
+                      >
+                        {t("chat.exportLongImage")}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => handleExportConversationImage("multi")}
+                        disabled={
+                          !canExportConversationImage || isExportingImage
+                        }
+                      >
+                        {t("chat.exportMultiImage")}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ) : null}
                 {session?.session_id ? (
                   <PanelHeaderAction
                     onClick={() => setIsRenameDialogOpen(true)}

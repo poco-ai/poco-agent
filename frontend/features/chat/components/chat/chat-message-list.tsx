@@ -387,9 +387,17 @@ export function ChatMessageList({
   }
 
   return (
-    <div className="relative h-full w-full min-w-0 overflow-hidden">
-      <ScrollArea ref={scrollAreaRef} className="h-full w-full min-w-0">
+    <div
+      className="relative h-full w-full min-w-0 overflow-hidden"
+      data-chat-message-list
+    >
+      <ScrollArea
+        ref={scrollAreaRef}
+        className="h-full w-full min-w-0"
+        data-chat-scroll-area
+      >
         <div
+          data-chat-scroll-content
           className={cn(
             "w-full min-w-0 max-w-full space-y-4 py-6",
             contentPaddingClassName ?? "px-6",
@@ -401,6 +409,7 @@ export function ChatMessageList({
                 <div
                   key={message.id}
                   data-user-message-id={message.id}
+                  data-chat-export-item
                   ref={(element) => {
                     if (element) {
                       userMessageElementsRef.current.set(message.id, element);
@@ -432,32 +441,38 @@ export function ChatMessageList({
                 : undefined;
 
             return (
-              <AssistantMessage
-                key={message.id}
-                message={message}
-                runUsage={runUsage}
-                sessionStatus={sessionStatus}
-              />
+              <div key={message.id} data-chat-export-item>
+                <AssistantMessage
+                  message={message}
+                  runUsage={runUsage}
+                  sessionStatus={sessionStatus}
+                />
+              </div>
             );
           })}
           {isTyping && (
-            <AssistantMessage
-              message={{
-                id: "typing",
-                role: "assistant",
-                content: "",
-                status: "streaming",
-                timestamp: new Date().toISOString(),
-              }}
-              sessionStatus={sessionStatus}
-            />
+            <div data-chat-export-item>
+              <AssistantMessage
+                message={{
+                  id: "typing",
+                  role: "assistant",
+                  content: "",
+                  status: "streaming",
+                  timestamp: new Date().toISOString(),
+                }}
+                sessionStatus={sessionStatus}
+              />
+            </div>
           )}
           <div ref={scrollRef} />
         </div>
       </ScrollArea>
 
       {shouldRenderUserPromptTimeline ? (
-        <div className="pointer-events-none absolute inset-y-6 right-2 z-20 hidden md:block">
+        <div
+          className="pointer-events-none absolute inset-y-6 right-2 z-20 hidden md:block"
+          data-chat-export-skip
+        >
           <div className="pointer-events-auto relative h-full w-8">
             <div className="absolute top-0 bottom-0 left-1/2 w-px -translate-x-1/2 bg-border/80" />
             <TooltipProvider delayDuration={120}>
@@ -513,6 +528,7 @@ export function ChatMessageList({
       {/* Scroll to bottom button */}
       {showScrollButton && (
         <div
+          data-chat-export-skip
           className={cn(
             "absolute bottom-6 right-6 z-10 animate-in fade-in slide-in-from-bottom-4 duration-300",
             scrollButtonClassName,
