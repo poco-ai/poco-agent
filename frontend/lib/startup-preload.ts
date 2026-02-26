@@ -2,22 +2,22 @@ import type {
   McpServer,
   UserMcpInstall,
 } from "@/features/capabilities/mcp/types";
-import { mcpService } from "@/features/capabilities/mcp/services/mcp-service";
+import { mcpService } from "@/features/capabilities/mcp/api/mcp-api";
 import type {
   UserPluginInstall,
   Plugin,
 } from "@/features/capabilities/plugins/types";
-import { pluginsService } from "@/features/capabilities/plugins/services/plugins-service";
+import { pluginsService } from "@/features/capabilities/plugins/api/plugins-api";
 import type {
   Skill,
   UserSkillInstall,
 } from "@/features/capabilities/skills/types";
-import { skillsService } from "@/features/capabilities/skills/services/skills-service";
+import { skillsService } from "@/features/capabilities/skills/api/skills-api";
 import type { ProjectItem, TaskHistoryItem } from "@/features/projects/types";
 import {
   projectsService,
   tasksService,
-} from "@/features/projects/services/projects-service";
+} from "@/features/projects/api/projects-api";
 
 export interface StartupPreloadState {
   projects: ProjectItem[];

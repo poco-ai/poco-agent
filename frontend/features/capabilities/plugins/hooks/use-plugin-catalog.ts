@@ -7,7 +7,7 @@ import type {
   Plugin,
   UserPluginInstall,
 } from "@/features/capabilities/plugins/types";
-import { pluginsService } from "@/features/capabilities/plugins/services/plugins-service";
+import { pluginsService } from "@/features/capabilities/plugins/api/plugins-api";
 import { useT } from "@/lib/i18n/client";
 import {
   getStartupPreloadPromise,

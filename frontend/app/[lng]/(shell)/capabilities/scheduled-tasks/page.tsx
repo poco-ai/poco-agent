@@ -1,4 +1,4 @@
-import { ScheduledTasksPageClient } from "@/features/scheduled-tasks/components/scheduled-tasks-page-client";
+import { ScheduledTasksPageClient } from "@/features/scheduled-tasks";
 
 export default function ScheduledTasksPage() {
   return <ScheduledTasksPageClient />;

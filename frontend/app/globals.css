@@ -476,3 +476,15 @@
     filter: saturate(1.4) brightness(1.2);
   }
 }
+
+@keyframes running-status-dot-blink {
+  0%,
+  100% {
+    opacity: 0.9;
+    filter: saturate(1) brightness(1);
+  }
+  50% {
+    opacity: 1;
+    filter: saturate(1.45) brightness(1.35);
+  }
+}

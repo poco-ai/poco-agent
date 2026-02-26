@@ -7,7 +7,7 @@ import type {
   Skill,
   UserSkillInstall,
 } from "@/features/capabilities/skills/types";
-import { skillsService } from "@/features/capabilities/skills/services/skills-service";
+import { skillsService } from "@/features/capabilities/skills/api/skills-api";
 import { useT } from "@/lib/i18n/client";
 import {
   getStartupPreloadPromise,

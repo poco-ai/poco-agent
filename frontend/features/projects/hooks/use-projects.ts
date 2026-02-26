@@ -1,3 +1,5 @@
+"use client";
+
 import { useState, useCallback, useEffect } from "react";
 import {
   createProjectAction,
@@ -14,7 +16,7 @@ import {
 import type {
   ProjectRepoDefaultsInput,
   ProjectUpdatesInput,
-} from "@/components/shared/app-shell-context";
+} from "@/components/shell/app-shell-context";
 
 interface UseProjectsOptions {
   initialProjects?: ProjectItem[];

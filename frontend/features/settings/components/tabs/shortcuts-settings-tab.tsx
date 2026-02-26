@@ -95,6 +95,12 @@ export function ShortcutsSettingsTab() {
         hint: t("settings.shortcuts.items.toggleOutputPanel.hint"),
         keys: [["Ctrl", "L"]],
       },
+      {
+        id: "jump-user-prompts",
+        action: t("settings.shortcuts.items.jumpUserPrompts.action"),
+        hint: t("settings.shortcuts.items.jumpUserPrompts.hint"),
+        keys: [["J"], ["K"]],
+      },
     ],
     [t],
   );

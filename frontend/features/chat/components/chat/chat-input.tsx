@@ -12,9 +12,9 @@ import {
 import {
   AVAILABLE_CONNECTORS,
   type ConnectorType,
-} from "@/features/home/constants/connectors";
+} from "@/features/connectors";
 import { toast } from "sonner";
-import { uploadAttachment } from "@/features/attachments/services/attachment-service";
+import { uploadAttachment } from "@/features/attachments/api/attachment-api";
 import type { InputFile } from "@/features/chat/types";
 import { FileCard } from "@/components/shared/file-card";
 import { playUploadSound } from "@/lib/utils/sound";
@@ -308,7 +308,9 @@ export function ChatInput({
                             <span>{connector.title}</span>
                           </div>
                           {/* TODO: Implement connection logic */}
-                          <span className="text-xs font-medium">连接</span>
+                          <span className="text-xs font-medium">
+                            {t("hero.connect")}
+                          </span>
                         </div>
                       </DropdownMenuItem>
                     ));

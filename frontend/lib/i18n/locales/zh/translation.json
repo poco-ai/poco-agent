@@ -243,10 +243,21 @@
     "input": "输入",
     "output": "输出",
     "scrollToLatestMessage": "跳转到最新消息",
+    "userPromptTimelineJump": "跳转到第 {{index}} 条用户消息",
+    "userPromptTimelineEmpty": "（空输入）",
     "expand": "展开",
     "collapse": "收起",
     "copyMessage": "复制消息",
+    "formulaCopied": "已复制",
     "editMessage": "编辑消息",
+    "quoteModify": "引用修改",
+    "exportImage": "生成对话长图",
+    "exportLongImage": "导出长图",
+    "exportMultiImage": "导出多图",
+    "exportImageSuccess": "已生成对话长图",
+    "exportImageMultiSuccess": "已导出 {{count}} 张图片",
+    "exportImageEmpty": "暂无可导出的对话内容",
+    "exportImageFailed": "生成对话长图失败",
     "statusBar": {
       "browser": "浏览器",
       "openDesktop": "打开桌面",
@@ -538,7 +549,7 @@
       "fetchError": "无法获取文档内容",
       "retry": "重试",
       "selectFile": "请从右侧选择文件进行预览",
-      "supportedFormats": "支持 PDF、Office 文档、常见图片格式、XMind 文件、.excalidraw 文件和 .drawio 文件",
+      "supportedFormats": "支持 PDF、Office 文档、常见图片格式、MP4 视频、XMind 文件、.excalidraw 文件和 .drawio 文件",
       "processing": "文件处理中",
       "notSupported": "该格式暂不支持预览",
       "openInNewWindow": "新窗口打开",
@@ -1026,7 +1037,8 @@
       "title": "导入技能",
       "tabs": {
         "zip": "上传压缩包",
-        "github": "GitHub 地址"
+        "github": "GitHub 地址",
+        "command": "npx 命令导入"
       },
       "fields": {
         "zip": "Zip 文件",
@@ -1035,11 +1047,13 @@
       },
       "placeholders": {
         "githubUrl": "https://github.com/owner/repo",
-        "name": "例如：my-skill"
+        "name": "例如：my-skill",
+        "command": "npx skills add https://github.com/owner/repo --skill my-skill"
       },
       "hints": {
         "github": "默认尝试 main/master 分支（仅支持 github.com 公共仓库）",
-        "nameRequired": "检测到 SKILL.md 位于根目录，必须手动填写技能名称"
+        "nameRequired": "检测到 SKILL.md 位于根目录，必须手动填写技能名称",
+        "command": "粘贴 add 命令后将自动解析 GitHub 地址和 --skill 参数。"
       },
       "actions": {
         "back": "返回",
@@ -1083,7 +1097,8 @@
         "committed": "技能导入成功",
         "commitError": "导入失败，请稍后重试",
         "partialFailed": "部分技能导入失败，请查看详情",
-        "commitTimeout": "导入超时，请稍后重试"
+        "commitTimeout": "导入超时，请稍后重试",
+        "invalidCommand": "无法解析命令，请确保包含 github.com 地址。"
       },
       "progress": {
         "title": "导入进度",
@@ -1395,6 +1410,10 @@
         "toggleOutputPanel": {
           "action": "收起/展开产物界面",
           "hint": "在聊天页收起或展开电脑/产物面板。"
+        },
+        "jumpUserPrompts": {
+          "action": "跳转用户消息",
+          "hint": "当产物面板收起时，使用 J/K 在用户消息之间快速跳转。"
         },
         "openSettings": {
           "action": "打开设置",

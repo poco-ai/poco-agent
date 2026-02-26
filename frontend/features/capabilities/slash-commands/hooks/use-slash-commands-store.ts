@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { useT } from "@/lib/i18n/client";
-import { slashCommandsService } from "@/features/capabilities/slash-commands/services/slash-commands-service";
+import { slashCommandsService } from "@/features/capabilities/slash-commands/api/slash-commands-api";
 import type {
   SlashCommand,
   SlashCommandCreateInput,

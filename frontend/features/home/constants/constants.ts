@@ -7,12 +7,6 @@ import {
   Presentation,
 } from "lucide-react";
 
-import type { ModelInfo } from "@/types";
-import type { ConnectedTool } from "@/features/home/types";
-import type { MessageStatus } from "@/features/chat/types";
-
-type TaskStatus = "pending" | "running" | "completed" | "failed" | "canceled";
-
 export type QuickAction = {
   id: string;
   labelKey: string;
@@ -26,82 +20,3 @@ export const QUICK_ACTIONS: QuickAction[] = [
   { id: "design", labelKey: "prompts.design", icon: Palette },
   { id: "more", labelKey: "prompts.more", icon: MoreHorizontal },
 ];
-
-export const CONNECTED_TOOLS: ConnectedTool[] = [
-  { id: "gmail", name: "Gmail", icon: "📧" },
-  { id: "drive", name: "Drive", icon: "📁" },
-  { id: "notion", name: "Notion", icon: "📝" },
-  { id: "slack", name: "Slack", icon: "💬" },
-  { id: "figma", name: "Figma", icon: "🎨" },
-];
-
-export const TASK_STATUS_META: Record<
-  TaskStatus,
-  { dotClassName: string; labelKey: string }
-> = {
-  pending: {
-    dotClassName: "bg-muted-foreground/40",
-    labelKey: "status.pending",
-  },
-  running: { dotClassName: "bg-primary/70", labelKey: "status.running" },
-  completed: { dotClassName: "bg-primary", labelKey: "status.completed" },
-  failed: { dotClassName: "bg-destructive", labelKey: "status.failed" },
-  canceled: {
-    dotClassName: "bg-chart-4/60",
-    labelKey: "status.canceled",
-  },
-};
-
-// Chat-related constants
-export const AVAILABLE_MODELS: ModelInfo[] = [
-  {
-    id: "claude-sonnet-4.5",
-    name: "Claude Sonnet 4.5",
-    descriptionKey: "models.claudeSonnet45.description",
-    icon: "⚡",
-    provider: "anthropic",
-  },
-  {
-    id: "claude-opus-4.5",
-    name: "Claude Opus 4.5",
-    descriptionKey: "models.claudeOpus45.description",
-    icon: "🚀",
-    provider: "anthropic",
-  },
-  {
-    id: "gpt-4-turbo",
-    name: "GPT-4 Turbo",
-    descriptionKey: "models.gpt4Turbo.description",
-    icon: "🧠",
-    provider: "openai",
-  },
-];
-
-export const MESSAGE_STATUS_META: Record<
-  MessageStatus,
-  { labelKey: string; className: string }
-> = {
-  sending: {
-    labelKey: "message.status.sending",
-    className: "text-muted-foreground",
-  },
-  sent: {
-    labelKey: "message.status.sent",
-    className: "text-muted-foreground",
-  },
-  streaming: {
-    labelKey: "message.status.streaming",
-    className: "text-primary animate-pulse",
-  },
-  completed: {
-    labelKey: "message.status.completed",
-    className: "text-primary",
-  },
-  failed: {
-    labelKey: "message.status.failed",
-    className: "text-destructive",
-  },
-};
-
-// Streaming animation delay (ms per character)
-export const STREAMING_CHAR_DELAY = 30;

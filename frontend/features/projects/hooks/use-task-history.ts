@@ -1,10 +1,15 @@
-import { useState, useCallback, useEffect } from "react";
+"use client";
+
+import { useState, useCallback, useEffect, useRef } from "react";
 import {
   listTaskHistoryAction,
   moveTaskToProjectAction,
 } from "@/features/projects/actions/project-actions";
 import { renameSessionTitleAction } from "@/features/chat/actions/session-actions";
-import type { TaskHistoryItem } from "@/features/projects/types";
+import type {
+  AddTaskOptions,
+  TaskHistoryItem,
+} from "@/features/projects/types";
 import { useT } from "@/lib/i18n/client";
 import {
   getStartupPreloadPromise,
@@ -23,6 +28,7 @@ export function useTaskHistory(options: UseTaskHistoryOptions = {}) {
   const { initialTasks = [] } = options;
   const seededTasks = hasPreloadedTasks ? (preloadTasks ?? []) : initialTasks;
   const { t } = useT("translation");
+  const hasConsumedStartupPreloadRef = useRef(hasPreloadedTasks);
   const [taskHistory, setTaskHistory] =
     useState<TaskHistoryItem[]>(seededTasks);
   const [isLoading, setIsLoading] = useState(
@@ -32,17 +38,23 @@ export function useTaskHistory(options: UseTaskHistoryOptions = {}) {
   const fetchTasks = useCallback(async () => {
     try {
       setIsLoading(true);
-      if (hasStartupPreloadValue("taskHistory")) {
-        setTaskHistory(getStartupPreloadValue("taskHistory") ?? []);
-        return;
-      }
+      // Startup preload is a static snapshot. Use it only once to avoid
+      // clobbering runtime updates when refreshTasks() is called later.
+      if (!hasConsumedStartupPreloadRef.current) {
+        hasConsumedStartupPreloadRef.current = true;
 
-      const preloadPromise = getStartupPreloadPromise();
-      if (preloadPromise) {
-        await preloadPromise;
         if (hasStartupPreloadValue("taskHistory")) {
           setTaskHistory(getStartupPreloadValue("taskHistory") ?? []);
           return;
+        }
+
+        const preloadPromise = getStartupPreloadPromise();
+        if (preloadPromise) {
+          await preloadPromise;
+          if (hasStartupPreloadValue("taskHistory")) {
+            setTaskHistory(getStartupPreloadValue("taskHistory") ?? []);
+            return;
+          }
         }
       }
 
@@ -59,31 +71,20 @@ export function useTaskHistory(options: UseTaskHistoryOptions = {}) {
     fetchTasks();
   }, [fetchTasks]);
 
-  const addTask = useCallback(
-    (
-      title: string,
-      options?: {
-        timestamp?: string;
-        status?: TaskHistoryItem["status"];
-        projectId?: string;
-        id?: string;
-      },
-    ) => {
-      const newTask: TaskHistoryItem = {
-        // Use sessionId if provided, otherwise fallback to random (for optimistic updates)
-        id:
-          options?.id ||
-          `task-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-        title,
-        timestamp: options?.timestamp || new Date().toISOString(),
-        status: options?.status || "pending",
-        projectId: options?.projectId,
-      };
-      setTaskHistory((prev) => [newTask, ...prev]);
-      return newTask;
-    },
-    [],
-  );
+  const addTask = useCallback((title: string, options?: AddTaskOptions) => {
+    const newTask: TaskHistoryItem = {
+      // Use sessionId if provided, otherwise fallback to random (for optimistic updates)
+      id:
+        options?.id ||
+        `task-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+      title,
+      timestamp: options?.timestamp || new Date().toISOString(),
+      status: options?.status || "pending",
+      projectId: options?.projectId,
+    };
+    setTaskHistory((prev) => [newTask, ...prev]);
+    return newTask;
+  }, []);
 
   const touchTask = useCallback(
     (

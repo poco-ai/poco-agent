@@ -1,4 +1,4 @@
-import { userService } from "@/features/user/services/user-service";
+import { userService } from "@/features/user/api/user-api";
 
 export async function getUserProfileAction() {
   return userService.getProfile();

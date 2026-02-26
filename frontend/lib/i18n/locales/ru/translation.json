@@ -242,10 +242,21 @@
     "input": "Ввод",
     "output": "Вывод",
     "scrollToLatestMessage": "Перейти к последнему сообщению",
+    "userPromptTimelineJump": "Перейти к сообщению пользователя {{index}}",
+    "userPromptTimelineEmpty": "(Пустой запрос)",
     "expand": "Развернуть",
     "collapse": "Свернуть",
     "copyMessage": "Копировать сообщение",
+    "formulaCopied": "Скопировано",
     "editMessage": "Редактировать сообщение",
+    "quoteModify": "Ответить с цитатой",
+    "exportImage": "Generate conversation image",
+    "exportLongImage": "Export long image",
+    "exportMultiImage": "Export multiple images",
+    "exportImageSuccess": "Conversation image generated",
+    "exportImageMultiSuccess": "Exported {{count}} images",
+    "exportImageEmpty": "No conversation content to export",
+    "exportImageFailed": "Failed to generate conversation image",
     "statusBar": {
       "browser": "Браузер",
       "openDesktop": "Открыть рабочий стол",
@@ -536,7 +547,7 @@
       "fetchError": "Не удалось получить содержимое документа",
       "retry": "Повторить",
       "selectFile": "Пожалуйста, выберите файл справа для предварительного просмотра",
-      "supportedFormats": "Поддерживает PDF, документы Office, распространённые форматы изображений, файлы XMind, файлы .excalidraw и файлы .drawio",
+      "supportedFormats": "Поддерживает PDF, документы Office, распространённые форматы изображений, видео MP4, файлы XMind, файлы .excalidraw и файлы .drawio",
       "processing": "Обработка файла",
       "notSupported": "Предварительный просмотр не поддерживается для этого формата",
       "openInNewWindow": "Открыть в новом окне",
@@ -1013,7 +1024,8 @@
       "title": "Импорт навыков",
       "tabs": {
         "zip": "Загрузить Zip",
-        "github": "GitHub URL"
+        "github": "GitHub URL",
+        "command": "Импорт через npx-команду"
       },
       "fields": {
         "zip": "Zip-файл",
@@ -1022,11 +1034,13 @@
       },
       "placeholders": {
         "githubUrl": "https://github.com/owner/repo",
-        "name": "например, my-skill"
+        "name": "например, my-skill",
+        "command": "npx skills add https://github.com/owner/repo --skill my-skill"
       },
       "hints": {
         "github": "По умолчанию main/master (только публичные репозитории github.com)",
-        "nameRequired": "SKILL.md находится в корне архива; требуется имя"
+        "nameRequired": "SKILL.md находится в корне архива; требуется имя",
+        "command": "Вставьте команду add — мы автоматически извлечем GitHub URL и --skill."
       },
       "actions": {
         "back": "Назад",
@@ -1070,7 +1084,8 @@
         "committed": "Импорт выполнен успешно",
         "commitError": "Не удалось импортировать, попробуйте позже",
         "partialFailed": "Не удалось импортировать некоторые навыки. Пожалуйста, просмотрите детали.",
-        "commitTimeout": "Истекло время ожидания импорта, попробуйте позже"
+        "commitTimeout": "Истекло время ожидания импорта, попробуйте позже",
+        "invalidCommand": "Не удалось разобрать команду. Укажите URL с github.com."
       },
       "progress": {
         "title": "Прогресс импорта",
@@ -1292,6 +1307,10 @@
         "toggleOutputPanel": {
           "action": "Toggle output panel",
           "hint": "Collapse or expand computer/artifacts panel in chat."
+        },
+        "jumpUserPrompts": {
+          "action": "Jump user prompts",
+          "hint": "When output panel is collapsed, use J/K to jump between user messages."
         },
         "openSettings": {
           "action": "Open settings",

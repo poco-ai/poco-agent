@@ -110,10 +110,13 @@ pre-commit run --all-files  # Run manually
 
 ### Frontend (`frontend/`)
 
-- `app/` - App Router pages (home/, layout.tsx, page.tsx, globals.css)
-- `components/` - React components (home/, ui/, theme-provider.tsx)
-- `hooks/` - Custom React hooks
-- `lib/` - Utilities (utils.ts)
+- `app/` - App Router routes, layouts, loading states, proxy routes
+- `features/` - Domain modules (chat, projects, capabilities, scheduled-tasks, etc.)
+- `components/` - Cross-feature shared components (`ui/`, `shared/`, `shell/`)
+- `hooks/` - Cross-feature reusable hooks only
+- `lib/` - Framework-agnostic utilities, i18n setup, startup preload logic
+- `services/` - Global infrastructure only (e.g., API client); do not put feature business logic here
+- `types/` - Global shared types only; feature-specific types stay in each feature
 
 ## Key Design Patterns
 
@@ -199,7 +202,7 @@ Use Tailwind CSS v4 utility classes with CSS variables. All colors, shadows, and
 All user-facing text MUST use i18n translations, NOT hardcoded strings:
 
 ```tsx
-import { useT } from "@/app/i18n/client";
+import { useT } from "@/lib/i18n/client";
 const { t } = useT();
 
 // ✅ Correct
@@ -209,7 +212,70 @@ const { t } = useT();
 <Button>New Task</Button>
 ```
 
-Translation files: `app/i18n/locales/{lng}/translation.json` | Config: `app/i18n/settings.ts`
+Translation files: `frontend/lib/i18n/locales/{lng}/translation.json` | Config: `frontend/lib/i18n/settings.ts`
+
+### Frontend Architecture and Boundaries
+
+Use feature-first organization with internal layering:
+
+- Recommended internal layout for each feature: `api/`, `model/`, `ui/`, `lib/`, `index.ts`
+- `api/`: backend calls and DTO mapping only
+- `model/`: business state, domain types, feature hooks/actions
+- `ui/`: feature UI components/pages
+- `lib/`: pure utility functions scoped to the feature
+- `index.ts`: public surface of the feature
+
+Boundary rules:
+
+- `app/` should compose feature public APIs and should not import deep internals from other features
+- Cross-feature imports should go through `features/<feature>/index.ts` whenever possible
+- Do not import from `features/*/services/*`; use `features/*/api/*` instead
+- Do not let low-level features depend on shell/container modules (avoid reverse dependencies)
+
+### Frontend Component Standards
+
+- Prefer one primary component per file
+- Split large components into container + presentational parts
+- If a component exceeds ~300 lines or mixes unrelated responsibilities, split it
+- Keep render logic declarative; move heavy data shaping into hooks or `lib/`
+- Reuse shared UI primitives from `components/ui` and shared composites from `components/shared`
+
+### Frontend State and Data Flow
+
+- Keep server data access in feature `api` modules
+- Keep feature state in feature hooks/context (`model` layer), not in route files
+- Avoid duplicated derived state; compute from source state with memoization
+- Use optimistic updates only with rollback handling for failures
+- Co-locate domain-specific state with the owning feature
+
+### Frontend Type Safety
+
+- No `any` unless absolutely unavoidable; use explicit interfaces/types
+- Keep API request/response types near the feature consuming them
+- Validate untrusted external input with schema validation (e.g., `zod`) before mutation calls
+- Avoid component-to-component type coupling through container modules
+
+### Next.js App Router Conventions
+
+- Default to Server Components; add `"use client"` only when interactivity is required
+- Place route-specific loading UI in `loading.tsx`
+- Keep route files thin; delegate business logic to feature modules
+- Use proxy route `app/api/v1/[...path]/route.ts` for browser-side API forwarding
+
+### Frontend Performance Guidelines
+
+- Dynamic-import heavy viewers/editors and browser-only libraries
+- Memoize expensive computations and stable callbacks in hot rendering paths
+- Virtualize or paginate long lists when item count is large
+- Avoid unnecessary re-renders caused by unstable object/array literals in props
+
+### Frontend Quality Gates
+
+Before submitting frontend changes:
+
+- `pnpm lint` must pass
+- `pnpm build` must pass
+- Manually verify key flows impacted by changes (create task, chat execution, project switching, capabilities CRUD)
 
 ## Linting and Formatting
 

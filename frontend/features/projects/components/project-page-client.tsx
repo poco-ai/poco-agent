@@ -5,21 +5,21 @@ import { useRouter } from "next/navigation";
 
 import { useT } from "@/lib/i18n/client";
 
-import { useAutosizeTextarea } from "@/features/home/hooks/use-autosize-textarea";
-import { createSessionAction } from "@/features/chat/actions/session-actions";
+import {
+  TaskEntrySection,
+  type ComposerMode,
+  type TaskSendOptions,
+  submitScheduledTask,
+  submitTask,
+  useAutosizeTextarea,
+  useComposerModeHotkeys,
+} from "@/features/task-composer";
 import type { ProjectItem, TaskHistoryItem } from "@/features/projects/types";
-import type {
-  ComposerMode,
-  TaskSendOptions,
-} from "@/features/home/components/task-composer";
 
 import { ProjectHeader } from "@/features/projects/components/project-header";
-import { useAppShell } from "@/components/shared/app-shell-context";
-import { scheduledTasksService } from "@/features/scheduled-tasks/services/scheduled-tasks-service";
+import { ConnectorsBar } from "@/features/connectors";
+import { useAppShell } from "@/components/shell/app-shell-context";
 import { toast } from "sonner";
-import type { TaskConfig } from "@/features/chat/types/api/session";
-import { TaskEntrySection } from "@/features/home/components/task-entry-section";
-import { useComposerModeHotkeys } from "@/features/home/hooks/use-composer-mode-hotkeys";
 
 interface ProjectPageClientProps {
   projectId: string;
@@ -82,7 +82,6 @@ export function ProjectPageClient({ projectId }: ProjectPageClientProps) {
       }
 
       setIsSubmitting(true);
-      console.log("[Project] Sending task:", inputValue, { mode });
 
       try {
         // Best-effort: persist repo defaults on the project for future runs.
@@ -94,36 +93,12 @@ export function ProjectPageClient({ projectId }: ProjectPageClientProps) {
           });
         }
 
-        const config: TaskConfig & Record<string, unknown> = {};
-        if (inputFiles.length > 0) {
-          config.input_files = inputFiles;
-        }
-        if (repoUrl) {
-          config.repo_url = repoUrl;
-          config.git_branch = gitBranch;
-          if (gitTokenEnvKey) {
-            config.git_token_env_key = gitTokenEnvKey;
-          }
-        }
-
         if (mode === "scheduled") {
-          const name =
-            (scheduledTask?.name || "").trim() ||
-            inputValue.trim().slice(0, 32);
-          const cron = (scheduledTask?.cron || "").trim() || "*/5 * * * *";
-          const timezone = (scheduledTask?.timezone || "").trim() || "UTC";
-          const enabled = Boolean(scheduledTask?.enabled ?? true);
-          const reuseSession = Boolean(scheduledTask?.reuse_session ?? true);
-
-          await scheduledTasksService.create({
-            name,
-            cron,
-            timezone,
+          await submitScheduledTask({
             prompt: inputValue,
-            enabled,
-            reuse_session: reuseSession,
-            project_id: projectId,
-            config: Object.keys(config).length > 0 ? config : undefined,
+            mode,
+            options,
+            projectId,
           });
           toast.success(t("library.scheduledTasks.toasts.created"));
           setInputValue("");
@@ -131,28 +106,22 @@ export function ProjectPageClient({ projectId }: ProjectPageClientProps) {
           return;
         }
 
-        const session = await createSessionAction({
-          prompt: inputValue,
-          projectId,
-          config: Object.keys(config).length > 0 ? config : undefined,
-          permission_mode: mode === "plan" ? "plan" : "default",
-          schedule_mode: runSchedule?.schedule_mode,
-          timezone: runSchedule?.timezone,
-          scheduled_at: runSchedule?.scheduled_at,
-        });
-        console.log("session", session);
-
-        localStorage.setItem(`session_prompt_${session.sessionId}`, inputValue);
-
-        addTask(inputValue, {
-          id: session.sessionId,
-          timestamp: new Date().toISOString(),
-          status: "running",
-          projectId,
-        });
+        const session = await submitTask(
+          {
+            prompt: inputValue,
+            mode,
+            options: {
+              ...options,
+              run_schedule: runSchedule,
+              scheduled_task: scheduledTask,
+            },
+            projectId,
+          },
+          { addTask },
+        );
+        if (!session.sessionId) return;
 
         setInputValue("");
-
         router.push(`/${lng}/chat/${session.sessionId}`);
       } catch (error) {
         console.error("[Project] Failed to create session", error);
@@ -203,7 +172,7 @@ export function ProjectPageClient({ projectId }: ProjectPageClientProps) {
         mode={mode}
         onModeChange={setMode}
         toggleDisabled={isSubmitting}
-        connectorsExpanded={shouldExpandConnectors}
+        footer={<ConnectorsBar forceExpanded={shouldExpandConnectors} />}
         composerProps={{
           textareaRef,
           value: inputValue,

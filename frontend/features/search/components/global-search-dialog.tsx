@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import {
   CommandDialog,
   CommandEmpty,
@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/command";
 import { FileText, Folder, MessageSquare, Loader2 } from "lucide-react";
 import { useT } from "@/lib/i18n/client";
+import { useLanguage } from "@/hooks/use-language";
 import { useSearchData } from "@/features/search/hooks/use-search-data";
 
 interface GlobalSearchDialogProps {
@@ -29,12 +30,7 @@ export function GlobalSearchDialog({
 }: GlobalSearchDialogProps) {
   const { t } = useT("translation");
   const router = useRouter();
-  const params = useParams();
-  const lng = React.useMemo(() => {
-    const value = params?.lng;
-    if (!value) return undefined;
-    return Array.isArray(value) ? value[0] : value;
-  }, [params]);
+  const lng = useLanguage();
   const [searchQuery, setSearchQuery] = React.useState("");
   const { tasks, projects, messages, isLoading } = useSearchData();
   const [mounted, setMounted] = React.useState(false);

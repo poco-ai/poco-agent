@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { useT } from "@/lib/i18n/client";
-import { customInstructionsService } from "@/features/capabilities/personalization/services/custom-instructions-service";
+import { customInstructionsService } from "@/features/capabilities/personalization/api/custom-instructions-api";
 import type {
   CustomInstructionsSettings,
   CustomInstructionsUpsertInput,

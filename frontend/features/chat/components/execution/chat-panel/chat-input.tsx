@@ -7,7 +7,7 @@ import {
   forwardRef,
 } from "react";
 import { ArrowUp, Plus, Loader2, Pause } from "lucide-react";
-import { uploadAttachment } from "@/features/attachments/services/attachment-service";
+import { uploadAttachment } from "@/features/attachments/api/attachment-api";
 import type { InputFile } from "@/features/chat/types";
 import { toast } from "sonner";
 import { FileCard } from "@/components/shared/file-card";
@@ -33,6 +33,7 @@ interface ChatInputProps {
 
 export interface ChatInputRef {
   setValueAndFocus: (value: string) => void;
+  appendValueAndFocus: (value: string) => void;
 }
 
 const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
@@ -80,11 +81,30 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
       [syncTextareaValue],
     );
 
+    const appendValue = useCallback(
+      (nextValue: string) => {
+        const trimmedValue = nextValue.trim();
+        if (!trimmedValue) return;
+
+        const separator = value.trim()
+          ? value.endsWith("\n")
+            ? "\n"
+            : "\n\n"
+          : "";
+        applyValue(`${value}${separator}${trimmedValue}\n`);
+      },
+      [applyValue, value],
+    );
+
     // Expose methods to parent component
     useImperativeHandle(ref, () => ({
       setValueAndFocus: (newValue: string) => {
         setHistoryIndex(-1);
         applyValue(newValue);
+      },
+      appendValueAndFocus: (newValue: string) => {
+        setHistoryIndex(-1);
+        appendValue(newValue);
       },
     }));
 

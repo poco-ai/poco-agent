@@ -25,3 +25,10 @@ export interface TaskHistoryItem {
   projectId?: string;
   hasPendingUserInput?: boolean;
 }
+
+export interface AddTaskOptions {
+  timestamp?: string;
+  status?: TaskHistoryItem["status"];
+  projectId?: string;
+  id?: string;
+}

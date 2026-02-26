@@ -16,13 +16,10 @@ import {
 } from "@/features/capabilities/lib/capability-view-state";
 import { useT } from "@/lib/i18n/client";
 
-// TODO: 清理无用代码，对这个路由方法进行重构；
-
-// 需要验证：
-// 1. 从首页的卡片点击进入详情页，再从详情页返回首页，是否能正确显示列表页；
-// 2. 从侧边栏进入能力页面，再进入详情页，点击返回按钮，是否能正确显示列表页；
-
-// 参数解释：view=list 是 mobile 下的能力选择界面，view=xxxx 是具体的能力详情页；
+// TODO: Refactor this route-state flow and remove obsolete branches.
+// Verify mobile back behavior for both home entry and sidebar entry.
+// Query param semantics: `view=list` means capability list (mobile),
+// while `view=<id>` means a specific capability detail view.
 
 export function CapabilitiesPageClient() {
   const { t } = useT("translation");

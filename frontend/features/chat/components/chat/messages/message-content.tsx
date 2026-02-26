@@ -6,17 +6,11 @@ import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import type { MessageBlock } from "@/features/chat/types";
 import type { ToolUseBlock, ToolResultBlock } from "@/features/chat/types";
-import { Brain, ChevronDown, ChevronRight } from "lucide-react";
 import { ToolChain } from "./tool-chain";
 import remarkBreaks from "remark-breaks";
 import rehypeKatex from "rehype-katex";
 import { MarkdownCode, MarkdownPre } from "@/components/shared/markdown-code";
-import { useT } from "@/lib/i18n/client";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+import { AdaptiveMarkdown } from "@/components/shared/adaptive-markdown";
 
 type LinkProps = {
   children?: React.ReactNode;
@@ -44,11 +38,6 @@ export function MessageContent({
   content: string | MessageBlock[];
   sessionStatus?: string;
 }) {
-  const { t } = useT("translation");
-  const [openThinkingByGroup, setOpenThinkingByGroup] = React.useState<
-    Record<number, boolean>
-  >({});
-
   // Helper function to extract text content from message
   const getTextContent = (content: string | MessageBlock[]): string => {
     const clean = (text: string) => text.replace(/\uFFFD/g, "");
@@ -76,7 +65,7 @@ export function MessageContent({
   // If content is string, render as before
   if (typeof content === "string") {
     return (
-      <div className="prose prose-base dark:prose-invert w-full min-w-0 max-w-none overflow-hidden break-words break-all [&_pre]:whitespace-pre-wrap [&_pre]:break-words [&_code]:break-words [&_p]:break-words [&_p]:break-all [&_*]:break-words [&_*]:break-all">
+      <AdaptiveMarkdown className="prose prose-base dark:prose-invert w-full min-w-0 max-w-none overflow-hidden break-words break-all [&_pre]:whitespace-pre-wrap [&_pre]:break-words [&_code]:break-words [&_p]:break-words [&_p]:break-all [&_*]:break-words [&_*]:break-all">
         <ReactMarkdown
           remarkPlugins={[remarkGfm, remarkBreaks, remarkMath]}
           rehypePlugins={[rehypeKatex]}
@@ -138,7 +127,7 @@ export function MessageContent({
         >
           {textContent}
         </ReactMarkdown>
-      </div>
+      </AdaptiveMarkdown>
     );
   }
 
@@ -200,50 +189,15 @@ export function MessageContent({
             .trim();
 
           if (!thinking) return null;
-          const isOpen = Boolean(openThinkingByGroup[index]);
 
           return (
             <div
               key={index}
-              className="my-2 w-full min-w-0 max-w-full overflow-hidden"
+              className="my-2 w-full min-w-0 max-w-full overflow-hidden pl-5"
             >
-              <Collapsible
-                open={isOpen}
-                onOpenChange={(open) =>
-                  setOpenThinkingByGroup((prev) => ({
-                    ...prev,
-                    [index]: open,
-                  }))
-                }
-              >
-                <CollapsibleTrigger className="flex w-full min-w-0 max-w-full items-center gap-2 overflow-hidden rounded-[0.5rem] border border-border/60 bg-card/70 px-3 py-1.5 text-left transition-colors hover:bg-muted/50">
-                  <span className="flex size-5 shrink-0 items-center justify-center rounded-md border border-border/60 bg-muted/30">
-                    <Brain className="size-3.5 text-muted-foreground" />
-                  </span>
-
-                  <div className="min-w-0 flex-1 overflow-hidden">
-                    <div className="truncate text-xs font-medium text-foreground">
-                      {t("chat.thinkingTitle")}
-                    </div>
-                  </div>
-
-                  <div className="flex shrink-0 items-center">
-                    {isOpen ? (
-                      <ChevronDown className="size-3.5 text-muted-foreground" />
-                    ) : (
-                      <ChevronRight className="size-3.5 text-muted-foreground" />
-                    )}
-                  </div>
-                </CollapsibleTrigger>
-
-                <CollapsibleContent>
-                  <div className="mt-2 min-w-0 max-w-full overflow-hidden rounded-[0.5rem] border border-border/60 bg-muted/20 p-3 text-xs">
-                    <pre className="whitespace-pre-wrap break-all font-mono text-xs text-foreground/90">
-                      {thinking}
-                    </pre>
-                  </div>
-                </CollapsibleContent>
-              </Collapsible>
+              <pre className="whitespace-pre-wrap break-words [overflow-wrap:anywhere] font-mono text-[11px] text-muted-foreground/90">
+                {thinking}
+              </pre>
             </div>
           );
         } else {
@@ -253,7 +207,7 @@ export function MessageContent({
           if (!text.trim()) return null;
 
           return (
-            <div
+            <AdaptiveMarkdown
               key={index}
               className="prose prose-base dark:prose-invert w-full min-w-0 max-w-none overflow-hidden break-words break-all [&_pre]:whitespace-pre-wrap [&_pre]:break-words [&_code]:break-words [&_p]:break-words [&_p]:break-all [&_*]:break-words [&_*]:break-all"
             >
@@ -318,7 +272,7 @@ export function MessageContent({
               >
                 {text}
               </ReactMarkdown>
-            </div>
+            </AdaptiveMarkdown>
           );
         }
       })}

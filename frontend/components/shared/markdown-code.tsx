@@ -20,10 +20,99 @@ type MarkdownPreProps = React.ComponentPropsWithoutRef<"pre"> & {
   node?: unknown;
 };
 
+type MermaidBlockProps = {
+  code: string;
+  isDark: boolean;
+};
+
 const extractLanguage = (className?: string) => {
   if (!className) return undefined;
   const match = className.match(/language-([^\s]+)/);
   return match?.[1];
+};
+
+const MermaidBlock = ({ code, isDark }: MermaidBlockProps) => {
+  const baseRenderId = React.useId().replace(/[^a-zA-Z0-9_-]/g, "");
+  const renderCountRef = React.useRef(0);
+  const [svg, setSvg] = React.useState<string | null>(null);
+  const [renderFailed, setRenderFailed] = React.useState(false);
+
+  React.useEffect(() => {
+    let mounted = true;
+
+    const renderMermaid = async () => {
+      try {
+        const mermaid = (await import("mermaid")).default;
+        mermaid.initialize({
+          startOnLoad: false,
+          securityLevel: "strict",
+          theme: isDark ? "dark" : "default",
+        });
+
+        renderCountRef.current += 1;
+        const { svg: nextSvg } = await mermaid.render(
+          `mermaid-${baseRenderId}-${renderCountRef.current}`,
+          code,
+        );
+
+        if (!mounted) {
+          return;
+        }
+
+        setSvg(nextSvg);
+        setRenderFailed(false);
+      } catch (error) {
+        if (!mounted) {
+          return;
+        }
+
+        console.error("[MarkdownPre] Mermaid render failed", error);
+        setSvg(null);
+        setRenderFailed(true);
+      }
+    };
+
+    void renderMermaid();
+
+    return () => {
+      mounted = false;
+    };
+  }, [baseRenderId, code, isDark]);
+
+  if (renderFailed) {
+    return (
+      <SyntaxHighlighter
+        language="markdown"
+        style={isDark ? oneDark : oneLight}
+        wrapLongLines
+        customStyle={{
+          margin: 0,
+          padding: "1rem",
+          background: "transparent",
+          fontSize: "0.85rem",
+          lineHeight: "1.6",
+        }}
+        codeTagProps={{
+          style: {
+            background: "transparent",
+          },
+        }}
+      >
+        {code}
+      </SyntaxHighlighter>
+    );
+  }
+
+  if (!svg) {
+    return <div className="min-h-24 w-full animate-pulse bg-muted/40" />;
+  }
+
+  return (
+    <div
+      className="overflow-x-auto px-4 py-4 [&_svg]:mx-auto [&_svg]:h-auto [&_svg]:max-w-full"
+      dangerouslySetInnerHTML={{ __html: svg }}
+    />
+  );
 };
 
 export const MarkdownCode = ({
@@ -74,7 +163,9 @@ export const MarkdownPre = ({ node, children, ...props }: MarkdownPreProps) => {
       ? codeChild.props.className
       : undefined;
 
-  const language = getPrismLanguage(extractLanguage(codeClassName));
+  const rawLanguage = extractLanguage(codeClassName)?.toLowerCase();
+  const isMermaid = rawLanguage === "mermaid";
+  const language = getPrismLanguage(rawLanguage);
   const syntaxTheme = resolvedTheme === "dark" ? oneDark : oneLight;
 
   const onCopy = async () => {
@@ -100,25 +191,29 @@ export const MarkdownPre = ({ node, children, ...props }: MarkdownPreProps) => {
         </Button>
       </div>
       <div className="max-w-full overflow-hidden bg-background/80">
-        <SyntaxHighlighter
-          language={language}
-          style={syntaxTheme}
-          wrapLongLines
-          customStyle={{
-            margin: 0,
-            padding: "1rem",
-            background: "transparent",
-            fontSize: "0.85rem",
-            lineHeight: "1.6",
-          }}
-          codeTagProps={{
-            style: {
+        {isMermaid ? (
+          <MermaidBlock code={code} isDark={resolvedTheme === "dark"} />
+        ) : (
+          <SyntaxHighlighter
+            language={language}
+            style={syntaxTheme}
+            wrapLongLines
+            customStyle={{
+              margin: 0,
+              padding: "1rem",
               background: "transparent",
-            },
-          }}
-        >
-          {code}
-        </SyntaxHighlighter>
+              fontSize: "0.85rem",
+              lineHeight: "1.6",
+            }}
+            codeTagProps={{
+              style: {
+                background: "transparent",
+              },
+            }}
+          >
+            {code}
+          </SyntaxHighlighter>
+        )}
       </div>
     </div>
   );

@@ -42,16 +42,16 @@ Useful variables:
 
 ## Architecture
 
-See `docs/frontend-architecture.md` for the full structure and conventions.
-
 Quick map:
 
 - `app/`: routes + layouts + global styles
 - `components/ui`: reusable UI primitives
-- `components/shared`: cross-feature composition components
+- `components/shared`: feature-agnostic shared components
+- `components/shell`: application shell & layout composition (may depend on `features/*`)
 - `features/*`: domain modules
 - `hooks/`: shared React hooks
 - `lib/`: shared runtime utilities
+- `services/`: API client and cross-feature service modules
 - `types/`: global TypeScript types
 
 ## i18n

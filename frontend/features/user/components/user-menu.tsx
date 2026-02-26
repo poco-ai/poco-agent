@@ -41,7 +41,6 @@ export function UserMenu({ trigger, onOpenSettings }: UserMenuProps) {
 
   const handleLogout = () => {
     // Mock logout logic
-    console.log("Logging out...");
     router.push("/login");
   };
 

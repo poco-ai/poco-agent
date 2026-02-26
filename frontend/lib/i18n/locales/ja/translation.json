@@ -242,10 +242,21 @@
     "input": "入力",
     "output": "出力",
     "scrollToLatestMessage": "最新メッセージにジャンプ",
+    "userPromptTimelineJump": "ユーザーメッセージ {{index}} に移動",
+    "userPromptTimelineEmpty": "（空のプロンプト）",
     "expand": "展開",
     "collapse": "折りたたみ",
     "copyMessage": "メッセージをコピー",
+    "formulaCopied": "コピーしました",
     "editMessage": "メッセージを編集",
+    "quoteModify": "引用して返信",
+    "exportImage": "Generate conversation image",
+    "exportLongImage": "Export long image",
+    "exportMultiImage": "Export multiple images",
+    "exportImageSuccess": "Conversation image generated",
+    "exportImageMultiSuccess": "Exported {{count}} images",
+    "exportImageEmpty": "No conversation content to export",
+    "exportImageFailed": "Failed to generate conversation image",
     "statusBar": {
       "browser": "ブラウザ",
       "openDesktop": "デスクトップを開く",
@@ -536,7 +547,7 @@
       "fetchError": "ドキュメントコンテンツの取得に失敗しました",
       "retry": "再試行",
       "selectFile": "プレビューするファイルを右から選択してください",
-      "supportedFormats": "PDF、Officeドキュメント、一般的な画像形式、XMind ファイル、.excalidraw ファイル、.drawio ファイルをサポート",
+      "supportedFormats": "PDF、Officeドキュメント、一般的な画像形式、MP4 動画、XMind ファイル、.excalidraw ファイル、.drawio ファイルをサポート",
       "processing": "ファイル処理",
       "notSupported": "この形式はプレビューをサポートしていません",
       "openInNewWindow": "新しいウィンドウで開く",
@@ -1013,7 +1024,8 @@
       "title": "スキルをインポート",
       "tabs": {
         "zip": "Zipをアップロード",
-        "github": "GitHub URL"
+        "github": "GitHub URL",
+        "command": "npx コマンド導入"
       },
       "fields": {
         "zip": "Zipファイル",
@@ -1022,11 +1034,13 @@
       },
       "placeholders": {
         "githubUrl": "https://github.com/owner/repo",
-        "name": "例：my-skill"
+        "name": "例：my-skill",
+        "command": "npx skills add https://github.com/owner/repo --skill my-skill"
       },
       "hints": {
         "github": "デフォルトはmain/master（パブリックgithub.comリポジトリのみ）",
-        "nameRequired": "SKILL.mdはアーカイブのルートにあります。名前が必要です"
+        "nameRequired": "SKILL.mdはアーカイブのルートにあります。名前が必要です",
+        "command": "add コマンドを貼り付けると、GitHub URL と --skill を自動解析します。"
       },
       "actions": {
         "back": "戻る",
@@ -1070,7 +1084,8 @@
         "committed": "インポートに成功しました",
         "commitError": "インポートに失敗しました。後でもう一度お試しください",
         "partialFailed": "一部のスキルのインポートに失敗しました。詳細を確認してください。",
-        "commitTimeout": "インポートがタイムアウトしました。後でもう一度お試しください"
+        "commitTimeout": "インポートがタイムアウトしました。後でもう一度お試しください",
+        "invalidCommand": "コマンドを解析できません。github.com の URL を含めてください。"
       },
       "progress": {
         "title": "インポートの進行状況",
@@ -1292,6 +1307,10 @@
         "toggleOutputPanel": {
           "action": "Toggle output panel",
           "hint": "Collapse or expand computer/artifacts panel in chat."
+        },
+        "jumpUserPrompts": {
+          "action": "Jump user prompts",
+          "hint": "When output panel is collapsed, use J/K to jump between user messages."
         },
         "openSettings": {
           "action": "Open settings",

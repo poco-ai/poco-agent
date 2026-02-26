@@ -243,10 +243,21 @@
     "input": "Eingabe",
     "output": "Ausgabe",
     "scrollToLatestMessage": "Zur neuesten Nachricht springen",
+    "userPromptTimelineJump": "Zur Nutzernachricht {{index}} springen",
+    "userPromptTimelineEmpty": "(Leerer Prompt)",
     "expand": "Erweitern",
     "collapse": "Reduzieren",
     "copyMessage": "Nachricht kopieren",
+    "formulaCopied": "Kopiert",
     "editMessage": "Nachricht bearbeiten",
+    "quoteModify": "Zitat antworten",
+    "exportImage": "Generate conversation image",
+    "exportLongImage": "Export long image",
+    "exportMultiImage": "Export multiple images",
+    "exportImageSuccess": "Conversation image generated",
+    "exportImageMultiSuccess": "Exported {{count}} images",
+    "exportImageEmpty": "No conversation content to export",
+    "exportImageFailed": "Failed to generate conversation image",
     "statusBar": {
       "browser": "Browser",
       "openDesktop": "Desktop öffnen",
@@ -537,7 +548,7 @@
       "fetchError": "Dokumentinhalt konnte nicht abgerufen werden",
       "retry": "Wiederholen",
       "selectFile": "Bitte wähle eine Datei rechts zur Vorschau",
-      "supportedFormats": "Unterstützt PDF, Office-Dokumente, gängige Bildformate, XMind-Dateien, .excalidraw-Dateien und .drawio-Dateien",
+      "supportedFormats": "Unterstützt PDF, Office-Dokumente, gängige Bildformate, MP4-Videos, XMind-Dateien, .excalidraw-Dateien und .drawio-Dateien",
       "processing": "Dateiverarbeitung",
       "notSupported": "Vorschau für dieses Format nicht unterstützt",
       "openInNewWindow": "In neuem Fenster öffnen",
@@ -1017,7 +1028,8 @@
       "title": "Skills importieren",
       "tabs": {
         "zip": "Zip hochladen",
-        "github": "GitHub-URL"
+        "github": "GitHub-URL",
+        "command": "Import per npx-Befehl"
       },
       "fields": {
         "zip": "Zip-Datei",
@@ -1026,11 +1038,13 @@
       },
       "placeholders": {
         "githubUrl": "https://github.com/owner/repo",
-        "name": "z.B. my-skill"
+        "name": "z.B. my-skill",
+        "command": "npx skills add https://github.com/owner/repo --skill my-skill"
       },
       "hints": {
         "github": "Standardmäßig main/master (nur öffentliche github.com-Repos)",
-        "nameRequired": "SKILL.md befindet sich im Archiv-Stammverzeichnis; ein Name ist erforderlich"
+        "nameRequired": "SKILL.md befindet sich im Archiv-Stammverzeichnis; ein Name ist erforderlich",
+        "command": "Fuge einen add-Befehl ein, wir erkennen GitHub-URL und --skill automatisch."
       },
       "actions": {
         "back": "Zurück",
@@ -1074,7 +1088,8 @@
         "committed": "Import erfolgreich",
         "commitError": "Import fehlgeschlagen, bitte später erneut versuchen",
         "partialFailed": "Einige Skills konnten nicht importiert werden. Bitte Details überprüfen.",
-        "commitTimeout": "Import zeitüberschritten, bitte später erneut versuchen"
+        "commitTimeout": "Import zeitüberschritten, bitte später erneut versuchen",
+        "invalidCommand": "Befehl konnte nicht gelesen werden. Bitte eine github.com-URL angeben."
       },
       "progress": {
         "title": "Import-Fortschritt",
@@ -1296,6 +1311,10 @@
         "toggleOutputPanel": {
           "action": "Toggle output panel",
           "hint": "Collapse or expand computer/artifacts panel in chat."
+        },
+        "jumpUserPrompts": {
+          "action": "Jump user prompts",
+          "hint": "When output panel is collapsed, use J/K to jump between user messages."
         },
         "openSettings": {
           "action": "Open settings",

@@ -243,10 +243,21 @@
     "input": "Input",
     "output": "Output",
     "scrollToLatestMessage": "Jump to latest message",
+    "userPromptTimelineJump": "Jump to user prompt {{index}}",
+    "userPromptTimelineEmpty": "(Empty prompt)",
     "expand": "Expand",
     "collapse": "Collapse",
     "copyMessage": "Copy message",
+    "formulaCopied": "Copied",
     "editMessage": "Edit message",
+    "quoteModify": "Quote Reply",
+    "exportImage": "Generate conversation image",
+    "exportLongImage": "Export long image",
+    "exportMultiImage": "Export multiple images",
+    "exportImageSuccess": "Conversation image generated",
+    "exportImageMultiSuccess": "Exported {{count}} images",
+    "exportImageEmpty": "No conversation content to export",
+    "exportImageFailed": "Failed to generate conversation image",
     "statusBar": {
       "browser": "Browser",
       "openDesktop": "Open desktop",
@@ -538,7 +549,7 @@
       "fetchError": "Failed to fetch document content",
       "retry": "Retry",
       "selectFile": "Please select a file from the right to preview",
-      "supportedFormats": "Supports PDF, Office documents, common image formats, XMind files, .excalidraw files, and .drawio files",
+      "supportedFormats": "Supports PDF, Office documents, common image formats, MP4 videos, XMind files, .excalidraw files, and .drawio files",
       "processing": "File processing",
       "notSupported": "Preview not supported for this format",
       "openInNewWindow": "Open in new window",
@@ -1026,7 +1037,8 @@
       "title": "Import Skills",
       "tabs": {
         "zip": "Upload Zip",
-        "github": "GitHub URL"
+        "github": "GitHub URL",
+        "command": "Import via npx command"
       },
       "fields": {
         "zip": "Zip file",
@@ -1035,11 +1047,13 @@
       },
       "placeholders": {
         "githubUrl": "https://github.com/owner/repo",
-        "name": "e.g. my-skill"
+        "name": "e.g. my-skill",
+        "command": "npx skills add https://github.com/owner/repo --skill my-skill"
       },
       "hints": {
         "github": "Defaults to main/master (public github.com repos only)",
-        "nameRequired": "SKILL.md is at archive root; a name is required"
+        "nameRequired": "SKILL.md is at archive root; a name is required",
+        "command": "Paste an add command, and we will parse the GitHub URL and --skill automatically."
       },
       "actions": {
         "back": "Back",
@@ -1083,7 +1097,8 @@
         "committed": "Import succeeded",
         "commitError": "Import failed, please try again later",
         "partialFailed": "Some skills failed to import. Please review the details.",
-        "commitTimeout": "Import timed out, please try again later"
+        "commitTimeout": "Import timed out, please try again later",
+        "invalidCommand": "Unable to parse command. Please include a github.com URL."
       },
       "progress": {
         "title": "Import progress",
@@ -1395,6 +1410,10 @@
         "toggleOutputPanel": {
           "action": "Toggle output panel",
           "hint": "Collapse or expand computer/artifacts panel in chat."
+        },
+        "jumpUserPrompts": {
+          "action": "Jump user prompts",
+          "hint": "When output panel is collapsed, use J/K to jump between user messages."
         },
         "openSettings": {
           "action": "Open settings",

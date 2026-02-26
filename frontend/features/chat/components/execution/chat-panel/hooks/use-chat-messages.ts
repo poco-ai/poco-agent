@@ -147,10 +147,6 @@ export function useChatMessages({
       if (!normalizedContent && !hasAttachments) return;
 
       const sessionId = session.session_id;
-      console.log(
-        `[Chat] Sending message to session ${sessionId}:`,
-        normalizedContent,
-      );
       setIsTyping(true);
 
       // Create a new user message for instant UI update
@@ -171,7 +167,6 @@ export function useChatMessages({
           content: normalizedContent,
           attachments,
         });
-        console.log("[Chat] Message sent successfully");
 
         // Refresh runs so multi-turn conversations only show real user inputs.
         await refreshRealUserMessageIds();
@@ -235,10 +230,6 @@ export function useChatMessages({
     if (session.session_id && !isTerminal) {
       interval = setInterval(fetchMessages, pollingInterval);
     } else if (session.session_id && isTerminal) {
-      console.log(
-        `%c [Message Polling] Stopped for session ${session.session_id}`,
-        "color: #f59e0b; font-weight: bold;",
-      );
       // Refresh run usage once the session becomes terminal so UI can display cost/tokens.
       void refreshRealUserMessageIds();
     }

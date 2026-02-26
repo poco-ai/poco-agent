@@ -5,20 +5,23 @@ import { useRouter } from "next/navigation";
 
 import { useT } from "@/lib/i18n/client";
 
-import { useAutosizeTextarea } from "../hooks/use-autosize-textarea";
+import {
+  TaskEntrySection,
+  type ComposerMode,
+  type TaskSendOptions,
+  submitScheduledTask,
+  submitTask,
+  useAutosizeTextarea,
+  useComposerModeHotkeys,
+} from "@/features/task-composer";
+import type { ModelConfigResponse } from "@/features/chat/types";
 
 import { HomeHeader } from "./home-header";
-import { createSessionAction } from "@/features/chat/actions/session-actions";
-import type { ComposerMode, TaskSendOptions } from "./task-composer";
+import { ConnectorsBar } from "@/features/connectors";
 
-import { useAppShell } from "@/components/shared/app-shell-context";
-import { scheduledTasksService } from "@/features/scheduled-tasks/services/scheduled-tasks-service";
+import { useAppShell } from "@/components/shell/app-shell-context";
 import { toast } from "sonner";
-import type { TaskConfig } from "@/features/chat/types/api/session";
-import { TaskEntrySection } from "@/features/home/components/task-entry-section";
-import { useComposerModeHotkeys } from "@/features/home/hooks/use-composer-mode-hotkeys";
-import { modelConfigService } from "@/features/home/services/model-config-service";
-import type { ModelConfigResponse } from "@/features/chat/types";
+import { modelConfigService } from "@/features/home/api/model-config-api";
 
 const MODEL_STORAGE_KEY = "poco_selected_model";
 
@@ -119,51 +122,20 @@ export function HomePageClient() {
       }
 
       setIsSubmitting(true);
-      console.log("[Home] Sending task:", inputValue, { mode });
 
       try {
-        // Build config object (shared by plan/task, and also used to pin scheduled task config)
-        const config: TaskConfig & Record<string, unknown> = {};
-        if (selectedModel) {
-          config.model = selectedModel;
-        }
-        if (inputFiles.length > 0) {
-          config.input_files = inputFiles;
-        }
-        if (repoUrl) {
-          config.repo_url = repoUrl;
-          config.git_branch = gitBranch;
-          if (gitTokenEnvKey) {
-            config.git_token_env_key = gitTokenEnvKey;
-          }
-        }
-        if (options?.browser_enabled) {
-          config.browser_enabled = true;
-        }
-
         if (mode === "scheduled") {
-          const name =
-            (scheduledTask?.name || "").trim() ||
-            inputValue.trim().slice(0, 32);
-          const cron = (scheduledTask?.cron || "").trim() || "*/5 * * * *";
-          const timezone = (scheduledTask?.timezone || "").trim() || "UTC";
-          const enabled = Boolean(scheduledTask?.enabled ?? true);
-          const reuseSession = Boolean(scheduledTask?.reuse_session ?? true);
-
-          const created = await scheduledTasksService.create({
-            name,
-            cron,
-            timezone,
+          const created = await submitScheduledTask({
             prompt: inputValue,
-            enabled,
-            reuse_session: reuseSession,
-            config: Object.keys(config).length > 0 ? config : undefined,
+            mode,
+            options,
+            selectedModel,
           });
 
           toast.success(t("library.scheduledTasks.toasts.created"));
           setInputValue("");
           router.push(
-            `/${lng}/capabilities/scheduled-tasks/${created.scheduled_task_id}`,
+            `/${lng}/capabilities/scheduled-tasks/${created.scheduledTaskId}`,
           );
           return;
         }
@@ -208,35 +180,23 @@ export function HomePageClient() {
           );
         }
 
-        // 1. Call create session API
-        const session = await createSessionAction({
-          prompt: inputValue,
-          config: Object.keys(config).length > 0 ? config : undefined,
-          projectId: finalProjectId,
-          permission_mode: mode === "plan" ? "plan" : "default",
-          schedule_mode: runSchedule?.schedule_mode,
-          timezone: runSchedule?.timezone,
-          scheduled_at: runSchedule?.scheduled_at,
-        });
-        console.log("session", session);
+        const session = await submitTask(
+          {
+            prompt: inputValue,
+            mode,
+            options: {
+              ...options,
+              run_schedule: runSchedule,
+              scheduled_task: scheduledTask,
+            },
+            selectedModel,
+            projectId: finalProjectId,
+          },
+          { addTask },
+        );
         const sessionId = session.sessionId;
-        console.log("sessionId", sessionId);
-
-        // 2. Save prompt to localStorage for compatibility/fallback
-        localStorage.setItem(`session_prompt_${sessionId}`, inputValue);
-
-        // 3. Add to local history (persisted via localStorage in hook)
-        addTask(inputValue, {
-          id: sessionId,
-          timestamp: new Date().toISOString(),
-          status: "running",
-          projectId: finalProjectId,
-        });
-
-        console.log("[Home] Navigating to chat session:", sessionId);
+        if (!sessionId) return;
         setInputValue("");
-
-        // 4. Navigate to the chat page
         router.push(`/${lng}/chat/${sessionId}`);
       } catch (error) {
         console.error("[Home] Failed to create session:", error);
@@ -271,7 +231,7 @@ export function HomePageClient() {
         mode={mode}
         onModeChange={setMode}
         toggleDisabled={isSubmitting}
-        connectorsExpanded={shouldExpandConnectors}
+        footer={<ConnectorsBar forceExpanded={shouldExpandConnectors} />}
         composerProps={{
           textareaRef,
           value: inputValue,

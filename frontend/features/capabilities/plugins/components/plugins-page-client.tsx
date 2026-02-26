@@ -9,7 +9,7 @@ import { usePluginCatalog } from "@/features/capabilities/plugins/hooks/use-plug
 import { PullToRefresh } from "@/components/ui/pull-to-refresh";
 import { PaginatedGrid } from "@/components/ui/paginated-grid";
 import { usePagination } from "@/hooks/use-pagination";
-import { pluginsService } from "@/features/capabilities/plugins/services/plugins-service";
+import { pluginsService } from "@/features/capabilities/plugins/api/plugins-api";
 import { useT } from "@/lib/i18n/client";
 import { CapabilityContentShell } from "@/features/capabilities/components/capability-content-shell";
 import { HeaderSearchInput } from "@/components/shared/header-search-input";
