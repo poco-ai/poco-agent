@@ -59,11 +59,19 @@ def upgrade() -> None:
 
     agent_runs_workspace_ref_id_idx = op.f("ix_agent_runs_workspace_ref_id")
     if _index_exists(inspector, "agent_runs", agent_runs_workspace_ref_id_idx):
-        op.drop_index(agent_runs_workspace_ref_id_idx, table_name="agent_runs")
+        op.drop_index(
+            agent_runs_workspace_ref_id_idx,
+            table_name="agent_runs",
+            if_exists=True,
+        )
 
     agent_runs_workspace_scope_idx = op.f("ix_agent_runs_workspace_scope")
     if _index_exists(inspector, "agent_runs", agent_runs_workspace_scope_idx):
-        op.drop_index(agent_runs_workspace_scope_idx, table_name="agent_runs")
+        op.drop_index(
+            agent_runs_workspace_scope_idx,
+            table_name="agent_runs",
+            if_exists=True,
+        )
 
     if _column_exists(inspector, "agent_runs", "workspace_scope"):
         op.drop_column("agent_runs", "workspace_scope")
@@ -76,7 +84,9 @@ def upgrade() -> None:
         inspector, "agent_scheduled_tasks", scheduled_tasks_project_id_idx
     ):
         op.drop_index(
-            scheduled_tasks_project_id_idx, table_name="agent_scheduled_tasks"
+            scheduled_tasks_project_id_idx,
+            table_name="agent_scheduled_tasks",
+            if_exists=True,
         )
 
     scheduled_tasks_workspace_scope_idx = op.f(
@@ -86,7 +96,9 @@ def upgrade() -> None:
         inspector, "agent_scheduled_tasks", scheduled_tasks_workspace_scope_idx
     ):
         op.drop_index(
-            scheduled_tasks_workspace_scope_idx, table_name="agent_scheduled_tasks"
+            scheduled_tasks_workspace_scope_idx,
+            table_name="agent_scheduled_tasks",
+            if_exists=True,
         )
 
     scheduled_tasks_project_fk = op.f("agent_scheduled_tasks_project_id_fkey")
@@ -107,11 +119,19 @@ def upgrade() -> None:
 
     agent_sessions_workspace_ref_id_idx = op.f("ix_agent_sessions_workspace_ref_id")
     if _index_exists(inspector, "agent_sessions", agent_sessions_workspace_ref_id_idx):
-        op.drop_index(agent_sessions_workspace_ref_id_idx, table_name="agent_sessions")
+        op.drop_index(
+            agent_sessions_workspace_ref_id_idx,
+            table_name="agent_sessions",
+            if_exists=True,
+        )
 
     agent_sessions_workspace_scope_idx = op.f("ix_agent_sessions_workspace_scope")
     if _index_exists(inspector, "agent_sessions", agent_sessions_workspace_scope_idx):
-        op.drop_index(agent_sessions_workspace_scope_idx, table_name="agent_sessions")
+        op.drop_index(
+            agent_sessions_workspace_scope_idx,
+            table_name="agent_sessions",
+            if_exists=True,
+        )
 
     if _column_exists(inspector, "agent_sessions", "workspace_scope"):
         op.drop_column("agent_sessions", "workspace_scope")
