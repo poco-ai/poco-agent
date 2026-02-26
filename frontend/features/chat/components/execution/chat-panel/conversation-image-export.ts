@@ -152,6 +152,7 @@ function replaceProblematicImages(node: HTMLElement): number {
 
 function stringifyError(error: unknown): string {
   if (error instanceof Error) return error.message;
+  if (error instanceof Event) return `Event(${error.type})`;
   try {
     return JSON.stringify(error);
   } catch {
@@ -389,27 +390,98 @@ function buildContentPage(
   return content;
 }
 
-function buildClippedContentPage(
-  template: HTMLElement,
+interface ItemSlice {
+  index: number;
+  offset: number;
+  height: number;
+  full: boolean;
+}
+
+function splitItemSlices(
+  itemHeights: number[],
+  pageContentHeight: number,
+): ItemSlice[][] {
+  const pages: ItemSlice[][] = [];
+  let currentPage: ItemSlice[] = [];
+  let remainingHeight = pageContentHeight;
+
+  itemHeights.forEach((rawHeight, index) => {
+    if (rawHeight <= 0) {
+      currentPage.push({ index, offset: 0, height: 0, full: true });
+      return;
+    }
+
+    const itemHeight = Math.ceil(rawHeight);
+    let consumed = 0;
+
+    while (consumed < itemHeight) {
+      if (remainingHeight <= 0) {
+        pages.push(currentPage);
+        currentPage = [];
+        remainingHeight = pageContentHeight;
+      }
+
+      const remainingItemHeight = itemHeight - consumed;
+      const take = Math.min(remainingItemHeight, remainingHeight);
+      currentPage.push({
+        index,
+        offset: consumed,
+        height: take,
+        full: consumed === 0 && take === itemHeight,
+      });
+      consumed += take;
+      remainingHeight -= take;
+    }
+  });
+
+  if (currentPage.length > 0) {
+    pages.push(currentPage);
+  }
+
+  return pages.length > 0 ? pages : [[]];
+}
+
+function buildSlicedItem(
+  item: HTMLElement,
   offset: number,
   viewportHeight: number,
 ): HTMLElement {
   const viewport = document.createElement("div");
+  viewport.style.width = "100%";
   viewport.style.height = `${viewportHeight}px`;
   viewport.style.maxHeight = `${viewportHeight}px`;
   viewport.style.overflow = "hidden";
   viewport.style.position = "relative";
   viewport.style.flexShrink = "0";
 
-  const content = template.cloneNode(true) as HTMLElement;
+  const content = item.cloneNode(true) as HTMLElement;
+  content.style.transform = `translateY(-${offset}px)`;
+  content.style.willChange = "transform";
+  viewport.appendChild(content);
+  return viewport;
+}
+
+function buildSlicedContentPage(
+  template: HTMLElement,
+  items: HTMLElement[],
+  slices: ItemSlice[],
+): HTMLElement {
+  const content = template.cloneNode(false) as HTMLElement;
   content.style.height = "auto";
   content.style.maxHeight = "none";
   content.style.overflow = "visible";
-  content.style.transform = `translateY(-${offset}px)`;
-  content.style.willChange = "transform";
 
-  viewport.appendChild(content);
-  return viewport;
+  slices.forEach((slice) => {
+    const item = items[slice.index];
+    if (!item) return;
+    if (slice.full) {
+      content.appendChild(item.cloneNode(true));
+      return;
+    }
+    content.appendChild(buildSlicedItem(item, slice.offset, slice.height));
+  });
+
+  return content;
 }
 
 async function measureHeaderHeight(
@@ -512,20 +584,17 @@ export async function exportConversationImage(
       }
     }
 
-    const totalContentHeight = Math.ceil(
-      sourceContent.getBoundingClientRect().height,
+    const itemHeights = exportItems.map((item) =>
+      Math.ceil(item.getBoundingClientRect().height),
     );
-    const totalPages = Math.max(
-      1,
-      Math.ceil(totalContentHeight / pageContentHeight),
-    );
+    const pageSlices = splitItemSlices(itemHeights, pageContentHeight);
+    const totalPages = Math.max(1, pageSlices.length);
 
     for (let i = 0; i < totalPages; i += 1) {
-      const pageOffset = i * pageContentHeight;
-      const pageContent = buildClippedContentPage(
+      const pageContent = buildSlicedContentPage(
         sourceContent,
-        pageOffset,
-        pageContentHeight,
+        exportItems,
+        pageSlices[i] ?? [],
       );
       const pageNode = buildExportNode(
         pageContent,
