@@ -122,13 +122,12 @@ export function McpPageClient() {
           }}
           onSave={async ({ serverId, name, serverConfig }) => {
             if (isCreating) {
-              if (!name) return;
-              const created = await createServer(name, serverConfig);
-              if (created) {
-                await toggleInstall(created.id);
-              }
+              const created = await createServer(name ?? "", serverConfig);
+              await toggleInstall(created.id);
             } else if (serverId) {
               await updateServer(serverId, serverConfig);
+            } else {
+              throw new Error(t("library.mcpLibrary.toasts.error"));
             }
           }}
         />

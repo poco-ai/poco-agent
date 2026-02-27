@@ -1540,7 +1540,10 @@
     "mcpName": "MCP 名称",
     "jsonConfig": "完整的 JSON 配置",
     "configureServer": "配置 MCP 服务器",
-    "fullJsonConfig": "完整的 JSON 配置"
+    "fullJsonConfig": "完整的 JSON 配置",
+    "invalidJson": "JSON 配置格式错误",
+    "nameRequired": "名称不能为空",
+    "saveFailed": "保存 MCP 服务器失败"
   },
   "queryActions": {
     "taskNameRequired": "请输入任务名称",

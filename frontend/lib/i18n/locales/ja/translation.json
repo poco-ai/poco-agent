@@ -1428,7 +1428,10 @@
     "configureServer": "MCPサーバーを設定",
     "fullJsonConfig": "完全なJSON設定",
     "mcpName": "MCP名",
-    "jsonConfig": "完全なJSON設定"
+    "jsonConfig": "完全なJSON設定",
+    "invalidJson": "JSON 設定が不正です",
+    "nameRequired": "名前は必須です",
+    "saveFailed": "MCP サーバーの保存に失敗しました"
   },
   "queryActions": {
     "taskNameRequired": "タスク名を入力してください",

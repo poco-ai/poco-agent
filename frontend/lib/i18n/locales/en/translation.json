@@ -1540,7 +1540,10 @@
     "configureServer": "Configure MCP Server",
     "fullJsonConfig": "Complete JSON configuration",
     "mcpName": "MCP Name",
-    "jsonConfig": "Complete JSON configuration"
+    "jsonConfig": "Complete JSON configuration",
+    "invalidJson": "Invalid JSON configuration",
+    "nameRequired": "Name is required",
+    "saveFailed": "Failed to save MCP server"
   },
   "queryActions": {
     "taskNameRequired": "Please enter a task name",

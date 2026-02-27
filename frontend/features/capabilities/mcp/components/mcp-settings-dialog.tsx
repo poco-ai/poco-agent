@@ -1,13 +1,54 @@
 import * as React from "react";
+import { AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { ApiError } from "@/lib/errors";
 import { useT } from "@/lib/i18n/client";
 
 import type { McpDisplayItem } from "@/features/capabilities/mcp/hooks/use-mcp-catalog";
 import { CapabilityDialogContent } from "@/features/capabilities/components/capability-dialog-content";
+
+type ValidationItem = {
+  path: string;
+  message: string;
+};
+
+function extractValidationItems(error: unknown): ValidationItem[] {
+  if (!(error instanceof ApiError)) return [];
+  const details = error.details;
+  if (
+    !details ||
+    typeof details !== "object" ||
+    Array.isArray(details) ||
+    !("data" in details)
+  ) {
+    return [];
+  }
+  const data = (details as { data?: unknown }).data;
+  if (
+    !data ||
+    typeof data !== "object" ||
+    Array.isArray(data) ||
+    !("errors" in data)
+  ) {
+    return [];
+  }
+  const errors = (data as { errors?: unknown }).errors;
+  if (!Array.isArray(errors)) return [];
+  const result: ValidationItem[] = [];
+  for (const item of errors) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) continue;
+    const path = (item as { path?: unknown }).path;
+    const message = (item as { message?: unknown }).message;
+    if (typeof path !== "string" || typeof message !== "string") continue;
+    result.push({ path, message });
+  }
+  return result;
+}
 
 interface McpSettingsDialogProps {
   item: McpDisplayItem | null;
@@ -18,7 +59,7 @@ interface McpSettingsDialogProps {
     serverId?: number;
     name?: string;
     serverConfig: Record<string, unknown>;
-  }) => Promise<void> | void;
+  }) => Promise<void>;
 }
 
 export function McpSettingsDialog({
@@ -31,6 +72,11 @@ export function McpSettingsDialog({
   const { t } = useT("translation");
   const [jsonConfig, setJsonConfig] = React.useState("{}");
   const [name, setName] = React.useState("");
+  const [isSaving, setIsSaving] = React.useState(false);
+  const [saveError, setSaveError] = React.useState<string | null>(null);
+  const [validationItems, setValidationItems] = React.useState<
+    ValidationItem[]
+  >([]);
 
   React.useEffect(() => {
     if (item) {
@@ -41,6 +87,9 @@ export function McpSettingsDialog({
       setJsonConfig("{}");
       setName("");
     }
+    setIsSaving(false);
+    setSaveError(null);
+    setValidationItems([]);
   }, [item, isNew]);
 
   if (!item && !isNew) {
@@ -68,22 +117,43 @@ export function McpSettingsDialog({
             </Button>
             <Button
               className="w-full"
+              disabled={isSaving}
               onClick={() => {
-                try {
-                  const parsed = JSON.parse(jsonConfig);
-                  const trimmedName = name.trim();
-                  if (isNew && !trimmedName) {
-                    throw new Error("Name required");
+                if (isSaving) return;
+                setSaveError(null);
+                setValidationItems([]);
+                setIsSaving(true);
+
+                (async () => {
+                  try {
+                    const parsed = JSON.parse(jsonConfig);
+                    const trimmedName = name.trim();
+                    if (isNew && !trimmedName) {
+                      setSaveError(t("mcpSettings.nameRequired"));
+                      return;
+                    }
+                    await onSave({
+                      serverId: item?.server.id,
+                      name: trimmedName,
+                      serverConfig: parsed,
+                    });
+                    onClose();
+                  } catch (error) {
+                    if (error instanceof SyntaxError) {
+                      setSaveError(t("mcpSettings.invalidJson"));
+                      return;
+                    }
+                    const items = extractValidationItems(error);
+                    setValidationItems(items);
+                    if (error instanceof Error && error.message.trim()) {
+                      setSaveError(error.message);
+                    } else {
+                      setSaveError(t("mcpSettings.saveFailed"));
+                    }
+                  } finally {
+                    setIsSaving(false);
                   }
-                  onSave({
-                    serverId: item?.server.id,
-                    name: trimmedName,
-                    serverConfig: parsed,
-                  });
-                  onClose();
-                } catch {
-                  console.error("Invalid JSON or name");
-                }
+                })();
               }}
             >
               {t("common.save")}
@@ -100,7 +170,13 @@ export function McpSettingsDialog({
             <Input
               value={name}
               disabled={!isNew}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => {
+                setName(e.target.value);
+                if (saveError || validationItems.length > 0) {
+                  setSaveError(null);
+                  setValidationItems([]);
+                }
+              }}
               className="bg-muted/50 font-mono text-sm"
             />
           </div>
@@ -111,11 +187,42 @@ export function McpSettingsDialog({
             </Label>
             <Textarea
               value={jsonConfig}
-              onChange={(e) => setJsonConfig(e.target.value)}
+              onChange={(e) => {
+                setJsonConfig(e.target.value);
+                if (saveError || validationItems.length > 0) {
+                  setSaveError(null);
+                  setValidationItems([]);
+                }
+              }}
               className="h-full min-h-0 flex-1 resize-none bg-muted/50 p-4 font-mono text-sm"
               spellCheck={false}
             />
           </div>
+
+          {saveError || validationItems.length > 0 ? (
+            <Alert
+              variant="destructive"
+              className="border-destructive/50 bg-destructive/10 text-destructive"
+            >
+              <AlertTriangle className="size-4" />
+              <AlertTitle>{t("mcpSettings.saveFailed")}</AlertTitle>
+              <AlertDescription>
+                {saveError ? <p>{saveError}</p> : null}
+                {validationItems.length > 0 ? (
+                  <ul className="mt-2 list-disc pl-5 space-y-1">
+                    {validationItems.map((item, index) => (
+                      <li
+                        key={`${item.path}-${index}`}
+                        className="font-mono text-xs"
+                      >
+                        {item.path}: {item.message}
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+              </AlertDescription>
+            </Alert>
+          ) : null}
         </div>
       </CapabilityDialogContent>
     </Dialog>

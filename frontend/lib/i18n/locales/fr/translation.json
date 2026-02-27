@@ -1428,7 +1428,10 @@
     "configureServer": "Configurer le serveur MCP",
     "fullJsonConfig": "Configuration JSON complète",
     "mcpName": "Nom MCP",
-    "jsonConfig": "Configuration JSON complète"
+    "jsonConfig": "Configuration JSON complète",
+    "invalidJson": "Configuration JSON invalide",
+    "nameRequired": "Le nom est requis",
+    "saveFailed": "Échec de l’enregistrement du serveur MCP"
   },
   "queryActions": {
     "taskNameRequired": "Veuillez entrer un nom de tâche",

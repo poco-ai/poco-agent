@@ -231,11 +231,10 @@ export function useMcpCatalog() {
         return updated;
       } catch (error) {
         console.error("[MCP] update failed:", error);
-        toast.error(t("library.mcpLibrary.toasts.error"));
+        throw error;
       } finally {
         setLoadingId(null);
       }
-      return null;
     },
     [t],
   );
@@ -254,11 +253,10 @@ export function useMcpCatalog() {
         return created;
       } catch (error) {
         console.error("[MCP] create failed:", error);
-        toast.error(t("library.mcpLibrary.toasts.error"));
+        throw error;
       } finally {
         setLoadingId(null);
       }
-      return null;
     },
     [t],
   );

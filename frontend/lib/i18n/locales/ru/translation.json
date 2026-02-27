@@ -1428,7 +1428,10 @@
     "configureServer": "Настроить MCP сервер",
     "fullJsonConfig": "Полная конфигурация JSON",
     "mcpName": "Имя MCP",
-    "jsonConfig": "Полная конфигурация JSON"
+    "jsonConfig": "Полная конфигурация JSON",
+    "invalidJson": "Неверная JSON-конфигурация",
+    "nameRequired": "Требуется имя",
+    "saveFailed": "Не удалось сохранить MCP-сервер"
   },
   "queryActions": {
     "taskNameRequired": "Пожалуйста, введите имя задачи",

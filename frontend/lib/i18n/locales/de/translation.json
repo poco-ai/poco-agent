@@ -1432,7 +1432,10 @@
     "configureServer": "MCP-Server konfigurieren",
     "fullJsonConfig": "Vollständige JSON-Konfiguration",
     "mcpName": "MCP-Name",
-    "jsonConfig": "Vollständige JSON-Konfiguration"
+    "jsonConfig": "Vollständige JSON-Konfiguration",
+    "invalidJson": "Ungültige JSON-Konfiguration",
+    "nameRequired": "Name ist erforderlich",
+    "saveFailed": "MCP-Server konnte nicht gespeichert werden"
   },
   "queryActions": {
     "taskNameRequired": "Bitte Aufgabennamen eingeben",
