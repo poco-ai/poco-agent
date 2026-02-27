@@ -31,7 +31,6 @@ class MemoryCreateRequest(BaseModel):
         min_length=1,
         description="Conversation messages used to extract and store memories.",
     )
-    agent_id: str | None = None
     run_id: str | None = None
     metadata: dict[str, Any] | None = None
 
@@ -40,7 +39,6 @@ class MemorySearchRequest(BaseModel):
     """Request to search memories."""
 
     query: str = Field(..., description="Search query.")
-    agent_id: str | None = None
     run_id: str | None = None
     filters: dict[str, Any] | None = None
 

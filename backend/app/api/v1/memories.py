@@ -60,13 +60,11 @@ async def create_memories(
 
 @router.get("", response_model=ResponseSchema[Any])
 async def list_memories(
-    agent_id: str | None = None,
     run_id: str | None = None,
     user_id: str = Depends(get_current_user_id),
 ) -> JSONResponse:
     result = memory_service.list_memories(
         user_id=user_id,
-        agent_id=agent_id,
         run_id=run_id,
     )
     return Response.success(data=result, message="Memories retrieved successfully")
@@ -114,13 +112,11 @@ async def delete_memory(memory_id: str) -> JSONResponse:
 
 @router.delete("", response_model=ResponseSchema[dict[str, bool]])
 async def delete_all_memories(
-    agent_id: str | None = None,
     run_id: str | None = None,
     user_id: str = Depends(get_current_user_id),
 ) -> JSONResponse:
     memory_service.delete_all_memories(
         user_id=user_id,
-        agent_id=agent_id,
         run_id=run_id,
     )
     return Response.success(

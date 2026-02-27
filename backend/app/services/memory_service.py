@@ -12,6 +12,8 @@ try:
 except ImportError:
     Mem0Memory = None
 
+DEFAULT_MEMORY_AGENT_ID = "poco-agent"
+
 
 class MemoryService:
     def __init__(self) -> None:
@@ -172,22 +174,21 @@ class MemoryService:
     def _build_scope(
         *,
         user_id: str | None,
-        agent_id: str | None,
         run_id: str | None,
         require_identifier: bool = True,
     ) -> dict[str, Any]:
+        if require_identifier and not (user_id or run_id):
+            raise AppException(
+                error_code=ErrorCode.BAD_REQUEST,
+                message="At least one identifier is required (user_id, run_id)",
+            )
+
         params: dict[str, Any] = {}
         if user_id:
             params["user_id"] = user_id
-        if agent_id:
-            params["agent_id"] = agent_id
+        params["agent_id"] = DEFAULT_MEMORY_AGENT_ID
         if run_id:
             params["run_id"] = run_id
-        if require_identifier and not params:
-            raise AppException(
-                error_code=ErrorCode.BAD_REQUEST,
-                message="At least one identifier is required (user_id, agent_id, run_id)",
-            )
         return params
 
     def configure(
@@ -206,7 +207,6 @@ class MemoryService:
     def create_memories(self, *, user_id: str, request: MemoryCreateRequest) -> Any:
         params = self._build_scope(
             user_id=user_id,
-            agent_id=request.agent_id,
             run_id=request.run_id,
         )
         if request.metadata is not None:
@@ -218,12 +218,10 @@ class MemoryService:
         self,
         *,
         user_id: str,
-        agent_id: str | None = None,
         run_id: str | None = None,
     ) -> Any:
         params = self._build_scope(
             user_id=user_id,
-            agent_id=agent_id,
             run_id=run_id,
         )
         return self._get_instance().get_all(**params)
@@ -234,7 +232,6 @@ class MemoryService:
     def search_memories(self, *, user_id: str, request: MemorySearchRequest) -> Any:
         params: dict[str, Any] = self._build_scope(
             user_id=user_id,
-            agent_id=request.agent_id,
             run_id=request.run_id,
         )
         if request.filters is not None:
@@ -254,12 +251,10 @@ class MemoryService:
         self,
         *,
         user_id: str,
-        agent_id: str | None = None,
         run_id: str | None = None,
     ) -> None:
         params = self._build_scope(
             user_id=user_id,
-            agent_id=agent_id,
             run_id=run_id,
         )
         self._get_instance().delete_all(**params)
