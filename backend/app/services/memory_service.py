@@ -96,7 +96,7 @@ class MemoryService:
                     "user": self.settings.mem0_postgres_user,
                     "password": self.settings.mem0_postgres_password,
                     "collection_name": self.settings.mem0_postgres_collection_name,
-                    "embedding_dims": self.settings.mem0_embedding_dims,
+                    "embedding_model_dims": self.settings.mem0_embedding_dims,
                 },
             },
             "graph_store": self._build_graph_store(),
