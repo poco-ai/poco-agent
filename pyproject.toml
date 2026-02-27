@@ -5,9 +5,16 @@ description = "Poco is a cloud-based AI agent execution platform inspired by Ant
 readme = "README.md"
 requires-python = ">=3.12"
 license = { text = "MIT" }
+dependencies = [
+    "langchain-neo4j>=0.8.0",
+]
 
 [tool.ruff]
 src = ["backend", "executor", "executor_manager", "im"]
+
+[[tool.uv.index]]
+url = "https://pypi.tuna.tsinghua.edu.cn/simple"
+default = true
 
 [tool.pyrefly]
 
