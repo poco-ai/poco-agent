@@ -50,11 +50,50 @@ class Settings(BaseSettings):
     anthropic_base_url: str = Field(
         default="https://api.anthropic.com", alias="ANTHROPIC_BASE_URL"
     )
+    openai_api_key: str | None = Field(default=None, alias="OPENAI_API_KEY")
+    openai_base_url: str | None = Field(default=None, alias="OPENAI_BASE_URL")
     default_model: str = Field(
         default="claude-sonnet-4-20250514", alias="DEFAULT_MODEL"
     )
     model_list: list[str] = Field(default_factory=list, alias="MODEL_LIST")
     max_upload_size_mb: int = Field(default=100, alias="MAX_UPLOAD_SIZE_MB")
+
+    # Memory (Mem0)
+    mem0_enabled: bool = Field(default=False, alias="MEM0_ENABLED")
+    mem0_vector_provider: str = Field(default="pgvector", alias="MEM0_VECTOR_PROVIDER")
+    mem0_postgres_host: str = Field(default="postgres", alias="MEM0_POSTGRES_HOST")
+    mem0_postgres_port: int = Field(default=5432, alias="MEM0_POSTGRES_PORT")
+    mem0_postgres_db: str = Field(default="postgres", alias="MEM0_POSTGRES_DB")
+    mem0_postgres_user: str = Field(default="postgres", alias="MEM0_POSTGRES_USER")
+    mem0_postgres_password: str = Field(
+        default="postgres", alias="MEM0_POSTGRES_PASSWORD"
+    )
+    mem0_postgres_collection_name: str = Field(
+        default="memories", alias="MEM0_POSTGRES_COLLECTION_NAME"
+    )
+    mem0_graph_provider: str = Field(default="neo4j", alias="MEM0_GRAPH_PROVIDER")
+    mem0_neo4j_uri: str = Field(default="bolt://neo4j:7687", alias="MEM0_NEO4J_URI")
+    mem0_neo4j_username: str = Field(default="neo4j", alias="MEM0_NEO4J_USERNAME")
+    mem0_neo4j_password: str = Field(default="mem0graph", alias="MEM0_NEO4J_PASSWORD")
+    mem0_memgraph_uri: str = Field(
+        default="bolt://localhost:7687", alias="MEM0_MEMGRAPH_URI"
+    )
+    mem0_memgraph_username: str = Field(
+        default="memgraph", alias="MEM0_MEMGRAPH_USERNAME"
+    )
+    mem0_memgraph_password: str = Field(
+        default="mem0graph", alias="MEM0_MEMGRAPH_PASSWORD"
+    )
+    mem0_llm_model: str = Field(
+        default="gpt-4.1-nano-2025-04-14", alias="MEM0_LLM_MODEL"
+    )
+    mem0_embedder_model: str = Field(
+        default="text-embedding-3-small", alias="MEM0_EMBEDDER_MODEL"
+    )
+    mem0_embedding_dims: int = Field(default=1536, alias="MEM0_EMBEDDING_DIMS")
+    mem0_history_db_path: str = Field(
+        default="/tmp/poco/memory/history.db", alias="MEM0_HISTORY_DB_PATH"
+    )
 
     model_config = SettingsConfigDict(
         env_file=".env",

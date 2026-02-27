@@ -18,6 +18,52 @@ services:
       timeout: 3s
       retries: 20
 
+  mem0-postgres:
+    profiles: ["mem0"]
+    image: ankane/pgvector:v0.5.1
+    restart: on-failure
+    shm_size: "128mb"
+    environment:
+      POSTGRES_USER: ${MEM0_POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${MEM0_POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${MEM0_POSTGRES_DB:-postgres}
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -q -d ${MEM0_POSTGRES_DB:-postgres} -U ${MEM0_POSTGRES_USER:-postgres}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    volumes:
+      - mem0_postgres_data:/var/lib/postgresql/data
+    ports:
+      - "${MEM0_POSTGRES_EXPOSE_PORT:-8432}:5432"
+
+  mem0-neo4j:
+    profiles: ["mem0"]
+    image: neo4j:5.26.4
+    restart: on-failure
+    healthcheck:
+      test:
+        ["CMD-SHELL", "wget -qO- http://localhost:7474 >/dev/null || exit 1"]
+      interval: 3s
+      timeout: 10s
+      retries: 20
+      start_period: 60s
+    ports:
+      - "${MEM0_NEO4J_HTTP_PORT:-8474}:7474"
+      - "${MEM0_NEO4J_BOLT_PORT:-8687}:7687"
+    volumes:
+      - mem0_neo4j_data:/data
+    environment:
+      NEO4J_AUTH: ${MEM0_NEO4J_USERNAME:-neo4j}/${MEM0_NEO4J_PASSWORD:-mem0graph}
+      NEO4J_PLUGINS: '["apoc"]'
+      NEO4J_apoc_export_file_enabled: "true"
+      NEO4J_apoc_import_file_enabled: "true"
+      NEO4J_apoc_import_file_use__neo4j__config: "true"
+
   backend:
     # Default to pulling from GHCR; override via BACKEND_IMAGE if needed.
     image: ${BACKEND_IMAGE:-ghcr.io/poco-ai/poco-backend:latest}
@@ -52,6 +98,27 @@ services:
       DEFAULT_MODEL: ${DEFAULT_MODEL:-claude-sonnet-4-20250514}
       MODEL_LIST: ${MODEL_LIST:-[]}
       MAX_UPLOAD_SIZE_MB: ${MAX_UPLOAD_SIZE_MB:-100}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-}
+      MEM0_ENABLED: ${MEM0_ENABLED:-false}
+      MEM0_VECTOR_PROVIDER: ${MEM0_VECTOR_PROVIDER:-pgvector}
+      MEM0_POSTGRES_HOST: ${MEM0_POSTGRES_HOST:-mem0-postgres}
+      MEM0_POSTGRES_PORT: ${MEM0_POSTGRES_PORT:-5432}
+      MEM0_POSTGRES_DB: ${MEM0_POSTGRES_DB:-postgres}
+      MEM0_POSTGRES_USER: ${MEM0_POSTGRES_USER:-postgres}
+      MEM0_POSTGRES_PASSWORD: ${MEM0_POSTGRES_PASSWORD:-postgres}
+      MEM0_POSTGRES_COLLECTION_NAME: ${MEM0_POSTGRES_COLLECTION_NAME:-memories}
+      MEM0_GRAPH_PROVIDER: ${MEM0_GRAPH_PROVIDER:-neo4j}
+      MEM0_NEO4J_URI: ${MEM0_NEO4J_URI:-bolt://mem0-neo4j:7687}
+      MEM0_NEO4J_USERNAME: ${MEM0_NEO4J_USERNAME:-neo4j}
+      MEM0_NEO4J_PASSWORD: ${MEM0_NEO4J_PASSWORD:-mem0graph}
+      MEM0_MEMGRAPH_URI: ${MEM0_MEMGRAPH_URI:-bolt://localhost:7687}
+      MEM0_MEMGRAPH_USERNAME: ${MEM0_MEMGRAPH_USERNAME:-memgraph}
+      MEM0_MEMGRAPH_PASSWORD: ${MEM0_MEMGRAPH_PASSWORD:-mem0graph}
+      MEM0_LLM_MODEL: ${MEM0_LLM_MODEL:-gpt-4.1-nano-2025-04-14}
+      MEM0_EMBEDDER_MODEL: ${MEM0_EMBEDDER_MODEL:-text-embedding-3-small}
+      MEM0_EMBEDDING_DIMS: ${MEM0_EMBEDDING_DIMS:-1536}
+      MEM0_HISTORY_DB_PATH: ${MEM0_HISTORY_DB_PATH:-/tmp/poco/memory/history.db}
 
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       LOG_TO_FILE: ${LOG_TO_FILE:-false}
@@ -182,3 +249,5 @@ services:
 
 volumes:
   postgres_data:
+  mem0_postgres_data:
+  mem0_neo4j_data:

@@ -11,6 +11,7 @@ dependencies = [
     "croniter>=6.0.0",
     "cryptography>=46.0.3",
     "fastapi>=0.128.0",
+    "mem0ai>=0.1.116",
     "psycopg2-binary>=2.9.9",
     "pydantic-settings>=2.12.0",
     "python-multipart>=0.0.21",
