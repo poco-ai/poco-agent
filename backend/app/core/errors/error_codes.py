@@ -17,6 +17,7 @@ class ErrorCode(Enum):
     ENV_VAR_ALREADY_EXISTS = (11002, "Environment variable already exists")
     MCP_SERVER_NOT_FOUND = (12001, "MCP server not found")
     MCP_SERVER_ALREADY_EXISTS = (12002, "MCP server already exists")
+    MCP_SERVER_INVALID_CONFIG = (12003, "Invalid MCP server config")
     SKILL_NOT_FOUND = (13001, "Skill not found")
     SKILL_ALREADY_EXISTS = (13002, "Skill already exists")
     SKILL_MODIFY_FORBIDDEN = (13003, "Skill modification forbidden")

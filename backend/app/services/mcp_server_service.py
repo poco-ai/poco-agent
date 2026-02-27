@@ -9,6 +9,10 @@ from app.schemas.mcp_server import (
     McpServerResponse,
     McpServerUpdateRequest,
 )
+from app.utils.mcp_server_config import (
+    extract_single_mcp_server_key,
+    normalize_mcp_server_config,
+)
 
 
 class McpServerService:
@@ -38,11 +42,15 @@ class McpServerService:
                 message=f"MCP server already exists: {request.name}",
             )
 
+        normalized_config = normalize_mcp_server_config(
+            request.server_config,
+            default_server_key=request.name,
+        )
         server = McpServer(
             name=request.name,
             scope=scope,
             owner_user_id=user_id,
-            server_config=request.server_config,
+            server_config=normalized_config,
         )
 
         McpServerRepository.create(db, server)
@@ -85,7 +93,13 @@ class McpServerService:
         if request.scope is not None:
             server.scope = request.scope
         if request.server_config is not None:
-            server.server_config = request.server_config
+            default_key = (
+                extract_single_mcp_server_key(server.server_config) or server.name
+            )
+            server.server_config = normalize_mcp_server_config(
+                request.server_config,
+                default_server_key=default_key,
+            )
 
         db.commit()
         db.refresh(server)
