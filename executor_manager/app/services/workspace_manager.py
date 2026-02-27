@@ -65,8 +65,15 @@ class WorkspaceManager:
     def _init_directories(self) -> None:
         """Initialize directory structure."""
         for directory in [self.active_dir, self.archive_dir, self.temp_dir]:
-            directory.mkdir(parents=True, exist_ok=True)
-            logger.debug("workspace_dir_ready", extra={"path": str(directory)})
+            try:
+                directory.mkdir(parents=True, exist_ok=True)
+                logger.debug("workspace_dir_ready", extra={"path": str(directory)})
+            except PermissionError as e:
+                raise RuntimeError(
+                    f"Permission denied creating workspace directory '{directory}'. "
+                    f"Ensure WORKSPACE_ROOT ('{self.base_dir}') is writable by the current user. "
+                    f"You may need to: chown -R <uid>:<gid> {self.base_dir} or set a different WORKSPACE_ROOT."
+                ) from e
 
     def get_workspace_path(
         self,

@@ -9,20 +9,28 @@ from app.schemas.workspace import FileNode
 from app.services.workspace_manager import WorkspaceManager
 
 router = APIRouter(prefix="/workspace", tags=["workspace"])
-workspace_manager = WorkspaceManager()
+
+_workspace_manager: WorkspaceManager | None = None
+
+
+def get_workspace_manager() -> WorkspaceManager:
+    global _workspace_manager
+    if _workspace_manager is None:
+        _workspace_manager = WorkspaceManager()
+    return _workspace_manager
 
 
 @router.get("/stats", response_model=ResponseSchema[dict])
 async def get_workspace_stats() -> JSONResponse:
     """Get workspace disk usage statistics."""
-    stats = workspace_manager.get_disk_usage()
+    stats = get_workspace_manager().get_disk_usage()
     return Response.success(data=stats)
 
 
 @router.get("/users/{user_id}", response_model=ResponseSchema[list])
 async def get_user_workspaces(user_id: str) -> JSONResponse:
     """Get all workspaces for a user."""
-    workspaces = workspace_manager.get_user_workspaces(user_id)
+    workspaces = get_workspace_manager().get_user_workspaces(user_id)
     return Response.success(data=workspaces)
 
 
@@ -33,7 +41,7 @@ async def archive_workspace(
     keep_days: int = Query(default=7, ge=1, le=90),
 ) -> JSONResponse:
     """Archive workspace."""
-    archive_path = workspace_manager.archive_workspace(
+    archive_path = get_workspace_manager().archive_workspace(
         user_id=user_id,
         session_id=session_id,
         keep_days=keep_days,
@@ -55,7 +63,7 @@ async def delete_workspace(
     force: bool = Query(default=False),
 ) -> JSONResponse:
     """Delete workspace."""
-    success = workspace_manager.delete_workspace(
+    success = get_workspace_manager().delete_workspace(
         user_id=user_id,
         session_id=session_id,
         force=force,
@@ -76,7 +84,7 @@ async def delete_workspace(
 )
 async def list_workspace_files(user_id: str, session_id: str) -> JSONResponse:
     """List workspace files for a session."""
-    files = workspace_manager.list_workspace_files(
+    files = get_workspace_manager().list_workspace_files(
         user_id=user_id, session_id=session_id
     )
     return Response.success(data=files)
@@ -89,7 +97,7 @@ async def get_workspace_file(
     path: str = Query(..., description="File path within the workspace"),
 ) -> FileResponse:
     """Serve a single file from workspace for preview/download."""
-    file_path = workspace_manager.resolve_workspace_file(
+    file_path = get_workspace_manager().resolve_workspace_file(
         user_id=user_id, session_id=session_id, file_path=path
     )
     if not file_path:

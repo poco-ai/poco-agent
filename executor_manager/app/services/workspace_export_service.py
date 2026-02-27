@@ -13,21 +13,35 @@ from app.services.workspace_manager import WorkspaceManager
 
 logger = logging.getLogger(__name__)
 
+_workspace_manager: WorkspaceManager | None = None
+_storage_service: S3StorageService | None = None
 
-workspace_manager = WorkspaceManager()
-storage_service = S3StorageService()
+
+def get_workspace_manager() -> WorkspaceManager:
+    global _workspace_manager
+    if _workspace_manager is None:
+        _workspace_manager = WorkspaceManager()
+    return _workspace_manager
+
+
+def get_storage_service() -> S3StorageService:
+    global _storage_service
+    if _storage_service is None:
+        _storage_service = S3StorageService()
+    return _storage_service
 
 
 class WorkspaceExportService:
     def export_workspace(self, session_id: str) -> WorkspaceExportResult:
-        user_id = workspace_manager.resolve_user_id(session_id)
+        wm = get_workspace_manager()
+        user_id = wm.resolve_user_id(session_id)
         if not user_id:
             return WorkspaceExportResult(
                 error="Unable to resolve user_id for session",
                 workspace_export_status="failed",
             )
 
-        workspace_dir = workspace_manager.get_session_workspace_dir(
+        workspace_dir = wm.get_session_workspace_dir(
             user_id=user_id, session_id=session_id
         )
         if not workspace_dir:
@@ -49,12 +63,13 @@ class WorkspaceExportService:
                 "files": [],
             }
 
+            ss = get_storage_service()
             for file_path in files:
                 rel_path = file_path.relative_to(workspace_dir).as_posix()
                 object_key = f"{files_prefix}/{rel_path}"
                 mime_type, _ = mimetypes.guess_type(file_path.name)
 
-                storage_service.upload_file(
+                ss.upload_file(
                     file_path=str(file_path),
                     key=object_key,
                     content_type=mime_type,
@@ -73,7 +88,7 @@ class WorkspaceExportService:
                     }
                 )
 
-            storage_service.put_object(
+            ss.put_object(
                 key=manifest_key,
                 body=json.dumps(manifest, ensure_ascii=False).encode("utf-8"),
                 content_type="application/json",
@@ -84,7 +99,7 @@ class WorkspaceExportService:
                 session_id=session_id,
                 files=files,
             )
-            storage_service.upload_file(
+            ss.upload_file(
                 file_path=str(archive_path),
                 key=archive_key,
                 content_type="application/zip",
@@ -113,9 +128,10 @@ class WorkspaceExportService:
             )
 
     def _collect_files(self, workspace_dir: Path) -> list[Path]:
+        wm = get_workspace_manager()
         files: list[Path] = []
-        ignore_names = workspace_manager._ignore_names
-        ignore_dot = workspace_manager.ignore_dot_files
+        ignore_names = wm._ignore_names
+        ignore_dot = wm.ignore_dot_files
 
         for root, dirnames, filenames in os.walk(workspace_dir):
             root_path = Path(root)
@@ -143,7 +159,8 @@ class WorkspaceExportService:
         session_id: str,
         files: list[Path],
     ) -> Path:
-        temp_dir = workspace_manager.temp_dir
+        wm = get_workspace_manager()
+        temp_dir = wm.temp_dir
         temp_dir.mkdir(parents=True, exist_ok=True)
         archive_path = temp_dir / f"{session_id}.zip"
 
