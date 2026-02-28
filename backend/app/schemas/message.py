@@ -32,3 +32,10 @@ class MessageWithFilesResponse(MessageResponse):
     """
 
     attachments: list[InputFileWithUrl] | None = None
+
+
+class MessageAttachmentsResponse(BaseModel):
+    """Attachment payload for a specific message."""
+
+    message_id: int
+    attachments: list[InputFileWithUrl]

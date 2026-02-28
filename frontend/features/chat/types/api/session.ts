@@ -33,6 +33,26 @@ export interface SessionCancelResponse {
   executor_cancelled: boolean;
 }
 
+export interface SessionBranchRequest {
+  message_id: number;
+}
+
+export interface SessionRegenerateRequest {
+  user_message_id: number;
+  assistant_message_id: number;
+}
+
+export interface SessionEditMessageRequest {
+  user_message_id: number;
+  content: string;
+}
+
+export interface SessionBranchResponse {
+  session_id: string;
+  source_session_id: string;
+  cutoff_message_id: number;
+}
+
 export interface SessionResponse {
   session_id: string; // UUID
   user_id: string;
@@ -63,8 +83,14 @@ export interface MessageResponse {
   id: number;
   role: string;
   content: Record<string, unknown>;
+  text_preview?: string | null;
   created_at: string; // ISO datetime
   updated_at: string; // ISO datetime
+}
+
+export interface MessageAttachmentsResponse {
+  message_id: number;
+  attachments: InputFile[];
 }
 
 export interface ToolExecutionResponse {
@@ -94,6 +120,7 @@ export interface InputFile {
   size?: number | null;
   content_type?: string | null;
   path?: string | null;
+  url?: string | null;
 }
 
 export interface TaskConfig {

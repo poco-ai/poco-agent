@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, cast
 
 
 def normalize_manifest_path(path: str | None) -> str | None:
@@ -57,7 +57,7 @@ def build_nodes_from_manifest(manifest: Any) -> list[dict[str, Any]]:
 
 
 def _build_tree_from_files(files: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    tree: dict[str, Any] = {}
+    tree: dict[str, dict[str, Any]] = {}
 
     for item in files:
         raw_path = item.get("path")
@@ -68,7 +68,7 @@ def _build_tree_from_files(files: list[dict[str, Any]]) -> list[dict[str, Any]]:
         if not parts:
             continue
 
-        current = tree
+        current: dict[str, dict[str, Any]] = tree
         for index, part in enumerate(parts):
             is_last = index == len(parts) - 1
             if is_last:
@@ -82,7 +82,7 @@ def _build_tree_from_files(files: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 }
             else:
                 node = current.get(part)
-                if not node:
+                if not isinstance(node, dict) or node.get("type") != "folder":
                     folder_path = "/" + "/".join(parts[: index + 1])
                     node = {
                         "type": "folder",
@@ -91,7 +91,11 @@ def _build_tree_from_files(files: list[dict[str, Any]]) -> list[dict[str, Any]]:
                         "children": {},
                     }
                     current[part] = node
-                current = node["children"]
+                children = node.get("children")
+                if not isinstance(children, dict):
+                    children = {}
+                    node["children"] = children
+                current = cast(dict[str, dict[str, Any]], children)
 
     return _tree_to_nodes(tree)
 
@@ -104,7 +108,7 @@ def _build_oss_meta(item: dict[str, Any]) -> dict[str, Any] | None:
     return meta or None
 
 
-def _tree_to_nodes(tree: dict[str, Any]) -> list[dict[str, Any]]:
+def _tree_to_nodes(tree: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
     nodes: list[dict[str, Any]] = []
 
     def sort_key(item: tuple[str, dict[str, Any]]) -> tuple[int, str]:

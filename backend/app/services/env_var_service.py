@@ -1,4 +1,5 @@
 import logging
+from typing import Literal, cast
 
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -21,15 +22,16 @@ from app.utils.crypto import decrypt_value, encrypt_value
 logger = logging.getLogger(__name__)
 
 SYSTEM_USER_ID = "__system__"
+EnvVarScope = Literal["system", "user"]
 
 
-def _require_scope(value: str) -> str:
+def _require_scope(value: str) -> EnvVarScope:
     if value not in ("system", "user"):
         raise AppException(
             error_code=ErrorCode.BAD_REQUEST,
             message=f"Invalid env var scope: {value}",
         )
-    return value
+    return cast(EnvVarScope, value)
 
 
 def _normalize_key(key: str) -> str:
