@@ -13,6 +13,7 @@ import {
   getStartupPreloadPromise,
   getStartupPreloadValue,
   hasStartupPreloadValue,
+  invalidateStartupPreloadValues,
 } from "@/lib/startup-preload";
 import { playInstallSound } from "@/lib/utils/sound";
 
@@ -57,6 +58,21 @@ export function usePluginCatalog() {
   useEffect(() => {
     let active = true;
 
+    const refreshSilently = async () => {
+      try {
+        const [pluginsData, installsData] = await Promise.all([
+          pluginsService.listPlugins(),
+          pluginsService.listInstalls(),
+        ]);
+        if (!active) return;
+        setPlugins(pluginsData);
+        setInstalls(installsData);
+      } catch (error) {
+        // Keep preload data as fallback, avoid user-facing toast for background refresh.
+        console.error("[Plugins] Silent refresh failed:", error);
+      }
+    };
+
     const hydrateAndRefresh = async () => {
       const canUsePreload =
         hasStartupPreloadValue("plugins") &&
@@ -65,6 +81,7 @@ export function usePluginCatalog() {
         setPlugins(getStartupPreloadValue("plugins") ?? []);
         setInstalls(getStartupPreloadValue("pluginInstalls") ?? []);
         setIsLoading(false);
+        void refreshSilently();
         return;
       }
 
@@ -80,6 +97,7 @@ export function usePluginCatalog() {
           setPlugins(getStartupPreloadValue("plugins") ?? []);
           setInstalls(getStartupPreloadValue("pluginInstalls") ?? []);
           setIsLoading(false);
+          void refreshSilently();
           return;
         }
       }
@@ -126,6 +144,7 @@ export function usePluginCatalog() {
           `${t("library.pluginsManager.toasts.installed")}${installNote}`,
         );
         playInstallSound();
+        invalidateStartupPreloadValues(["pluginInstalls"]);
       } catch (error) {
         console.error("[Plugins] install failed:", error);
         if (previouslyEnabled.length > 0) {
@@ -159,6 +178,7 @@ export function usePluginCatalog() {
           prev.filter((install) => install.plugin_id !== pluginId),
         );
         toast.success(t("common.deleted"));
+        invalidateStartupPreloadValues(["plugins", "pluginInstalls"]);
       } catch (error) {
         console.error("[Plugins] delete failed:", error);
         toast.error(t("library.pluginsManager.toasts.actionError"));
@@ -224,6 +244,7 @@ export function usePluginCatalog() {
         if (enabled) {
           playInstallSound();
         }
+        invalidateStartupPreloadValues(["pluginInstalls"]);
       } catch (error) {
         console.error("[Plugins] setEnabled failed:", error);
         if (shouldRestoreOthers) {

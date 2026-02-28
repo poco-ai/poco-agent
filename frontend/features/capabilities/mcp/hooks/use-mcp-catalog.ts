@@ -15,6 +15,7 @@ import {
   getStartupPreloadPromise,
   getStartupPreloadValue,
   hasStartupPreloadValue,
+  invalidateStartupPreloadValues,
 } from "@/lib/startup-preload";
 import { CheckCircle2, CircleOff } from "lucide-react";
 import { playInstallSound } from "@/lib/utils/sound";
@@ -62,6 +63,21 @@ export function useMcpCatalog() {
   useEffect(() => {
     let active = true;
 
+    const refreshSilently = async () => {
+      try {
+        const [serversData, installsData] = await Promise.all([
+          mcpService.listServers(),
+          mcpService.listInstalls(),
+        ]);
+        if (!active) return;
+        setServers(serversData);
+        setInstalls(installsData);
+      } catch (error) {
+        // Keep preload data as fallback, avoid user-facing toast for background refresh.
+        console.error("[MCP] Silent refresh failed:", error);
+      }
+    };
+
     const hydrateAndRefresh = async () => {
       const canUsePreload =
         hasStartupPreloadValue("mcpServers") &&
@@ -70,6 +86,7 @@ export function useMcpCatalog() {
         setServers(getStartupPreloadValue("mcpServers") ?? []);
         setInstalls(getStartupPreloadValue("mcpInstalls") ?? []);
         setIsLoading(false);
+        void refreshSilently();
         return;
       }
 
@@ -85,6 +102,7 @@ export function useMcpCatalog() {
           setServers(getStartupPreloadValue("mcpServers") ?? []);
           setInstalls(getStartupPreloadValue("mcpInstalls") ?? []);
           setIsLoading(false);
+          void refreshSilently();
           return;
         }
       }
@@ -164,6 +182,7 @@ export function useMcpCatalog() {
           if (typeof window !== "undefined" && "vibrate" in navigator) {
             navigator.vibrate(50);
           }
+          invalidateStartupPreloadValues(["mcpInstalls"]);
         } else {
           const created = await mcpService.createInstall({
             server_id: serverId,
@@ -189,6 +208,7 @@ export function useMcpCatalog() {
           if (typeof window !== "undefined" && "vibrate" in navigator) {
             navigator.vibrate(50);
           }
+          invalidateStartupPreloadValues(["mcpInstalls"]);
         }
       } catch (error) {
         console.error("[MCP] toggle failed:", error);
@@ -228,6 +248,7 @@ export function useMcpCatalog() {
         );
         toast.success(t("library.mcpLibrary.toasts.updated"));
         playInstallSound();
+        invalidateStartupPreloadValues(["mcpServers"]);
         return updated;
       } catch (error) {
         console.error("[MCP] update failed:", error);
@@ -250,6 +271,7 @@ export function useMcpCatalog() {
         setServers((prev) => [created, ...prev]);
         toast.success(t("library.mcpLibrary.toasts.created"));
         playInstallSound();
+        invalidateStartupPreloadValues(["mcpServers"]);
         return created;
       } catch (error) {
         console.error("[MCP] create failed:", error);
@@ -270,6 +292,7 @@ export function useMcpCatalog() {
         const server = servers.find((s) => s.id === serverId);
         const serverName = server?.name || "";
         toast.success(`${serverName} MCP ${t("common.deleted")}`);
+        invalidateStartupPreloadValues(["mcpServers", "mcpInstalls"]);
       } catch (error) {
         console.error("[MCP] delete failed:", error);
         toast.error(t("library.mcpLibrary.toasts.error"));
