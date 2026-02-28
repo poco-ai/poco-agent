@@ -419,33 +419,33 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
     return (
       <div className={cn("shrink-0 min-w-0 px-4 pb-4 pt-2", className)}>
         <input
-          type='file'
+          type="file"
           ref={fileInputRef}
-          className='hidden'
+          className="hidden"
           onChange={handleFileSelect}
         />
         {attachments.length > 0 && (
-          <div className='mb-2 flex min-w-0 flex-wrap gap-2 px-3'>
+          <div className="mb-2 flex min-w-0 flex-wrap gap-2 px-3">
             {attachments.map((file, i) => (
               <FileCard
                 key={i}
                 file={file}
                 onRemove={() => removeAttachment(i)}
-                className='w-full max-w-48 bg-background'
+                className="w-full max-w-48 bg-background"
               />
             ))}
           </div>
         )}
-        <div className='relative flex w-full min-w-0 items-center gap-2 rounded-lg border border-border bg-card px-3 py-2'>
+        <div className="relative flex w-full min-w-0 items-center gap-2 rounded-lg border border-border bg-card px-3 py-2">
           {slashAutocomplete.isOpen ? (
-            <div className='absolute bottom-full left-0 z-50 mb-2 w-full overflow-hidden rounded-lg border border-border bg-popover shadow-md'>
-              <div className='max-h-64 overflow-auto py-1'>
+            <div className="absolute bottom-full left-0 z-50 mb-2 w-full overflow-hidden rounded-lg border border-border bg-popover shadow-md">
+              <div className="max-h-64 overflow-auto py-1">
                 {slashAutocomplete.suggestions.map((item, idx) => {
                   const selected = idx === slashAutocomplete.activeIndex;
                   return (
                     <button
                       key={item.command}
-                      type='button'
+                      type="button"
                       onMouseEnter={() => slashAutocomplete.setActiveIndex(idx)}
                       onMouseDown={(e) => {
                         // Prevent textarea from losing focus.
@@ -459,7 +459,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
                           : "hover:bg-accent/50",
                       )}
                     >
-                      <span className='font-mono'>{item.command}</span>
+                      <span className="font-mono">{item.command}</span>
                     </button>
                   );
                 })}
@@ -470,20 +470,20 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
           <Tooltip>
             <TooltipTrigger asChild>
               <button
-                type='button'
+                type="button"
                 disabled={disabled || isUploading}
                 onClick={() => fileInputRef.current?.click()}
-                className='flex-shrink-0 flex items-center justify-center size-8 rounded-md hover:bg-accent text-muted-foreground transition-colors disabled:cursor-not-allowed disabled:opacity-50'
+                className="flex-shrink-0 flex items-center justify-center size-8 rounded-md hover:bg-accent text-muted-foreground transition-colors disabled:cursor-not-allowed disabled:opacity-50"
                 aria-label={t("hero.importLocal")}
               >
                 {isUploading ? (
-                  <Loader2 className='size-4 animate-spin' />
+                  <Loader2 className="size-4 animate-spin" />
                 ) : (
-                  <Plus className='size-4' />
+                  <Plus className="size-4" />
                 )}
               </button>
             </TooltipTrigger>
-            <TooltipContent side='top' sideOffset={8}>
+            <TooltipContent side="top" sideOffset={8}>
               {t("hero.importLocal")}
             </TooltipContent>
           </Tooltip>
@@ -500,7 +500,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
             placeholder={t("chat.inputPlaceholder")}
             disabled={disabled}
             rows={1}
-            className='flex-1 min-w-0 bg-transparent text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 resize-none overflow-y-auto py-1 scrollbar-hide'
+            className="flex-1 min-w-0 bg-transparent text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 resize-none overflow-y-auto py-1 scrollbar-hide"
             style={{
               minHeight: "2rem",
               maxHeight: "10rem",
@@ -515,17 +515,17 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
           />
           {showCancel ? (
             <button
-              type='button'
+              type="button"
               onClick={onCancel}
               disabled={isCancelling}
-              className='flex-shrink-0 flex items-center justify-center size-8 rounded-md bg-muted text-foreground hover:bg-muted/80 transition-colors disabled:cursor-not-allowed disabled:opacity-60'
+              className="flex-shrink-0 flex items-center justify-center size-8 rounded-md bg-muted text-foreground hover:bg-muted/80 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
               aria-label={t("chatInput.cancelTask")}
               title={t("chatInput.cancelTask")}
             >
               {isCancelling ? (
-                <Loader2 className='size-4 animate-spin' />
+                <Loader2 className="size-4 animate-spin" />
               ) : (
-                <Pause className='size-4' />
+                <Pause className="size-4" />
               )}
             </button>
           ) : (
@@ -534,7 +534,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <button
-                      type='button'
+                      type="button"
                       onClick={() => {
                         void handleToggleVoiceInput();
                       }}
@@ -552,13 +552,13 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
                       }
                     >
                       {listening ? (
-                        <MicOff className='size-4' />
+                        <MicOff className="size-4" />
                       ) : (
-                        <Mic className='size-4' />
+                        <Mic className="size-4" />
                       )}
                     </button>
                   </TooltipTrigger>
-                  <TooltipContent side='top' sideOffset={8}>
+                  <TooltipContent side="top" sideOffset={8}>
                     {listening
                       ? t("hero.stopVoiceInput")
                       : t("hero.startVoiceInput")}
@@ -566,14 +566,14 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
                 </Tooltip>
               ) : null}
               <button
-                type='button'
+                type="button"
                 onClick={handleSend}
                 disabled={!hasDraft || disabled}
-                className='flex-shrink-0 flex items-center justify-center size-8 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground transition-colors disabled:cursor-not-allowed disabled:opacity-50'
+                className="flex-shrink-0 flex items-center justify-center size-8 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground transition-colors disabled:cursor-not-allowed disabled:opacity-50"
                 aria-label={t("hero.send")}
                 title={t("hero.send")}
               >
-                <ArrowUp className='size-4' />
+                <ArrowUp className="size-4" />
               </button>
             </>
           )}

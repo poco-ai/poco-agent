@@ -293,12 +293,13 @@ export function ChatMessageList({
     lastMessageCountRef.current = messages.length;
     prevIsTypingRef.current = isTyping;
 
-    if (
-      !isUserScrolling &&
-      (hasNewMessages || isTyping)
-    ) {
+    if (!isUserScrolling && (hasNewMessages || isTyping)) {
       scrollViewportToBottom(
-        isTyping ? "auto" : hasNewMessages || isTypingStarted ? "smooth" : "auto",
+        isTyping
+          ? "auto"
+          : hasNewMessages || isTypingStarted
+            ? "smooth"
+            : "auto",
       );
     }
 

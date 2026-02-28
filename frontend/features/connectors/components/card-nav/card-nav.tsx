@@ -122,40 +122,43 @@ export function CardNav({
   const [hasFetchedFresh, setHasFetchedFresh] = useState(false);
 
   // Fetch MCP/Skill/Plugin data
-  const fetchData = useCallback(async (force = false) => {
-    if ((!force && hasFetchedFresh) || isLoading) return;
+  const fetchData = useCallback(
+    async (force = false) => {
+      if ((!force && hasFetchedFresh) || isLoading) return;
 
-    setIsLoading(true);
-    try {
-      const [
-        mcpServersData,
-        mcpInstallsData,
-        skillsData,
-        skillInstallsData,
-        pluginsData,
-        pluginInstallsData,
-      ] = await Promise.all([
-        mcpService.listServers(),
-        mcpService.listInstalls(),
-        skillsService.listSkills(),
-        skillsService.listInstalls(),
-        pluginsService.listPlugins(),
-        pluginsService.listInstalls(),
-      ]);
-      setMcpServers(mcpServersData);
-      setMcpInstalls(mcpInstallsData);
-      setSkills(skillsData);
-      setSkillInstalls(skillInstallsData);
-      setPlugins(pluginsData);
-      setPluginInstalls(pluginInstallsData);
-      setHasFetched(true);
-      setHasFetchedFresh(true);
-    } catch (error) {
-      console.error("[CardNav] Failed to fetch data:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [hasFetchedFresh, isLoading]);
+      setIsLoading(true);
+      try {
+        const [
+          mcpServersData,
+          mcpInstallsData,
+          skillsData,
+          skillInstallsData,
+          pluginsData,
+          pluginInstallsData,
+        ] = await Promise.all([
+          mcpService.listServers(),
+          mcpService.listInstalls(),
+          skillsService.listSkills(),
+          skillsService.listInstalls(),
+          pluginsService.listPlugins(),
+          pluginsService.listInstalls(),
+        ]);
+        setMcpServers(mcpServersData);
+        setMcpInstalls(mcpInstallsData);
+        setSkills(skillsData);
+        setSkillInstalls(skillInstallsData);
+        setPlugins(pluginsData);
+        setPluginInstalls(pluginInstallsData);
+        setHasFetched(true);
+        setHasFetchedFresh(true);
+      } catch (error) {
+        console.error("[CardNav] Failed to fetch data:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [hasFetchedFresh, isLoading],
+  );
 
   // Refresh once on mount to avoid stale startup-preload data after capability changes.
   useEffect(() => {
