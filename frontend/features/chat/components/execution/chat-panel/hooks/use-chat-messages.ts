@@ -24,7 +24,76 @@ interface UseChatMessagesReturn {
   isTyping: boolean;
   showTypingIndicator: boolean;
   sendMessage: (content: string, attachments?: InputFile[]) => Promise<void>;
+  beginOptimisticRegenerate: (assistantMessageId: number) => string;
+  beginOptimisticEditMessage: (args: {
+    userMessageId: number;
+    content: string;
+  }) => string;
+  commitOptimisticHistoryMutation: (mutationToken: string) => void;
+  rollbackOptimisticHistoryMutation: (mutationToken: string) => void;
   runUsageByUserMessageId: Record<string, UsageResponse | null>;
+}
+
+type HistoryMutation =
+  | {
+      kind: "regenerate";
+      assistantMessageId: number;
+    }
+  | {
+      kind: "edit";
+      userMessageId: number;
+      content: string;
+    };
+
+function getNumericMessageId(messageId: string): number | null {
+  if (!/^\d+$/.test(messageId)) {
+    return null;
+  }
+  const parsed = Number(messageId);
+  return Number.isInteger(parsed) ? parsed : null;
+}
+
+function applyHistoryMutation(
+  input: ChatMessage[],
+  mutation: HistoryMutation | null,
+): ChatMessage[] {
+  if (!mutation) return input;
+
+  const trimmed = input.filter((message) => {
+    // Optimistic-only messages should not survive across history rewrites.
+    if (message.id.startsWith("msg-")) {
+      return false;
+    }
+
+    const messageId = getNumericMessageId(message.id);
+    if (messageId === null) {
+      return true;
+    }
+
+    if (mutation.kind === "regenerate") {
+      return messageId < mutation.assistantMessageId;
+    }
+    return messageId <= mutation.userMessageId;
+  });
+
+  if (mutation.kind !== "edit") {
+    return trimmed;
+  }
+
+  return trimmed.map((message) => {
+    const messageId = getNumericMessageId(message.id);
+    if (
+      messageId !== mutation.userMessageId ||
+      message.role !== "user" ||
+      message.content === mutation.content
+    ) {
+      return message;
+    }
+    return {
+      ...message,
+      content: mutation.content,
+    };
+  });
 }
 
 /**
@@ -51,6 +120,11 @@ export function useChatMessages({
 
   const lastLoadedSessionIdRef = useRef<string | null>(null);
   const realUserMessageIdsRef = useRef<number[] | null>(null);
+  const [activeHistoryMutation, setActiveHistoryMutation] =
+    useState<HistoryMutation | null>(null);
+  const mutationRollbackMessagesRef = useRef<ChatMessage[] | null>(null);
+  const activeMutationTokenRef = useRef<string | null>(null);
+  const mutationSequenceRef = useRef(0);
 
   const refreshRealUserMessageIds = useCallback(async () => {
     if (!session?.session_id) return;
@@ -88,6 +162,12 @@ export function useChatMessages({
   const fetchMessageAttachments = useCallback(async (sessionId: string) => {
     return getMessageAttachmentsAction({ sessionId });
   }, []);
+
+  const applyActiveHistoryMutation = useCallback(
+    (input: ChatMessage[]) =>
+      applyHistoryMutation(input, activeHistoryMutation),
+    [activeHistoryMutation],
+  );
 
   // Helper to merge new server messages with local optimistic messages
   const mergeMessages = useCallback(
@@ -224,10 +304,14 @@ export function useChatMessages({
 
         // Fetch latest messages immediately to confirm sync
         const server = await fetchMessagesWithFilter(sessionId);
-        setMessages((prev) => mergeMessages(prev, server.messages));
+        setMessages((prev) =>
+          applyActiveHistoryMutation(mergeMessages(prev, server.messages)),
+        );
         const attachmentsByMessageId = await fetchMessageAttachments(sessionId);
         setMessages((prev) =>
-          mergeMessageAttachments(prev, attachmentsByMessageId),
+          applyActiveHistoryMutation(
+            mergeMessageAttachments(prev, attachmentsByMessageId),
+          ),
         );
       } catch (error) {
         console.error("[Chat] Failed to send message or get reply:", error);
@@ -236,6 +320,7 @@ export function useChatMessages({
     },
     [
       session,
+      applyActiveHistoryMutation,
       mergeMessages,
       mergeMessageAttachments,
       refreshRealUserMessageIds,
@@ -254,6 +339,9 @@ export function useChatMessages({
       setMessages([]);
       setIsTyping(false);
       realUserMessageIdsRef.current = null;
+      setActiveHistoryMutation(null);
+      mutationRollbackMessagesRef.current = null;
+      activeMutationTokenRef.current = null;
       setRunUsageByUserMessageId({});
       lastLoadedSessionIdRef.current = session.session_id;
     }
@@ -268,7 +356,9 @@ export function useChatMessages({
         setMessages((prev) => {
           // If it's the first load (empty prev), just set it
           // Otherwise merge
-          return mergeMessages(prev, history.messages);
+          return applyActiveHistoryMutation(
+            mergeMessages(prev, history.messages),
+          );
         });
 
         const attachmentsByMessageId = await fetchMessageAttachments(
@@ -276,7 +366,9 @@ export function useChatMessages({
         );
         if (isCancelled) return;
         setMessages((prev) =>
-          mergeMessageAttachments(prev, attachmentsByMessageId),
+          applyActiveHistoryMutation(
+            mergeMessageAttachments(prev, attachmentsByMessageId),
+          ),
         );
 
         if (realUserMessageIdsRef.current === null) {
@@ -287,7 +379,11 @@ export function useChatMessages({
                 session.session_id,
               );
               if (isCancelled) return;
-              setMessages((prev) => mergeMessages(prev, refreshed.messages));
+              setMessages((prev) =>
+                applyActiveHistoryMutation(
+                  mergeMessages(prev, refreshed.messages),
+                ),
+              );
             })
             .catch((error) => {
               console.error(
@@ -329,6 +425,7 @@ export function useChatMessages({
   }, [
     session?.session_id,
     session?.status,
+    applyActiveHistoryMutation,
     mergeMessages,
     mergeMessageAttachments,
     pollingInterval,
@@ -379,6 +476,64 @@ export function useChatMessages({
     (isSessionActive &&
       (messages.length === 0 || messages[messages.length - 1].role === "user"));
 
+  const beginOptimisticHistoryMutation = useCallback(
+    (mutation: HistoryMutation) => {
+      const token = `history-${Date.now()}-${mutationSequenceRef.current + 1}`;
+      mutationSequenceRef.current += 1;
+      mutationRollbackMessagesRef.current = messages;
+      activeMutationTokenRef.current = token;
+      setActiveHistoryMutation(mutation);
+      setMessages((prev) => applyHistoryMutation(prev, mutation));
+      setIsTyping(true);
+      return token;
+    },
+    [messages],
+  );
+
+  const beginOptimisticRegenerate = useCallback(
+    (assistantMessageId: number) =>
+      beginOptimisticHistoryMutation({
+        kind: "regenerate",
+        assistantMessageId,
+      }),
+    [beginOptimisticHistoryMutation],
+  );
+
+  const beginOptimisticEditMessage = useCallback(
+    ({ userMessageId, content }: { userMessageId: number; content: string }) =>
+      beginOptimisticHistoryMutation({
+        kind: "edit",
+        userMessageId,
+        content,
+      }),
+    [beginOptimisticHistoryMutation],
+  );
+
+  const commitOptimisticHistoryMutation = useCallback(
+    (mutationToken: string) => {
+      if (activeMutationTokenRef.current !== mutationToken) return;
+      mutationRollbackMessagesRef.current = null;
+      activeMutationTokenRef.current = null;
+      setActiveHistoryMutation(null);
+    },
+    [],
+  );
+
+  const rollbackOptimisticHistoryMutation = useCallback(
+    (mutationToken: string) => {
+      if (activeMutationTokenRef.current !== mutationToken) return;
+      const rollbackMessages = mutationRollbackMessagesRef.current;
+      if (rollbackMessages) {
+        setMessages(rollbackMessages);
+      }
+      mutationRollbackMessagesRef.current = null;
+      activeMutationTokenRef.current = null;
+      setActiveHistoryMutation(null);
+      setIsTyping(false);
+    },
+    [],
+  );
+
   return {
     messages,
     displayMessages,
@@ -386,6 +541,10 @@ export function useChatMessages({
     isTyping,
     showTypingIndicator,
     sendMessage,
+    beginOptimisticRegenerate,
+    beginOptimisticEditMessage,
+    commitOptimisticHistoryMutation,
+    rollbackOptimisticHistoryMutation,
     runUsageByUserMessageId,
   };
 }

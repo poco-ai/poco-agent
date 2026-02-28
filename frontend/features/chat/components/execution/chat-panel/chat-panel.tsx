@@ -139,6 +139,9 @@ export function ChatPanel({
   const [isCancelling, setIsCancelling] = React.useState(false);
   const [isExportingImage, setIsExportingImage] = React.useState(false);
   const [isRenameDialogOpen, setIsRenameDialogOpen] = React.useState(false);
+  const [branchingMessageId, setBranchingMessageId] = React.useState<
+    string | null
+  >(null);
   const inputRef = React.useRef<ChatInputRef>(null);
   const panelRootRef = React.useRef<HTMLDivElement>(null);
   const conversationRef = React.useRef<HTMLDivElement>(null);
@@ -153,6 +156,10 @@ export function ChatPanel({
     isLoadingHistory,
     showTypingIndicator,
     sendMessage,
+    beginOptimisticRegenerate,
+    beginOptimisticEditMessage,
+    commitOptimisticHistoryMutation,
+    rollbackOptimisticHistoryMutation,
     runUsageByUserMessageId,
   } = useChatMessages({ session });
 
@@ -402,28 +409,70 @@ export function ChatPanel({
   );
 
   const handleEditMessage = React.useCallback(
-    async ({ messageId, content }: { messageId: string; content: string }) => {
-      if (!session?.session_id) return;
+    ({
+      messageId,
+      content,
+    }: {
+      messageId: string;
+      content: string;
+    }): Promise<void> => {
+      if (!session?.session_id) return Promise.resolve();
       const userMessageId = Number(messageId);
       if (!Number.isInteger(userMessageId) || userMessageId <= 0) {
         toast.error(t("chat.editMessageFailed"));
-        return;
+        return Promise.resolve();
+      }
+      const trimmedContent = content.trim();
+      if (!trimmedContent) {
+        toast.error(t("chat.editMessageFailed"));
+        return Promise.resolve();
       }
 
-      try {
+      const previousStatus = session.status;
+      const mutationToken = beginOptimisticEditMessage({
+        userMessageId,
+        content: trimmedContent,
+      });
+      touchTask(session.session_id, {
+        status: "pending",
+        timestamp: new Date().toISOString(),
+        bumpToTop: true,
+      });
+      if (session.status !== "running" && session.status !== "pending") {
         updateSession({ status: "pending" });
-        await editMessageAndRegenerateAction({
-          sessionId: session.session_id,
-          userMessageId,
-          content,
-        });
-        await refreshTasks();
-      } catch (error) {
-        console.error("[ChatPanel] Failed to edit message:", error);
-        toast.error(t("chat.editMessageFailed"));
       }
+
+      void (async () => {
+        try {
+          await editMessageAndRegenerateAction({
+            sessionId: session.session_id,
+            userMessageId,
+            content: trimmedContent,
+          });
+          commitOptimisticHistoryMutation(mutationToken);
+          void refreshTasks();
+        } catch (error) {
+          console.error("[ChatPanel] Failed to edit message:", error);
+          rollbackOptimisticHistoryMutation(mutationToken);
+          updateSession({ status: previousStatus });
+          toast.error(t("chat.editMessageFailed"));
+          void refreshTasks();
+        }
+      })();
+
+      return Promise.resolve();
     },
-    [refreshTasks, session?.session_id, t, updateSession],
+    [
+      beginOptimisticEditMessage,
+      commitOptimisticHistoryMutation,
+      refreshTasks,
+      rollbackOptimisticHistoryMutation,
+      session?.session_id,
+      session?.status,
+      t,
+      touchTask,
+      updateSession,
+    ],
   );
 
   const handleInsertQuote = React.useCallback(() => {
@@ -478,7 +527,7 @@ export function ChatPanel({
   );
 
   const handleRegenerateMessage = React.useCallback(
-    async ({
+    ({
       userMessageId,
       assistantMessageId,
     }: {
@@ -498,26 +547,52 @@ export function ChatPanel({
         toast.error(t("chat.regenerateFailed"));
         return;
       }
-
-      try {
+      const previousStatus = session.status;
+      const mutationToken = beginOptimisticRegenerate(assistantMessageIdNumber);
+      touchTask(session.session_id, {
+        status: "pending",
+        timestamp: new Date().toISOString(),
+        bumpToTop: true,
+      });
+      if (session.status !== "running" && session.status !== "pending") {
         updateSession({ status: "pending" });
-        await regenerateMessageAction({
-          sessionId: session.session_id,
-          userMessageId: userMessageIdNumber,
-          assistantMessageId: assistantMessageIdNumber,
-        });
-        await refreshTasks();
-      } catch (error) {
-        console.error("[ChatPanel] Failed to regenerate message:", error);
-        toast.error(t("chat.regenerateFailed"));
       }
+
+      void (async () => {
+        try {
+          await regenerateMessageAction({
+            sessionId: session.session_id,
+            userMessageId: userMessageIdNumber,
+            assistantMessageId: assistantMessageIdNumber,
+          });
+          commitOptimisticHistoryMutation(mutationToken);
+          void refreshTasks();
+        } catch (error) {
+          console.error("[ChatPanel] Failed to regenerate message:", error);
+          rollbackOptimisticHistoryMutation(mutationToken);
+          updateSession({ status: previousStatus });
+          toast.error(t("chat.regenerateFailed"));
+          void refreshTasks();
+        }
+      })();
     },
-    [refreshTasks, session?.session_id, t, updateSession],
+    [
+      beginOptimisticRegenerate,
+      commitOptimisticHistoryMutation,
+      refreshTasks,
+      rollbackOptimisticHistoryMutation,
+      session?.session_id,
+      session?.status,
+      t,
+      touchTask,
+      updateSession,
+    ],
   );
 
   const handleCreateBranch = React.useCallback(
-    async (assistantMessageId: string) => {
+    (assistantMessageId: string) => {
       if (!session?.session_id) return;
+      if (branchingMessageId) return;
 
       const messageId = Number(assistantMessageId);
       if (!Number.isInteger(messageId) || messageId <= 0) {
@@ -525,24 +600,33 @@ export function ChatPanel({
         return;
       }
 
-      try {
-        const branched = await branchSessionAction({
-          sessionId: session.session_id,
-          messageId,
-        });
-        await refreshTasks();
-        toast.success(t("chat.branchCreated"));
-        router.push(
-          lng
-            ? `/${lng}/chat/${branched.sessionId}`
-            : `/chat/${branched.sessionId}`,
-        );
-      } catch (error) {
-        console.error("[ChatPanel] Failed to branch session:", error);
-        toast.error(t("chat.branchCreateFailed"));
-      }
+      setBranchingMessageId(assistantMessageId);
+      const loadingToastId = toast.loading(
+        t("chat.branchCreating", "Creating branch..."),
+      );
+
+      void (async () => {
+        try {
+          const branched = await branchSessionAction({
+            sessionId: session.session_id,
+            messageId,
+          });
+          toast.success(t("chat.branchCreated"), { id: loadingToastId });
+          void refreshTasks();
+          router.push(
+            lng
+              ? `/${lng}/chat/${branched.sessionId}`
+              : `/chat/${branched.sessionId}`,
+          );
+        } catch (error) {
+          console.error("[ChatPanel] Failed to branch session:", error);
+          toast.error(t("chat.branchCreateFailed"), { id: loadingToastId });
+        } finally {
+          setBranchingMessageId(null);
+        }
+      })();
     },
-    [lng, refreshTasks, router, session?.session_id, t],
+    [branchingMessageId, lng, refreshTasks, router, session?.session_id, t],
   );
 
   // Condition checks for UI sections
@@ -730,6 +814,7 @@ export function ChatPanel({
             onEditMessage={handleEditMessage}
             onRegenerateMessage={handleRegenerateMessage}
             onCreateBranch={handleCreateBranch}
+            branchingAssistantMessageId={branchingMessageId}
             showUserPromptTimeline={isRightPanelCollapsed}
             contentPaddingClassName={messagePaddingClass}
             scrollButtonClassName={

@@ -36,6 +36,7 @@ export interface ChatMessageListProps {
     assistantMessageId: string;
   }) => void;
   onCreateBranch?: (assistantMessageId: string) => void;
+  branchingAssistantMessageId?: string | null;
   showUserPromptTimeline?: boolean;
   contentPaddingClassName?: string;
   scrollButtonClassName?: string;
@@ -92,6 +93,7 @@ export function ChatMessageList({
   onEditMessage,
   onRegenerateMessage,
   onCreateBranch,
+  branchingAssistantMessageId = null,
   showUserPromptTimeline = false,
   contentPaddingClassName,
   scrollButtonClassName,
@@ -508,6 +510,11 @@ export function ChatMessageList({
                   message={message}
                   runUsage={runUsage}
                   sessionStatus={sessionStatus}
+                  isCreatingBranch={branchingAssistantMessageId === message.id}
+                  disableBranchAction={
+                    branchingAssistantMessageId !== null &&
+                    branchingAssistantMessageId !== message.id
+                  }
                   onRegenerate={
                     userMessageIdForUsage && onRegenerateMessage
                       ? () =>

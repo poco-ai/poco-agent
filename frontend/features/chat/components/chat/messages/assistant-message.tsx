@@ -10,6 +10,7 @@ import {
   Coins,
   Copy,
   GitBranch,
+  Loader2,
   RotateCcw,
   ThumbsUp,
 } from "lucide-react";
@@ -29,6 +30,8 @@ interface AssistantMessageProps {
   sessionStatus?: string;
   onRegenerate?: () => void;
   onCreateBranch?: () => void;
+  isCreatingBranch?: boolean;
+  disableBranchAction?: boolean;
 }
 
 function pickNumber(value: unknown): number | null {
@@ -55,6 +58,8 @@ export function AssistantMessage({
   sessionStatus,
   onRegenerate,
   onCreateBranch,
+  isCreatingBranch = false,
+  disableBranchAction = false,
 }: AssistantMessageProps) {
   const { t } = useT("translation");
   const [isCopied, setIsCopied] = React.useState(false);
@@ -215,10 +220,19 @@ export function AssistantMessage({
             size="icon"
             className="size-7 text-muted-foreground hover:text-foreground disabled:opacity-40"
             onClick={onCreateBranch}
-            disabled={!onCreateBranch || isStreaming}
+            disabled={
+              !onCreateBranch ||
+              isStreaming ||
+              disableBranchAction ||
+              isCreatingBranch
+            }
             title={t("chat.createBranch")}
           >
-            <GitBranch className="size-3.5" />
+            {isCreatingBranch ? (
+              <Loader2 className="size-3.5 animate-spin" />
+            ) : (
+              <GitBranch className="size-3.5" />
+            )}
           </Button>
         </div>
 
