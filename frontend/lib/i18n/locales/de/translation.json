@@ -46,6 +46,8 @@
     "title": "Was kann ich für dich tun?",
     "subtitle": "Weise eine Aufgabe zu oder stelle eine Frage.",
     "attachFile": "Anhang hinzufügen",
+    "uploadFile": "Datei hochladen",
+    "importCode": "Code importieren",
     "voiceInput": "Spracheingabe",
     "startVoiceInput": "Spracheingabe starten",
     "stopVoiceInput": "Spracheingabe stoppen",

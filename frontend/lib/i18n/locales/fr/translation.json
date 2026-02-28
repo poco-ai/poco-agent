@@ -45,6 +45,8 @@
     "title": "Que puis-je faire pour vous ?",
     "subtitle": "Assignez une tâche ou posez une question.",
     "attachFile": "Ajouter une pièce jointe",
+    "uploadFile": "Téléverser un fichier",
+    "importCode": "Importer du code",
     "voiceInput": "Saisie vocale",
     "startVoiceInput": "Démarrer la saisie vocale",
     "stopVoiceInput": "Arrêter la saisie vocale",

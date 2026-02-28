@@ -1,9 +1,23 @@
 "use client";
 
 import * as React from "react";
-import { Loader2, ArrowUp, Plus, Github, Chrome, Clock } from "lucide-react";
+import {
+  Loader2,
+  ArrowUp,
+  Plus,
+  Chrome,
+  Clock,
+  Paperclip,
+  Code2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Tooltip,
   TooltipContent,
@@ -18,8 +32,6 @@ interface ComposerToolbarProps {
   isSubmitting?: boolean;
   isUploading: boolean;
   canSubmit: boolean;
-  repoUrl: string;
-  repoDialogOpen: boolean;
   browserEnabled: boolean;
   onOpenRepoDialog: () => void;
   onToggleBrowser: () => void;
@@ -39,8 +51,6 @@ export function ComposerToolbar({
   isSubmitting,
   isUploading,
   canSubmit,
-  repoUrl,
-  repoDialogOpen,
   browserEnabled,
   onOpenRepoDialog,
   onToggleBrowser,
@@ -64,19 +74,18 @@ export function ComposerToolbar({
 
   return (
     <div className="flex w-full flex-wrap items-center justify-between gap-3">
-      {/* Left: file upload, then GitHub */}
+      {/* Left: attach menu */}
       <div className="flex items-center gap-1">
-        {/* File upload */}
-        <Tooltip>
-          <TooltipTrigger asChild>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
             <Button
               type="button"
               variant="ghost"
               size="icon"
               disabled={disabled}
               className="size-9 rounded-xl hover:bg-accent"
-              aria-label={t("hero.importLocal")}
-              onClick={onOpenFileInput}
+              aria-label={t("hero.attachFile")}
+              title={t("hero.attachFile")}
             >
               {isUploading ? (
                 <Loader2 className="size-4 animate-spin" />
@@ -84,34 +93,25 @@ export function ComposerToolbar({
                 <Plus className="size-4" />
               )}
             </Button>
-          </TooltipTrigger>
-          <TooltipContent side="top" sideOffset={8}>
-            {t("hero.importLocal")}
-          </TooltipContent>
-        </Tooltip>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            align="start"
+            side="top"
+            sideOffset={8}
+            className="w-44"
+          >
+            <DropdownMenuItem onSelect={onOpenFileInput}>
+              <Paperclip className="size-4" />
+              <span>{t("hero.uploadFile")}</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={onOpenRepoDialog}>
+              <Code2 className="size-4" />
+              <span>{t("hero.importCode")}</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
 
-        {/* Repo (GitHub) toggle */}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              type="button"
-              variant={repoDialogOpen || repoUrl.trim() ? "secondary" : "ghost"}
-              size="icon"
-              disabled={disabled}
-              className="size-9 rounded-xl hover:bg-accent"
-              aria-label={t("hero.repo.toggle")}
-              title={t("hero.repo.toggle")}
-              onClick={onOpenRepoDialog}
-            >
-              <Github className="size-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="top" sideOffset={8}>
-            {t("hero.repo.toggle")}
-          </TooltipContent>
-        </Tooltip>
-
-        {/* Scheduled summary badge (scheduled mode only, right of GitHub) */}
+        {/* Scheduled summary badge (scheduled mode only) */}
         {mode === "scheduled" &&
           scheduledSummary &&
           onOpenScheduledSettings && (

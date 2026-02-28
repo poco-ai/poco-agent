@@ -45,6 +45,8 @@
     "title": "何かお手伝いできることはありますか？",
     "subtitle": "タスクを割り当てるか、質問してください。",
     "attachFile": "添付ファイルを追加",
+    "uploadFile": "ファイルをアップロード",
+    "importCode": "コードをインポート",
     "voiceInput": "音声入力",
     "startVoiceInput": "音声入力を開始",
     "stopVoiceInput": "音声入力を停止",

@@ -46,6 +46,8 @@
     "title": "我能为你做什么？",
     "subtitle": "分配一个任务，或提出任何问题。",
     "attachFile": "添加附件",
+    "uploadFile": "上传文件",
+    "importCode": "导入代码",
     "voiceInput": "语音输入",
     "startVoiceInput": "开始语音输入",
     "stopVoiceInput": "停止语音输入",

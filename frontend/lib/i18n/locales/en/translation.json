@@ -46,6 +46,8 @@
     "title": "What can I do for you?",
     "subtitle": "Assign a task, or ask any question.",
     "attachFile": "Add attachment",
+    "uploadFile": "Upload file",
+    "importCode": "Import code",
     "voiceInput": "Voice input",
     "startVoiceInput": "Start voice input",
     "stopVoiceInput": "Stop voice input",

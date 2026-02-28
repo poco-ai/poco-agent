@@ -393,8 +393,6 @@ export function TaskComposer({
             isSubmitting={isSubmitting}
             isUploading={upload.isUploading}
             canSubmit={canSubmit}
-            repoUrl={repoUrl}
-            repoDialogOpen={repoDialogOpen}
             browserEnabled={browserEnabled}
             onOpenRepoDialog={() => setRepoDialogOpen(true)}
             onToggleBrowser={() => setBrowserEnabled((prev) => !prev)}
