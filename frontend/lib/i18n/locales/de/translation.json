@@ -47,6 +47,8 @@
     "subtitle": "Weise eine Aufgabe zu oder stelle eine Frage.",
     "attachFile": "Anhang hinzufügen",
     "voiceInput": "Spracheingabe",
+    "startVoiceInput": "Spracheingabe starten",
+    "stopVoiceInput": "Spracheingabe stoppen",
     "send": "Senden",
     "placeholder": "Weise eine Aufgabe zu oder stelle eine Frage",
     "inputPrompts": {
@@ -144,7 +146,9 @@
       "uploadFailed": "Datei-Upload fehlgeschlagen",
       "actionFailed": "Aktion fehlgeschlagen, bitte versuchen Sie es erneut",
       "fileTooLarge": "Datei zu groß, maximal 100 MB unterstützt",
-      "duplicateFileName": "Ein Anhang mit dem Namen {{name}} existiert bereits. Bitte entfernen oder benennen Sie ihn um."
+      "duplicateFileName": "Ein Anhang mit dem Namen {{name}} existiert bereits. Bitte entfernen oder benennen Sie ihn um.",
+      "voiceInputNotSupported": "Spracheingabe wird in diesem Browser nicht unterstützt",
+      "voiceInputFailed": "Spracheingabe konnte nicht gestartet werden, bitte versuchen Sie es erneut"
     },
     "mcpSelector": {
       "title": "MCP-Server auswählen",

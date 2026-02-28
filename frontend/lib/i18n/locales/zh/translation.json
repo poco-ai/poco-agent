@@ -47,6 +47,8 @@
     "subtitle": "分配一个任务，或提出任何问题。",
     "attachFile": "添加附件",
     "voiceInput": "语音输入",
+    "startVoiceInput": "开始语音输入",
+    "stopVoiceInput": "停止语音输入",
     "send": "发送",
     "placeholder": "分配一个任务或提出任何问题",
     "inputPrompts": {
@@ -144,7 +146,9 @@
       "uploadFailed": "文件上传失败",
       "actionFailed": "操作失败，请重试",
       "fileTooLarge": "文件过大，最大支持 100MB",
-      "duplicateFileName": "已存在同名附件：{{name}}，请先删除或重命名"
+      "duplicateFileName": "已存在同名附件：{{name}}，请先删除或重命名",
+      "voiceInputNotSupported": "当前浏览器不支持语音输入",
+      "voiceInputFailed": "语音输入启动失败，请重试"
     },
     "mcpSelector": {
       "title": "选择 MCP 服务器",

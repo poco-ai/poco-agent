@@ -46,6 +46,8 @@
     "subtitle": "Assignez une tâche ou posez une question.",
     "attachFile": "Ajouter une pièce jointe",
     "voiceInput": "Saisie vocale",
+    "startVoiceInput": "Démarrer la saisie vocale",
+    "stopVoiceInput": "Arrêter la saisie vocale",
     "send": "Envoyer",
     "placeholder": "Assignez une tâche ou posez une question",
     "inputPrompts": {
@@ -143,7 +145,9 @@
       "uploadFailed": "Échec de l'upload du fichier",
       "actionFailed": "Action échouée, veuillez réessayer",
       "fileTooLarge": "Fichier trop volumineux, max 100 Mo supporté",
-      "duplicateFileName": "Une pièce jointe nommée {{name}} existe déjà. Veuillez la supprimer ou la renommer."
+      "duplicateFileName": "Une pièce jointe nommée {{name}} existe déjà. Veuillez la supprimer ou la renommer.",
+      "voiceInputNotSupported": "La saisie vocale n'est pas prise en charge dans ce navigateur",
+      "voiceInputFailed": "Impossible de démarrer la saisie vocale, veuillez réessayer"
     },
     "mcpSelector": {
       "title": "Sélectionner les serveurs MCP",
