@@ -167,7 +167,6 @@ export function ComposerToolbar({
               <DropdownMenuCheckboxItem
                 checked={browserEnabled}
                 onCheckedChange={(next) => {
-                  if (next === "indeterminate") return;
                   onBrowserEnabledChange(Boolean(next));
                 }}
               >
