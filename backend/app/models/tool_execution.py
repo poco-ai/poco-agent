@@ -24,9 +24,9 @@ class ToolExecution(Base, TimestampMixin):
     __tablename__ = "tool_executions"
     __table_args__ = (
         Index(
-            "ix_tool_executions_session_id_created_at_id",
+            "ix_tool_executions_session_id_updated_at_id",
             "session_id",
-            "created_at",
+            "updated_at",
             "id",
         ),
         UniqueConstraint(

@@ -73,9 +73,9 @@ def upgrade() -> None:
         unique=False,
     )
     op.create_index(
-        "ix_tool_executions_session_id_created_at_id",
+        "ix_tool_executions_session_id_updated_at_id",
         "tool_executions",
-        ["session_id", "created_at", "id"],
+        ["session_id", "updated_at", "id"],
         unique=False,
     )
     op.create_index(
@@ -95,7 +95,7 @@ def downgrade() -> None:
         table_name="user_input_requests",
     )
     op.drop_index(
-        "ix_tool_executions_session_id_created_at_id", table_name="tool_executions"
+        "ix_tool_executions_session_id_updated_at_id", table_name="tool_executions"
     )
     op.drop_index(op.f("ix_tool_executions_session_id"), table_name="tool_executions")
     op.drop_index(
