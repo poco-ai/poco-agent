@@ -1,5 +1,6 @@
 import uuid
 import json
+from datetime import datetime
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
@@ -12,7 +13,11 @@ from app.core.settings import get_settings
 from app.core.deps import get_current_user_id, get_db
 from app.core.errors.error_codes import ErrorCode
 from app.core.errors.exceptions import AppException
-from app.schemas.message import MessageResponse, MessageWithFilesResponse
+from app.schemas.message import (
+    MessageDeltaResponse,
+    MessageResponse,
+    MessageWithFilesResponse,
+)
 from app.schemas.response import Response, ResponseSchema
 from app.schemas.session import (
     SessionCancelRequest,
@@ -23,7 +28,7 @@ from app.schemas.session import (
     SessionUpdateRequest,
 )
 from app.schemas.computer import ComputerBrowserScreenshotResponse
-from app.schemas.tool_execution import ToolExecutionResponse
+from app.schemas.tool_execution import ToolExecutionDeltaResponse, ToolExecutionResponse
 from app.schemas.usage import UsageResponse
 from app.schemas.workspace import FileNode, WorkspaceArchiveResponse
 from app.services.message_service import MessageService
@@ -285,6 +290,38 @@ async def get_session_messages_with_files(
 
 
 @router.get(
+    "/{session_id}/messages-with-files/delta",
+    response_model=ResponseSchema[MessageDeltaResponse],
+)
+async def get_session_messages_with_files_delta(
+    session_id: uuid.UUID,
+    user_id: str = Depends(get_current_user_id),
+    after_message_id: int = Query(default=0, ge=0),
+    limit: int = Query(default=200, ge=1, le=1000),
+    db: Session = Depends(get_db),
+) -> JSONResponse:
+    """Gets incremental messages for a session with per-message attachments."""
+    db_session = session_service.get_session(db, session_id)
+    if db_session.user_id != user_id:
+        raise AppException(
+            error_code=ErrorCode.FORBIDDEN,
+            message="Session does not belong to the user",
+        )
+
+    payload = message_service.get_messages_with_files_delta(
+        db,
+        session_id,
+        user_id=user_id,
+        after_message_id=after_message_id,
+        limit=limit,
+    )
+    return Response.success(
+        data=payload,
+        message="Messages delta retrieved successfully",
+    )
+
+
+@router.get(
     "/{session_id}/tool-executions",
     response_model=ResponseSchema[list[ToolExecutionResponse]],
 )
@@ -312,6 +349,44 @@ async def get_session_tool_executions(
     return Response.success(
         data=[ToolExecutionResponse.model_validate(e) for e in executions],
         message="Tool executions retrieved successfully",
+    )
+
+
+@router.get(
+    "/{session_id}/tool-executions/delta",
+    response_model=ResponseSchema[ToolExecutionDeltaResponse],
+)
+async def get_session_tool_executions_delta(
+    session_id: uuid.UUID,
+    user_id: str = Depends(get_current_user_id),
+    after_created_at: datetime | None = Query(default=None),
+    after_id: uuid.UUID | None = Query(default=None),
+    limit: int = Query(default=200, ge=1, le=2000),
+    db: Session = Depends(get_db),
+) -> JSONResponse:
+    """Gets incremental tool executions for a session."""
+    db_session = session_service.get_session(db, session_id)
+    if db_session.user_id != user_id:
+        raise AppException(
+            error_code=ErrorCode.FORBIDDEN,
+            message="Session does not belong to the user",
+        )
+    if after_id is not None and after_created_at is None:
+        raise AppException(
+            error_code=ErrorCode.BAD_REQUEST,
+            message="after_created_at is required when after_id is provided",
+        )
+
+    payload = tool_execution_service.get_tool_executions_delta(
+        db,
+        session_id,
+        after_created_at=after_created_at,
+        after_id=after_id,
+        limit=limit,
+    )
+    return Response.success(
+        data=payload,
+        message="Tool executions delta retrieved successfully",
     )
 
 

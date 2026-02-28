@@ -1,6 +1,8 @@
 import uuid
+from datetime import datetime
 from typing import Any
 
+from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session
 
 from app.models.tool_execution import ToolExecution
@@ -73,6 +75,40 @@ class ToolExecutionRepository:
             .order_by(ToolExecution.created_at.asc())
             .limit(limit)
             .offset(offset)
+            .all()
+        )
+
+    @staticmethod
+    def list_by_session_after_cursor(
+        session_db: Session,
+        session_id: uuid.UUID,
+        *,
+        after_created_at: datetime | None = None,
+        after_id: uuid.UUID | None = None,
+        limit: int = 100,
+    ) -> list[ToolExecution]:
+        """Lists tool executions for a session using a composite cursor."""
+        query = session_db.query(ToolExecution).filter(
+            ToolExecution.session_id == session_id
+        )
+
+        if after_created_at is not None:
+            if after_id is not None:
+                query = query.filter(
+                    or_(
+                        ToolExecution.created_at > after_created_at,
+                        and_(
+                            ToolExecution.created_at == after_created_at,
+                            ToolExecution.id > after_id,
+                        ),
+                    )
+                )
+            else:
+                query = query.filter(ToolExecution.created_at > after_created_at)
+
+        return (
+            query.order_by(ToolExecution.created_at.asc(), ToolExecution.id.asc())
+            .limit(limit)
             .all()
         )
 

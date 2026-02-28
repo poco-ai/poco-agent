@@ -49,6 +49,25 @@ class MessageRepository:
         )
 
     @staticmethod
+    def list_by_session_after_id(
+        session_db: Session,
+        session_id: uuid.UUID,
+        *,
+        after_id: int = 0,
+        limit: int = 100,
+    ) -> list[AgentMessage]:
+        """Lists messages for a session using an incremental ID cursor."""
+        query = (
+            session_db.query(AgentMessage)
+            .filter(AgentMessage.session_id == session_id)
+            .order_by(AgentMessage.id.asc())
+            .limit(limit)
+        )
+        if after_id > 0:
+            query = query.filter(AgentMessage.id > after_id)
+        return query.all()
+
+    @staticmethod
     def count_by_session(session_db: Session, session_id: uuid.UUID) -> int:
         """Counts messages for a session."""
         return (

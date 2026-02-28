@@ -63,6 +63,24 @@ class RunRepository:
         )
 
     @staticmethod
+    def list_by_session_and_user_message_ids(
+        session_db: Session,
+        session_id: uuid.UUID,
+        user_message_ids: list[int],
+    ) -> list[AgentRun]:
+        """Lists runs by session and a set of user_message ids."""
+        if not user_message_ids:
+            return []
+
+        return (
+            session_db.query(AgentRun)
+            .filter(AgentRun.session_id == session_id)
+            .filter(AgentRun.user_message_id.in_(user_message_ids))
+            .order_by(AgentRun.created_at.asc())
+            .all()
+        )
+
+    @staticmethod
     def list_by_scheduled_task(
         session_db: Session,
         scheduled_task_id: uuid.UUID,

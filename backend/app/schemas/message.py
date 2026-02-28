@@ -32,3 +32,11 @@ class MessageWithFilesResponse(MessageResponse):
     """
 
     attachments: list[InputFileWithUrl] | None = None
+
+
+class MessageDeltaResponse(BaseModel):
+    """Incremental message response with cursor for polling."""
+
+    items: list[MessageWithFilesResponse]
+    next_after_message_id: int | None = None
+    has_more: bool = False

@@ -19,3 +19,12 @@ class ToolExecutionResponse(BaseModel):
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class ToolExecutionDeltaResponse(BaseModel):
+    """Incremental tool execution response with composite cursor."""
+
+    items: list[ToolExecutionResponse]
+    next_after_created_at: datetime | None = None
+    next_after_id: UUID | None = None
+    has_more: bool = False
