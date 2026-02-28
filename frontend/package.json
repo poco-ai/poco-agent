@@ -68,6 +68,7 @@
     "react-markdown": "^10.1.0",
     "react-pdf": "9.0.0",
     "react-resizable-panels": "^2.x.x",
+    "react-speech-recognition": "^4.0.1",
     "react-syntax-highlighter": "^16.1.0",
     "recharts": "2.15.4",
     "rehype-highlight": "^7.0.2",

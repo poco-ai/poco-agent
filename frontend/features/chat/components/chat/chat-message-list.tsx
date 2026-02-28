@@ -150,6 +150,18 @@ export function ChatMessageList({
     );
   }, []);
 
+  const scrollViewportToBottom = React.useCallback(
+    (behavior: ScrollBehavior = "auto") => {
+      const viewport = getScrollViewport();
+      if (!viewport) return;
+      viewport.scrollTo({
+        top: viewport.scrollHeight,
+        behavior,
+      });
+    },
+    [getScrollViewport],
+  );
+
   // Check if user has scrolled up
   const checkScrollPosition = React.useCallback(() => {
     const viewport = getScrollViewport();
@@ -205,14 +217,26 @@ export function ChatMessageList({
     (messageId: string, behavior: ScrollBehavior = "auto") => {
       const element = userMessageElementsRef.current.get(messageId);
       if (!element) return;
+      const viewport = getScrollViewport();
+      if (!viewport) return;
 
-      element.scrollIntoView({
+      const viewportRect = viewport.getBoundingClientRect();
+      const elementRect = element.getBoundingClientRect();
+      const elementOffsetTop = elementRect.top - viewportRect.top;
+      const centeredTop =
+        viewport.scrollTop +
+        elementOffsetTop -
+        viewport.clientHeight / 2 +
+        elementRect.height / 2;
+      const maxScrollTop = viewport.scrollHeight - viewport.clientHeight;
+
+      viewport.scrollTo({
+        top: Math.max(0, Math.min(centeredTop, maxScrollTop)),
         behavior,
-        block: "center",
       });
       setActiveUserMessageId(messageId);
     },
-    [],
+    [getScrollViewport],
   );
 
   // Handle scroll events
@@ -256,10 +280,10 @@ export function ChatMessageList({
       messages.length > 0 &&
       scrollRef.current
     ) {
-      scrollRef.current.scrollIntoView({ behavior: "auto" });
+      scrollViewportToBottom("auto");
       hasInitializedRef.current = true;
     }
-  }, [messages]);
+  }, [messages, scrollViewportToBottom]);
 
   // Auto-scroll to bottom when new messages arrive (only if user is not scrolling)
   React.useEffect(() => {
@@ -269,19 +293,48 @@ export function ChatMessageList({
     lastMessageCountRef.current = messages.length;
     prevIsTypingRef.current = isTyping;
 
-    if (
-      scrollRef.current &&
-      !isUserScrolling &&
-      (hasNewMessages || isTypingStarted)
-    ) {
-      scrollRef.current.scrollIntoView({ behavior: "smooth" });
+    if (!isUserScrolling && (hasNewMessages || isTyping)) {
+      scrollViewportToBottom(
+        isTyping
+          ? "auto"
+          : hasNewMessages || isTypingStarted
+            ? "smooth"
+            : "auto",
+      );
     }
 
     // Show scroll button when new messages arrive while user is scrolling
     if (hasNewMessages && isUserScrolling) {
       setShowScrollButton(true);
     }
-  }, [messages, isTyping, isUserScrolling]);
+  }, [messages, isTyping, isUserScrolling, scrollViewportToBottom]);
+
+  React.useEffect(() => {
+    if (!isTyping || isUserScrolling) return;
+
+    const scrollArea = scrollAreaRef.current;
+    if (!scrollArea) return;
+
+    const content = scrollArea.querySelector<HTMLElement>(
+      "[data-chat-scroll-content]",
+    );
+    if (!content) return;
+
+    const keepBottom = () => {
+      scrollViewportToBottom("auto");
+    };
+
+    keepBottom();
+
+    const resizeObserver = new ResizeObserver(() => {
+      keepBottom();
+    });
+    resizeObserver.observe(content);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [isTyping, isUserScrolling, scrollViewportToBottom]);
 
   React.useEffect(() => {
     if (!showUserPromptTimeline) {
@@ -297,12 +350,10 @@ export function ChatMessageList({
 
   // Scroll to bottom handler
   const scrollToBottom = React.useCallback(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollIntoView({ behavior: "smooth" });
-      setIsUserScrolling(false);
-      setShowScrollButton(false);
-    }
-  }, []);
+    scrollViewportToBottom("smooth");
+    setIsUserScrolling(false);
+    setShowScrollButton(false);
+  }, [scrollViewportToBottom]);
 
   React.useEffect(() => {
     if (!showUserPromptTimeline || userPromptTimelineIds.length === 0) return;

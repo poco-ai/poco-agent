@@ -6,7 +6,10 @@ import {
   useImperativeHandle,
   forwardRef,
 } from "react";
-import { ArrowUp, Plus, Loader2, Pause } from "lucide-react";
+import { ArrowUp, Plus, Loader2, Pause, Mic, MicOff } from "lucide-react";
+import SpeechRecognition, {
+  useSpeechRecognition,
+} from "react-speech-recognition";
 import { uploadAttachment } from "@/features/attachments/api/attachment-api";
 import type { InputFile } from "@/features/chat/types";
 import { toast } from "sonner";
@@ -37,6 +40,7 @@ export interface ChatInputRef {
 }
 
 const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
+const MANUAL_EDIT_PAUSE_MS = 1000;
 
 /**
  * Chat input component with send button
@@ -61,6 +65,11 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
     const [historyIndex, setHistoryIndex] = useState(-1);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const dictationBaseRef = useRef("");
+    const isDictatingRef = useRef(false);
+    const isSpeechUpdateRef = useRef(false);
+    const manualEditUntilRef = useRef(0);
+    const [hasVoiceSupport, setHasVoiceSupport] = useState(false);
 
     const syncTextareaValue = useCallback((nextValue: string) => {
       const textarea = textareaRef.current;
@@ -117,11 +126,110 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
       textareaRef,
     });
 
+    const {
+      interimTranscript,
+      finalTranscript,
+      listening,
+      resetTranscript,
+      browserSupportsSpeechRecognition,
+    } = useSpeechRecognition();
+
+    useEffect(() => {
+      if (browserSupportsSpeechRecognition && !hasVoiceSupport) {
+        setHasVoiceSupport(true);
+      }
+    }, [browserSupportsSpeechRecognition, hasVoiceSupport]);
+
+    // Keep voice transcript synchronized with current input while dictating.
+    useEffect(() => {
+      if (!isDictatingRef.current) {
+        return;
+      }
+
+      if (!listening) {
+        isDictatingRef.current = false;
+        isSpeechUpdateRef.current = false;
+        return;
+      }
+
+      if (manualEditUntilRef.current > Date.now()) {
+        return;
+      }
+
+      const liveTranscript = [finalTranscript, interimTranscript]
+        .filter(Boolean)
+        .join(" ");
+      const base = dictationBaseRef.current;
+      const separator = base && liveTranscript && !/\s$/.test(base) ? " " : "";
+      const nextValue = `${base}${separator}${liveTranscript}`;
+
+      if (nextValue !== value) {
+        isSpeechUpdateRef.current = true;
+        applyValue(nextValue);
+        isSpeechUpdateRef.current = false;
+      }
+    }, [applyValue, finalTranscript, interimTranscript, listening, value]);
+
+    // Reset speech state after message has been sent and cleared.
+    useEffect(() => {
+      if (!value && !listening) {
+        resetTranscript();
+        dictationBaseRef.current = "";
+        isDictatingRef.current = false;
+        isSpeechUpdateRef.current = false;
+      }
+    }, [listening, resetTranscript, value]);
+
+    const handleToggleVoiceInput = useCallback(async () => {
+      if (!browserSupportsSpeechRecognition) {
+        toast.error(t("hero.toasts.voiceInputNotSupported"));
+        return;
+      }
+
+      try {
+        if (listening) {
+          await SpeechRecognition.stopListening();
+          return;
+        }
+
+        dictationBaseRef.current = value;
+        isDictatingRef.current = true;
+        manualEditUntilRef.current = 0;
+        resetTranscript();
+        await SpeechRecognition.startListening({ continuous: true });
+
+        requestAnimationFrame(() => {
+          const textarea = textareaRef.current;
+          if (!textarea) return;
+          textarea.focus();
+          const end = textarea.value.length;
+          textarea.setSelectionRange(end, end);
+        });
+      } catch (error) {
+        console.error("Speech recognition failed:", error);
+        toast.error(t("hero.toasts.voiceInputFailed"));
+      }
+    }, [
+      browserSupportsSpeechRecognition,
+      listening,
+      resetTranscript,
+      t,
+      value,
+    ]);
+
     const handleSend = useCallback(() => {
       if (!value.trim() && attachments.length === 0) return;
 
       const content = value;
       const currentAttachments = [...attachments];
+      if (listening) {
+        void SpeechRecognition.stopListening();
+      }
+      resetTranscript();
+      dictationBaseRef.current = "";
+      isDictatingRef.current = false;
+      isSpeechUpdateRef.current = false;
+      manualEditUntilRef.current = 0;
       setHistoryIndex(-1);
       setValue(""); // Clear immediately
       setAttachments([]);
@@ -130,7 +238,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
         textareaRef.current.style.height = "auto";
       }
       onSend(content, currentAttachments);
-    }, [value, attachments, onSend]);
+    }, [value, attachments, listening, onSend, resetTranscript]);
 
     // Reset textarea height when value becomes empty
     useEffect(() => {
@@ -148,6 +256,9 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
     const handleKeyDown = useCallback(
       (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
         if (slashAutocomplete.handleKeyDown(e)) return;
+        if (listening && isDictatingRef.current && e.key !== "Enter") {
+          manualEditUntilRef.current = Date.now() + MANUAL_EDIT_PAUSE_MS;
+        }
         if (
           disabled ||
           isComposingRef.current ||
@@ -204,6 +315,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
         handleSend,
         slashAutocomplete,
         disabled,
+        listening,
         historyIndex,
         history,
         applyValue,
@@ -218,6 +330,37 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
       requestAnimationFrame(() => {
         isComposingRef.current = false;
       });
+    }, []);
+
+    const handleInputChange = useCallback(
+      (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        const nextValue = e.target.value;
+        if (isDictatingRef.current && !isSpeechUpdateRef.current) {
+          dictationBaseRef.current = nextValue;
+          manualEditUntilRef.current = Date.now() + MANUAL_EDIT_PAUSE_MS;
+          if (listening) {
+            resetTranscript();
+          }
+        }
+
+        setValue(nextValue);
+        if (historyIndex !== -1) {
+          setHistoryIndex(-1);
+        }
+      },
+      [historyIndex, listening, resetTranscript],
+    );
+
+    const handleInputFocus = useCallback(() => {
+      if (isDictatingRef.current) {
+        manualEditUntilRef.current = Date.now() + MANUAL_EDIT_PAUSE_MS;
+      }
+    }, []);
+
+    const handleInputClick = useCallback(() => {
+      if (isDictatingRef.current) {
+        manualEditUntilRef.current = Date.now() + MANUAL_EDIT_PAUSE_MS;
+      }
     }, []);
 
     const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -348,13 +491,10 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
           <textarea
             ref={textareaRef}
             value={value}
-            onChange={(e) => {
-              setValue(e.target.value);
-              if (historyIndex !== -1) {
-                setHistoryIndex(-1);
-              }
-            }}
+            onChange={handleInputChange}
             onKeyDown={handleKeyDown}
+            onFocus={handleInputFocus}
+            onClick={handleInputClick}
             onCompositionStart={handleCompositionStart}
             onCompositionEnd={handleCompositionEnd}
             placeholder={t("chat.inputPlaceholder")}
@@ -389,16 +529,53 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
               )}
             </button>
           ) : (
-            <button
-              type="button"
-              onClick={handleSend}
-              disabled={!hasDraft || disabled}
-              className="flex-shrink-0 flex items-center justify-center size-8 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground transition-colors disabled:cursor-not-allowed disabled:opacity-50"
-              aria-label={t("hero.send")}
-              title={t("hero.send")}
-            >
-              <ArrowUp className="size-4" />
-            </button>
+            <>
+              {hasVoiceSupport ? (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void handleToggleVoiceInput();
+                      }}
+                      disabled={disabled || isUploading}
+                      className={cn(
+                        "flex-shrink-0 flex items-center justify-center size-8 rounded-md transition-colors disabled:cursor-not-allowed disabled:opacity-50",
+                        listening
+                          ? "bg-destructive text-destructive-foreground hover:bg-destructive/90 animate-pulse"
+                          : "hover:bg-accent text-muted-foreground",
+                      )}
+                      aria-label={
+                        listening
+                          ? t("hero.stopVoiceInput")
+                          : t("hero.startVoiceInput")
+                      }
+                    >
+                      {listening ? (
+                        <MicOff className="size-4" />
+                      ) : (
+                        <Mic className="size-4" />
+                      )}
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" sideOffset={8}>
+                    {listening
+                      ? t("hero.stopVoiceInput")
+                      : t("hero.startVoiceInput")}
+                  </TooltipContent>
+                </Tooltip>
+              ) : null}
+              <button
+                type="button"
+                onClick={handleSend}
+                disabled={!hasDraft || disabled}
+                className="flex-shrink-0 flex items-center justify-center size-8 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                aria-label={t("hero.send")}
+                title={t("hero.send")}
+              >
+                <ArrowUp className="size-4" />
+              </button>
+            </>
           )}
         </div>
       </div>

@@ -30,7 +30,7 @@ export interface StartupPreloadState {
   pluginInstalls: UserPluginInstall[];
 }
 
-type StartupPreloadKey = keyof StartupPreloadState;
+export type StartupPreloadKey = keyof StartupPreloadState;
 
 const startupPreloadData: Partial<StartupPreloadState> = {};
 const readyKeys = new Set<StartupPreloadKey>();
@@ -95,4 +95,17 @@ export function getStartupPreloadValue<K extends StartupPreloadKey>(
   }
 
   return startupPreloadData[key] as StartupPreloadState[K];
+}
+
+export function invalidateStartupPreloadValue(key: StartupPreloadKey): void {
+  readyKeys.delete(key);
+  delete startupPreloadData[key];
+}
+
+export function invalidateStartupPreloadValues(
+  keys: StartupPreloadKey[],
+): void {
+  keys.forEach((key) => {
+    invalidateStartupPreloadValue(key);
+  });
 }

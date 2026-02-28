@@ -47,6 +47,8 @@
     "subtitle": "Assign a task, or ask any question.",
     "attachFile": "Add attachment",
     "voiceInput": "Voice input",
+    "startVoiceInput": "Start voice input",
+    "stopVoiceInput": "Stop voice input",
     "send": "Send",
     "placeholder": "Assign a task or ask any question",
     "inputPrompts": {
@@ -144,7 +146,9 @@
       "uploadFailed": "File upload failed",
       "actionFailed": "Action failed, please try again",
       "fileTooLarge": "File too large, max 100MB supported",
-      "duplicateFileName": "An attachment named {{name}} already exists. Please remove or rename it."
+      "duplicateFileName": "An attachment named {{name}} already exists. Please remove or rename it.",
+      "voiceInputNotSupported": "Voice input is not supported in this browser",
+      "voiceInputFailed": "Failed to start voice input, please try again"
     },
     "mcpSelector": {
       "title": "Select MCP Servers",

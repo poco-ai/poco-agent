@@ -29,6 +29,7 @@ import { useT } from "@/lib/i18n/client";
 import {
   getStartupPreloadValue,
   hasStartupPreloadValue,
+  invalidateStartupPreloadValues,
 } from "@/lib/startup-preload";
 import { toast } from "sonner";
 import { AlertTriangle } from "lucide-react";
@@ -81,6 +82,7 @@ export function CardNav({
   const tlRef = useRef<gsap.core.Timeline | null>(null);
   const isHoveringRef = useRef(false);
   const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const didInitialRefreshRef = useRef(false);
 
   const preloadMcpServers = getStartupPreloadValue("mcpServers");
   const preloadMcpInstalls = getStartupPreloadValue("mcpInstalls");
@@ -117,41 +119,53 @@ export function CardNav({
   );
   const [isLoading, setIsLoading] = useState(false);
   const [hasFetched, setHasFetched] = useState(hasPreloadedCardData);
+  const [hasFetchedFresh, setHasFetchedFresh] = useState(false);
 
   // Fetch MCP/Skill/Plugin data
-  const fetchData = useCallback(async () => {
-    if (hasFetched || isLoading) return;
+  const fetchData = useCallback(
+    async (force = false) => {
+      if ((!force && hasFetchedFresh) || isLoading) return;
 
-    setIsLoading(true);
-    try {
-      const [
-        mcpServersData,
-        mcpInstallsData,
-        skillsData,
-        skillInstallsData,
-        pluginsData,
-        pluginInstallsData,
-      ] = await Promise.all([
-        mcpService.listServers(),
-        mcpService.listInstalls(),
-        skillsService.listSkills(),
-        skillsService.listInstalls(),
-        pluginsService.listPlugins(),
-        pluginsService.listInstalls(),
-      ]);
-      setMcpServers(mcpServersData);
-      setMcpInstalls(mcpInstallsData);
-      setSkills(skillsData);
-      setSkillInstalls(skillInstallsData);
-      setPlugins(pluginsData);
-      setPluginInstalls(pluginInstallsData);
-      setHasFetched(true);
-    } catch (error) {
-      console.error("[CardNav] Failed to fetch data:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [hasFetched, isLoading]);
+      setIsLoading(true);
+      try {
+        const [
+          mcpServersData,
+          mcpInstallsData,
+          skillsData,
+          skillInstallsData,
+          pluginsData,
+          pluginInstallsData,
+        ] = await Promise.all([
+          mcpService.listServers(),
+          mcpService.listInstalls(),
+          skillsService.listSkills(),
+          skillsService.listInstalls(),
+          pluginsService.listPlugins(),
+          pluginsService.listInstalls(),
+        ]);
+        setMcpServers(mcpServersData);
+        setMcpInstalls(mcpInstallsData);
+        setSkills(skillsData);
+        setSkillInstalls(skillInstallsData);
+        setPlugins(pluginsData);
+        setPluginInstalls(pluginInstallsData);
+        setHasFetched(true);
+        setHasFetchedFresh(true);
+      } catch (error) {
+        console.error("[CardNav] Failed to fetch data:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [hasFetchedFresh, isLoading],
+  );
+
+  // Refresh once on mount to avoid stale startup-preload data after capability changes.
+  useEffect(() => {
+    if (didInitialRefreshRef.current) return;
+    didInitialRefreshRef.current = true;
+    void fetchData(true);
+  }, [fetchData]);
 
   // Get all installed MCPs
   const installedMcps: InstalledItem[] = mcpInstalls.map((install) => {
@@ -206,6 +220,7 @@ export function CardNav({
               : install,
           ),
         );
+        invalidateStartupPreloadValues(["mcpInstalls"]);
         if (!currentEnabled) {
           playInstallSound();
         }
@@ -247,6 +262,7 @@ export function CardNav({
               : install,
           ),
         );
+        invalidateStartupPreloadValues(["skillInstalls"]);
         if (!currentEnabled) {
           playInstallSound();
         }
@@ -312,6 +328,7 @@ export function CardNav({
             return install;
           }),
         );
+        invalidateStartupPreloadValues(["pluginInstalls"]);
         if (shouldEnable) {
           playInstallSound();
           const extraNote =
@@ -359,6 +376,7 @@ export function CardNav({
         setMcpInstalls((prev) =>
           prev.map((install) => ({ ...install, enabled: enable })),
         );
+        invalidateStartupPreloadValues(["mcpInstalls"]);
         if (enable) {
           const count = mcpInstalls.length;
           if (count > MCP_LIMIT) {
@@ -391,6 +409,7 @@ export function CardNav({
         setSkillInstalls((prev) =>
           prev.map((install) => ({ ...install, enabled: enable })),
         );
+        invalidateStartupPreloadValues(["skillInstalls"]);
         if (enable) {
           const count = skillInstalls.length;
           if (count > SKILL_LIMIT) {
@@ -425,6 +444,7 @@ export function CardNav({
             : install,
         ),
       );
+      invalidateStartupPreloadValues(["pluginInstalls"]);
     } catch (error) {
       console.error("[CardNav] Failed to disable presets:", error);
       toast.error(t("hero.toasts.actionFailed"));

@@ -13,6 +13,7 @@ import {
   getStartupPreloadPromise,
   getStartupPreloadValue,
   hasStartupPreloadValue,
+  invalidateStartupPreloadValues,
 } from "@/lib/startup-preload";
 import { playInstallSound } from "@/lib/utils/sound";
 
@@ -56,6 +57,21 @@ export function useSkillCatalog() {
   useEffect(() => {
     let active = true;
 
+    const refreshSilently = async () => {
+      try {
+        const [skillsData, installsData] = await Promise.all([
+          skillsService.listSkills(),
+          skillsService.listInstalls(),
+        ]);
+        if (!active) return;
+        setSkills(skillsData);
+        setInstalls(installsData);
+      } catch (error) {
+        // Keep preload data as fallback, avoid user-facing toast for background refresh.
+        console.error("[Skills] Silent refresh failed:", error);
+      }
+    };
+
     const hydrateAndRefresh = async () => {
       const canUsePreload =
         hasStartupPreloadValue("skills") &&
@@ -64,6 +80,7 @@ export function useSkillCatalog() {
         setSkills(getStartupPreloadValue("skills") ?? []);
         setInstalls(getStartupPreloadValue("skillInstalls") ?? []);
         setIsLoading(false);
+        void refreshSilently();
         return;
       }
 
@@ -79,6 +96,7 @@ export function useSkillCatalog() {
           setSkills(getStartupPreloadValue("skills") ?? []);
           setInstalls(getStartupPreloadValue("skillInstalls") ?? []);
           setIsLoading(false);
+          void refreshSilently();
           return;
         }
       }
@@ -105,6 +123,7 @@ export function useSkillCatalog() {
         setInstalls((prev) => [created, ...prev]);
         toast.success(t("library.skillsManager.toasts.installed"));
         playInstallSound();
+        invalidateStartupPreloadValues(["skillInstalls"]);
       } catch (error) {
         console.error("[Skills] install failed:", error);
         toast.error(t("library.skillsManager.toasts.actionError"));
@@ -125,6 +144,7 @@ export function useSkillCatalog() {
           prev.filter((install) => install.skill_id !== skillId),
         );
         toast.success(t("common.deleted"));
+        invalidateStartupPreloadValues(["skills", "skillInstalls"]);
       } catch (error) {
         console.error("[Skills] delete failed:", error);
         toast.error(t("library.skillsManager.toasts.actionError"));
@@ -164,6 +184,7 @@ export function useSkillCatalog() {
         if (enabled) {
           playInstallSound();
         }
+        invalidateStartupPreloadValues(["skillInstalls"]);
       } catch (error) {
         console.error("[Skills] setEnabled failed:", error);
         // Rollback
