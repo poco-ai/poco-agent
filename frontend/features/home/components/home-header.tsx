@@ -71,7 +71,7 @@ export function HomeHeader({
                 title={t("header.switchModel")}
                 disabled={!isSelectorReady}
               >
-                <span className="min-w-0 max-w-[220px] truncate text-sm font-medium font-serif">
+                <span className="min-w-0 max-w-[220px] truncate text-base font-medium font-serif">
                   {effectiveModel || t("status.loading")}
                 </span>
                 <ChevronDown className="size-3.5 text-muted-foreground" />
@@ -129,7 +129,7 @@ export function HomeHeader({
               <Button
                 variant="ghost"
                 size="sm"
-                className="mx-1 flex size-8 items-center justify-center rounded-full border-0 bg-primary p-0 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 hover:text-primary-foreground"
+                className="mx-1 flex size-8 items-center justify-center rounded-full p-0 text-muted-foreground hover:bg-accent hover:text-foreground"
               >
                 <Coins className="size-3.5" />
               </Button>
