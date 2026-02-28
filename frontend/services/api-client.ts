@@ -42,6 +42,9 @@ export const API_ENDPOINTS = {
   // Tasks
   tasks: "/tasks",
 
+  // Search
+  search: "/search",
+
   // Models
   models: "/models",
 

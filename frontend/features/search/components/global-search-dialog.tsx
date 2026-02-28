@@ -32,50 +32,21 @@ export function GlobalSearchDialog({
   const router = useRouter();
   const lng = useLanguage();
   const [searchQuery, setSearchQuery] = React.useState("");
-  const { tasks, projects, messages, isLoading } = useSearchData();
+  const { tasks, projects, messages, isLoading } = useSearchData(searchQuery, {
+    enabled: open,
+  });
   const [mounted, setMounted] = React.useState(false);
 
   React.useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Filter tasks by search query
-  const filteredTasks = React.useMemo(
-    () =>
-      tasks.filter(
-        (task) =>
-          searchQuery === "" ||
-          task.title.toLowerCase().includes(searchQuery.toLowerCase()),
-      ),
-    [tasks, searchQuery],
-  );
-
-  // Filter projects by search query
-  const filteredProjects = React.useMemo(
-    () =>
-      projects.filter(
-        (project) =>
-          searchQuery === "" ||
-          project.name.toLowerCase().includes(searchQuery.toLowerCase()),
-      ),
-    [projects, searchQuery],
-  );
-
-  // Filter messages by search query
-  const filteredMessages = React.useMemo(
-    () =>
-      messages.filter(
-        (message) =>
-          searchQuery === "" ||
-          message.content.toLowerCase().includes(searchQuery.toLowerCase()),
-      ),
-    [messages, searchQuery],
-  );
+  React.useEffect(() => {
+    if (!open) setSearchQuery("");
+  }, [open]);
 
   const hasResults =
-    filteredTasks.length > 0 ||
-    filteredProjects.length > 0 ||
-    filteredMessages.length > 0;
+    tasks.length > 0 || projects.length > 0 || messages.length > 0;
 
   const handleSelect = (type: string, id: string) => {
     onOpenChange(false);
@@ -113,15 +84,17 @@ export function GlobalSearchDialog({
           <CommandEmpty>{t("search.noResults")}</CommandEmpty>
         ) : null}
 
-        {filteredTasks.length > 0 && (
+        {tasks.length > 0 && (
           <CommandGroup heading={t("search.tasks")}>
-            {filteredTasks.map((task) => (
+            {tasks.map((task) => (
               <CommandItem
                 key={task.id}
                 onSelect={() => handleSelect("task", task.id)}
               >
                 <FileText className="size-4 text-muted-foreground" />
-                <span className="flex-1">{task.title}</span>
+                <span className="flex-1">
+                  {task.title || t("chat.newChat")}
+                </span>
                 <span className="text-xs text-muted-foreground">
                   {new Date(task.timestamp).toLocaleDateString()}
                 </span>
@@ -130,9 +103,9 @@ export function GlobalSearchDialog({
           </CommandGroup>
         )}
 
-        {filteredProjects.length > 0 && (
+        {projects.length > 0 && (
           <CommandGroup heading={t("search.projects")}>
-            {filteredProjects.map((project) => (
+            {projects.map((project) => (
               <CommandItem
                 key={project.id}
                 onSelect={() => handleSelect("project", project.id)}
@@ -149,9 +122,9 @@ export function GlobalSearchDialog({
           </CommandGroup>
         )}
 
-        {filteredMessages.length > 0 && (
+        {messages.length > 0 && (
           <CommandGroup heading={t("search.messages")}>
-            {filteredMessages.slice(0, 5).map((message) => (
+            {messages.slice(0, 5).map((message) => (
               <CommandItem
                 key={message.id}
                 onSelect={() => handleSelect("message", message.chatId)}

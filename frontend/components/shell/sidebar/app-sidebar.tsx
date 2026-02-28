@@ -73,12 +73,17 @@ export function AppSidebar({
     [onCreateProject],
   );
 
+  const openSearch = React.useCallback(() => {
+    setIsSearchOpen(true);
+  }, [setIsSearchOpen]);
+
   return (
     <>
       <MainSidebar
         projects={projects}
         taskHistory={taskHistory}
         onNewTask={handleNewTask}
+        onOpenSearch={openSearch}
         onDeleteTask={onDeleteTask ?? noop}
         onRenameTask={onRenameTask}
         onMoveTaskToProject={onMoveTaskToProject}

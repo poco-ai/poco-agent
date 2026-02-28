@@ -31,6 +31,7 @@ interface MainSidebarProps {
   projects: ProjectItem[];
   taskHistory: TaskHistoryItem[];
   onNewTask: () => void;
+  onOpenSearch: () => void;
   onDeleteTask: (taskId: string) => Promise<void> | void;
   onRenameTask?: (taskId: string, newName: string) => Promise<void> | void;
   onMoveTaskToProject?: (taskId: string, projectId: string | null) => void;
@@ -61,6 +62,7 @@ export function MainSidebar({
   projects,
   taskHistory,
   onNewTask,
+  onOpenSearch,
   onDeleteTask,
   onRenameTask,
   onMoveTaskToProject,
@@ -129,7 +131,10 @@ export function MainSidebar({
         collapsible="icon"
         className="border-r-0 bg-sidebar overflow-hidden"
       >
-        <SidebarHeaderSection onNewTask={onNewTask} />
+        <SidebarHeaderSection
+          onNewTask={onNewTask}
+          onOpenSearch={onOpenSearch}
+        />
 
         <SidebarContentSection
           projects={projects}

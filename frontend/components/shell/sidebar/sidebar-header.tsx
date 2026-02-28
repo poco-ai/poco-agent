@@ -24,7 +24,6 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { useSearchDialog } from "@/features/search";
 
 // ---------------------------------------------------------------------------
 // Navigation items
@@ -59,15 +58,23 @@ const ICON_ANIMATIONS: Record<string, string> = {
 
 interface SidebarHeaderSectionProps {
   onNewTask: () => void;
+  onOpenSearch: () => void;
 }
 
-export function SidebarHeaderSection({ onNewTask }: SidebarHeaderSectionProps) {
+export function SidebarHeaderSection({
+  onNewTask,
+  onOpenSearch,
+}: SidebarHeaderSectionProps) {
   const { t } = useT("translation");
   const router = useRouter();
   const lng = useLanguage();
   const { toggleSidebar } = useSidebar();
   const { closeMobileSidebar } = useMobileSidebar();
-  const { searchKey } = useSearchDialog();
+  const searchKey = React.useMemo(() => {
+    if (typeof navigator === "undefined") return "Ctrl+K";
+    const isMac = /Mac|iPhone|iPad|iPod/.test(navigator.platform);
+    return isMac ? "⌘K" : "Ctrl+K";
+  }, []);
 
   return (
     <SidebarHeader className="px-2 gap-2 pb-2">
@@ -134,15 +141,19 @@ export function SidebarHeaderSection({ onNewTask }: SidebarHeaderSectionProps) {
 
       {/* Navigation items */}
       {TOP_NAV_ITEMS.map(({ id, labelKey, icon: Icon, href }) => {
-        const isDisabled = id === "search";
-        const iconAnimation = isDisabled ? "" : (ICON_ANIMATIONS[id] ?? "");
+        const isSearch = id === "search";
+        const iconAnimation = isSearch ? "" : (ICON_ANIMATIONS[id] ?? "");
 
         return (
           <SidebarMenu key={id} className="group-data-[collapsible=icon]:px-0">
             <SidebarMenuItem className="group/menu-item">
               <SidebarMenuButton
                 onClick={() => {
-                  if (isDisabled) return;
+                  if (isSearch) {
+                    onOpenSearch();
+                    closeMobileSidebar();
+                    return;
+                  }
                   if (href) {
                     router.push(lng ? `/${lng}${href}` : href);
                     closeMobileSidebar();
@@ -153,8 +164,6 @@ export function SidebarHeaderSection({ onNewTask }: SidebarHeaderSectionProps) {
                 }
                 className={cn(
                   "h-[36px] min-w-0 max-w-[calc(var(--sidebar-width)-16px)] w-full justify-start gap-3 rounded-[10px] px-3 py-[7.5px] text-muted-foreground transition-colors hover:bg-sidebar-accent focus-visible:ring-0 focus-visible:outline-none group-data-[collapsible=icon]:w-[var(--sidebar-width-icon)] group-data-[collapsible=icon]:max-w-[var(--sidebar-width-icon)] group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0",
-                  isDisabled &&
-                    "opacity-50 cursor-not-allowed hover:bg-transparent",
                 )}
                 tooltip={t(labelKey)}
               >
