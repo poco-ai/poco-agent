@@ -462,7 +462,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
               ))}
             </div>
           )}
-          <div className="relative flex w-full min-w-0 items-center gap-2 rounded-lg border border-border bg-card px-3 py-2">
+          <div className="relative flex w-full min-w-0 items-end gap-2 rounded-lg border border-border bg-card px-3 py-2">
             {slashAutocomplete.isOpen ? (
               <div className="absolute bottom-full left-0 z-50 mb-2 w-full overflow-hidden rounded-lg border border-border bg-popover shadow-md">
                 <div className="max-h-64 overflow-auto py-1">
@@ -501,7 +501,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
                   type="button"
                   disabled={disabled || isUploading}
                   onClick={() => fileInputRef.current?.click()}
-                  className="flex-shrink-0 flex items-center justify-center size-8 rounded-md hover:bg-accent text-muted-foreground transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                  className="self-end flex-shrink-0 flex items-center justify-center size-8 rounded-md hover:bg-accent text-muted-foreground transition-colors disabled:cursor-not-allowed disabled:opacity-50"
                   aria-label={t("hero.uploadFile")}
                 >
                   {isUploading ? (
@@ -546,7 +546,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
                 type="button"
                 onClick={onCancel}
                 disabled={isCancelling}
-                className="flex-shrink-0 flex items-center justify-center size-8 rounded-md bg-muted text-foreground hover:bg-muted/80 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+                className="self-end flex-shrink-0 flex items-center justify-center size-8 rounded-md bg-muted text-foreground hover:bg-muted/80 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
                 aria-label={t("chatInput.cancelTask")}
                 title={t("chatInput.cancelTask")}
               >
@@ -568,7 +568,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
                         }}
                         disabled={disabled || isUploading}
                         className={cn(
-                          "flex-shrink-0 flex items-center justify-center size-8 rounded-md transition-colors disabled:cursor-not-allowed disabled:opacity-50",
+                          "self-end flex-shrink-0 flex items-center justify-center size-8 rounded-md transition-colors disabled:cursor-not-allowed disabled:opacity-50",
                           listening
                             ? "bg-destructive text-destructive-foreground hover:bg-destructive/90 animate-pulse"
                             : "hover:bg-accent text-muted-foreground",
@@ -597,7 +597,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
                   type="button"
                   onClick={handleSend}
                   disabled={!hasDraft || disabled}
-                  className="flex-shrink-0 flex items-center justify-center size-8 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                  className="self-end flex-shrink-0 flex items-center justify-center size-8 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground transition-colors disabled:cursor-not-allowed disabled:opacity-50"
                   aria-label={t("hero.send")}
                   title={t("hero.send")}
                 >

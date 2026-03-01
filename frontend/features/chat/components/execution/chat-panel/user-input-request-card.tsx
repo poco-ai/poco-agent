@@ -562,8 +562,8 @@ export function UserInputRequestCard({
 
       {!showCompletion && (
         <div className="pt-5">
-          <div className="grid grid-cols-3 items-center gap-2">
-            <div className="justify-self-start">
+          <div className="grid grid-cols-3 gap-2">
+            <div className="flex items-end justify-self-start">
               {showPrev ? (
                 <button
                   type="button"
@@ -579,7 +579,7 @@ export function UserInputRequestCard({
             </div>
             <div
               className={cn(
-                "text-center text-xs",
+                "flex items-end justify-center text-center text-xs",
                 secondsLeft !== null && secondsLeft <= 10
                   ? "text-destructive"
                   : "text-muted-foreground",
@@ -589,7 +589,7 @@ export function UserInputRequestCard({
                 ? t("chat.askUserTimeout", { seconds: secondsLeft })
                 : ""}
             </div>
-            <div className="justify-self-end">
+            <div className="flex items-end justify-self-end">
               <button
                 type="button"
                 onClick={() => {

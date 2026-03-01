@@ -12,6 +12,7 @@ import { CapabilitiesLibraryHeader } from "@/features/capabilities/components/ca
 import { useCapabilityViews } from "@/features/capabilities/hooks/use-capability-views";
 import {
   consumePendingCapabilityView,
+  getLastCapabilityView,
   setLastCapabilityView,
 } from "@/features/capabilities/lib/capability-view-state";
 import { useT } from "@/lib/i18n/client";
@@ -29,7 +30,7 @@ export function CapabilitiesPageClient() {
   const router = useRouter();
   const viewFromUrl = searchParams.get("view");
   const fromHome = searchParams.get("from") === "home";
-  const [activeViewId, setActiveViewId] = React.useState<string>("skills");
+  const [activeViewId, setActiveViewId] = React.useState<string>("list");
   const [isDesktop, setIsDesktop] = React.useState(false);
   const [isMobileDetailVisible, setIsMobileDetailVisible] =
     React.useState(false);
@@ -68,10 +69,23 @@ export function CapabilitiesPageClient() {
       return;
     }
 
-    // No view in URL and no pending: from sidebar → go to options list (?view=list)
-    setActiveViewId("list");
+    if (isMobile) {
+      // Mobile keeps the original behavior: show options list first.
+      setActiveViewId("list");
+      setEnteredDetailViaView(false);
+      setIsMobileDetailVisible(false);
+      return;
+    }
+
+    const lastViewId = getLastCapabilityView();
+    const fallbackViewId =
+      (lastViewId && views.some((view) => view.id === lastViewId)
+        ? lastViewId
+        : views[0]?.id) || "list";
+
+    // Desktop restores last selected tab, fallback to first.
+    setActiveViewId(fallbackViewId);
     setEnteredDetailViaView(false);
-    if (isMobile) setIsMobileDetailVisible(false);
   }, [views, viewFromUrl, fromHome]);
 
   React.useEffect(() => {

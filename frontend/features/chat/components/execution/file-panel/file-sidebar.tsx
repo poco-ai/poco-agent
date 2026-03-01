@@ -234,9 +234,10 @@ export function FileSidebar({
   embedded = false,
 }: FileSidebarProps) {
   const { t } = useT("translation");
+  const canDownloadArchive = Boolean(sessionId) && files.length > 0;
 
   const handleDownload = async () => {
-    if (!sessionId) return;
+    if (!sessionId || !canDownloadArchive) return;
     try {
       const response = await apiClient.get<{
         url?: string | null;
@@ -272,6 +273,7 @@ export function FileSidebar({
         {sessionId && (
           <PanelHeaderAction
             onClick={handleDownload}
+            disabled={!canDownloadArchive}
             aria-label={t("fileSidebar.downloadAll")}
           >
             <Download className="size-4" />
