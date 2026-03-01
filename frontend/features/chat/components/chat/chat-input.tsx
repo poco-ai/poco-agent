@@ -81,49 +81,58 @@ export function ChatInput({
     }
   };
 
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const uploadFiles = async (files: File[]) => {
+    if (files.length === 0) return;
 
-    const normalizedName = file.name.trim().toLowerCase();
-    if (
-      attachments.some(
-        (item) => (item.name || "").trim().toLowerCase() === normalizedName,
-      )
-    ) {
-      toast.error(
-        t("hero.toasts.duplicateFileName", {
-          name: file.name,
-        }),
-      );
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
-      return;
-    }
+    const existingNames = new Set(
+      attachments
+        .map((item) => (item.name || "").trim().toLowerCase())
+        .filter(Boolean),
+    );
 
-    if (file.size > MAX_FILE_SIZE) {
-      toast.error(t("hero.toasts.fileTooLarge"));
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
-      return;
-    }
-
+    setIsUploading(true);
     try {
-      setIsUploading(true);
-      const uploadedFile = await uploadAttachment(file);
-      setAttachments((prev) => [...prev, uploadedFile]);
-      toast.success(t("hero.toasts.uploadSuccess"));
-      playUploadSound();
-    } catch (error) {
-      console.error("Upload failed:", error);
-      toast.error(t("hero.toasts.uploadFailed"));
+      for (const file of files) {
+        const normalizedName = file.name.trim().toLowerCase();
+        if (existingNames.has(normalizedName)) {
+          toast.error(
+            t("hero.toasts.duplicateFileName", {
+              name: file.name,
+            }),
+          );
+          continue;
+        }
+
+        if (file.size > MAX_FILE_SIZE) {
+          toast.error(t("hero.toasts.fileTooLarge"));
+          continue;
+        }
+
+        try {
+          const uploadedFile = await uploadAttachment(file);
+          setAttachments((prev) => [...prev, uploadedFile]);
+          existingNames.add(normalizedName);
+          toast.success(t("hero.toasts.uploadSuccess"));
+          playUploadSound();
+        } catch (error) {
+          console.error("Upload failed:", error);
+          toast.error(t("hero.toasts.uploadFailed"));
+        }
+      }
     } finally {
       setIsUploading(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
+    }
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const input = e.currentTarget;
+    const files = Array.from(e.target.files ?? []);
+    if (files.length === 0) return;
+
+    try {
+      await uploadFiles(files);
+    } finally {
+      input.value = "";
     }
   };
 
@@ -136,38 +145,7 @@ export function ChatInput({
       ?.getAsFile();
 
     if (!file) return;
-
-    const normalizedName = file.name.trim().toLowerCase();
-    if (
-      attachments.some(
-        (item) => (item.name || "").trim().toLowerCase() === normalizedName,
-      )
-    ) {
-      toast.error(
-        t("hero.toasts.duplicateFileName", {
-          name: file.name,
-        }),
-      );
-      return;
-    }
-
-    if (file.size > MAX_FILE_SIZE) {
-      toast.error(t("hero.toasts.fileTooLarge"));
-      return;
-    }
-
-    try {
-      setIsUploading(true);
-      const uploadedFile = await uploadAttachment(file);
-      setAttachments((prev) => [...prev, uploadedFile]);
-      toast.success(t("hero.toasts.uploadSuccess"));
-      playUploadSound();
-    } catch (error) {
-      console.error("Upload failed:", error);
-      toast.error(t("hero.toasts.uploadFailed"));
-    } finally {
-      setIsUploading(false);
-    }
+    await uploadFiles([file]);
   };
 
   const removeAttachment = (index: number) => {
@@ -179,6 +157,7 @@ export function ChatInput({
       <div className="max-w-4xl mx-auto">
         <input
           type="file"
+          multiple
           ref={fileInputRef}
           className="hidden"
           onChange={handleFileSelect}

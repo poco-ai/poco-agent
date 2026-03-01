@@ -46,6 +46,10 @@
     "title": "Was kann ich für dich tun?",
     "subtitle": "Weise eine Aufgabe zu oder stelle eine Frage.",
     "uploadFile": "Datei hochladen",
+    "dragDrop": {
+      "title": "Dateien zum Hochladen hier ablegen",
+      "hint": "Dateien loslassen, um sie als Anhang hinzuzufügen"
+    },
     "importCode": "Code importieren",
     "voiceInput": "Spracheingabe",
     "startVoiceInput": "Spracheingabe starten",

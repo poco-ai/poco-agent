@@ -1,4 +1,5 @@
 import * as React from "react";
+import { Upload } from "lucide-react";
 import { useT } from "@/lib/i18n/client";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
@@ -15,6 +16,7 @@ import { SlashAutocompleteDropdown } from "@/features/task-composer/components/s
 import { getNextComposerMode } from "@/features/task-composer/lib/mode-utils";
 import { useSlashCommandAutocomplete } from "@/features/chat/hooks/use-slash-command-autocomplete";
 import { useAppShell } from "@/components/shell/app-shell-context";
+import { useFileDropUpload } from "@/features/task-composer/hooks/use-file-drop-upload";
 import { useFileUpload } from "@/features/task-composer/hooks/use-file-upload";
 import type { RunScheduleMode } from "@/features/task-composer/model/run-schedule";
 import type {
@@ -79,6 +81,10 @@ export function TaskComposer({
 
   // ---- File upload (shared hook) ----
   const upload = useFileUpload({ t });
+  const fileDrop = useFileDropUpload({
+    disabled: Boolean(isSubmitting) || upload.isUploading,
+    onFilesDrop: upload.uploadFiles,
+  });
 
   // ---- Slash-command autocomplete ----
   const slashAutocomplete = useSlashCommandAutocomplete({
@@ -264,161 +270,178 @@ export function TaskComposer({
 
   // ---- Render ----
   return (
-    <div
-      className="rounded-2xl border border-border bg-card shadow-sm"
-      data-onboarding="home-task-composer"
-    >
-      {/* Hidden file input */}
-      <input
-        type="file"
-        ref={fileInputRef}
-        className="hidden"
-        onChange={upload.handleFileSelect}
-      />
-
-      {/* Attachments */}
-      <ComposerAttachments
-        repoUrl={repoUrl}
-        gitBranch={gitBranch}
-        attachments={upload.attachments}
-        onOpenRepoDialog={() => setRepoDialogOpen(true)}
-        onRemoveRepo={() => setRepoUrl("")}
-        onRemoveAttachment={upload.removeAttachment}
-      />
-
-      {/* Repo dialog */}
-      <RepoDialog
-        open={repoDialogOpen}
-        onOpenChange={setRepoDialogOpen}
-        mode={mode}
-        allowProjectize={allowProjectize}
-        lng={lng}
-        repoUrl={repoUrl}
-        onRepoUrlChange={setRepoUrl}
-        gitBranch={gitBranch}
-        onGitBranchChange={setGitBranch}
-        gitTokenEnvKey={gitTokenEnvKey}
-        onGitTokenEnvKeyChange={setGitTokenEnvKey}
-        repoUsage={repoUsage}
-        onRepoUsageChange={setRepoUsage}
-        projectName={projectName}
-        onProjectNameChange={setProjectName}
-        onSave={handleRepoSave}
-      />
-
-      {/* Scheduled task settings */}
-      <ScheduledTaskSettingsDialog
-        open={scheduledSettingsOpen}
-        onOpenChange={setScheduledSettingsOpen}
-        value={{
-          name: scheduledName,
-          cron: scheduledCron,
-          timezone: scheduledTimezone,
-          enabled: scheduledEnabled,
-          reuse_session: scheduledReuseSession,
-        }}
-        onSave={(next) => {
-          setScheduledName(next.name);
-          setScheduledCron(next.cron);
-          setScheduledTimezone(next.timezone);
-          setScheduledEnabled(next.enabled);
-          setScheduledReuseSession(next.reuse_session);
-        }}
-      />
-
-      {/* Run schedule dialog */}
-      <RunScheduleDialog
-        open={runScheduleOpen}
-        onOpenChange={setRunScheduleOpen}
-        value={{
-          schedule_mode: runScheduleMode,
-          timezone: runTimezone,
-          scheduled_at: runScheduledAt,
-        }}
-        onSave={(next) => {
-          setRunScheduleMode(next.schedule_mode);
-          setRunTimezone(next.timezone);
-          setRunScheduledAt(next.scheduled_at);
-        }}
-      />
-
-      {/* Textarea with slash autocomplete */}
-      <div className="relative px-4 pb-3 pt-4">
-        <SlashAutocompleteDropdown
-          isOpen={slashAutocomplete.isOpen}
-          suggestions={slashAutocomplete.suggestions}
-          activeIndex={slashAutocomplete.activeIndex}
-          onHover={slashAutocomplete.setActiveIndex}
-          onSelect={slashAutocomplete.applySelection}
+    <>
+      <div
+        className="relative rounded-2xl border border-border bg-card shadow-sm"
+        data-onboarding="home-task-composer"
+      >
+        {/* Hidden file input */}
+        <input
+          type="file"
+          multiple
+          ref={fileInputRef}
+          className="hidden"
+          onChange={upload.handleFileSelect}
         />
-        <Textarea
-          ref={textareaRef}
-          value={value}
-          disabled={isSubmitting || upload.isUploading}
-          onChange={(e) => onChange(e.target.value)}
-          onCompositionStart={() => (isComposing.current = true)}
-          onCompositionEnd={() => {
-            requestAnimationFrame(() => {
-              isComposing.current = false;
-            });
+
+        {/* Attachments */}
+        <ComposerAttachments
+          repoUrl={repoUrl}
+          gitBranch={gitBranch}
+          attachments={upload.attachments}
+          onOpenRepoDialog={() => setRepoDialogOpen(true)}
+          onRemoveRepo={() => setRepoUrl("")}
+          onRemoveAttachment={upload.removeAttachment}
+        />
+
+        {/* Repo dialog */}
+        <RepoDialog
+          open={repoDialogOpen}
+          onOpenChange={setRepoDialogOpen}
+          mode={mode}
+          allowProjectize={allowProjectize}
+          lng={lng}
+          repoUrl={repoUrl}
+          onRepoUrlChange={setRepoUrl}
+          gitBranch={gitBranch}
+          onGitBranchChange={setGitBranch}
+          gitTokenEnvKey={gitTokenEnvKey}
+          onGitTokenEnvKeyChange={setGitTokenEnvKey}
+          repoUsage={repoUsage}
+          onRepoUsageChange={setRepoUsage}
+          projectName={projectName}
+          onProjectNameChange={setProjectName}
+          onSave={handleRepoSave}
+        />
+
+        {/* Scheduled task settings */}
+        <ScheduledTaskSettingsDialog
+          open={scheduledSettingsOpen}
+          onOpenChange={setScheduledSettingsOpen}
+          value={{
+            name: scheduledName,
+            cron: scheduledCron,
+            timezone: scheduledTimezone,
+            enabled: scheduledEnabled,
+            reuse_session: scheduledReuseSession,
           }}
-          onPaste={upload.handlePaste}
-          onFocus={onFocus}
-          onBlur={onBlur}
-          onKeyDown={(e) => {
-            if (e.shiftKey && e.key === "Tab") {
-              e.preventDefault();
-              e.stopPropagation();
-              onModeChange(getNextComposerMode(mode));
-              return;
-            }
-            if (slashAutocomplete.handleKeyDown(e)) return;
-            if (e.key === "Enter") {
-              if (e.shiftKey) return;
-              if (
-                e.nativeEvent.isComposing ||
-                isComposing.current ||
-                e.keyCode === 229
-              ) {
+          onSave={(next) => {
+            setScheduledName(next.name);
+            setScheduledCron(next.cron);
+            setScheduledTimezone(next.timezone);
+            setScheduledEnabled(next.enabled);
+            setScheduledReuseSession(next.reuse_session);
+          }}
+        />
+
+        {/* Run schedule dialog */}
+        <RunScheduleDialog
+          open={runScheduleOpen}
+          onOpenChange={setRunScheduleOpen}
+          value={{
+            schedule_mode: runScheduleMode,
+            timezone: runTimezone,
+            scheduled_at: runScheduledAt,
+          }}
+          onSave={(next) => {
+            setRunScheduleMode(next.schedule_mode);
+            setRunTimezone(next.timezone);
+            setRunScheduledAt(next.scheduled_at);
+          }}
+        />
+
+        {/* Textarea with slash autocomplete */}
+        <div className="relative px-4 pb-3 pt-4">
+          <SlashAutocompleteDropdown
+            isOpen={slashAutocomplete.isOpen}
+            suggestions={slashAutocomplete.suggestions}
+            activeIndex={slashAutocomplete.activeIndex}
+            onHover={slashAutocomplete.setActiveIndex}
+            onSelect={slashAutocomplete.applySelection}
+          />
+          <Textarea
+            ref={textareaRef}
+            value={value}
+            disabled={isSubmitting}
+            onChange={(e) => onChange(e.target.value)}
+            onCompositionStart={() => (isComposing.current = true)}
+            onCompositionEnd={() => {
+              requestAnimationFrame(() => {
+                isComposing.current = false;
+              });
+            }}
+            onPaste={upload.handlePaste}
+            onFocus={onFocus}
+            onBlur={onBlur}
+            onKeyDown={(e) => {
+              if (e.shiftKey && e.key === "Tab") {
+                e.preventDefault();
+                e.stopPropagation();
+                onModeChange(getNextComposerMode(mode));
                 return;
               }
-              e.preventDefault();
-              handleSubmit();
-            }
-          }}
-          placeholder={placeholderText}
-          className={cn(
-            "min-h-[60px] max-h-[40vh] w-full resize-none border-0 bg-transparent dark:bg-transparent p-0 text-base shadow-none placeholder:text-muted-foreground/50 focus-visible:ring-0 disabled:opacity-50",
-          )}
-          rows={2}
-        />
-      </div>
-
-      {/* Bottom toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 px-4 pb-4">
-        <div className="flex-1 min-w-0">
-          <ComposerToolbar
-            mode={mode}
-            onModeChange={onModeChange}
-            isSubmitting={isSubmitting}
-            isUploading={upload.isUploading}
-            canSubmit={canSubmit}
-            browserEnabled={browserEnabled}
-            onOpenRepoDialog={() => setRepoDialogOpen(true)}
-            onBrowserEnabledChange={setBrowserEnabled}
-            onOpenFileInput={() => fileInputRef.current?.click()}
-            onSubmit={handleSubmit}
-            scheduledSummary={
-              mode === "scheduled" ? scheduledSummary : undefined
-            }
-            onOpenScheduledSettings={
-              mode === "scheduled"
-                ? () => setScheduledSettingsOpen(true)
-                : undefined
-            }
+              if (slashAutocomplete.handleKeyDown(e)) return;
+              if (e.key === "Enter") {
+                if (e.shiftKey) return;
+                if (
+                  e.nativeEvent.isComposing ||
+                  isComposing.current ||
+                  e.keyCode === 229
+                ) {
+                  return;
+                }
+                e.preventDefault();
+                handleSubmit();
+              }
+            }}
+            placeholder={placeholderText}
+            className={cn(
+              "min-h-[60px] max-h-[40vh] w-full resize-none border-0 bg-transparent dark:bg-transparent p-0 text-base shadow-none placeholder:text-muted-foreground/50 focus-visible:ring-0 disabled:opacity-50",
+            )}
+            rows={2}
           />
         </div>
+
+        {/* Bottom toolbar */}
+        <div className="flex flex-wrap items-center justify-between gap-3 px-4 pb-4">
+          <div className="flex-1 min-w-0">
+            <ComposerToolbar
+              mode={mode}
+              onModeChange={onModeChange}
+              isSubmitting={isSubmitting}
+              isUploading={upload.isUploading}
+              canSubmit={canSubmit}
+              browserEnabled={browserEnabled}
+              onOpenRepoDialog={() => setRepoDialogOpen(true)}
+              onBrowserEnabledChange={setBrowserEnabled}
+              onOpenFileInput={() => fileInputRef.current?.click()}
+              onSubmit={handleSubmit}
+              scheduledSummary={
+                mode === "scheduled" ? scheduledSummary : undefined
+              }
+              onOpenScheduledSettings={
+                mode === "scheduled"
+                  ? () => setScheduledSettingsOpen(true)
+                  : undefined
+              }
+            />
+          </div>
+        </div>
       </div>
-    </div>
+
+      {fileDrop.isDragActive ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/70 backdrop-blur-sm">
+          <div className="mx-4 flex w-full max-w-xl flex-col items-center justify-center rounded-2xl border-2 border-dashed border-primary/60 bg-card/95 px-8 py-10 text-center shadow-xl">
+            <Upload className="mb-4 size-6 text-primary" />
+            <p className="text-base font-medium text-foreground">
+              {t("hero.dragDrop.title")}
+            </p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              {t("hero.dragDrop.hint")}
+            </p>
+          </div>
+        </div>
+      ) : null}
+    </>
   );
 }

@@ -10,6 +10,7 @@ import {
   Search,
   Sparkles,
   Clock,
+  Command,
 } from "lucide-react";
 
 import { useT } from "@/lib/i18n/client";
@@ -17,6 +18,7 @@ import { useLanguage } from "@/hooks/use-language";
 import { useMobileSidebar } from "@/hooks/use-mobile-sidebar";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import {
   SidebarHeader,
   SidebarMenu,
@@ -46,6 +48,8 @@ const TOP_NAV_ITEMS = [
 ] as const;
 
 const ICON_ANIMATIONS: Record<string, string> = {
+  search:
+    "transition-transform duration-300 group-hover/menu-item:scale-110 group-hover/menu-item:-translate-y-0.5",
   capabilities:
     "transition-all duration-300 group-hover/menu-item:rotate-12 group-hover/menu-item:scale-110",
   "scheduled-tasks":
@@ -70,10 +74,9 @@ export function SidebarHeaderSection({
   const lng = useLanguage();
   const { toggleSidebar } = useSidebar();
   const { closeMobileSidebar } = useMobileSidebar();
-  const searchKey = React.useMemo(() => {
-    if (typeof navigator === "undefined") return "Ctrl+K";
-    const isMac = /Mac|iPhone|iPad|iPod/.test(navigator.platform);
-    return isMac ? "⌘K" : "Ctrl+K";
+  const isMacPlatform = React.useMemo(() => {
+    if (typeof navigator === "undefined") return false;
+    return /Mac|iPhone|iPad|iPod/.test(navigator.platform);
   }, []);
 
   return (
@@ -142,7 +145,7 @@ export function SidebarHeaderSection({
       {/* Navigation items */}
       {TOP_NAV_ITEMS.map(({ id, labelKey, icon: Icon, href }) => {
         const isSearch = id === "search";
-        const iconAnimation = isSearch ? "" : (ICON_ANIMATIONS[id] ?? "");
+        const iconAnimation = ICON_ANIMATIONS[id] ?? "";
 
         return (
           <SidebarMenu key={id} className="group-data-[collapsible=icon]:px-0">
@@ -172,9 +175,16 @@ export function SidebarHeaderSection({
                   {t(labelKey)}
                 </span>
                 {id === "search" && (
-                  <kbd className="ml-auto text-xs opacity-60 group-data-[collapsible=icon]:hidden">
-                    {searchKey}
-                  </kbd>
+                  <KbdGroup className="ml-auto opacity-70 group-data-[collapsible=icon]:hidden">
+                    {isMacPlatform ? (
+                      <Kbd className="px-1.5">
+                        <Command className="size-3.5" />
+                      </Kbd>
+                    ) : (
+                      <Kbd>Ctrl</Kbd>
+                    )}
+                    <Kbd>K</Kbd>
+                  </KbdGroup>
                 )}
               </SidebarMenuButton>
             </SidebarMenuItem>

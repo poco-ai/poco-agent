@@ -24,55 +24,73 @@ export function useFileUpload({ t }: UseFileUploadOptions) {
   const [isUploading, setIsUploading] = React.useState(false);
   const [attachments, setAttachments] = React.useState<InputFile[]>([]);
 
-  const isDuplicate = React.useCallback(
-    (fileName: string) => {
-      const normalized = fileName.trim().toLowerCase();
-      return attachments.some(
-        (item) => (item.name || "").trim().toLowerCase() === normalized,
-      );
-    },
-    [attachments],
-  );
+  const getAttachmentNameSet = React.useCallback(() => {
+    return new Set(
+      attachments
+        .map((item) => (item.name || "").trim().toLowerCase())
+        .filter(Boolean),
+    );
+  }, [attachments]);
 
-  const uploadFile = React.useCallback(
-    async (file: File) => {
-      if (isDuplicate(file.name)) {
-        toast.error(t("hero.toasts.duplicateFileName", { name: file.name }));
-        return;
-      }
-      if (file.size > MAX_FILE_SIZE) {
-        toast.error(t("hero.toasts.fileTooLarge"));
-        return;
-      }
+  const uploadFiles = React.useCallback(
+    async (files: File[]) => {
+      if (files.length === 0) return;
+
+      const existingNames = getAttachmentNameSet();
+      setIsUploading(true);
 
       try {
-        setIsUploading(true);
-        const uploaded = await uploadAttachment(file);
-        setAttachments((prev) => [...prev, uploaded]);
-        toast.success(t("hero.toasts.uploadSuccess"));
-        playUploadSound();
-      } catch (error) {
-        console.error("[useFileUpload] Upload failed:", error);
-        toast.error(t("hero.toasts.uploadFailed"));
+        for (const file of files) {
+          const normalized = file.name.trim().toLowerCase();
+          if (existingNames.has(normalized)) {
+            toast.error(
+              t("hero.toasts.duplicateFileName", { name: file.name }),
+            );
+            continue;
+          }
+
+          if (file.size > MAX_FILE_SIZE) {
+            toast.error(t("hero.toasts.fileTooLarge"));
+            continue;
+          }
+
+          try {
+            const uploaded = await uploadAttachment(file);
+            setAttachments((prev) => [...prev, uploaded]);
+            existingNames.add(normalized);
+            toast.success(t("hero.toasts.uploadSuccess"));
+            playUploadSound();
+          } catch (error) {
+            console.error("[useFileUpload] Upload failed:", error);
+            toast.error(t("hero.toasts.uploadFailed"));
+          }
+        }
       } finally {
         setIsUploading(false);
       }
     },
-    [isDuplicate, t],
+    [getAttachmentNameSet, t],
+  );
+
+  const uploadFile = React.useCallback(
+    async (file: File) => {
+      await uploadFiles([file]);
+    },
+    [uploadFiles],
   );
 
   const handleFileSelect = React.useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
       const input = e.currentTarget;
-      const file = e.target.files?.[0];
-      if (!file) return;
+      const files = Array.from(e.target.files ?? []);
+      if (files.length === 0) return;
       try {
-        await uploadFile(file);
+        await uploadFiles(files);
       } finally {
         input.value = "";
       }
     },
-    [uploadFile],
+    [uploadFiles],
   );
 
   const handlePaste = React.useCallback(
@@ -85,9 +103,9 @@ export function useFileUpload({ t }: UseFileUploadOptions) {
         ?.getAsFile();
 
       if (!file) return;
-      await uploadFile(file);
+      await uploadFiles([file]);
     },
-    [uploadFile],
+    [uploadFiles],
   );
 
   const removeAttachment = React.useCallback((index: number) => {
@@ -101,6 +119,8 @@ export function useFileUpload({ t }: UseFileUploadOptions) {
   return {
     isUploading,
     attachments,
+    uploadFile,
+    uploadFiles,
     handleFileSelect,
     handlePaste,
     removeAttachment,

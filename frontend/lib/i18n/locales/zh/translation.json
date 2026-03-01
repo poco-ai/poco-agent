@@ -46,6 +46,10 @@
     "title": "我能为你做什么？",
     "subtitle": "分配一个任务，或提出任何问题。",
     "uploadFile": "上传文件",
+    "dragDrop": {
+      "title": "拖拽文件以上传",
+      "hint": "松开文件后将作为附件添加到当前消息"
+    },
     "importCode": "导入代码",
     "voiceInput": "语音输入",
     "startVoiceInput": "开始语音输入",

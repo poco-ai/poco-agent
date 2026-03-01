@@ -6,7 +6,15 @@ import {
   useImperativeHandle,
   forwardRef,
 } from "react";
-import { ArrowUp, Plus, Loader2, Pause, Mic, MicOff } from "lucide-react";
+import {
+  ArrowUp,
+  Plus,
+  Loader2,
+  Pause,
+  Mic,
+  MicOff,
+  Upload,
+} from "lucide-react";
 import SpeechRecognition, {
   useSpeechRecognition,
 } from "react-speech-recognition";
@@ -22,6 +30,7 @@ import {
 import { useT } from "@/lib/i18n/client";
 import { playUploadSound } from "@/lib/utils/sound";
 import { useSlashCommandAutocomplete } from "@/features/chat/hooks/use-slash-command-autocomplete";
+import { useFileDropUpload } from "@/features/task-composer";
 import { cn } from "@/lib/utils";
 
 interface ChatInputProps {
@@ -124,6 +133,55 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
       value,
       onChange: setValue,
       textareaRef,
+    });
+    const uploadFiles = useCallback(
+      async (files: File[]) => {
+        if (files.length === 0) return;
+
+        const existingNames = new Set(
+          attachments
+            .map((item) => (item.name || "").trim().toLowerCase())
+            .filter(Boolean),
+        );
+
+        setIsUploading(true);
+        try {
+          for (const file of files) {
+            const normalizedName = file.name.trim().toLowerCase();
+            if (existingNames.has(normalizedName)) {
+              toast.error(
+                t("hero.toasts.duplicateFileName", {
+                  name: file.name,
+                }),
+              );
+              continue;
+            }
+
+            if (file.size > MAX_FILE_SIZE) {
+              toast.error(t("hero.toasts.fileTooLarge", { size: "100MB" }));
+              continue;
+            }
+
+            try {
+              const uploadedFile = await uploadAttachment(file);
+              setAttachments((prev) => [...prev, uploadedFile]);
+              existingNames.add(normalizedName);
+              toast.success(t("hero.toasts.uploadSuccess"));
+              playUploadSound();
+            } catch (error) {
+              console.error("Upload failed:", error);
+              toast.error(t("hero.toasts.uploadFailed"));
+            }
+          }
+        } finally {
+          setIsUploading(false);
+        }
+      },
+      [attachments, t],
+    );
+    const fileDrop = useFileDropUpload({
+      disabled: disabled || isUploading,
+      onFilesDrop: uploadFiles,
     });
 
     const {
@@ -364,48 +422,14 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
     }, []);
 
     const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
-
-      const normalizedName = file.name.trim().toLowerCase();
-      if (
-        attachments.some(
-          (item) => (item.name || "").trim().toLowerCase() === normalizedName,
-        )
-      ) {
-        toast.error(
-          t("hero.toasts.duplicateFileName", {
-            name: file.name,
-          }),
-        );
-        if (fileInputRef.current) {
-          fileInputRef.current.value = "";
-        }
-        return;
-      }
-
-      if (file.size > MAX_FILE_SIZE) {
-        toast.error(t("hero.toasts.fileTooLarge", { size: "100MB" }));
-        if (fileInputRef.current) {
-          fileInputRef.current.value = "";
-        }
-        return;
-      }
+      const input = e.currentTarget;
+      const files = Array.from(e.target.files ?? []);
+      if (files.length === 0) return;
 
       try {
-        setIsUploading(true);
-        const uploadedFile = await uploadAttachment(file);
-        setAttachments((prev) => [...prev, uploadedFile]);
-        toast.success(t("hero.toasts.uploadSuccess"));
-        playUploadSound();
-      } catch (error) {
-        console.error("Upload failed:", error);
-        toast.error(t("hero.toasts.uploadFailed"));
+        await uploadFiles(files);
       } finally {
-        setIsUploading(false);
-        if (fileInputRef.current) {
-          fileInputRef.current.value = "";
-        }
+        input.value = "";
       }
     };
 
@@ -417,168 +441,186 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
     const showCancel = Boolean(onCancel) && canCancel && !hasDraft;
 
     return (
-      <div className={cn("shrink-0 min-w-0 px-4 pb-4 pt-2", className)}>
-        <input
-          type="file"
-          ref={fileInputRef}
-          className="hidden"
-          onChange={handleFileSelect}
-        />
-        {attachments.length > 0 && (
-          <div className="mb-2 flex min-w-0 flex-wrap gap-2 px-3">
-            {attachments.map((file, i) => (
-              <FileCard
-                key={i}
-                file={file}
-                onRemove={() => removeAttachment(i)}
-                className="w-full max-w-48 bg-background"
-              />
-            ))}
-          </div>
-        )}
-        <div className="relative flex w-full min-w-0 items-center gap-2 rounded-lg border border-border bg-card px-3 py-2">
-          {slashAutocomplete.isOpen ? (
-            <div className="absolute bottom-full left-0 z-50 mb-2 w-full overflow-hidden rounded-lg border border-border bg-popover shadow-md">
-              <div className="max-h-64 overflow-auto py-1">
-                {slashAutocomplete.suggestions.map((item, idx) => {
-                  const selected = idx === slashAutocomplete.activeIndex;
-                  return (
-                    <button
-                      key={item.command}
-                      type="button"
-                      onMouseEnter={() => slashAutocomplete.setActiveIndex(idx)}
-                      onMouseDown={(e) => {
-                        // Prevent textarea from losing focus.
-                        e.preventDefault();
-                        slashAutocomplete.applySelection(idx);
-                      }}
-                      className={cn(
-                        "w-full px-3 py-2 text-left text-sm",
-                        selected
-                          ? "bg-accent text-accent-foreground"
-                          : "hover:bg-accent/50",
-                      )}
-                    >
-                      <span className="font-mono">{item.command}</span>
-                    </button>
-                  );
-                })}
-              </div>
+      <>
+        <div className={cn("shrink-0 min-w-0 px-4 pb-4 pt-2", className)}>
+          <input
+            type="file"
+            multiple
+            ref={fileInputRef}
+            className="hidden"
+            onChange={handleFileSelect}
+          />
+          {attachments.length > 0 && (
+            <div className="mb-2 flex min-w-0 flex-wrap gap-2 px-3">
+              {attachments.map((file, i) => (
+                <FileCard
+                  key={i}
+                  file={file}
+                  onRemove={() => removeAttachment(i)}
+                  className="w-full max-w-48 bg-background"
+                />
+              ))}
             </div>
-          ) : null}
+          )}
+          <div className="relative flex w-full min-w-0 items-center gap-2 rounded-lg border border-border bg-card px-3 py-2">
+            {slashAutocomplete.isOpen ? (
+              <div className="absolute bottom-full left-0 z-50 mb-2 w-full overflow-hidden rounded-lg border border-border bg-popover shadow-md">
+                <div className="max-h-64 overflow-auto py-1">
+                  {slashAutocomplete.suggestions.map((item, idx) => {
+                    const selected = idx === slashAutocomplete.activeIndex;
+                    return (
+                      <button
+                        key={item.command}
+                        type="button"
+                        onMouseEnter={() =>
+                          slashAutocomplete.setActiveIndex(idx)
+                        }
+                        onMouseDown={(e) => {
+                          // Prevent textarea from losing focus.
+                          e.preventDefault();
+                          slashAutocomplete.applySelection(idx);
+                        }}
+                        className={cn(
+                          "w-full px-3 py-2 text-left text-sm",
+                          selected
+                            ? "bg-accent text-accent-foreground"
+                            : "hover:bg-accent/50",
+                        )}
+                      >
+                        <span className="font-mono">{item.command}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
 
-          <Tooltip>
-            <TooltipTrigger asChild>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  disabled={disabled || isUploading}
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex-shrink-0 flex items-center justify-center size-8 rounded-md hover:bg-accent text-muted-foreground transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                  aria-label={t("hero.uploadFile")}
+                >
+                  {isUploading ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <Plus className="size-4" />
+                  )}
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top" sideOffset={8}>
+                {t("hero.uploadFile")}
+              </TooltipContent>
+            </Tooltip>
+
+            <textarea
+              ref={textareaRef}
+              value={value}
+              onChange={handleInputChange}
+              onKeyDown={handleKeyDown}
+              onFocus={handleInputFocus}
+              onClick={handleInputClick}
+              onCompositionStart={handleCompositionStart}
+              onCompositionEnd={handleCompositionEnd}
+              placeholder={t("chat.inputPlaceholder")}
+              disabled={disabled}
+              rows={1}
+              className="flex-1 min-w-0 bg-transparent text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 resize-none overflow-y-auto py-1 scrollbar-hide"
+              style={{
+                minHeight: "2rem",
+                maxHeight: "10rem",
+                lineHeight: "1.5rem",
+              }}
+              onInput={(e) => {
+                // Auto-resize textarea
+                const target = e.target as HTMLTextAreaElement;
+                target.style.height = "auto";
+                target.style.height = `${Math.min(target.scrollHeight, 160)}px`;
+              }}
+            />
+            {showCancel ? (
               <button
                 type="button"
-                disabled={disabled || isUploading}
-                onClick={() => fileInputRef.current?.click()}
-                className="flex-shrink-0 flex items-center justify-center size-8 rounded-md hover:bg-accent text-muted-foreground transition-colors disabled:cursor-not-allowed disabled:opacity-50"
-                aria-label={t("hero.uploadFile")}
+                onClick={onCancel}
+                disabled={isCancelling}
+                className="flex-shrink-0 flex items-center justify-center size-8 rounded-md bg-muted text-foreground hover:bg-muted/80 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+                aria-label={t("chatInput.cancelTask")}
+                title={t("chatInput.cancelTask")}
               >
-                {isUploading ? (
+                {isCancelling ? (
                   <Loader2 className="size-4 animate-spin" />
                 ) : (
-                  <Plus className="size-4" />
+                  <Pause className="size-4" />
                 )}
               </button>
-            </TooltipTrigger>
-            <TooltipContent side="top" sideOffset={8}>
-              {t("hero.uploadFile")}
-            </TooltipContent>
-          </Tooltip>
-
-          <textarea
-            ref={textareaRef}
-            value={value}
-            onChange={handleInputChange}
-            onKeyDown={handleKeyDown}
-            onFocus={handleInputFocus}
-            onClick={handleInputClick}
-            onCompositionStart={handleCompositionStart}
-            onCompositionEnd={handleCompositionEnd}
-            placeholder={t("chat.inputPlaceholder")}
-            disabled={disabled}
-            rows={1}
-            className="flex-1 min-w-0 bg-transparent text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 resize-none overflow-y-auto py-1 scrollbar-hide"
-            style={{
-              minHeight: "2rem",
-              maxHeight: "10rem",
-              lineHeight: "1.5rem",
-            }}
-            onInput={(e) => {
-              // Auto-resize textarea
-              const target = e.target as HTMLTextAreaElement;
-              target.style.height = "auto";
-              target.style.height = `${Math.min(target.scrollHeight, 160)}px`;
-            }}
-          />
-          {showCancel ? (
-            <button
-              type="button"
-              onClick={onCancel}
-              disabled={isCancelling}
-              className="flex-shrink-0 flex items-center justify-center size-8 rounded-md bg-muted text-foreground hover:bg-muted/80 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
-              aria-label={t("chatInput.cancelTask")}
-              title={t("chatInput.cancelTask")}
-            >
-              {isCancelling ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <Pause className="size-4" />
-              )}
-            </button>
-          ) : (
-            <>
-              {hasVoiceSupport ? (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        void handleToggleVoiceInput();
-                      }}
-                      disabled={disabled || isUploading}
-                      className={cn(
-                        "flex-shrink-0 flex items-center justify-center size-8 rounded-md transition-colors disabled:cursor-not-allowed disabled:opacity-50",
-                        listening
-                          ? "bg-destructive text-destructive-foreground hover:bg-destructive/90 animate-pulse"
-                          : "hover:bg-accent text-muted-foreground",
-                      )}
-                      aria-label={
-                        listening
-                          ? t("hero.stopVoiceInput")
-                          : t("hero.startVoiceInput")
-                      }
-                    >
-                      {listening ? (
-                        <MicOff className="size-4" />
-                      ) : (
-                        <Mic className="size-4" />
-                      )}
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent side="top" sideOffset={8}>
-                    {listening
-                      ? t("hero.stopVoiceInput")
-                      : t("hero.startVoiceInput")}
-                  </TooltipContent>
-                </Tooltip>
-              ) : null}
-              <button
-                type="button"
-                onClick={handleSend}
-                disabled={!hasDraft || disabled}
-                className="flex-shrink-0 flex items-center justify-center size-8 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground transition-colors disabled:cursor-not-allowed disabled:opacity-50"
-                aria-label={t("hero.send")}
-                title={t("hero.send")}
-              >
-                <ArrowUp className="size-4" />
-              </button>
-            </>
-          )}
+            ) : (
+              <>
+                {hasVoiceSupport ? (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          void handleToggleVoiceInput();
+                        }}
+                        disabled={disabled || isUploading}
+                        className={cn(
+                          "flex-shrink-0 flex items-center justify-center size-8 rounded-md transition-colors disabled:cursor-not-allowed disabled:opacity-50",
+                          listening
+                            ? "bg-destructive text-destructive-foreground hover:bg-destructive/90 animate-pulse"
+                            : "hover:bg-accent text-muted-foreground",
+                        )}
+                        aria-label={
+                          listening
+                            ? t("hero.stopVoiceInput")
+                            : t("hero.startVoiceInput")
+                        }
+                      >
+                        {listening ? (
+                          <MicOff className="size-4" />
+                        ) : (
+                          <Mic className="size-4" />
+                        )}
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" sideOffset={8}>
+                      {listening
+                        ? t("hero.stopVoiceInput")
+                        : t("hero.startVoiceInput")}
+                    </TooltipContent>
+                  </Tooltip>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={handleSend}
+                  disabled={!hasDraft || disabled}
+                  className="flex-shrink-0 flex items-center justify-center size-8 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                  aria-label={t("hero.send")}
+                  title={t("hero.send")}
+                >
+                  <ArrowUp className="size-4" />
+                </button>
+              </>
+            )}
+          </div>
         </div>
-      </div>
+        {fileDrop.isDragActive ? (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/70 backdrop-blur-sm">
+            <div className="mx-4 flex w-full max-w-xl flex-col items-center justify-center rounded-2xl border-2 border-dashed border-primary/60 bg-card/95 px-8 py-10 text-center shadow-xl">
+              <Upload className="mb-4 size-6 text-primary" />
+              <p className="text-base font-medium text-foreground">
+                {t("hero.dragDrop.title")}
+              </p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                {t("hero.dragDrop.hint")}
+              </p>
+            </div>
+          </div>
+        ) : null}
+      </>
     );
   },
 );

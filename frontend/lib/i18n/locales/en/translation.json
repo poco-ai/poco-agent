@@ -46,6 +46,10 @@
     "title": "What can I do for you?",
     "subtitle": "Assign a task, or ask any question.",
     "uploadFile": "Upload file",
+    "dragDrop": {
+      "title": "Drop files to upload",
+      "hint": "Release files to attach them to this message"
+    },
     "importCode": "Import code",
     "voiceInput": "Voice input",
     "startVoiceInput": "Start voice input",
