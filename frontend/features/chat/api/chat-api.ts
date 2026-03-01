@@ -15,6 +15,12 @@ import type {
   FileNode,
   SessionCancelRequest,
   SessionCancelResponse,
+  SessionBranchRequest,
+  SessionBranchResponse,
+  SessionEditMessageRequest,
+  MessageAttachmentsResponse,
+  MessageResponse,
+  SessionRegenerateRequest,
   SessionResponse,
   SessionUpdateRequest,
   ToolExecutionResponse,
@@ -138,6 +144,36 @@ export const chatService = {
     );
   },
 
+  branchSession: async (
+    sessionId: string,
+    payload: SessionBranchRequest,
+  ): Promise<SessionBranchResponse> => {
+    return apiClient.post<SessionBranchResponse>(
+      API_ENDPOINTS.sessionBranch(sessionId),
+      payload,
+    );
+  },
+
+  regenerateMessage: async (
+    sessionId: string,
+    payload: SessionRegenerateRequest,
+  ): Promise<TaskEnqueueResponse> => {
+    return apiClient.post<TaskEnqueueResponse>(
+      API_ENDPOINTS.sessionRegenerate(sessionId),
+      payload,
+    );
+  },
+
+  editMessageAndRegenerate: async (
+    sessionId: string,
+    payload: SessionEditMessageRequest,
+  ): Promise<TaskEnqueueResponse> => {
+    return apiClient.post<TaskEnqueueResponse>(
+      API_ENDPOINTS.sessionEditMessage(sessionId),
+      payload,
+    );
+  },
+
   // ---- Task enqueue ----
 
   enqueueTask: async (
@@ -256,6 +292,45 @@ export const chatService = {
     return apiClient.get<MessageDeltaResponse>(
       `${API_ENDPOINTS.sessionMessagesWithFilesDelta(sessionId)}${query}`,
     );
+  },
+
+  getMessagesBase: async (
+    sessionId: string,
+    options?: { realUserMessageIds?: number[] },
+  ) => {
+    try {
+      const baseMessages = await apiClient.get<MessageResponse[]>(
+        API_ENDPOINTS.sessionMessages(sessionId),
+      );
+      const rawMessages: RawApiMessage[] = baseMessages.map((message) => ({
+        id: message.id,
+        role: message.role,
+        content: message.content,
+        created_at: message.created_at,
+        updated_at: message.updated_at,
+      }));
+      return parseMessages(rawMessages, options?.realUserMessageIds);
+    } catch (error) {
+      console.error("[Chat Service] Failed to get base messages:", error);
+      return { messages: [] };
+    }
+  },
+
+  getMessageAttachments: async (
+    sessionId: string,
+  ): Promise<Record<number, InputFile[]>> => {
+    try {
+      const response = await apiClient.get<MessageAttachmentsResponse[]>(
+        API_ENDPOINTS.sessionMessageAttachments(sessionId),
+      );
+      return response.reduce<Record<number, InputFile[]>>((acc, item) => {
+        acc[item.message_id] = item.attachments ?? [];
+        return acc;
+      }, {});
+    } catch (error) {
+      console.error("[Chat Service] Failed to get message attachments:", error);
+      return {};
+    }
   },
 
   // ---- Files ----

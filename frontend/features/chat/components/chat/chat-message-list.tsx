@@ -27,7 +27,16 @@ export interface ChatMessageListProps {
   repoUrl?: string | null;
   gitBranch?: string | null;
   runUsageByUserMessageId?: Record<string, UsageResponse | null>;
-  onEditMessage?: (content: string) => void;
+  onEditMessage?: (args: {
+    messageId: string;
+    content: string;
+  }) => Promise<void>;
+  onRegenerateMessage?: (args: {
+    userMessageId: string;
+    assistantMessageId: string;
+  }) => void;
+  onCreateBranch?: (assistantMessageId: string) => void;
+  branchingAssistantMessageId?: string | null;
   showUserPromptTimeline?: boolean;
   contentPaddingClassName?: string;
   scrollButtonClassName?: string;
@@ -82,6 +91,9 @@ export function ChatMessageList({
   gitBranch,
   runUsageByUserMessageId,
   onEditMessage,
+  onRegenerateMessage,
+  onCreateBranch,
+  branchingAssistantMessageId = null,
   showUserPromptTimeline = false,
   contentPaddingClassName,
   scrollButtonClassName,
@@ -470,6 +482,7 @@ export function ChatMessageList({
                   }}
                 >
                   <UserMessage
+                    messageId={message.id}
                     content={message.content}
                     attachments={message.attachments}
                     repoUrl={message.id === firstUserMessageId ? repoUrl : null}
@@ -497,6 +510,25 @@ export function ChatMessageList({
                   message={message}
                   runUsage={runUsage}
                   sessionStatus={sessionStatus}
+                  isCreatingBranch={branchingAssistantMessageId === message.id}
+                  disableBranchAction={
+                    branchingAssistantMessageId !== null &&
+                    branchingAssistantMessageId !== message.id
+                  }
+                  onRegenerate={
+                    userMessageIdForUsage && onRegenerateMessage
+                      ? () =>
+                          onRegenerateMessage({
+                            userMessageId: userMessageIdForUsage,
+                            assistantMessageId: message.id,
+                          })
+                      : undefined
+                  }
+                  onCreateBranch={
+                    onCreateBranch && /^\d+$/.test(message.id)
+                      ? () => onCreateBranch(message.id)
+                      : undefined
+                  }
                 />
               </div>
             );

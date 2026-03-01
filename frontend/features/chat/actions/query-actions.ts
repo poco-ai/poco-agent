@@ -59,6 +59,7 @@ export type GetMessagesRawInput = z.infer<typeof getMessagesRawSchema>;
 export type GetMessagesDeltaRawInput = z.infer<
   typeof getMessagesDeltaRawSchema
 >;
+export type GetMessageAttachmentsInput = z.infer<typeof sessionIdSchema>;
 export type GetFilesInput = z.infer<typeof sessionIdSchema>;
 export type GetRunsBySessionInput = z.infer<typeof sessionIdSchema>;
 export type GetToolExecutionsInput = z.infer<typeof toolExecutionsSchema>;
@@ -98,6 +99,18 @@ export async function getMessagesDeltaRawAction(
     after_message_id: afterMessageId,
     limit,
   });
+}
+
+export async function getMessagesBaseAction(input: GetMessagesInput) {
+  const { sessionId, realUserMessageIds } = getMessagesSchema.parse(input);
+  return chatService.getMessagesBase(sessionId, { realUserMessageIds });
+}
+
+export async function getMessageAttachmentsAction(
+  input: GetMessageAttachmentsInput,
+) {
+  const { sessionId } = sessionIdSchema.parse(input);
+  return chatService.getMessageAttachments(sessionId);
 }
 
 export async function getFilesAction(input: GetFilesInput) {

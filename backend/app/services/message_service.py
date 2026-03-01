@@ -2,7 +2,6 @@ import logging
 import uuid
 
 from pydantic import ValidationError
-
 from sqlalchemy.orm import Session
 
 from app.core.errors.error_codes import ErrorCode
@@ -14,6 +13,7 @@ from app.repositories.run_repository import RunRepository
 from app.schemas.input_file import InputFile
 from app.schemas.message import (
     InputFileWithUrl,
+    MessageAttachmentsResponse,
     MessageDeltaResponse,
     MessageResponse,
     MessageWithFilesResponse,
@@ -55,38 +55,53 @@ class MessageService:
         return message_id_to_attachments
 
     @staticmethod
+    def _to_input_files_with_urls(
+        raw_attachments: list[InputFile],
+        *,
+        user_id: str,
+        storage_service: S3StorageService,
+    ) -> list[InputFileWithUrl]:
+        key_prefix = f"attachments/{user_id}/"
+
+        attachments: list[InputFileWithUrl] = []
+        for file in raw_attachments:
+            key = (file.source or "").strip()
+            url = None
+            if key and key.startswith(key_prefix):
+                try:
+                    url = storage_service.presign_get(
+                        key,
+                        response_content_disposition="inline",
+                        response_content_type=file.content_type,
+                    )
+                except Exception:
+                    url = None
+            attachments.append(
+                InputFileWithUrl(
+                    **file.model_dump(mode="json"),
+                    url=url,
+                )
+            )
+        return attachments
+
     def _build_messages_with_files(
+        self,
         messages: list[AgentMessage],
         *,
         user_id: str,
         message_id_to_attachments: dict[int, list[InputFile]],
     ) -> list[MessageWithFilesResponse]:
         storage_service = S3StorageService()
-        key_prefix = f"attachments/{user_id}/"
 
         result: list[MessageWithFilesResponse] = []
         for msg in messages:
             base = MessageResponse.model_validate(msg)
             raw_attachments = message_id_to_attachments.get(msg.id) or []
-            attachments: list[InputFileWithUrl] = []
-            for file in raw_attachments:
-                key = (file.source or "").strip()
-                url = None
-                if key and key.startswith(key_prefix):
-                    try:
-                        url = storage_service.presign_get(
-                            key,
-                            response_content_disposition="inline",
-                            response_content_type=file.content_type,
-                        )
-                    except Exception:
-                        url = None
-                attachments.append(
-                    InputFileWithUrl(
-                        **file.model_dump(mode="json"),
-                        url=url,
-                    )
-                )
+            attachments = self._to_input_files_with_urls(
+                raw_attachments,
+                user_id=user_id,
+                storage_service=storage_service,
+            )
             result.append(
                 MessageWithFilesResponse(
                     **base.model_dump(mode="json"),
@@ -138,10 +153,10 @@ class MessageService:
         Attachments are derived from the run snapshot to avoid coupling the
         message content schema to any upstream agent SDK format.
         """
-
         messages = MessageRepository.list_by_session(db, session_id, limit=1000)
-        runs = RunRepository.list_by_session(db, session_id, limit=1000)
-        message_id_to_attachments = self._collect_message_attachments(runs)
+        message_id_to_attachments = self._build_message_id_to_attachments(
+            db, session_id
+        )
         result = self._build_messages_with_files(
             messages,
             user_id=user_id,
@@ -197,3 +212,32 @@ class MessageService:
             next_after_message_id=next_after_message_id,
             has_more=has_more,
         )
+
+    def get_message_attachments(
+        self, db: Session, session_id: uuid.UUID, *, user_id: str
+    ) -> list[MessageAttachmentsResponse]:
+        """Gets per-message attachments for a session."""
+
+        message_id_to_attachments = self._build_message_id_to_attachments(
+            db, session_id
+        )
+        storage_service = S3StorageService()
+        result: list[MessageAttachmentsResponse] = []
+        for message_id, attachments in sorted(message_id_to_attachments.items()):
+            result.append(
+                MessageAttachmentsResponse(
+                    message_id=message_id,
+                    attachments=self._to_input_files_with_urls(
+                        attachments,
+                        user_id=user_id,
+                        storage_service=storage_service,
+                    ),
+                )
+            )
+        return result
+
+    def _build_message_id_to_attachments(
+        self, db: Session, session_id: uuid.UUID
+    ) -> dict[int, list[InputFile]]:
+        runs = RunRepository.list_by_session(db, session_id, limit=1000)
+        return self._collect_message_attachments(runs)

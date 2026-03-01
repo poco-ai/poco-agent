@@ -14,19 +14,25 @@ from app.core.deps import get_current_user_id, get_db
 from app.core.errors.error_codes import ErrorCode
 from app.core.errors.exceptions import AppException
 from app.schemas.message import (
+    MessageAttachmentsResponse,
     MessageDeltaResponse,
     MessageResponse,
     MessageWithFilesResponse,
 )
 from app.schemas.response import Response, ResponseSchema
 from app.schemas.session import (
+    SessionBranchRequest,
+    SessionBranchResponse,
     SessionCancelRequest,
     SessionCancelResponse,
     SessionCreateRequest,
+    SessionEditMessageRequest,
+    SessionRegenerateRequest,
     SessionResponse,
     SessionStateResponse,
     SessionUpdateRequest,
 )
+from app.schemas.task import TaskEnqueueResponse
 from app.schemas.computer import ComputerBrowserScreenshotResponse
 from app.schemas.tool_execution import ToolExecutionDeltaResponse, ToolExecutionResponse
 from app.schemas.usage import UsageResponse
@@ -222,6 +228,72 @@ async def cancel_session(
     )
 
 
+@router.post(
+    "/{session_id}/branch", response_model=ResponseSchema[SessionBranchResponse]
+)
+async def branch_session(
+    session_id: uuid.UUID,
+    request: SessionBranchRequest,
+    user_id: str = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+) -> JSONResponse:
+    """Create a branched session by cloning state up to a message checkpoint."""
+    branched = session_service.branch_session(
+        db,
+        session_id,
+        user_id=user_id,
+        cutoff_message_id=request.message_id,
+    )
+    return Response.success(
+        data=SessionBranchResponse(
+            session_id=branched.id,
+            source_session_id=session_id,
+            cutoff_message_id=request.message_id,
+        ),
+        message="Session branched successfully",
+    )
+
+
+@router.post(
+    "/{session_id}/regenerate", response_model=ResponseSchema[TaskEnqueueResponse]
+)
+async def regenerate_message(
+    session_id: uuid.UUID,
+    request: SessionRegenerateRequest,
+    user_id: str = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+) -> JSONResponse:
+    """Regenerate from a prior turn by pruning later messages then queueing a new run."""
+    result = session_service.regenerate_from_message(
+        db,
+        session_id,
+        user_id=user_id,
+        user_message_id=request.user_message_id,
+        assistant_message_id=request.assistant_message_id,
+    )
+    return Response.success(data=result, message="Message regenerated successfully")
+
+
+@router.post(
+    "/{session_id}/edit-message", response_model=ResponseSchema[TaskEnqueueResponse]
+)
+async def edit_message_and_regenerate(
+    session_id: uuid.UUID,
+    request: SessionEditMessageRequest,
+    user_id: str = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+) -> JSONResponse:
+    """Edit a user message and regenerate by pruning all subsequent history."""
+    result = session_service.edit_message_and_regenerate(
+        db,
+        session_id,
+        user_id=user_id,
+        user_message_id=request.user_message_id,
+        content=request.content,
+    )
+    return Response.success(data=result, message="Message edited and regenerated")
+
+
 @router.delete("/{session_id}", response_model=ResponseSchema[dict])
 async def delete_session(
     session_id: uuid.UUID,
@@ -301,6 +373,7 @@ async def get_session_messages_with_files_delta(
     db: Session = Depends(get_db),
 ) -> JSONResponse:
     """Gets incremental messages for a session with per-message attachments."""
+
     db_session = session_service.get_session(db, session_id)
     if db_session.user_id != user_id:
         raise AppException(
@@ -318,6 +391,32 @@ async def get_session_messages_with_files_delta(
     return Response.success(
         data=payload,
         message="Messages delta retrieved successfully",
+    )
+
+
+@router.get(
+    "/{session_id}/message-attachments",
+    response_model=ResponseSchema[list[MessageAttachmentsResponse]],
+)
+async def get_session_message_attachments(
+    session_id: uuid.UUID,
+    user_id: str = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+) -> JSONResponse:
+    """Gets per-message attachments for a session."""
+    db_session = session_service.get_session(db, session_id)
+    if db_session.user_id != user_id:
+        raise AppException(
+            error_code=ErrorCode.FORBIDDEN,
+            message="Session does not belong to the user",
+        )
+
+    attachments = message_service.get_message_attachments(
+        db, session_id, user_id=user_id
+    )
+    return Response.success(
+        data=attachments,
+        message="Message attachments retrieved successfully",
     )
 
 

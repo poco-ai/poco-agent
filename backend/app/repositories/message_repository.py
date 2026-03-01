@@ -42,7 +42,7 @@ class MessageRepository:
         return (
             session_db.query(AgentMessage)
             .filter(AgentMessage.session_id == session_id)
-            .order_by(AgentMessage.created_at.asc())
+            .order_by(AgentMessage.created_at.asc(), AgentMessage.id.asc())
             .limit(limit)
             .offset(offset)
             .all()

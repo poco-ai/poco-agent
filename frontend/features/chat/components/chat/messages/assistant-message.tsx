@@ -1,7 +1,19 @@
 "use client";
 
 import * as React from "react";
-import { Bot, Copy, ThumbsUp, Check } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowUp,
+  Bot,
+  Check,
+  Clock3,
+  Coins,
+  Copy,
+  GitBranch,
+  Loader2,
+  RotateCcw,
+  ThumbsUp,
+} from "lucide-react";
 import { MessageContent } from "./message-content";
 import { TypingIndicator } from "./typing-indicator";
 import type {
@@ -16,6 +28,10 @@ interface AssistantMessageProps {
   message: ChatMessage;
   runUsage?: UsageResponse | null;
   sessionStatus?: string;
+  onRegenerate?: () => void;
+  onCreateBranch?: () => void;
+  isCreatingBranch?: boolean;
+  disableBranchAction?: boolean;
 }
 
 function pickNumber(value: unknown): number | null {
@@ -40,10 +56,15 @@ export function AssistantMessage({
   message,
   runUsage,
   sessionStatus,
+  onRegenerate,
+  onCreateBranch,
+  isCreatingBranch = false,
+  disableBranchAction = false,
 }: AssistantMessageProps) {
   const { t } = useT("translation");
   const [isCopied, setIsCopied] = React.useState(false);
   const [isLiked, setIsLiked] = React.useState(false);
+  const isStreaming = message.status === "streaming";
 
   // Helper function to extract text content from message
   const getTextContent = (content: string | MessageBlock[]): string => {
@@ -88,25 +109,42 @@ export function AssistantMessage({
     | undefined;
   const inputTokens = pickNumber(usageJson?.input_tokens);
   const outputTokens = pickNumber(usageJson?.output_tokens);
-  const tokenSegments: string[] = [];
+  const costLabel = formatCostUsd(runUsage?.total_cost_usd);
+  const durationLabel = formatDurationMs(runUsage?.total_duration_ms);
+  const usageSegments: React.ReactNode[] = [];
+  if (costLabel) {
+    usageSegments.push(
+      <span key="cost" className="inline-flex items-center gap-1">
+        <Coins className="size-3" />
+        {costLabel}
+      </span>,
+    );
+  }
   if (inputTokens !== null) {
-    tokenSegments.push(
-      `${t("chat.tokenInput")} ${inputTokens.toLocaleString()}`,
+    usageSegments.push(
+      <span key="input" className="inline-flex items-center gap-1">
+        <ArrowUp className="size-3" />
+        {inputTokens.toLocaleString()}
+      </span>,
     );
   }
   if (outputTokens !== null) {
-    tokenSegments.push(
-      `${t("chat.tokenOutput")} ${outputTokens.toLocaleString()}`,
+    usageSegments.push(
+      <span key="output" className="inline-flex items-center gap-1">
+        <ArrowDown className="size-3" />
+        {outputTokens.toLocaleString()}
+      </span>,
     );
   }
-  const tokensLabel =
-    tokenSegments.length > 0 ? tokenSegments.join(" · ") : null;
-  const costLabel = formatCostUsd(runUsage?.total_cost_usd);
-  const durationLabel = formatDurationMs(runUsage?.total_duration_ms);
-  const showUsage =
-    !!runUsage &&
-    message.status !== "streaming" &&
-    (costLabel !== null || tokensLabel !== null || durationLabel !== null);
+  if (durationLabel) {
+    usageSegments.push(
+      <span key="duration" className="inline-flex items-center gap-1">
+        <Clock3 className="size-3" />
+        {durationLabel}
+      </span>,
+    );
+  }
+  const showUsage = !!runUsage && !isStreaming && usageSegments.length > 0;
   const timestampLabel =
     message.timestamp && !isNaN(new Date(message.timestamp).getTime())
       ? new Date(message.timestamp).toLocaleTimeString([], {
@@ -136,17 +174,17 @@ export function AssistantMessage({
           content={message.content}
           sessionStatus={sessionStatus}
         />
-        {message.status === "streaming" && <TypingIndicator />}
+        {isStreaming && <TypingIndicator />}
       </div>
 
       <div className="mt-2 flex min-w-0 items-center gap-2 pt-2">
-        <div className="shrink-0 flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+        <div className="shrink-0 flex items-center gap-1 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100">
           <Button
             variant="ghost"
             size="icon"
             className="size-7 text-muted-foreground hover:text-foreground"
             onClick={onCopy}
-            title="Copy message"
+            title={t("chat.copyMessage")}
           >
             {isCopied ? (
               <Check className="size-3.5" />
@@ -163,21 +201,51 @@ export function AssistantMessage({
                 : "text-muted-foreground"
             }`}
             onClick={onLike}
-            title="Like response"
+            title={t("chat.likeResponse")}
           >
             <ThumbsUp className={`size-3.5 ${isLiked ? "fill-current" : ""}`} />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-7 text-muted-foreground hover:text-foreground disabled:opacity-40"
+            onClick={onRegenerate}
+            disabled={!onRegenerate || isStreaming}
+            title={t("chat.regenerate")}
+          >
+            <RotateCcw className="size-3.5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-7 text-muted-foreground hover:text-foreground disabled:opacity-40"
+            onClick={onCreateBranch}
+            disabled={
+              !onCreateBranch ||
+              isStreaming ||
+              disableBranchAction ||
+              isCreatingBranch
+            }
+            title={t("chat.createBranch")}
+          >
+            {isCreatingBranch ? (
+              <Loader2 className="size-3.5 animate-spin" />
+            ) : (
+              <GitBranch className="size-3.5" />
+            )}
           </Button>
         </div>
 
         {showUsage ? (
-          <div className="w-0 flex-1 overflow-hidden truncate text-right font-mono text-xs tabular-nums text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100">
-            {costLabel ? `${t("chat.cost")}: ${costLabel}` : null}
-            {tokensLabel
-              ? `${costLabel ? " · " : ""}${t("chat.tokens")}: ${tokensLabel}`
-              : null}
-            {durationLabel
-              ? `${costLabel || tokensLabel ? " · " : ""}${t("chat.duration")}: ${durationLabel}`
-              : null}
+          <div className="w-0 flex-1 overflow-hidden text-right font-mono text-xs tabular-nums text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100">
+            <div className="truncate">
+              {usageSegments.map((segment, index) => (
+                <React.Fragment key={index}>
+                  {index > 0 ? " · " : null}
+                  {segment}
+                </React.Fragment>
+              ))}
+            </div>
           </div>
         ) : null}
       </div>

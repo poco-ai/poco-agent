@@ -1,5 +1,5 @@
 from collections.abc import Callable
-from typing import Any
+from typing import Any, Literal
 
 from app.schemas.workspace import FileNode
 
@@ -21,7 +21,10 @@ def build_workspace_file_nodes(
     result: list[FileNode] = []
 
     for node in nodes:
-        node_type = node.get("type")
+        raw_node_type = node.get("type")
+        if raw_node_type not in ("file", "folder"):
+            continue
+        node_type: Literal["file", "folder"] = raw_node_type
         node_path = node.get("path")
         node_id = node.get("id") or node_path or ""
         name = node.get("name") or ""

@@ -40,3 +40,10 @@ class MessageDeltaResponse(BaseModel):
     items: list[MessageWithFilesResponse]
     next_after_message_id: int | None = None
     has_more: bool = False
+
+
+class MessageAttachmentsResponse(BaseModel):
+    """Attachment payload for a specific message."""
+
+    message_id: int
+    attachments: list[InputFileWithUrl]
