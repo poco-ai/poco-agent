@@ -30,7 +30,9 @@ async def run_task(req: TaskRun, background_tasks: BackgroundTasks) -> dict:
     Returns:
         Accepted status with session ID.
     """
-    callback_client = CallbackClient(callback_url=req.callback_url)
+    callback_client = CallbackClient(
+        callback_url=req.callback_url, callback_token=req.callback_token
+    )
     base_url = UserInputClient.resolve_base_url(
         callback_url=req.callback_url, callback_base_url=req.callback_base_url
     )
