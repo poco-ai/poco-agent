@@ -27,6 +27,10 @@ const getMessagesDeltaRawSchema = sessionIdSchema.extend({
   afterMessageId: z.number().int().min(0).optional(),
   limit: z.number().int().positive().max(1000).optional(),
 });
+const getMessageAttachmentsDeltaRawSchema = sessionIdSchema.extend({
+  afterMessageId: z.number().int().min(0).optional(),
+  limit: z.number().int().positive().max(1000).optional(),
+});
 
 const executionSessionSchema = sessionIdSchema.extend({
   currentProgress: z.number().min(0).optional(),
@@ -58,6 +62,9 @@ export type GetMessagesInput = z.infer<typeof getMessagesSchema>;
 export type GetMessagesRawInput = z.infer<typeof getMessagesRawSchema>;
 export type GetMessagesDeltaRawInput = z.infer<
   typeof getMessagesDeltaRawSchema
+>;
+export type GetMessageAttachmentsDeltaRawInput = z.infer<
+  typeof getMessageAttachmentsDeltaRawSchema
 >;
 export type GetMessageAttachmentsInput = z.infer<typeof sessionIdSchema>;
 export type GetFilesInput = z.infer<typeof sessionIdSchema>;
@@ -101,6 +108,17 @@ export async function getMessagesDeltaRawAction(
   });
 }
 
+export async function getMessagesBaseDeltaRawAction(
+  input: GetMessagesDeltaRawInput,
+) {
+  const { sessionId, afterMessageId, limit } =
+    getMessagesDeltaRawSchema.parse(input);
+  return chatService.getMessagesBaseDeltaRaw(sessionId, {
+    after_message_id: afterMessageId,
+    limit,
+  });
+}
+
 export async function getMessagesBaseAction(input: GetMessagesInput) {
   const { sessionId, realUserMessageIds } = getMessagesSchema.parse(input);
   return chatService.getMessagesBase(sessionId, { realUserMessageIds });
@@ -111,6 +129,17 @@ export async function getMessageAttachmentsAction(
 ) {
   const { sessionId } = sessionIdSchema.parse(input);
   return chatService.getMessageAttachments(sessionId);
+}
+
+export async function getMessageAttachmentsDeltaRawAction(
+  input: GetMessageAttachmentsDeltaRawInput,
+) {
+  const { sessionId, afterMessageId, limit } =
+    getMessageAttachmentsDeltaRawSchema.parse(input);
+  return chatService.getMessageAttachmentsDeltaRaw(sessionId, {
+    after_message_id: afterMessageId,
+    limit,
+  });
 }
 
 export async function getFilesAction(input: GetFilesInput) {

@@ -13,9 +13,11 @@ from app.repositories.run_repository import RunRepository
 from app.schemas.input_file import InputFile
 from app.schemas.message import (
     InputFileWithUrl,
+    MessageAttachmentsDeltaResponse,
     MessageAttachmentsResponse,
     MessageDeltaResponse,
     MessageResponse,
+    MessageWithFilesDeltaResponse,
     MessageWithFilesResponse,
 )
 from app.services.storage_service import S3StorageService
@@ -181,8 +183,8 @@ class MessageService:
         user_id: str,
         after_message_id: int = 0,
         limit: int = 200,
-    ) -> MessageDeltaResponse:
-        """Gets incremental message updates for polling."""
+    ) -> MessageWithFilesDeltaResponse:
+        """Gets incremental message-with-files updates for polling."""
         safe_limit = max(1, min(int(limit), 1000))
         safe_after_id = max(0, int(after_message_id))
 
@@ -205,6 +207,35 @@ class MessageService:
             user_id=user_id,
             message_id_to_attachments=message_id_to_attachments,
         )
+
+        next_after_message_id = items[-1].id if items else safe_after_id or None
+        return MessageWithFilesDeltaResponse(
+            items=items,
+            next_after_message_id=next_after_message_id,
+            has_more=has_more,
+        )
+
+    def get_messages_delta(
+        self,
+        db: Session,
+        session_id: uuid.UUID,
+        *,
+        after_message_id: int = 0,
+        limit: int = 200,
+    ) -> MessageDeltaResponse:
+        """Gets incremental message updates for polling without attachments."""
+        safe_limit = max(1, min(int(limit), 1000))
+        safe_after_id = max(0, int(after_message_id))
+
+        fetched = MessageRepository.list_by_session_after_id(
+            db,
+            session_id,
+            after_id=safe_after_id,
+            limit=safe_limit + 1,
+        )
+        has_more = len(fetched) > safe_limit
+        messages = fetched[:safe_limit]
+        items = [MessageResponse.model_validate(message) for message in messages]
 
         next_after_message_id = items[-1].id if items else safe_after_id or None
         return MessageDeltaResponse(
@@ -235,6 +266,64 @@ class MessageService:
                 )
             )
         return result
+
+    def get_message_attachments_delta(
+        self,
+        db: Session,
+        session_id: uuid.UUID,
+        *,
+        user_id: str,
+        after_message_id: int = 0,
+        limit: int = 200,
+    ) -> MessageAttachmentsDeltaResponse:
+        """Gets incremental message attachments for polling."""
+        safe_limit = max(1, min(int(limit), 1000))
+        safe_after_id = max(0, int(after_message_id))
+
+        fetched_message_ids = MessageRepository.list_ids_by_session_after_id(
+            db,
+            session_id,
+            after_id=safe_after_id,
+            limit=safe_limit + 1,
+        )
+        has_more = len(fetched_message_ids) > safe_limit
+        page_message_ids = fetched_message_ids[:safe_limit]
+
+        if not page_message_ids:
+            return MessageAttachmentsDeltaResponse(
+                items=[],
+                next_after_message_id=safe_after_id or None,
+                has_more=False,
+            )
+
+        runs = RunRepository.list_by_session_and_user_message_ids(
+            db,
+            session_id,
+            page_message_ids,
+        )
+        message_id_to_attachments = self._collect_message_attachments(runs)
+        storage_service = S3StorageService()
+        items: list[MessageAttachmentsResponse] = []
+        for message_id in page_message_ids:
+            attachments = message_id_to_attachments.get(message_id) or []
+            if not attachments:
+                continue
+            items.append(
+                MessageAttachmentsResponse(
+                    message_id=message_id,
+                    attachments=self._to_input_files_with_urls(
+                        attachments,
+                        user_id=user_id,
+                        storage_service=storage_service,
+                    ),
+                )
+            )
+
+        return MessageAttachmentsDeltaResponse(
+            items=items,
+            next_after_message_id=page_message_ids[-1],
+            has_more=has_more,
+        )
 
     def _build_message_id_to_attachments(
         self, db: Session, session_id: uuid.UUID

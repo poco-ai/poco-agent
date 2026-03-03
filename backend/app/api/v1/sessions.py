@@ -14,8 +14,10 @@ from app.core.deps import get_current_user_id, get_db
 from app.core.errors.error_codes import ErrorCode
 from app.core.errors.exceptions import AppException
 from app.schemas.message import (
+    MessageAttachmentsDeltaResponse,
     MessageAttachmentsResponse,
     MessageDeltaResponse,
+    MessageWithFilesDeltaResponse,
     MessageResponse,
     MessageWithFilesResponse,
 )
@@ -338,6 +340,37 @@ async def get_session_messages(
 
 
 @router.get(
+    "/{session_id}/messages/delta",
+    response_model=ResponseSchema[MessageDeltaResponse],
+)
+async def get_session_messages_delta(
+    session_id: uuid.UUID,
+    user_id: str = Depends(get_current_user_id),
+    after_message_id: int = Query(default=0, ge=0),
+    limit: int = Query(default=200, ge=1, le=1000),
+    db: Session = Depends(get_db),
+) -> JSONResponse:
+    """Gets incremental messages for a session without attachments."""
+    db_session = session_service.get_session(db, session_id)
+    if db_session.user_id != user_id:
+        raise AppException(
+            error_code=ErrorCode.FORBIDDEN,
+            message="Session does not belong to the user",
+        )
+
+    payload = message_service.get_messages_delta(
+        db,
+        session_id,
+        after_message_id=after_message_id,
+        limit=limit,
+    )
+    return Response.success(
+        data=payload,
+        message="Messages delta retrieved successfully",
+    )
+
+
+@router.get(
     "/{session_id}/messages-with-files",
     response_model=ResponseSchema[list[MessageWithFilesResponse]],
 )
@@ -363,7 +396,7 @@ async def get_session_messages_with_files(
 
 @router.get(
     "/{session_id}/messages-with-files/delta",
-    response_model=ResponseSchema[MessageDeltaResponse],
+    response_model=ResponseSchema[MessageWithFilesDeltaResponse],
 )
 async def get_session_messages_with_files_delta(
     session_id: uuid.UUID,
@@ -417,6 +450,38 @@ async def get_session_message_attachments(
     return Response.success(
         data=attachments,
         message="Message attachments retrieved successfully",
+    )
+
+
+@router.get(
+    "/{session_id}/message-attachments/delta",
+    response_model=ResponseSchema[MessageAttachmentsDeltaResponse],
+)
+async def get_session_message_attachments_delta(
+    session_id: uuid.UUID,
+    user_id: str = Depends(get_current_user_id),
+    after_message_id: int = Query(default=0, ge=0),
+    limit: int = Query(default=200, ge=1, le=1000),
+    db: Session = Depends(get_db),
+) -> JSONResponse:
+    """Gets incremental per-message attachments for a session."""
+    db_session = session_service.get_session(db, session_id)
+    if db_session.user_id != user_id:
+        raise AppException(
+            error_code=ErrorCode.FORBIDDEN,
+            message="Session does not belong to the user",
+        )
+
+    payload = message_service.get_message_attachments_delta(
+        db,
+        session_id,
+        user_id=user_id,
+        after_message_id=after_message_id,
+        limit=limit,
+    )
+    return Response.success(
+        data=payload,
+        message="Message attachments delta retrieved successfully",
     )
 
 

@@ -100,6 +100,12 @@ export interface MessageAttachmentsResponse {
   attachments: InputFile[];
 }
 
+export interface MessageAttachmentsDeltaResponse {
+  items: MessageAttachmentsResponse[];
+  next_after_message_id: number | null;
+  has_more: boolean;
+}
+
 export interface ToolExecutionResponse {
   id: string; // UUID
   message_id: number | null;

@@ -37,6 +37,14 @@ class MessageWithFilesResponse(MessageResponse):
 class MessageDeltaResponse(BaseModel):
     """Incremental message response with cursor for polling."""
 
+    items: list[MessageResponse]
+    next_after_message_id: int | None = None
+    has_more: bool = False
+
+
+class MessageWithFilesDeltaResponse(BaseModel):
+    """Incremental message-with-files response with cursor for polling."""
+
     items: list[MessageWithFilesResponse]
     next_after_message_id: int | None = None
     has_more: bool = False
@@ -47,3 +55,11 @@ class MessageAttachmentsResponse(BaseModel):
 
     message_id: int
     attachments: list[InputFileWithUrl]
+
+
+class MessageAttachmentsDeltaResponse(BaseModel):
+    """Incremental message attachment response with cursor for polling."""
+
+    items: list[MessageAttachmentsResponse]
+    next_after_message_id: int | None = None
+    has_more: bool = False

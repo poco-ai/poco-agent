@@ -18,6 +18,7 @@ import type {
   SessionBranchRequest,
   SessionBranchResponse,
   SessionEditMessageRequest,
+  MessageAttachmentsDeltaResponse,
   MessageAttachmentsResponse,
   MessageResponse,
   SessionRegenerateRequest,
@@ -294,6 +295,16 @@ export const chatService = {
     );
   },
 
+  getMessagesBaseDeltaRaw: async (
+    sessionId: string,
+    params?: { after_message_id?: number; limit?: number },
+  ): Promise<MessageDeltaResponse> => {
+    const query = buildQuery(params);
+    return apiClient.get<MessageDeltaResponse>(
+      `${API_ENDPOINTS.sessionMessagesDelta(sessionId)}${query}`,
+    );
+  },
+
   getMessagesBase: async (
     sessionId: string,
     options?: { realUserMessageIds?: number[] },
@@ -331,6 +342,16 @@ export const chatService = {
       console.error("[Chat Service] Failed to get message attachments:", error);
       return {};
     }
+  },
+
+  getMessageAttachmentsDeltaRaw: async (
+    sessionId: string,
+    params?: { after_message_id?: number; limit?: number },
+  ): Promise<MessageAttachmentsDeltaResponse> => {
+    const query = buildQuery(params);
+    return apiClient.get<MessageAttachmentsDeltaResponse>(
+      `${API_ENDPOINTS.sessionMessageAttachmentsDelta(sessionId)}${query}`,
+    );
   },
 
   // ---- Files ----

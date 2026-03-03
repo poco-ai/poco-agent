@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { sendMessageAction } from "@/features/chat/actions/session-actions";
 import {
-  getMessagesDeltaRawAction,
-  getMessagesRawAction,
+  getMessageAttachmentsDeltaRawAction,
+  getMessagesBaseDeltaRawAction,
   getRunsBySessionAction,
 } from "@/features/chat/actions/query-actions";
 import type {
@@ -117,6 +117,104 @@ function compareMessagesForRenderOrder(a: ChatMessage, b: ChatMessage): number {
   return a.id.localeCompare(b.id);
 }
 
+const DELTA_PAGE_SIZE = 500;
+const MAX_DELTA_PAGES_PER_CYCLE = 5;
+
+function mergeRawMessagesById(
+  current: RawApiMessage[],
+  appended: RawApiMessage[],
+): RawApiMessage[] {
+  if (appended.length === 0) return current;
+
+  const byId = new Map<number, RawApiMessage>();
+  current.forEach((message) => {
+    byId.set(message.id, message);
+  });
+
+  appended.forEach((message) => {
+    const existing = byId.get(message.id);
+    if (!existing) {
+      byId.set(message.id, message);
+      return;
+    }
+    byId.set(message.id, {
+      ...existing,
+      ...message,
+      attachments: message.attachments ?? existing.attachments,
+    });
+  });
+
+  return Array.from(byId.values()).sort((a, b) => a.id - b.id);
+}
+
+function buildAttachmentSignature(attachments?: InputFile[] | null): string {
+  if (!attachments || attachments.length === 0) {
+    return "";
+  }
+  return attachments
+    .map(
+      (attachment) =>
+        `${attachment.id ?? ""}|${attachment.source ?? ""}|${attachment.name ?? ""}|${attachment.url ?? ""}`,
+    )
+    .join("||");
+}
+
+function mergeServerAndOptimisticMessages(
+  currentMessages: ChatMessage[],
+  serverMessages: ChatMessage[],
+): ChatMessage[] {
+  const dedupedServerMessages = new Map<string, ChatMessage>();
+  serverMessages.forEach((message) => {
+    dedupedServerMessages.set(message.id, message);
+  });
+  const normalizedServerMessages = Array.from(
+    dedupedServerMessages.values(),
+  ).sort(compareMessagesForRenderOrder);
+
+  const currentById = new Map(currentMessages.map((msg) => [msg.id, msg]));
+  const finalMessages = normalizedServerMessages.map((serverMsg) => {
+    const existing = currentById.get(serverMsg.id);
+    if (!existing || (existing.attachments?.length ?? 0) === 0) {
+      return serverMsg;
+    }
+    if ((serverMsg.attachments?.length ?? 0) > 0) {
+      return serverMsg;
+    }
+    return {
+      ...serverMsg,
+      attachments: existing.attachments,
+    };
+  });
+
+  currentMessages.forEach((localMsg) => {
+    if (!localMsg.id.startsWith("msg-")) return;
+
+    const isSynced = normalizedServerMessages.some((serverMsg) => {
+      if (
+        serverMsg.role !== localMsg.role ||
+        serverMsg.content !== localMsg.content
+      ) {
+        return false;
+      }
+
+      const localTime = localMsg.timestamp
+        ? new Date(localMsg.timestamp).getTime()
+        : Date.now();
+      const serverTime = serverMsg.timestamp
+        ? new Date(serverMsg.timestamp).getTime()
+        : 0;
+
+      return serverTime >= localTime - 10000;
+    });
+
+    if (!isSynced) {
+      finalMessages.push(localMsg);
+    }
+  });
+
+  return finalMessages.sort(compareMessagesForRenderOrder);
+}
+
 /**
  * Manages chat message loading, polling, and optimistic updates
  *
@@ -147,6 +245,218 @@ export function useChatMessages({
   const mutationRollbackMessagesRef = useRef<ChatMessage[] | null>(null);
   const activeMutationTokenRef = useRef<string | null>(null);
   const mutationSequenceRef = useRef(0);
+  const messageCursorRef = useRef(0);
+  const attachmentCursorRef = useRef(0);
+  const attachmentsByMessageIdRef = useRef<Record<number, InputFile[]>>({});
+  const messageDeltaInFlightRef = useRef<{
+    sessionId: string;
+    promise: Promise<{ changed: boolean; hasMore: boolean }>;
+  } | null>(null);
+  const attachmentDeltaInFlightRef = useRef<{
+    sessionId: string;
+    promise: Promise<{ changed: boolean; hasMore: boolean }>;
+  } | null>(null);
+
+  const buildParsedMessages = useCallback(() => {
+    const realUserMessageIds = realUserMessageIdsRef.current ?? undefined;
+    return parseMessages(rawMessagesRef.current, realUserMessageIds).messages;
+  }, []);
+
+  const fetchMessagesDelta = useCallback(
+    async (
+      sessionId: string,
+      options?: {
+        maxPages?: number;
+      },
+    ) => {
+      const inFlight = messageDeltaInFlightRef.current;
+      if (inFlight && inFlight.sessionId === sessionId) {
+        return inFlight.promise;
+      }
+
+      const request = (async () => {
+        if (lastLoadedSessionIdRef.current !== sessionId) {
+          return { changed: false, hasMore: false };
+        }
+
+        const knownIds = new Set(
+          rawMessagesRef.current.map((message) => message.id),
+        );
+        const appended: RawApiMessage[] = [];
+        let afterMessageId = messageCursorRef.current;
+        let hasMore = true;
+        let guard = 0;
+        const maxPages = Math.max(
+          1,
+          options?.maxPages ?? MAX_DELTA_PAGES_PER_CYCLE,
+        );
+
+        while (hasMore && guard < maxPages) {
+          const payload = await getMessagesBaseDeltaRawAction({
+            sessionId,
+            afterMessageId,
+            limit: DELTA_PAGE_SIZE,
+          });
+          if (lastLoadedSessionIdRef.current !== sessionId) {
+            return { changed: false, hasMore: false };
+          }
+          for (const item of payload.items) {
+            if (knownIds.has(item.id)) continue;
+            knownIds.add(item.id);
+            const attachments = attachmentsByMessageIdRef.current[item.id];
+            appended.push(
+              attachments && attachments.length > 0
+                ? { ...item, attachments }
+                : item,
+            );
+          }
+          hasMore = payload.has_more;
+          afterMessageId =
+            payload.next_after_message_id ??
+            payload.items.at(-1)?.id ??
+            afterMessageId;
+          if (afterMessageId > messageCursorRef.current) {
+            messageCursorRef.current = afterMessageId;
+          }
+          guard += 1;
+        }
+
+        if (appended.length > 0) {
+          rawMessagesRef.current = mergeRawMessagesById(
+            rawMessagesRef.current,
+            appended,
+          );
+        }
+
+        return { changed: appended.length > 0, hasMore };
+      })();
+
+      messageDeltaInFlightRef.current = { sessionId, promise: request };
+      try {
+        return await request;
+      } finally {
+        if (messageDeltaInFlightRef.current?.promise === request) {
+          messageDeltaInFlightRef.current = null;
+        }
+      }
+    },
+    [],
+  );
+
+  const fetchMessageAttachmentsDelta = useCallback(
+    async (
+      sessionId: string,
+      options?: {
+        maxPages?: number;
+      },
+    ) => {
+      const inFlight = attachmentDeltaInFlightRef.current;
+      if (inFlight && inFlight.sessionId === sessionId) {
+        return inFlight.promise;
+      }
+
+      const request = (async () => {
+        if (lastLoadedSessionIdRef.current !== sessionId) {
+          return { changed: false, hasMore: false };
+        }
+
+        let afterMessageId = attachmentCursorRef.current;
+        let hasMore = true;
+        let guard = 0;
+        let updatedMessages: RawApiMessage[] | null = null;
+        let changed = false;
+        const messageIndexById = new Map(
+          rawMessagesRef.current.map((message, index) => [message.id, index]),
+        );
+        const maxPages = Math.max(
+          1,
+          options?.maxPages ?? MAX_DELTA_PAGES_PER_CYCLE,
+        );
+
+        while (hasMore && guard < maxPages) {
+          const payload = await getMessageAttachmentsDeltaRawAction({
+            sessionId,
+            afterMessageId,
+            limit: DELTA_PAGE_SIZE,
+          });
+          if (lastLoadedSessionIdRef.current !== sessionId) {
+            return { changed: false, hasMore: false };
+          }
+          for (const item of payload.items) {
+            const nextAttachments = item.attachments ?? [];
+            const nextSignature = buildAttachmentSignature(nextAttachments);
+            const previousAttachments =
+              attachmentsByMessageIdRef.current[item.message_id] ?? [];
+            const previousSignature =
+              buildAttachmentSignature(previousAttachments);
+            if (previousSignature === nextSignature) continue;
+
+            attachmentsByMessageIdRef.current[item.message_id] =
+              nextAttachments;
+            const messageIndex = messageIndexById.get(item.message_id);
+            if (messageIndex === undefined) continue;
+
+            if (!updatedMessages) {
+              updatedMessages = [...rawMessagesRef.current];
+            }
+            const currentMessage = updatedMessages[messageIndex];
+            const currentSignature = buildAttachmentSignature(
+              currentMessage.attachments,
+            );
+            if (currentSignature === nextSignature) continue;
+
+            updatedMessages[messageIndex] = {
+              ...currentMessage,
+              attachments:
+                nextAttachments.length > 0 ? nextAttachments : undefined,
+            };
+            changed = true;
+          }
+
+          hasMore = payload.has_more;
+          afterMessageId =
+            payload.next_after_message_id ??
+            payload.items.at(-1)?.message_id ??
+            afterMessageId;
+          if (afterMessageId > attachmentCursorRef.current) {
+            attachmentCursorRef.current = afterMessageId;
+          }
+          guard += 1;
+        }
+
+        if (updatedMessages) {
+          rawMessagesRef.current = updatedMessages;
+        }
+
+        return { changed, hasMore };
+      })();
+
+      attachmentDeltaInFlightRef.current = { sessionId, promise: request };
+      try {
+        return await request;
+      } finally {
+        if (attachmentDeltaInFlightRef.current?.promise === request) {
+          attachmentDeltaInFlightRef.current = null;
+        }
+      }
+    },
+    [],
+  );
+
+  const applyActiveHistoryMutation = useCallback(
+    (input: ChatMessage[]) =>
+      applyHistoryMutation(input, activeHistoryMutation),
+    [activeHistoryMutation],
+  );
+
+  const syncMessagesFromServerState = useCallback(() => {
+    const parsed = buildParsedMessages();
+    setMessages((prev) =>
+      applyActiveHistoryMutation(
+        mergeServerAndOptimisticMessages(prev, parsed),
+      ),
+    );
+  }, [applyActiveHistoryMutation, buildParsedMessages]);
 
   const refreshRealUserMessageIds = useCallback(async () => {
     if (!session?.session_id) return;
@@ -165,135 +475,16 @@ export function useChatMessages({
         usageByMessageId[key] = r.usage ?? null;
       });
       setRunUsageByUserMessageId(usageByMessageId);
+
+      if (rawMessagesRef.current.length > 0) {
+        syncMessagesFromServerState();
+      }
     } catch (error) {
       console.error("[Chat] Failed to load runs:", error);
-      // Keep as null so message rendering falls back to showing all user messages.
       realUserMessageIdsRef.current = null;
       setRunUsageByUserMessageId({});
     }
-  }, [session?.session_id]);
-
-  const fetchMessagesFull = useCallback(
-    async (sessionId: string) => {
-      // Ensure we have a whitelist of real user input message ids (per run).
-      if (realUserMessageIdsRef.current === null) {
-        await refreshRealUserMessageIds();
-      }
-      const rawMessages = await getMessagesRawAction({ sessionId });
-      rawMessagesRef.current = rawMessages;
-      const realUserMessageIds = realUserMessageIdsRef.current ?? undefined;
-      const parsed = parseMessages(rawMessagesRef.current, realUserMessageIds);
-      return { messages: parsed.messages, changed: true };
-    },
-    [refreshRealUserMessageIds],
-  );
-
-  const fetchMessagesDelta = useCallback(
-    async (sessionId: string) => {
-      // Ensure we have a whitelist of real user input message ids (per run).
-      if (realUserMessageIdsRef.current === null) {
-        await refreshRealUserMessageIds();
-      }
-
-      const knownIds = new Set(
-        rawMessagesRef.current.map((message) => message.id),
-      );
-      const appended: RawApiMessage[] = [];
-      let afterMessageId = rawMessagesRef.current.at(-1)?.id ?? 0;
-      let hasMore = true;
-      let guard = 0;
-
-      // Drain a few pages in one polling cycle so the UI can catch up quickly
-      // when callbacks are bursty.
-      while (hasMore && guard < 5) {
-        const payload = await getMessagesDeltaRawAction({
-          sessionId,
-          afterMessageId,
-          limit: 500,
-        });
-        for (const item of payload.items) {
-          if (knownIds.has(item.id)) continue;
-          knownIds.add(item.id);
-          appended.push(item);
-        }
-        hasMore = payload.has_more;
-        afterMessageId =
-          payload.next_after_message_id ??
-          payload.items.at(-1)?.id ??
-          afterMessageId;
-        guard += 1;
-      }
-
-      if (appended.length > 0) {
-        rawMessagesRef.current = [...rawMessagesRef.current, ...appended];
-      }
-
-      const realUserMessageIds = realUserMessageIdsRef.current ?? undefined;
-      const parsed = parseMessages(rawMessagesRef.current, realUserMessageIds);
-      return { messages: parsed.messages, changed: appended.length > 0 };
-    },
-    [refreshRealUserMessageIds],
-  );
-
-  const applyActiveHistoryMutation = useCallback(
-    (input: ChatMessage[]) =>
-      applyHistoryMutation(input, activeHistoryMutation),
-    [activeHistoryMutation],
-  );
-
-  // Helper to merge new server messages with local optimistic messages
-  const mergeMessages = useCallback(
-    (currentMessages: ChatMessage[], serverMessages: ChatMessage[]) => {
-      const currentById = new Map(currentMessages.map((msg) => [msg.id, msg]));
-      const finalMessages = serverMessages.map((serverMsg) => {
-        const existing = currentById.get(serverMsg.id);
-        if (!existing || (existing.attachments?.length ?? 0) === 0) {
-          return serverMsg;
-        }
-        if ((serverMsg.attachments?.length ?? 0) > 0) {
-          return serverMsg;
-        }
-        return {
-          ...serverMsg,
-          attachments: existing.attachments,
-        };
-      });
-
-      // Append local optimistic messages that haven't been synced yet
-      currentMessages.forEach((localMsg) => {
-        // Only care about optimistic messages (id starts with "msg-")
-        if (!localMsg.id.startsWith("msg-")) return;
-
-        // Check if this optimistic message is already present in server messages
-        const isSynced = serverMessages.some((serverMsg) => {
-          if (
-            serverMsg.role !== localMsg.role ||
-            serverMsg.content !== localMsg.content
-          ) {
-            return false;
-          }
-
-          // Timestamp check - allow 10s skew/lag
-          const localTime = localMsg.timestamp
-            ? new Date(localMsg.timestamp).getTime()
-            : Date.now();
-          const serverTime = serverMsg.timestamp
-            ? new Date(serverMsg.timestamp).getTime()
-            : 0;
-
-          return serverTime >= localTime - 10000;
-        });
-
-        if (!isSynced) {
-          finalMessages.push(localMsg);
-        }
-      });
-
-      // Sort by timestamp
-      return finalMessages.sort(compareMessagesForRenderOrder);
-    },
-    [],
-  );
+  }, [session?.session_id, syncMessagesFromServerState]);
 
   // Send message and immediately fetch updated messages
   const sendMessage = useCallback(
@@ -329,11 +520,19 @@ export function useChatMessages({
         // Refresh runs so multi-turn conversations only show real user inputs.
         await refreshRealUserMessageIds();
 
-        // Fetch latest messages immediately to confirm sync
-        const server = await fetchMessagesFull(sessionId);
-        setMessages((prev) =>
-          applyActiveHistoryMutation(mergeMessages(prev, server.messages)),
-        );
+        const messageDelta = await fetchMessagesDelta(sessionId, {
+          maxPages: 2,
+        });
+        if (messageDelta.changed) {
+          syncMessagesFromServerState();
+          void fetchMessageAttachmentsDelta(sessionId, { maxPages: 2 }).then(
+            (attachmentDelta) => {
+              if (attachmentDelta.changed) {
+                syncMessagesFromServerState();
+              }
+            },
+          );
+        }
       } catch (error) {
         console.error("[Chat] Failed to send message or get reply:", error);
         setIsTyping(false);
@@ -341,10 +540,10 @@ export function useChatMessages({
     },
     [
       session,
-      applyActiveHistoryMutation,
-      mergeMessages,
       refreshRealUserMessageIds,
-      fetchMessagesFull,
+      fetchMessagesDelta,
+      fetchMessageAttachmentsDelta,
+      syncMessagesFromServerState,
     ],
   );
 
@@ -359,6 +558,11 @@ export function useChatMessages({
       setIsTyping(false);
       realUserMessageIdsRef.current = null;
       rawMessagesRef.current = [];
+      messageCursorRef.current = 0;
+      attachmentCursorRef.current = 0;
+      attachmentsByMessageIdRef.current = {};
+      messageDeltaInFlightRef.current = null;
+      attachmentDeltaInFlightRef.current = null;
       setActiveHistoryMutation(null);
       mutationRollbackMessagesRef.current = null;
       activeMutationTokenRef.current = null;
@@ -368,32 +572,53 @@ export function useChatMessages({
 
     let isCancelled = false;
 
-    const fetchMessages = async (mode: "full" | "delta") => {
+    const fetchAttachments = async () => {
       try {
-        const history =
-          mode === "full"
-            ? await fetchMessagesFull(session.session_id)
-            : await fetchMessagesDelta(session.session_id);
-
+        const delta = await fetchMessageAttachmentsDelta(session.session_id);
         if (isCancelled) return;
-        if (mode === "delta" && !history.changed) {
-          return;
+        if (delta.changed) {
+          syncMessagesFromServerState();
         }
+        if (delta.hasMore && !isCancelled) {
+          setTimeout(() => {
+            if (!isCancelled) {
+              void fetchAttachments();
+            }
+          }, 0);
+        }
+      } catch (error) {
+        console.error("[Chat] Failed to load message attachments:", error);
+      }
+    };
 
-        setMessages((prev) =>
-          applyActiveHistoryMutation(mergeMessages(prev, history.messages)),
-        );
+    const fetchMessages = async (initial = false) => {
+      try {
+        const history = await fetchMessagesDelta(session.session_id);
+        if (isCancelled) return;
+        if (history.changed || initial) {
+          syncMessagesFromServerState();
+        }
+        if (history.changed) {
+          void fetchAttachments();
+        }
+        if (history.hasMore && !isCancelled) {
+          setTimeout(() => {
+            if (!isCancelled) {
+              void fetchMessages(false);
+            }
+          }, 0);
+        }
       } catch (error) {
         console.error("[Chat] Failed to load messages:", error);
       } finally {
-        if (!isCancelled) {
+        if (initial && !isCancelled) {
           setIsLoadingHistory(false);
         }
       }
     };
 
-    // Initial fetch
-    void fetchMessages("full");
+    void refreshRealUserMessageIds();
+    void fetchMessages(true);
 
     // Setup polling
     let interval: NodeJS.Timeout;
@@ -404,7 +629,7 @@ export function useChatMessages({
 
     if (session.session_id && !isTerminal) {
       interval = setInterval(() => {
-        void fetchMessages("delta");
+        void fetchMessages(false);
       }, pollingInterval);
     } else if (session.session_id && isTerminal) {
       // Refresh run usage once the session becomes terminal so UI can display cost/tokens.
@@ -418,12 +643,11 @@ export function useChatMessages({
   }, [
     session?.session_id,
     session?.status,
-    applyActiveHistoryMutation,
-    mergeMessages,
     pollingInterval,
-    fetchMessagesFull,
     fetchMessagesDelta,
+    fetchMessageAttachmentsDelta,
     refreshRealUserMessageIds,
+    syncMessagesFromServerState,
   ]);
 
   // Manage isTyping state based on messages
