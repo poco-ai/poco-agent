@@ -2,6 +2,7 @@ import logging
 import os
 import re
 import time
+from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -47,6 +48,22 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 _SUBAGENT_NAME_PATTERN = re.compile(r"^[A-Za-z0-9._-]+$")
+
+
+@contextmanager
+def _temporary_env_overrides(overrides: dict[str, str]):
+    previous: dict[str, str | None] = {}
+    try:
+        for key, value in overrides.items():
+            previous[key] = os.environ.get(key)
+            os.environ[key] = value
+        yield
+    finally:
+        for key, old_value in previous.items():
+            if old_value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = old_value
 
 
 class AgentExecutor:
@@ -287,41 +304,48 @@ class AgentExecutor:
                 agents = resolved or None
 
             plugins = self._discover_plugins()
+            env_overrides = {
+                key: value
+                for key, value in (config.env_overrides or {}).items()
+                if isinstance(key, str) and key.strip() and isinstance(value, str)
+            }
+            with _temporary_env_overrides(env_overrides):
+                selected_model = (config.model or "").strip()
+                if not selected_model:
+                    selected_model = os.environ["DEFAULT_MODEL"]
 
-            selected_model = (config.model or "").strip()
-            if not selected_model:
-                selected_model = os.environ["DEFAULT_MODEL"]
+                options = ClaudeAgentOptions(
+                    cwd=ctx.cwd,
+                    resume=self.sdk_session_id,
+                    # Load both user-level (~/.claude) and project-level (.claude) settings.
+                    # Skills are staged into user-level ~/.claude/skills (symlinked to /workspace/.claude_data).
+                    setting_sources=["user", "project"],
+                    allowed_tools=[
+                        "Skill",
+                        "Read",
+                        "Edit",
+                        "Write",
+                        "Bash",
+                        "TodoWrite",
+                        "Grep",
+                        "Glob",
+                        "Task",
+                    ],
+                    mcp_servers=mcp_servers,
+                    permission_mode=normalized_permission_mode,
+                    model=selected_model,
+                    can_use_tool=can_use_tool,
+                    hooks={
+                        "PreToolUse": [HookMatcher(matcher=None, hooks=[dummy_hook])]
+                    },
+                    agents=agents,
+                    plugins=plugins,
+                )
 
-            options = ClaudeAgentOptions(
-                cwd=ctx.cwd,
-                resume=self.sdk_session_id,
-                # Load both user-level (~/.claude) and project-level (.claude) settings.
-                # Skills are staged into user-level ~/.claude/skills (symlinked to /workspace/.claude_data).
-                setting_sources=["user", "project"],
-                allowed_tools=[
-                    "Skill",
-                    "Read",
-                    "Edit",
-                    "Write",
-                    "Bash",
-                    "TodoWrite",
-                    "Grep",
-                    "Glob",
-                    "Task",
-                ],
-                mcp_servers=mcp_servers,
-                permission_mode=normalized_permission_mode,
-                model=selected_model,
-                can_use_tool=can_use_tool,
-                hooks={"PreToolUse": [HookMatcher(matcher=None, hooks=[dummy_hook])]},
-                agents=agents,
-                plugins=plugins,
-            )
-
-            async with ClaudeSDKClient(options=options) as client:
-                await client.query(prompt)
-                async for msg in client.receive_response():
-                    await self.hooks.run_on_response(ctx, msg)
+                async with ClaudeSDKClient(options=options) as client:
+                    await client.query(prompt)
+                    async for msg in client.receive_response():
+                        await self.hooks.run_on_response(ctx, msg)
 
         except Exception as e:
             status = "failed"

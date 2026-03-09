@@ -1,6 +1,6 @@
 from functools import lru_cache
 
-from pydantic import Field, model_validator
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -89,6 +89,14 @@ class Settings(BaseSettings):
     anthropic_base_url: str = Field(
         default="https://api.anthropic.com", alias="ANTHROPIC_BASE_URL"
     )
+    openai_api_key: str | None = Field(default=None, alias="OPENAI_API_KEY")
+    openai_base_url: str | None = Field(default=None, alias="OPENAI_BASE_URL")
+    glm_api_key: str | None = Field(default=None, alias="GLM_API_KEY")
+    glm_base_url: str | None = Field(default=None, alias="GLM_BASE_URL")
+    minimax_api_key: str | None = Field(default=None, alias="MINIMAX_API_KEY")
+    minimax_base_url: str | None = Field(default=None, alias="MINIMAX_BASE_URL")
+    deepseek_api_key: str | None = Field(default=None, alias="DEEPSEEK_API_KEY")
+    deepseek_base_url: str | None = Field(default=None, alias="DEEPSEEK_BASE_URL")
     default_model: str = Field(
         default="claude-sonnet-4-20250514", alias="DEFAULT_MODEL"
     )
@@ -148,14 +156,6 @@ class Settings(BaseSettings):
         case_sensitive=False,
         extra="ignore",
     )
-
-    @model_validator(mode="after")
-    def validate_anthropic_credentials(self) -> "Settings":
-        """Ensure Anthropic API key is configured."""
-        if not (self.anthropic_api_key or "").strip():
-            raise ValueError("Missing Anthropic credential; set ANTHROPIC_API_KEY.")
-        return self
-
 
 @lru_cache
 def get_settings() -> Settings:
