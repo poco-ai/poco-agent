@@ -1,5 +1,6 @@
 import { createSessionAction } from "@/features/chat/actions/session-actions";
 import type { TaskConfig } from "@/features/chat/types/api/session";
+import { normalizeModelSelection } from "@/features/chat/lib/model-catalog";
 import { scheduledTasksService } from "@/features/scheduled-tasks/api/scheduled-tasks-api";
 import type {
   TaskSubmitContext,
@@ -20,10 +21,13 @@ function buildTaskConfig(
   const repoUrl = (options.repo_url || "").trim();
   const gitBranch = (options.git_branch || "").trim() || DEFAULT_BRANCH;
   const gitTokenEnvKey = (options.git_token_env_key || "").trim();
-  const selectedModel = (input.selectedModel || "").trim();
+  const selectedModel = normalizeModelSelection(input.selectedModel);
 
-  if (selectedModel) {
-    config.model = selectedModel;
+  if (selectedModel.modelId) {
+    config.model = selectedModel.modelId;
+    if (selectedModel.providerId) {
+      config.model_provider_id = selectedModel.providerId;
+    }
   }
   if (inputFiles.length > 0) {
     config.input_files = inputFiles;

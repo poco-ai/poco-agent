@@ -18,7 +18,9 @@ export interface ModelProvider {
   default_base_url: string;
   effective_base_url: string;
   base_url_source: BaseUrlSource;
+  supports_model_discovery: boolean;
   models: ModelDefinition[];
+  discovered_models: ModelDefinition[];
 }
 
 export interface ModelConfigResponse {
@@ -27,4 +29,18 @@ export interface ModelConfigResponse {
   mem0_enabled?: boolean;
   models: ModelDefinition[];
   providers: ModelProvider[];
+}
+
+export interface ProviderModelDiscoveryRequest {
+  api_key?: string | null;
+  base_url?: string | null;
+}
+
+export interface ProviderModelDiscoveryResponse {
+  provider_id: string;
+  models: ModelDefinition[];
+}
+
+export interface ProviderModelSettingsUpdateInput {
+  model_ids: string[];
 }

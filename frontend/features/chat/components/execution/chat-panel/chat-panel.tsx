@@ -58,6 +58,10 @@ import { useLanguage } from "@/hooks/use-language";
 import { useAppShell } from "@/components/shell/app-shell-context";
 import { ModelSelector } from "@/features/chat/components/chat/model-selector";
 import { useModelCatalog } from "@/features/chat/hooks/use-model-catalog";
+import {
+  normalizeModelSelection,
+  type ModelSelection,
+} from "@/features/chat/lib/model-catalog";
 
 interface ChatPanelProps {
   session: ExecutionSession | null;
@@ -160,7 +164,8 @@ export function ChatPanel({
   const quoteButtonRef = React.useRef<HTMLButtonElement>(null);
   const [quoteSelection, setQuoteSelection] =
     React.useState<QuoteSelectionState | null>(null);
-  const [draftModelId, setDraftModelId] = React.useState<string | null>(null);
+  const [draftModelSelection, setDraftModelSelection] =
+    React.useState<ModelSelection | null>(null);
 
   // Message management hook
   const {
@@ -189,22 +194,6 @@ export function ChatPanel({
   const isSessionActive =
     session?.status === "running" || session?.status === "pending";
   const defaultModelId = (modelConfig?.default_model || "").trim();
-  const persistedModelId = (
-    session?.config_snapshot?.model ||
-    defaultModelId ||
-    ""
-  ).trim();
-  const selectedModelId =
-    (draftModelId || persistedModelId || "").trim() || null;
-  const selectedModelLabel = React.useMemo(() => {
-    if (!selectedModelId) {
-      return null;
-    }
-    return (
-      modelOptions.find((option) => option.modelId === selectedModelId)
-        ?.displayName || selectedModelId
-    );
-  }, [modelOptions, selectedModelId]);
 
   const {
     requests: userInputRequests,
@@ -238,31 +227,101 @@ export function ChatPanel({
   React.useEffect(() => {
     setStickyUserInput(null);
     setQuoteSelection(null);
-    setDraftModelId(null);
+    setDraftModelSelection(null);
     if (stickyTimerRef.current) {
       window.clearTimeout(stickyTimerRef.current);
       stickyTimerRef.current = null;
     }
   }, [session?.session_id]);
 
+  const defaultSelection = React.useMemo(() => {
+    const defaultOption = modelOptions.find((option) => option.isDefault);
+    return defaultOption
+      ? {
+          modelId: defaultOption.modelId,
+          providerId: defaultOption.providerId,
+        }
+      : null;
+  }, [modelOptions]);
+
+  const persistedModelSelection = React.useMemo(() => {
+    const snapshotModelId =
+      (session?.config_snapshot?.model || defaultModelId || "").trim() || null;
+    const inferredProviderId =
+      (session?.config_snapshot?.model_provider_id || "").trim() ||
+      modelOptions.find((option) => option.modelId === snapshotModelId)
+        ?.providerId ||
+      defaultSelection?.providerId ||
+      null;
+    return normalizeModelSelection({
+      modelId: snapshotModelId,
+      providerId: inferredProviderId,
+    });
+  }, [
+    defaultModelId,
+    defaultSelection?.providerId,
+    modelOptions,
+    session?.config_snapshot?.model,
+    session?.config_snapshot?.model_provider_id,
+  ]);
+
+  const selectedModelSelection = React.useMemo(
+    () =>
+      normalizeModelSelection(draftModelSelection ?? persistedModelSelection),
+    [draftModelSelection, persistedModelSelection],
+  );
+  const selectedModelId = selectedModelSelection.modelId;
+  const selectedModelLabel = React.useMemo(() => {
+    if (!selectedModelSelection.modelId) {
+      return null;
+    }
+    return (
+      modelOptions.find(
+        (option) =>
+          option.modelId === selectedModelSelection.modelId &&
+          (selectedModelSelection.providerId
+            ? option.providerId === selectedModelSelection.providerId
+            : true),
+      )?.displayName || selectedModelSelection.modelId
+    );
+  }, [
+    modelOptions,
+    selectedModelSelection.modelId,
+    selectedModelSelection.providerId,
+  ]);
+
   React.useEffect(() => {
-    if (!draftModelId) {
+    if (!draftModelSelection?.modelId) {
       return;
     }
-    if (draftModelId === persistedModelId) {
-      setDraftModelId(null);
+    if (
+      draftModelSelection.modelId === persistedModelSelection.modelId &&
+      (draftModelSelection.providerId || "") ===
+        (persistedModelSelection.providerId || "")
+    ) {
+      setDraftModelSelection(null);
     }
-  }, [draftModelId, persistedModelId]);
+  }, [draftModelSelection, persistedModelSelection]);
 
   const handleSelectModel = React.useCallback(
-    (modelId: string | null) => {
-      const nextModelId = (modelId || defaultModelId || "").trim();
-      if (!nextModelId || !defaultModelId) {
+    (selection: ModelSelection | null) => {
+      const nextSelection = normalizeModelSelection(
+        selection ?? defaultSelection,
+      );
+      if (!nextSelection.modelId || !defaultSelection?.modelId) {
         return;
       }
-      setDraftModelId(nextModelId === persistedModelId ? null : nextModelId);
+      if (
+        nextSelection.modelId === persistedModelSelection.modelId &&
+        (nextSelection.providerId || "") ===
+          (persistedModelSelection.providerId || "")
+      ) {
+        setDraftModelSelection(null);
+        return;
+      }
+      setDraftModelSelection(nextSelection);
     },
-    [defaultModelId, persistedModelId],
+    [defaultSelection, persistedModelSelection],
   );
 
   const updateQuoteSelection = React.useCallback(() => {
@@ -564,7 +623,9 @@ export function ChatPanel({
         return;
       }
 
-      const pendingModelOverride = draftModelId ?? undefined;
+      const pendingModelOverride = draftModelSelection?.modelId
+        ? draftModelSelection
+        : undefined;
 
       if (isSessionActive) {
         // Session is running, add to pending queue
@@ -588,7 +649,7 @@ export function ChatPanel({
     },
     [
       addPendingMessage,
-      draftModelId,
+      draftModelSelection,
       hasActiveUserInput,
       isSessionActive,
       refreshTasks,
@@ -793,13 +854,12 @@ export function ChatPanel({
                 {selectedModelId ? (
                   <ModelSelector
                     options={modelOptions}
-                    selectedModelId={selectedModelId}
-                    defaultModelId={defaultModelId}
+                    selection={selectedModelSelection}
+                    defaultSelection={defaultSelection}
                     fallbackLabel={selectedModelLabel || selectedModelId}
                     onChange={handleSelectModel}
                     disabled={isLoadingModelCatalog}
                     triggerClassName="h-8 max-w-[220px] px-2"
-                    modelConfig={modelConfig}
                   />
                 ) : null}
                 {session?.session_id ? (

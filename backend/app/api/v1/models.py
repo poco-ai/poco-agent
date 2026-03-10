@@ -3,7 +3,13 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from app.core.deps import get_current_user_id, get_db
-from app.schemas.model_config import ModelConfigResponse
+from app.schemas.model_config import (
+    ModelConfigResponse,
+    ModelProviderResponse,
+    ProviderModelDiscoveryRequest,
+    ProviderModelDiscoveryResponse,
+    ProviderModelSettingsUpsertRequest,
+)
 from app.schemas.response import Response, ResponseSchema
 from app.services.model_config_service import ModelConfigService
 
@@ -19,3 +25,43 @@ async def get_model_config(
     """Get model configuration for UI selection."""
     payload = model_config_service.get_model_config(db, user_id=user_id)
     return Response.success(data=payload, message="Models retrieved successfully")
+
+
+@router.put(
+    "/providers/{provider_id}",
+    response_model=ResponseSchema[ModelProviderResponse],
+)
+async def upsert_provider_models(
+    provider_id: str,
+    request: ProviderModelSettingsUpsertRequest,
+    user_id: str = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+) -> JSONResponse:
+    """Persist the selected model list for a provider."""
+    payload = model_config_service.upsert_provider_models(
+        db,
+        user_id=user_id,
+        provider_id=provider_id,
+        request=request,
+    )
+    return Response.success(data=payload, message="Provider models updated")
+
+
+@router.post(
+    "/providers/{provider_id}/discover",
+    response_model=ResponseSchema[ProviderModelDiscoveryResponse],
+)
+async def discover_provider_models(
+    provider_id: str,
+    request: ProviderModelDiscoveryRequest,
+    user_id: str = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+) -> JSONResponse:
+    """Best-effort discovery of provider models using the current credentials."""
+    payload = model_config_service.discover_provider_models(
+        db,
+        user_id=user_id,
+        provider_id=provider_id,
+        request=request,
+    )
+    return Response.success(data=payload, message="Provider models discovered")

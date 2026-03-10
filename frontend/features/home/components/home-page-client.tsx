@@ -20,6 +20,10 @@ import { ConnectorsBar } from "@/features/connectors";
 import { useAppShell } from "@/components/shell/app-shell-context";
 import { toast } from "sonner";
 import { useModelCatalog } from "@/features/chat/hooks/use-model-catalog";
+import {
+  normalizeModelSelection,
+  type ModelSelection,
+} from "@/features/chat/lib/model-catalog";
 
 const MODEL_STORAGE_KEY = "poco_selected_model";
 
@@ -34,14 +38,15 @@ export function HomePageClient() {
   const [mode, setMode] = React.useState<ComposerMode>("task");
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
 
-  const [selectedModel, setSelectedModel] = React.useState<string | null>(null);
+  const [selectedModel, setSelectedModel] =
+    React.useState<ModelSelection | null>(null);
   const { modelConfig, modelOptions } = useModelCatalog();
-  const selectableModelIds = React.useMemo(
+  const selectableOptionKeys = React.useMemo(
     () =>
       new Set(
         modelOptions
           .filter((option) => option.isAvailable && !option.isDefault)
-          .map((option) => option.modelId),
+          .map((option) => option.optionKey),
       ),
     [modelOptions],
   );
@@ -52,20 +57,30 @@ export function HomePageClient() {
     const defaultModel = (modelConfig?.default_model || "").trim();
     if (!defaultModel) return;
 
-    let saved: string | null = null;
+    let saved: ModelSelection | null = null;
     try {
-      saved = localStorage.getItem(MODEL_STORAGE_KEY);
+      const raw = localStorage.getItem(MODEL_STORAGE_KEY);
+      saved = raw ? normalizeModelSelection(JSON.parse(raw)) : null;
     } catch {
       saved = null;
     }
 
-    const cleaned = (saved || "").trim();
-    if (!cleaned || cleaned === defaultModel) {
+    if (!saved?.modelId || saved.modelId === defaultModel) {
       setSelectedModel(null);
       return;
     }
 
-    if (!selectableModelIds.has(cleaned)) {
+    const resolvedProviderId =
+      saved.providerId ||
+      modelOptions.find((option) => option.modelId === saved.modelId)
+        ?.providerId ||
+      "";
+    const normalizedSaved = {
+      modelId: saved.modelId,
+      providerId: resolvedProviderId || null,
+    };
+    const selectionKey = `${resolvedProviderId}:${saved.modelId}`;
+    if (!selectableOptionKeys.has(selectionKey)) {
       try {
         localStorage.removeItem(MODEL_STORAGE_KEY);
       } catch {
@@ -75,23 +90,26 @@ export function HomePageClient() {
       return;
     }
 
-    setSelectedModel(cleaned);
-  }, [modelConfig, selectableModelIds]);
+    setSelectedModel(normalizedSaved);
+  }, [modelConfig, modelOptions, selectableOptionKeys]);
 
-  const handleSelectModel = React.useCallback((model: string | null) => {
-    const cleaned = (model || "").trim();
-    const next = cleaned ? cleaned : null;
-    setSelectedModel(next);
-    try {
-      if (!next) {
-        localStorage.removeItem(MODEL_STORAGE_KEY);
-      } else {
-        localStorage.setItem(MODEL_STORAGE_KEY, next);
+  const handleSelectModel = React.useCallback(
+    (selection: ModelSelection | null) => {
+      const next = normalizeModelSelection(selection);
+      const hasSelection = Boolean(next.modelId);
+      setSelectedModel(hasSelection ? next : null);
+      try {
+        if (!hasSelection) {
+          localStorage.removeItem(MODEL_STORAGE_KEY);
+        } else {
+          localStorage.setItem(MODEL_STORAGE_KEY, JSON.stringify(next));
+        }
+      } catch {
+        // Ignore storage failures (e.g., privacy mode).
       }
-    } catch {
-      // Ignore storage failures (e.g., privacy mode).
-    }
-  }, []);
+    },
+    [],
+  );
 
   // Determine if connectors bar should be expanded
   const shouldExpandConnectors = isInputFocused || inputValue.trim().length > 0;

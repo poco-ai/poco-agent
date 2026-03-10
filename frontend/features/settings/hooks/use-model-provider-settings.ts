@@ -11,17 +11,41 @@ import { invalidateModelCatalog } from "@/features/chat/lib/model-catalog-state"
 import { useT } from "@/lib/i18n/client";
 import type { ApiProviderConfig } from "@/features/settings/types";
 
+function normalizeModelIds(modelIds: string[]): string[] {
+  const seen = new Set<string>();
+  const ordered: string[] = [];
+
+  modelIds.forEach((modelId) => {
+    const clean = (modelId || "").trim();
+    if (!clean || seen.has(clean)) {
+      return;
+    }
+    seen.add(clean);
+    ordered.push(clean);
+  });
+
+  return ordered;
+}
+
 function buildProviderConfig(
   provider: ModelProvider,
   envVars: EnvVar[],
-  savingProviderId: string | null,
+  status?: {
+    savingProviderId?: string | null;
+    discoveringProviderId?: string | null;
+  },
 ): ApiProviderConfig {
+  const providerModels = Array.isArray(provider.models) ? provider.models : [];
+  const discoveredModels = Array.isArray(provider.discovered_models)
+    ? provider.discovered_models
+    : [];
   const hasStoredUserKey = envVars.some(
     (item) => item.scope === "user" && item.key === provider.api_key_env_key,
   );
   const hasStoredUserBaseUrl = envVars.some(
     (item) => item.scope === "user" && item.key === provider.base_url_env_key,
   );
+
   return {
     providerId: provider.provider_id,
     displayName: provider.display_name,
@@ -31,13 +55,18 @@ function buildProviderConfig(
     defaultBaseUrl: provider.default_base_url,
     effectiveBaseUrl: provider.effective_base_url,
     baseUrlSource: provider.base_url_source,
-    models: provider.models,
+    models: providerModels,
+    discoveredModels,
+    supportsModelDiscovery: provider.supports_model_discovery,
+    selectedModelIds: providerModels.map((item) => item.model_id),
+    modelDraft: "",
     keyInput: "",
     baseUrlInput:
       provider.base_url_source === "user" ? provider.effective_base_url : "",
     hasStoredUserKey,
     hasStoredUserBaseUrl,
-    isSaving: savingProviderId === provider.provider_id,
+    isSaving: status?.savingProviderId === provider.provider_id,
+    isDiscovering: status?.discoveringProviderId === provider.provider_id,
   };
 }
 
@@ -55,6 +84,39 @@ export function useModelProviderSettings(options?: { enabled?: boolean }) {
     null,
   );
 
+  const rebuildProviderConfigs = React.useCallback(
+    (
+      nextModelConfig: ModelConfigResponse,
+      nextEnvVars: EnvVar[],
+      status?: {
+        savingProviderId?: string | null;
+        discoveringProviderId?: string | null;
+      },
+    ) => {
+      setProviderConfigs((prev) => {
+        const previousMap = new Map(
+          prev.map((item) => [item.providerId, item]),
+        );
+        return nextModelConfig.providers.map((provider) => {
+          const nextProvider = buildProviderConfig(
+            provider,
+            nextEnvVars,
+            status,
+          );
+          const previous = previousMap.get(provider.provider_id);
+          if (!previous) {
+            return nextProvider;
+          }
+          return {
+            ...nextProvider,
+            modelDraft: previous.modelDraft,
+          };
+        });
+      });
+    },
+    [],
+  );
+
   const refresh = React.useCallback(async () => {
     if (!enabled) return;
     setIsLoading(true);
@@ -65,18 +127,14 @@ export function useModelProviderSettings(options?: { enabled?: boolean }) {
       ]);
       setModelConfig(nextModelConfig);
       setEnvVars(nextEnvVars);
-      setProviderConfigs(
-        nextModelConfig.providers.map((provider) =>
-          buildProviderConfig(provider, nextEnvVars, null),
-        ),
-      );
+      rebuildProviderConfigs(nextModelConfig, nextEnvVars);
     } catch (error) {
       console.error("[Settings] Failed to load provider settings:", error);
       toast.error(t("settings.providerSaveError"));
     } finally {
       setIsLoading(false);
     }
-  }, [enabled, t]);
+  }, [enabled, rebuildProviderConfigs, t]);
 
   React.useEffect(() => {
     if (!enabled) return;
@@ -161,17 +219,17 @@ export function useModelProviderSettings(options?: { enabled?: boolean }) {
           await deleteUserEnvVar(provider.baseUrlEnvKey);
         }
 
+        await modelConfigService.updateProviderModels(providerId, {
+          model_ids: normalizeModelIds(provider.selectedModelIds),
+        });
+
         const [nextModelConfig, nextEnvVars] = await Promise.all([
           modelConfigService.get(),
           envVarsService.list(),
         ]);
         setModelConfig(nextModelConfig);
         setEnvVars(nextEnvVars);
-        setProviderConfigs(
-          nextModelConfig.providers.map((item) =>
-            buildProviderConfig(item, nextEnvVars, null),
-          ),
-        );
+        rebuildProviderConfigs(nextModelConfig, nextEnvVars);
         invalidateModelCatalog();
         toast.success(t("settings.providerSaveSuccess"));
       } catch (error) {
@@ -182,7 +240,14 @@ export function useModelProviderSettings(options?: { enabled?: boolean }) {
         setProviderPatch(providerId, { isSaving: false });
       }
     },
-    [deleteUserEnvVar, providerConfigs, setProviderPatch, t, upsertUserEnvVar],
+    [
+      deleteUserEnvVar,
+      providerConfigs,
+      rebuildProviderConfigs,
+      setProviderPatch,
+      t,
+      upsertUserEnvVar,
+    ],
   );
 
   const clearCustomProvider = React.useCallback(
@@ -198,6 +263,9 @@ export function useModelProviderSettings(options?: { enabled?: boolean }) {
         await Promise.all([
           deleteUserEnvVar(provider.apiKeyEnvKey),
           deleteUserEnvVar(provider.baseUrlEnvKey),
+          modelConfigService.updateProviderModels(providerId, {
+            model_ids: [],
+          }),
         ]);
         const [nextModelConfig, nextEnvVars] = await Promise.all([
           modelConfigService.get(),
@@ -205,11 +273,7 @@ export function useModelProviderSettings(options?: { enabled?: boolean }) {
         ]);
         setModelConfig(nextModelConfig);
         setEnvVars(nextEnvVars);
-        setProviderConfigs(
-          nextModelConfig.providers.map((item) =>
-            buildProviderConfig(item, nextEnvVars, null),
-          ),
-        );
+        rebuildProviderConfigs(nextModelConfig, nextEnvVars);
         invalidateModelCatalog();
         toast.success(t("settings.providerClearSuccess"));
       } catch (error) {
@@ -220,7 +284,44 @@ export function useModelProviderSettings(options?: { enabled?: boolean }) {
         setProviderPatch(providerId, { isSaving: false });
       }
     },
-    [deleteUserEnvVar, providerConfigs, setProviderPatch, t],
+    [
+      deleteUserEnvVar,
+      providerConfigs,
+      rebuildProviderConfigs,
+      setProviderPatch,
+      t,
+    ],
+  );
+
+  const discoverProviderModels = React.useCallback(
+    async (providerId: string) => {
+      const provider = providerConfigs.find(
+        (item) => item.providerId === providerId,
+      );
+      if (!provider || !provider.supportsModelDiscovery) {
+        return;
+      }
+
+      setProviderPatch(providerId, { isDiscovering: true });
+      try {
+        const discovered = await modelConfigService.discoverProviderModels(
+          providerId,
+          {
+            api_key: provider.keyInput.trim() || null,
+            base_url: provider.baseUrlInput,
+          },
+        );
+        setProviderPatch(providerId, {
+          discoveredModels: discovered.models,
+        });
+      } catch (error) {
+        console.error("[Settings] Failed to discover provider models:", error);
+        toast.error(t("settings.providerDiscoverError"));
+      } finally {
+        setProviderPatch(providerId, { isDiscovering: false });
+      }
+    },
+    [providerConfigs, setProviderPatch, t],
   );
 
   return {
@@ -231,6 +332,7 @@ export function useModelProviderSettings(options?: { enabled?: boolean }) {
     setProviderPatch,
     saveProvider,
     clearCustomProvider,
+    discoverProviderModels,
     refresh,
   };
 }

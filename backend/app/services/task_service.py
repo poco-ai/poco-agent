@@ -27,20 +27,22 @@ class TaskService:
         """Validate `model` override and normalize config in-place.
 
         Rules:
-        - `model` unset/empty -> removed (use DEFAULT_MODEL)
-        - `model` equals settings.default_model -> removed (treat as default; do not pin)
-        - otherwise `model` must be in the backend model catalog
+        - `model` unset/empty -> removed and clear `model_provider_id`
+        - `model` equals settings.default_model -> removed and clear `model_provider_id`
+        - explicit `model_provider_id` wins over provider inference
+        - otherwise `model` must be in the backend model catalog or belong to a known provider
         """
         if not isinstance(config, dict):
             return
 
         if "model" not in config:
+            config.pop("model_provider_id", None)
             return
 
         raw = config.get("model")
         if raw is None:
-            # Explicit null clears a previously pinned model.
             config.pop("model", None)
+            config.pop("model_provider_id", None)
             return
 
         if not isinstance(raw, str):
@@ -52,24 +54,38 @@ class TaskService:
         value = raw.strip()
         if not value:
             config.pop("model", None)
+            config.pop("model_provider_id", None)
             return
 
         settings = get_settings()
         default_model = (settings.default_model or "").strip()
         if value == default_model:
-            # Treat selecting the default as "inherit", so the session follows future
-            # default_model changes instead of pinning the old value.
             config.pop("model", None)
+            config.pop("model_provider_id", None)
             return
 
+        raw_provider_id = config.get("model_provider_id")
+        provider_id = (
+            raw_provider_id.strip()
+            if isinstance(raw_provider_id, str) and raw_provider_id.strip()
+            else None
+        )
+        inferred_provider_id = infer_provider_id(value)
+
         allowed = set(get_allowed_model_ids(settings))
-        if value not in allowed and infer_provider_id(value) is None:
+        if value not in allowed and not provider_id and inferred_provider_id is None:
             raise AppException(
                 error_code=ErrorCode.BAD_REQUEST,
                 message=f"Invalid model: {value}",
             )
 
         config["model"] = value
+        if provider_id:
+            config["model_provider_id"] = provider_id
+        elif inferred_provider_id:
+            config["model_provider_id"] = inferred_provider_id
+        else:
+            config.pop("model_provider_id", None)
 
     @staticmethod
     def _normalize_memory_enabled(config: dict) -> None:

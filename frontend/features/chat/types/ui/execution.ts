@@ -58,6 +58,7 @@ export interface ConfigSnapshot {
   browser_enabled?: boolean;
   memory_enabled?: boolean;
   model?: string;
+  model_provider_id?: string;
   repo_url?: string;
   git_branch?: string;
   git_token_env_key?: string | null;

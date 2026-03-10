@@ -1285,7 +1285,7 @@
     "anthropicBaseUrl": "URL de base Anthropic",
     "anthropicBaseUrlHint": "Remplacer le endpoint Anthropic par défaut.",
     "anthropicBaseUrlPlaceholder": "https://api.anthropic.com",
-    "providerConfigDescription": "Gérez les identifiants prédéfinis et personnalisés pour chaque famille de modèles.",
+    "providerConfigDescription": "Gérez les identifiants du fournisseur et la liste des modèles affichés dans le sélecteur.",
     "providerListEmpty": "Aucun fournisseur de modèles disponible pour le moment.",
     "providerStatusNone": "Non configuré",
     "providerStatusSystem": "Service prédéfini",
@@ -1295,7 +1295,7 @@
     "providerApiKeyHint": "Laissez vide pour conserver la clé personnalisée existante.",
     "providerApiKeyPlaceholder": "Entrez votre clé API {{provider}}",
     "providerBaseUrlLabel": "URL de base personnalisée",
-    "providerBaseUrlHint": "Leave this blank to use the default API endpoint.",
+    "providerBaseUrlHint": "Laissez ce champ vide pour utiliser l'endpoint API par défaut.",
     "providerBaseUrlRequired": "Une URL de base est requise lorsque l'endpoint personnalisé est activé.",
     "providerSaveSuccess": "Paramètres du fournisseur enregistrés",
     "providerSaveError": "Échec de l'enregistrement des paramètres du fournisseur",
@@ -1383,7 +1383,15 @@
           "hint": "Open the settings dialog."
         }
       }
-    }
+    },
+    "providerDiscoverError": "Impossible de récupérer les modèles du fournisseur",
+    "providerModelsPlaceholder": "Rechercher ou saisir un nom de modèle",
+    "providerModelsSearchPlaceholder": "Rechercher des modèles ou saisir un nom personnalisé",
+    "providerModelsDiscovering": "Chargement des modèles...",
+    "providerModelsManualHint": "Ce fournisseur ne prend pas en charge la découverte automatique. Saisissez les noms des modèles manuellement.",
+    "providerModelsEmpty": "Aucun modèle trouvé",
+    "providerModelsUseCustom": "Utiliser un modèle personnalisé : {{model}}",
+    "providerFieldAnnotation": "Laissez le champ API Key vide pour conserver la clé actuelle. Laissez Base URL vide pour utiliser l'endpoint par défaut. Les modèles peuvent être sélectionnés dans la liste ou saisis manuellement."
   },
   "validation": {
     "projectNameRequired": "Veuillez entrer un nom de projet",
@@ -1602,16 +1610,16 @@
     "gpt4Turbo": {
       "description": "Rapide et efficace"
     },
-    "customBadge": "Custom",
-    "customModelAction": "Custom model",
-    "customModelTitle": "Use a custom model",
-    "customModelDescription": "Add any model name supported by the configured provider.",
-    "customModelPlaceholder": "e.g. gpt-5 or claude-sonnet-4-5",
-    "customModelHint": "Supported prefixes: claude-, gpt, o1/o3/o4, glm-, MiniMax-, deepseek-.",
-    "customModelRequired": "Enter a model name.",
-    "customModelUnsupported": "This model name does not match a supported provider.",
-    "customModelProviderUnavailable": "Configure the provider credentials before using this model.",
-    "customModelSaved": "Custom model added"
+    "customBadge": "Personnalisé",
+    "customModelAction": "Modèle personnalisé",
+    "customModelTitle": "Utiliser un modèle personnalisé",
+    "customModelDescription": "Ajoutez n'importe quel nom de modèle pris en charge par le fournisseur configuré.",
+    "customModelPlaceholder": "ex. gpt-5 ou claude-sonnet-4-5",
+    "customModelHint": "Préfixes pris en charge : claude-, gpt, o1/o3/o4, glm-, MiniMax-, deepseek-.",
+    "customModelRequired": "Saisissez un nom de modèle.",
+    "customModelUnsupported": "Ce nom de modèle ne correspond à aucun fournisseur pris en charge.",
+    "customModelProviderUnavailable": "Configurez d'abord les identifiants du fournisseur avant d'utiliser ce modèle.",
+    "customModelSaved": "Modèle personnalisé ajouté"
   },
   "creditsPopover": {
     "proPlan": "Forfait Pro",

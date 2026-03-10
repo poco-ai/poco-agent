@@ -11,15 +11,18 @@ import { RepoLinkButton } from "@/components/shared/repo-link-button";
 import { PageHeaderShell } from "@/components/shared/page-header-shell";
 import type { SettingsTabId } from "@/features/settings/types";
 import type { ModelConfigResponse } from "@/features/chat/types";
-import type { ModelCatalogOption } from "@/features/chat/lib/model-catalog";
+import type {
+  ModelCatalogOption,
+  ModelSelection,
+} from "@/features/chat/lib/model-catalog";
 import { ModelSelector } from "@/features/chat/components/chat/model-selector";
 
 interface HomeHeaderProps {
   onOpenSettings?: (tab?: SettingsTabId) => void;
   modelConfig?: ModelConfigResponse | null;
   modelOptions?: ModelCatalogOption[];
-  selectedModel?: string | null;
-  onSelectModel?: (model: string | null) => void;
+  selectedModel?: ModelSelection | null;
+  onSelectModel?: (selection: ModelSelection | null) => void;
 }
 
 export function HomeHeader({
@@ -32,6 +35,15 @@ export function HomeHeader({
   const { t } = useT("translation");
 
   const defaultModel = (modelConfig?.default_model || "").trim();
+  const defaultSelection = React.useMemo(() => {
+    const defaultOption = modelOptions.find((option) => option.isDefault);
+    return defaultOption
+      ? {
+          modelId: defaultOption.modelId,
+          providerId: defaultOption.providerId,
+        }
+      : null;
+  }, [modelOptions]);
   const hasSelectableModel = React.useMemo(
     () => modelOptions.some((option) => option.isAvailable),
     [modelOptions],
@@ -47,13 +59,14 @@ export function HomeHeader({
         <div className="flex items-center gap-2">
           <ModelSelector
             options={modelOptions}
-            selectedModelId={selectedModel || defaultModel}
-            defaultModelId={defaultModel}
-            fallbackLabel={selectedModel || defaultModel || t("status.loading")}
-            onChange={(modelId) => onSelectModel?.(modelId)}
+            selection={selectedModel ?? null}
+            defaultSelection={defaultSelection}
+            fallbackLabel={
+              selectedModel?.modelId || defaultModel || t("status.loading")
+            }
+            onChange={onSelectModel ?? (() => undefined)}
             disabled={!isSelectorReady}
             triggerClassName="h-10 gap-2 px-2"
-            modelConfig={modelConfig}
           />
         </div>
       }

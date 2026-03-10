@@ -15,6 +15,7 @@ import {
   parseMessages,
   type RawApiMessage,
 } from "@/features/chat/services/message-parser";
+import type { ModelSelection } from "@/features/chat/lib/model-catalog";
 
 interface UseChatMessagesOptions {
   session: ExecutionSession | null;
@@ -30,7 +31,7 @@ interface UseChatMessagesReturn {
   sendMessage: (
     content: string,
     attachments?: InputFile[],
-    model?: string | null,
+    modelSelection?: ModelSelection | null,
   ) => Promise<void>;
   beginOptimisticRegenerate: (assistantMessageId: number) => string;
   beginOptimisticEditMessage: (args: {
@@ -495,7 +496,7 @@ export function useChatMessages({
     async (
       content: string,
       attachments?: InputFile[],
-      model?: string | null,
+      modelSelection?: ModelSelection | null,
     ) => {
       if (!session?.session_id) return;
 
@@ -523,7 +524,8 @@ export function useChatMessages({
           sessionId,
           content: normalizedContent,
           attachments,
-          model,
+          model: modelSelection?.modelId ?? null,
+          model_provider_id: modelSelection?.providerId ?? null,
         });
 
         // Refresh runs so multi-turn conversations only show real user inputs.

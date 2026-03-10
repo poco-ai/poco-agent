@@ -7,8 +7,10 @@ import { ModelSelector } from "./model-selector";
 import { UsageTooltip } from "./usage-tooltip";
 import type { UsageStats } from "@/types";
 import { PageHeaderShell } from "@/components/shared/page-header-shell";
-import type { ModelCatalogOption } from "@/features/chat/lib/model-catalog";
-import type { ModelConfigResponse } from "@/features/chat/types";
+import type {
+  ModelCatalogOption,
+  ModelSelection,
+} from "@/features/chat/lib/model-catalog";
 
 // Default usage stats for now
 const DEFAULT_USAGE_STATS: UsageStats = {
@@ -22,20 +24,18 @@ const DEFAULT_USAGE_STATS: UsageStats = {
 
 interface ChatHeaderProps {
   modelOptions: ModelCatalogOption[];
-  selectedModelId: string | null;
-  defaultModelId?: string | null;
-  onModelChange: (modelId: string | null) => void;
+  selectedModel: ModelSelection | null;
+  defaultSelection?: ModelSelection | null;
+  onModelChange: (selection: ModelSelection | null) => void;
   title?: string;
-  modelConfig?: ModelConfigResponse | null;
 }
 
 export function ChatHeader({
   modelOptions,
-  selectedModelId,
-  defaultModelId,
+  selectedModel,
+  defaultSelection,
   onModelChange,
   title,
-  modelConfig,
 }: ChatHeaderProps) {
   const usageStats = React.useMemo(() => DEFAULT_USAGE_STATS, []);
 
@@ -45,11 +45,10 @@ export function ChatHeader({
         <div className="flex items-center gap-3 sm:gap-4">
           <ModelSelector
             options={modelOptions}
-            selectedModelId={selectedModelId || defaultModelId || ""}
-            defaultModelId={defaultModelId}
-            fallbackLabel={selectedModelId || undefined}
+            selection={selectedModel}
+            defaultSelection={defaultSelection}
+            fallbackLabel={selectedModel?.modelId || undefined}
             onChange={onModelChange}
-            modelConfig={modelConfig}
           />
           {title ? (
             <>

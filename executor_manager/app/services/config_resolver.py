@@ -276,11 +276,16 @@ class ConfigResolver:
         selected_model = str(
             config_snapshot.get("model") or self.settings.default_model or ""
         ).strip()
-        provider_id = self._infer_provider_id(selected_model)
+        explicit_provider_id = str(config_snapshot.get("model_provider_id") or "").strip()
+        inferred_provider_id = self._infer_provider_id(selected_model)
+        provider_id = explicit_provider_id or inferred_provider_id
         if not provider_id:
             return {}
 
         spec = _PROVIDER_RUNTIME_SPECS.get(provider_id)
+        if not spec and explicit_provider_id and inferred_provider_id:
+            provider_id = inferred_provider_id
+            spec = _PROVIDER_RUNTIME_SPECS.get(provider_id)
         if not spec:
             return {}
 

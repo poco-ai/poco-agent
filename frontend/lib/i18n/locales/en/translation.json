@@ -1389,7 +1389,7 @@
     "anthropicBaseUrl": "Anthropic Base URL",
     "anthropicBaseUrlHint": "Override the default Anthropic API endpoint.",
     "anthropicBaseUrlPlaceholder": "https://api.anthropic.com",
-    "providerConfigDescription": "Manage preset and custom provider credentials for each model family.",
+    "providerConfigDescription": "Manage provider credentials and the model list exposed to the selector.",
     "providerListEmpty": "No model providers available yet.",
     "providerStatusNone": "Unconfigured",
     "providerStatusSystem": "Preset Service",
@@ -1487,7 +1487,15 @@
           "hint": "Open the settings dialog."
         }
       }
-    }
+    },
+    "providerDiscoverError": "Failed to discover provider models",
+    "providerModelsPlaceholder": "Search or enter model names",
+    "providerModelsSearchPlaceholder": "Search models or type a custom name",
+    "providerModelsDiscovering": "Loading models...",
+    "providerModelsManualHint": "Discovery is unavailable for this provider. Enter the model names manually.",
+    "providerModelsEmpty": "No models found",
+    "providerModelsUseCustom": "Use custom model: {{model}}",
+    "providerFieldAnnotation": "Leave API Key blank to keep the current key. Leave Base URL blank to use the default endpoint. Models can be selected from the list or entered manually."
   },
   "validation": {
     "projectNameRequired": "Please enter a project name",

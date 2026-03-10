@@ -16,6 +16,8 @@ class TaskConfig(BaseModel):
     git_token_env_key: str | None = None
     # Optional explicit model override for this session/run.
     model: str | None = None
+    # Optional explicit provider binding for the selected model.
+    model_provider_id: str | None = None
     # Built-in browser capability toggle (Playwright MCP is injected internally by the executor).
     browser_enabled: bool = False
     # Built-in memory capability toggle (Memory MCP is injected internally by the executor).

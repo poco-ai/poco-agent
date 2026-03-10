@@ -1,19 +1,20 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import type { ExecutionSession, InputFile } from "@/features/chat/types";
+import type { ModelSelection } from "@/features/chat/lib/model-catalog";
 
 interface UsePendingMessagesOptions {
   session: ExecutionSession | null;
   sendMessage: (
     content: string,
     attachments?: InputFile[],
-    model?: string | null,
+    modelSelection?: ModelSelection | null,
   ) => Promise<void>;
 }
 
 export interface PendingMessage {
   content: string;
   attachments?: InputFile[];
-  model?: string | null;
+  modelSelection?: ModelSelection | null;
 }
 
 interface UsePendingMessagesReturn {
@@ -22,7 +23,7 @@ interface UsePendingMessagesReturn {
   addPendingMessage: (
     content: string,
     attachments?: InputFile[],
-    model?: string | null,
+    modelSelection?: ModelSelection | null,
   ) => void;
   sendPendingMessage: (index: number) => Promise<void>;
   modifyPendingMessage: (index: number) => PendingMessage;
@@ -61,8 +62,15 @@ export function usePendingMessages({
 
   // Add message to pending queue
   const addPendingMessage = useCallback(
-    (content: string, attachments?: InputFile[], model?: string | null) => {
-      setPendingMessages((prev) => [...prev, { content, attachments, model }]);
+    (
+      content: string,
+      attachments?: InputFile[],
+      modelSelection?: ModelSelection | null,
+    ) => {
+      setPendingMessages((prev) => [
+        ...prev,
+        { content, attachments, modelSelection },
+      ]);
     },
     [],
   );
@@ -72,7 +80,7 @@ export function usePendingMessages({
     async (index: number) => {
       const msg = pendingMessages[index];
       setPendingMessages((prev) => prev.filter((_, i) => i !== index));
-      await sendMessage(msg.content, msg.attachments, msg.model);
+      await sendMessage(msg.content, msg.attachments, msg.modelSelection);
     },
     [pendingMessages, sendMessage],
   );
@@ -108,7 +116,7 @@ export function usePendingMessages({
         setPendingMessages((prev) => prev.slice(1));
 
         try {
-          await sendMessage(msg.content, msg.attachments, msg.model);
+          await sendMessage(msg.content, msg.attachments, msg.modelSelection);
         } catch (error) {
           console.error("Auto-send failed:", error);
         } finally {

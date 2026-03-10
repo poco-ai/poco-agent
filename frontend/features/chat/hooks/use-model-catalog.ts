@@ -5,17 +5,13 @@ import * as React from "react";
 import { apiClient, API_ENDPOINTS } from "@/services/api-client";
 import type { ModelConfigResponse } from "@/features/chat/types";
 import { buildModelCatalogOptions } from "@/features/chat/lib/model-catalog";
-import {
-  getModelCatalogInvalidatedEventName,
-  readCustomModelIds,
-} from "@/features/chat/lib/model-catalog-state";
+import { getModelCatalogInvalidatedEventName } from "@/features/chat/lib/model-catalog-state";
 
 export function useModelCatalog(options?: { enabled?: boolean }) {
   const enabled = options?.enabled ?? true;
   const [modelConfig, setModelConfig] =
     React.useState<ModelConfigResponse | null>(null);
   const [isLoading, setIsLoading] = React.useState(enabled);
-  const [customModelIds, setCustomModelIds] = React.useState<string[]>([]);
 
   const refresh = React.useCallback(async () => {
     if (!enabled) {
@@ -41,7 +37,6 @@ export function useModelCatalog(options?: { enabled?: boolean }) {
       return;
     }
 
-    setCustomModelIds(readCustomModelIds());
     void refresh();
   }, [enabled, refresh]);
 
@@ -52,24 +47,18 @@ export function useModelCatalog(options?: { enabled?: boolean }) {
 
     const eventName = getModelCatalogInvalidatedEventName();
     const handleInvalidated = () => {
-      setCustomModelIds(readCustomModelIds());
       void refresh();
-    };
-    const handleStorage = () => {
-      setCustomModelIds(readCustomModelIds());
     };
 
     window.addEventListener(eventName, handleInvalidated);
-    window.addEventListener("storage", handleStorage);
     return () => {
       window.removeEventListener(eventName, handleInvalidated);
-      window.removeEventListener("storage", handleStorage);
     };
   }, [enabled, refresh]);
 
   return {
     modelConfig,
-    modelOptions: buildModelCatalogOptions(modelConfig, customModelIds),
+    modelOptions: buildModelCatalogOptions(modelConfig),
     isLoading,
     refresh,
   };

@@ -28,7 +28,9 @@ class ModelProviderResponse(BaseModel):
     default_base_url: str
     effective_base_url: str
     base_url_source: BaseUrlSource = "default"
+    supports_model_discovery: bool = False
     models: list[ModelDefinitionResponse] = Field(default_factory=list)
+    discovered_models: list[ModelDefinitionResponse] = Field(default_factory=list)
 
 
 class ModelConfigResponse(BaseModel):
@@ -39,3 +41,23 @@ class ModelConfigResponse(BaseModel):
     mem0_enabled: bool = False
     models: list[ModelDefinitionResponse] = Field(default_factory=list)
     providers: list[ModelProviderResponse] = Field(default_factory=list)
+
+
+class ProviderModelSettingsUpsertRequest(BaseModel):
+    """Persist the provider-scoped model list for the current user."""
+
+    model_ids: list[str] = Field(default_factory=list)
+
+
+class ProviderModelDiscoveryRequest(BaseModel):
+    """Best-effort discovery overrides for provider model lookup."""
+
+    api_key: str | None = None
+    base_url: str | None = None
+
+
+class ProviderModelDiscoveryResponse(BaseModel):
+    """Provider model discovery result."""
+
+    provider_id: str
+    models: list[ModelDefinitionResponse] = Field(default_factory=list)

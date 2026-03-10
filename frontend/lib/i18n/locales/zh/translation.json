@@ -1389,7 +1389,7 @@
     "anthropicBaseUrl": "Anthropic Base URL",
     "anthropicBaseUrlHint": "覆盖默认 Anthropic API 地址。",
     "anthropicBaseUrlPlaceholder": "https://api.anthropic.com",
-    "providerConfigDescription": "为每个模型提供方管理预设服务和自定义凭据。",
+    "providerConfigDescription": "管理提供方凭据，以及暴露给模型选择器的模型列表。",
     "providerListEmpty": "当前没有可用的模型提供方。",
     "providerStatusNone": "未配置",
     "providerStatusSystem": "预设服务",
@@ -1487,7 +1487,15 @@
           "hint": "打开设置弹窗。"
         }
       }
-    }
+    },
+    "providerDiscoverError": "拉取提供方模型失败",
+    "providerModelsPlaceholder": "搜索或输入模型名称",
+    "providerModelsSearchPlaceholder": "搜索模型，或直接输入自定义名称",
+    "providerModelsDiscovering": "正在加载模型...",
+    "providerModelsManualHint": "该提供方暂不支持自动发现，请手动输入模型名称。",
+    "providerModelsEmpty": "没有找到模型",
+    "providerModelsUseCustom": "使用自定义模型：{{model}}",
+    "providerFieldAnnotation": "API Key 留空表示保留当前值，Base URL 留空表示使用默认地址，模型可从列表选择或手动输入。"
   },
   "validation": {
     "projectNameRequired": "请输入项目名称",

@@ -107,6 +107,7 @@ export function SettingsDialog({
     setProviderPatch,
     saveProvider,
     clearCustomProvider,
+    discoverProviderModels,
   } = useModelProviderSettings({
     enabled: open,
   });
@@ -353,6 +354,7 @@ export function SettingsDialog({
           onChangeProvider={setProviderPatch}
           onSaveProvider={saveProvider}
           onClearProvider={clearCustomProvider}
+          onDiscoverProviderModels={discoverProviderModels}
         />
       );
     }

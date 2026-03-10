@@ -1285,7 +1285,7 @@
     "anthropicBaseUrl": "Anthropic Base URL",
     "anthropicBaseUrlHint": "デフォルトのAnthropic APIエンドポイントを上書きします。",
     "anthropicBaseUrlPlaceholder": "https://api.anthropic.com",
-    "providerConfigDescription": "各モデルファミリーのプリセット資格情報とカスタム資格情報を管理します。",
+    "providerConfigDescription": "プロバイダーの認証情報と、セレクターに表示するモデル一覧を管理します。",
     "providerListEmpty": "利用可能なモデルプロバイダーはまだありません。",
     "providerStatusNone": "未設定",
     "providerStatusSystem": "プリセットサービス",
@@ -1295,7 +1295,7 @@
     "providerApiKeyHint": "既存のカスタムキーを保持する場合は空欄のままにしてください。",
     "providerApiKeyPlaceholder": "{{provider}} APIキーを入力",
     "providerBaseUrlLabel": "カスタム Base URL",
-    "providerBaseUrlHint": "Leave this blank to use the default API endpoint.",
+    "providerBaseUrlHint": "デフォルトの API エンドポイントを使用するには空欄のままにしてください。",
     "providerBaseUrlRequired": "カスタムエンドポイントを有効にする場合は Base URL が必要です。",
     "providerSaveSuccess": "プロバイダー設定を保存しました",
     "providerSaveError": "プロバイダー設定の保存に失敗しました",
@@ -1383,7 +1383,15 @@
           "hint": "Open the settings dialog."
         }
       }
-    }
+    },
+    "providerDiscoverError": "プロバイダーのモデル取得に失敗しました",
+    "providerModelsPlaceholder": "モデル名を検索または入力",
+    "providerModelsSearchPlaceholder": "モデルを検索、またはカスタム名を入力",
+    "providerModelsDiscovering": "モデルを読み込み中...",
+    "providerModelsManualHint": "このプロバイダーは自動検出に対応していません。モデル名を手動で入力してください。",
+    "providerModelsEmpty": "モデルが見つかりません",
+    "providerModelsUseCustom": "カスタムモデルを使用: {{model}}",
+    "providerFieldAnnotation": "API Key を空欄のままにすると現在のキーを保持します。Base URL を空欄のままにするとデフォルトのエンドポイントを使用します。モデルは一覧から選択するか、手動で入力できます。"
   },
   "validation": {
     "projectNameRequired": "プロジェクト名を入力してください",
@@ -1602,16 +1610,16 @@
     "gpt4Turbo": {
       "description": "高速で効率的"
     },
-    "customBadge": "Custom",
-    "customModelAction": "Custom model",
-    "customModelTitle": "Use a custom model",
-    "customModelDescription": "Add any model name supported by the configured provider.",
-    "customModelPlaceholder": "e.g. gpt-5 or claude-sonnet-4-5",
-    "customModelHint": "Supported prefixes: claude-, gpt, o1/o3/o4, glm-, MiniMax-, deepseek-.",
-    "customModelRequired": "Enter a model name.",
-    "customModelUnsupported": "This model name does not match a supported provider.",
-    "customModelProviderUnavailable": "Configure the provider credentials before using this model.",
-    "customModelSaved": "Custom model added"
+    "customBadge": "カスタム",
+    "customModelAction": "カスタムモデル",
+    "customModelTitle": "カスタムモデルを使用",
+    "customModelDescription": "設定済みのプロバイダーが対応する任意のモデル名を追加します。",
+    "customModelPlaceholder": "例: gpt-5 または claude-sonnet-4-5",
+    "customModelHint": "対応プレフィックス: claude-、gpt、o1/o3/o4、glm-、MiniMax-、deepseek-。",
+    "customModelRequired": "モデル名を入力してください。",
+    "customModelUnsupported": "このモデル名は対応しているプロバイダーに一致しません。",
+    "customModelProviderUnavailable": "このモデルを使う前に、対応するプロバイダーの認証情報を設定してください。",
+    "customModelSaved": "カスタムモデルを追加しました"
   },
   "creditsPopover": {
     "proPlan": "Proプラン",
