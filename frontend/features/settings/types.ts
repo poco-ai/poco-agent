@@ -13,13 +13,6 @@ export interface SettingsSidebarItem {
   icon: LucideIcon;
 }
 
-export type ApiProviderConfig = {
-  enabled: boolean;
-  key: string;
-  useCustomBaseUrl: boolean;
-  baseUrl: string;
-};
-
 export interface UsageAnalyticsMetricSummary {
   input_tokens: number;
   output_tokens: number;
