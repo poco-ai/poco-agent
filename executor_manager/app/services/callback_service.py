@@ -145,6 +145,7 @@ class CallbackService:
                 "status": callback.status,
                 "progress": callback.progress,
                 "sdk_session_id": callback.sdk_session_id,
+                "run_id": callback.run_id,
             },
         )
 
@@ -176,7 +177,7 @@ class CallbackService:
             payload = payload_model.model_dump(mode="json")
 
             # Forward callback to backend
-            await backend_client.forward_callback(payload)
+            backend_response = await backend_client.forward_callback(payload)
 
             if callback.status in ["completed", "failed"]:
                 from app.scheduler.task_dispatcher import TaskDispatcher
@@ -186,10 +187,24 @@ class CallbackService:
                     extra={
                         "session_id": callback.session_id,
                         "status": callback.status,
+                        "run_id": callback.run_id,
+                        "session_status": backend_response.get("status"),
                     },
                 )
                 asyncio.create_task(self._export_and_forward(callback))
-                await TaskDispatcher.on_task_complete(callback.session_id)
+                session_status = str(backend_response.get("status") or "").strip()
+                if session_status not in {"pending", "running"}:
+                    await TaskDispatcher.on_task_complete(callback.session_id)
+                else:
+                    logger.info(
+                        "task_cleanup_deferred",
+                        extra={
+                            "session_id": callback.session_id,
+                            "status": callback.status,
+                            "run_id": callback.run_id,
+                            "session_status": session_status,
+                        },
+                    )
 
             return CallbackReceiveResponse(
                 status="received",
@@ -222,6 +237,7 @@ class CallbackService:
 
         payload_model = AgentCallbackRequest(
             session_id=callback.session_id,
+            run_id=callback.run_id,
             time=datetime.now(timezone.utc),
             status=callback.status,
             progress=100 if callback.status == "completed" else callback.progress,

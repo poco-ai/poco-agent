@@ -9,6 +9,7 @@ class McpServer(Base, TimestampMixin):
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[str | None] = mapped_column(String(1000), nullable=True)
     scope: Mapped[str] = mapped_column(String(20), default="user", nullable=False)
     owner_user_id: Mapped[str] = mapped_column(String(255), nullable=False)
     server_config: Mapped[dict] = mapped_column(JSON, nullable=False)

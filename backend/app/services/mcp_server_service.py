@@ -15,6 +15,13 @@ from app.utils.mcp_server_config import (
 )
 
 
+def _normalize_description(value: str | None) -> str | None:
+    if value is None:
+        return None
+    cleaned = value.strip()
+    return cleaned or None
+
+
 class McpServerService:
     def list_servers(self, db: Session, user_id: str) -> list[McpServerResponse]:
         servers = McpServerRepository.list_visible(db, user_id=user_id)
@@ -48,6 +55,7 @@ class McpServerService:
         )
         server = McpServer(
             name=request.name,
+            description=_normalize_description(request.description),
             scope=scope,
             owner_user_id=user_id,
             server_config=normalized_config,
@@ -92,6 +100,8 @@ class McpServerService:
 
         if request.scope is not None:
             server.scope = request.scope
+        if request.description is not None:
+            server.description = _normalize_description(request.description)
         if request.server_config is not None:
             default_key = (
                 extract_single_mcp_server_key(server.server_config) or server.name
@@ -130,6 +140,7 @@ class McpServerService:
         return McpServerResponse(
             id=server.id,
             name=server.name,
+            description=server.description,
             scope=server.scope,
             owner_user_id=server.owner_user_id,
             server_config=server.server_config,

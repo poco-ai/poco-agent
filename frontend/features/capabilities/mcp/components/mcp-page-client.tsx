@@ -38,11 +38,15 @@ export function McpPageClient() {
   const filteredServers = useMemo(() => {
     if (!searchQuery) return servers;
     const lowerQuery = searchQuery.toLowerCase();
-    return servers.filter(
-      (server) =>
+    return servers.filter((server) => {
+      const description =
+        typeof server.description === "string" ? server.description : "";
+      return (
         server.name.toLowerCase().includes(lowerQuery) ||
-        String(server.id).includes(lowerQuery),
-    );
+        description.toLowerCase().includes(lowerQuery) ||
+        String(server.id).includes(lowerQuery)
+      );
+    });
   }, [servers, searchQuery]);
 
   const pagination = usePagination(filteredServers, { pageSize: PAGE_SIZE });
@@ -120,12 +124,16 @@ export function McpPageClient() {
             setSelectedServer(null);
             setIsCreating(false);
           }}
-          onSave={async ({ serverId, name, serverConfig }) => {
+          onSave={async ({ serverId, name, description, serverConfig }) => {
             if (isCreating) {
-              const created = await createServer(name ?? "", serverConfig);
+              const created = await createServer(
+                name ?? "",
+                serverConfig,
+                description,
+              );
               await toggleInstall(created.id);
             } else if (serverId) {
-              await updateServer(serverId, serverConfig);
+              await updateServer(serverId, serverConfig, description);
             } else {
               throw new Error(t("library.mcpLibrary.toasts.error"));
             }

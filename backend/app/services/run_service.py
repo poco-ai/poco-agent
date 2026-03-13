@@ -5,7 +5,6 @@ from sqlalchemy.orm import Session
 
 from app.core.errors.error_codes import ErrorCode
 from app.core.errors.exceptions import AppException
-from app.repositories.scheduled_task_repository import ScheduledTaskRepository
 from app.repositories.message_repository import MessageRepository
 from app.repositories.run_repository import RunRepository
 from app.repositories.session_repository import SessionRepository
@@ -16,35 +15,15 @@ from app.schemas.run import (
     RunResponse,
     RunStartRequest,
 )
+from app.services.run_lifecycle_service import RunLifecycleService
 from app.services.usage_service import UsageService
 
 usage_service = UsageService()
+run_lifecycle_service = RunLifecycleService()
 
 
 class RunService:
     """Service layer for run queue operations."""
-
-    def _sync_scheduled_task_last_status(self, db: Session, run_id: uuid.UUID) -> None:
-        """Sync AgentScheduledTask.last_run_status/last_error based on a run record."""
-        db_run = RunRepository.get_by_id(db, run_id)
-        if not db_run or not db_run.scheduled_task_id:
-            return
-
-        db_task = ScheduledTaskRepository.get_by_id(db, db_run.scheduled_task_id)
-        if not db_task:
-            return
-
-        # Avoid older runs overriding the latest run status.
-        if db_task.last_run_id and db_task.last_run_id != db_run.id:
-            return
-
-        db_task.last_run_id = db_run.id
-        db_task.last_run_status = db_run.status
-
-        if db_run.status == "failed":
-            db_task.last_error = db_run.last_error or db_task.last_error
-        elif db_run.status == "completed":
-            db_task.last_error = None
 
     def _extract_prompt_from_message(self, message_content: object) -> str | None:
         if not isinstance(message_content, dict):
@@ -139,7 +118,6 @@ class RunService:
             self._extract_prompt_from_message(db_message.content)
             or db_message.text_preview
         )
-
         if not prompt:
             raise AppException(
                 error_code=ErrorCode.BAD_REQUEST,
@@ -197,24 +175,12 @@ class RunService:
                 message="Run is claimed by another worker",
             )
 
-        now = datetime.now(timezone.utc)
-        db_run.status = "running"
-        db_run.started_at = now
-        db_run.lease_expires_at = None
+        if db_run.status == "queued":
+            db_run.claimed_by = worker_id
         db_run.attempts += 1
-
-        db_session = SessionRepository.get_by_id(db, db_run.session_id)
-        if not db_session:
-            raise AppException(
-                error_code=ErrorCode.NOT_FOUND,
-                message=f"Session not found: {db_run.session_id}",
-            )
-        db_session.status = "running"
-
-        self._sync_scheduled_task_last_status(db, db_run.id)
+        run_lifecycle_service.mark_running(db, db_run)
         db.commit()
         db.refresh(db_run)
-
         return RunResponse.model_validate(db_run)
 
     def fail_run(
@@ -237,24 +203,23 @@ class RunService:
                 message=f"Run not found: {run_id}",
             )
 
+        if db_run.status in ["completed", "failed", "canceled"]:
+            return RunResponse.model_validate(db_run)
+
         if db_run.claimed_by and db_run.claimed_by != worker_id:
             raise AppException(
                 error_code=ErrorCode.FORBIDDEN,
                 message="Run is claimed by another worker",
             )
 
-        now = datetime.now(timezone.utc)
-        db_run.status = "failed"
-        db_run.last_error = request.error_message
-        db_run.finished_at = now
-        db_run.lease_expires_at = None
-
-        db_session = SessionRepository.get_by_id(db, db_run.session_id)
-        if db_session:
-            db_session.status = "failed"
-
-        self._sync_scheduled_task_last_status(db, db_run.id)
+        if db_run.started_at is None:
+            db_run.started_at = datetime.now(timezone.utc)
+        run_lifecycle_service.finalize_terminal(
+            db,
+            db_run,
+            status="failed",
+            error_message=request.error_message,
+        )
         db.commit()
         db.refresh(db_run)
-
         return RunResponse.model_validate(db_run)

@@ -1,137 +1,224 @@
 import { useEffect, useState, useRef, useCallback } from "react";
+import {
+  deleteQueuedQueryAction,
+  sendQueuedQueryNowAction,
+  type TaskEnqueueActionResult,
+} from "@/features/chat/actions/session-actions";
+import { getQueuedQueriesAction } from "@/features/chat/actions/query-actions";
 import type { ExecutionSession, InputFile } from "@/features/chat/types";
 import type { ModelSelection } from "@/features/chat/lib/model-catalog";
 
+const PENDING_MESSAGE_POLLING_INTERVAL = 3000;
+
 interface UsePendingMessagesOptions {
   session: ExecutionSession | null;
-  sendMessage: (
-    content: string,
-    attachments?: InputFile[],
-    modelSelection?: ModelSelection | null,
-  ) => Promise<void>;
 }
 
 export interface PendingMessage {
+  id: string;
   content: string;
   attachments?: InputFile[];
   modelSelection?: ModelSelection | null;
+  status: "queued" | "paused";
+  sequenceNo: number;
 }
 
 interface UsePendingMessagesReturn {
   pendingMessages: PendingMessage[];
-  isSendingPending: boolean;
+  isLoadingPendingMessages: boolean;
   addPendingMessage: (
-    content: string,
-    attachments?: InputFile[],
-    modelSelection?: ModelSelection | null,
+    message: Omit<PendingMessage, "sequenceNo"> & { sequenceNo?: number },
   ) => void;
-  sendPendingMessage: (index: number) => Promise<void>;
-  modifyPendingMessage: (index: number) => PendingMessage;
-  deletePendingMessage: (index: number) => void;
+  refreshPendingMessages: () => Promise<void>;
+  sendPendingMessage: (
+    messageId: string,
+  ) => Promise<TaskEnqueueActionResult | null>;
+  modifyPendingMessage: (messageId: string) => Promise<PendingMessage | null>;
+  deletePendingMessage: (messageId: string) => Promise<void>;
 }
 
-/**
- * Manages pending message queue and auto-send logic
- *
- * Responsibilities:
- * - Queue messages when session is active
- * - Auto-send pending messages when session becomes idle
- * - Handle manual send/modify/delete from queue
- * - Prevent concurrent auto-sends
- */
+function toPendingMessage(item: {
+  queue_item_id: string;
+  prompt: string;
+  attachments?: InputFile[];
+  status: "queued" | "paused" | "promoted" | "canceled";
+  sequence_no: number;
+}): PendingMessage {
+  return {
+    id: item.queue_item_id,
+    content: item.prompt,
+    attachments: item.attachments ?? undefined,
+    status: item.status === "paused" ? "paused" : "queued",
+    sequenceNo: item.sequence_no,
+  };
+}
+
+function sortPendingMessages(messages: PendingMessage[]): PendingMessage[] {
+  return [...messages].sort((left, right) => {
+    if (left.sequenceNo !== right.sequenceNo) {
+      return left.sequenceNo - right.sequenceNo;
+    }
+    return left.id.localeCompare(right.id);
+  });
+}
+
 export function usePendingMessages({
   session,
-  sendMessage,
 }: UsePendingMessagesOptions): UsePendingMessagesReturn {
   const [pendingMessages, setPendingMessages] = useState<PendingMessage[]>([]);
-  const [isSendingPending, setIsSendingPending] = useState(false);
-  const isProcessingRef = useRef(false);
+  const [isLoadingPendingMessages, setIsLoadingPendingMessages] =
+    useState(false);
+  const lastLoadedSessionIdRef = useRef<string | null>(null);
+  const requestIdRef = useRef(0);
 
-  // Determine if session is running/active
+  const sessionId = session?.session_id ?? null;
   const isSessionActive =
     session?.status === "running" || session?.status === "pending";
-  const isSessionCanceled = session?.status === "canceled";
+  const shouldPoll =
+    Boolean(sessionId) &&
+    (isSessionActive ||
+      pendingMessages.length > 0 ||
+      (session?.queued_query_count ?? 0) > 0);
 
-  // Reset auto-send lock when session becomes active
-  useEffect(() => {
-    if (isSessionActive) {
-      isProcessingRef.current = false;
-      setIsSendingPending(false);
+  const refreshPendingMessages = useCallback(async () => {
+    if (!sessionId) {
+      lastLoadedSessionIdRef.current = null;
+      setPendingMessages([]);
+      setIsLoadingPendingMessages(false);
+      return;
     }
-  }, [isSessionActive]);
 
-  // Add message to pending queue
+    const requestId = requestIdRef.current + 1;
+    requestIdRef.current = requestId;
+    setIsLoadingPendingMessages(true);
+
+    try {
+      const items = await getQueuedQueriesAction({ sessionId });
+      if (requestIdRef.current !== requestId) return;
+      lastLoadedSessionIdRef.current = sessionId;
+      setPendingMessages(sortPendingMessages(items.map(toPendingMessage)));
+    } catch (error) {
+      console.error("[PendingMessages] Failed to load queued queries:", error);
+      if (requestIdRef.current !== requestId) return;
+    } finally {
+      if (requestIdRef.current === requestId) {
+        setIsLoadingPendingMessages(false);
+      }
+    }
+  }, [sessionId]);
+
+  useEffect(() => {
+    if (!sessionId) {
+      lastLoadedSessionIdRef.current = null;
+      setPendingMessages([]);
+      setIsLoadingPendingMessages(false);
+      return;
+    }
+
+    if (lastLoadedSessionIdRef.current !== sessionId) {
+      setPendingMessages([]);
+    }
+
+    void refreshPendingMessages();
+  }, [refreshPendingMessages, sessionId]);
+
+  useEffect(() => {
+    if (!shouldPoll || !sessionId) return;
+
+    const interval = window.setInterval(() => {
+      void refreshPendingMessages();
+    }, PENDING_MESSAGE_POLLING_INTERVAL);
+
+    return () => {
+      window.clearInterval(interval);
+    };
+  }, [refreshPendingMessages, sessionId, shouldPoll]);
+
   const addPendingMessage = useCallback(
-    (
-      content: string,
-      attachments?: InputFile[],
-      modelSelection?: ModelSelection | null,
-    ) => {
-      setPendingMessages((prev) => [
-        ...prev,
-        { content, attachments, modelSelection },
-      ]);
+    (message: Omit<PendingMessage, "sequenceNo"> & { sequenceNo?: number }) => {
+      setPendingMessages((prev) => {
+        const maxSequenceNo = prev.reduce(
+          (max, item) => Math.max(max, item.sequenceNo),
+          0,
+        );
+        const existingIndex = prev.findIndex((item) => item.id === message.id);
+        const existingMessage =
+          existingIndex >= 0 ? prev[existingIndex] : undefined;
+        const nextMessage: PendingMessage = {
+          ...message,
+          sequenceNo:
+            message.sequenceNo ??
+            existingMessage?.sequenceNo ??
+            maxSequenceNo + 1,
+        };
+
+        if (existingIndex >= 0) {
+          const updated = [...prev];
+          updated[existingIndex] = nextMessage;
+          return sortPendingMessages(updated);
+        }
+
+        return sortPendingMessages([...prev, nextMessage]);
+      });
     },
     [],
   );
 
-  // Send a specific pending message by index
-  const sendPendingMessage = useCallback(
-    async (index: number) => {
-      const msg = pendingMessages[index];
-      setPendingMessages((prev) => prev.filter((_, i) => i !== index));
-      await sendMessage(msg.content, msg.attachments, msg.modelSelection);
-    },
-    [pendingMessages, sendMessage],
-  );
+  const deletePendingMessage = useCallback(
+    async (messageId: string) => {
+      if (!sessionId) return;
 
-  // Modify a pending message (returns content/attachments for editing)
-  const modifyPendingMessage = useCallback(
-    (index: number) => {
-      const msg = pendingMessages[index];
-      setPendingMessages((prev) => prev.filter((_, i) => i !== index));
-      return msg;
-    },
-    [pendingMessages],
-  );
+      const previousMessages = pendingMessages;
+      setPendingMessages((prev) =>
+        prev.filter((item) => item.id !== messageId),
+      );
 
-  // Delete a pending message
-  const deletePendingMessage = useCallback((index: number) => {
-    setPendingMessages((prev) => prev.filter((_, i) => i !== index));
-  }, []);
-
-  // Auto-send pending messages when session is idle
-  useEffect(() => {
-    const autoSend = async () => {
-      // Only send if session is NOT active AND we are NOT currently sending
-      if (
-        !isSessionActive &&
-        !isSessionCanceled &&
-        pendingMessages.length > 0 &&
-        !isProcessingRef.current
-      ) {
-        isProcessingRef.current = true;
-        setIsSendingPending(true);
-        const msg = pendingMessages[0];
-        setPendingMessages((prev) => prev.slice(1));
-
-        try {
-          await sendMessage(msg.content, msg.attachments, msg.modelSelection);
-        } catch (error) {
-          console.error("Auto-send failed:", error);
-        } finally {
-          isProcessingRef.current = false;
-          setIsSendingPending(false);
-        }
+      try {
+        await deleteQueuedQueryAction({ sessionId, itemId: messageId });
+      } catch (error) {
+        setPendingMessages(previousMessages);
+        void refreshPendingMessages();
+        throw error;
       }
-    };
-    autoSend();
-  }, [isSessionActive, isSessionCanceled, pendingMessages, sendMessage]);
+    },
+    [pendingMessages, refreshPendingMessages, sessionId],
+  );
+
+  const modifyPendingMessage = useCallback(
+    async (messageId: string) => {
+      const target = pendingMessages.find((item) => item.id === messageId);
+      if (!target) return null;
+
+      await deletePendingMessage(messageId);
+      return target;
+    },
+    [deletePendingMessage, pendingMessages],
+  );
+
+  const sendPendingMessage = useCallback(
+    async (messageId: string) => {
+      if (!sessionId) return null;
+
+      try {
+        const result = await sendQueuedQueryNowAction({
+          sessionId,
+          itemId: messageId,
+        });
+        return result;
+      } catch (error) {
+        console.error("[PendingMessages] Failed to send queued query:", error);
+        void refreshPendingMessages();
+        return null;
+      }
+    },
+    [refreshPendingMessages, sessionId],
+  );
 
   return {
     pendingMessages,
-    isSendingPending,
+    isLoadingPendingMessages,
     addPendingMessage,
+    refreshPendingMessages,
     sendPendingMessage,
     modifyPendingMessage,
     deletePendingMessage,

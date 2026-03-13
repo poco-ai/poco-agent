@@ -81,7 +81,7 @@ class ContainerPool:
                 )
                 await self.delete_container(container_id)
             else:
-                port_info = container.ports["8000/tcp"][0]
+                host_port = self._wait_for_port_mapping(container)
                 logger.info(
                     "timing",
                     extra={
@@ -94,10 +94,11 @@ class ContainerPool:
                         "container_id": container_id,
                         "container_mode": container_mode,
                         "browser_enabled": bool(browser_enabled),
+                        "host_port": host_port,
                     },
                 )
                 return (
-                    f"http://{published_host}:{port_info['HostPort']}",
+                    f"http://{published_host}:{host_port}",
                     container_id,
                 )
 
@@ -172,6 +173,12 @@ class ContainerPool:
             environment["POCO_BROWSER_VIEWPORT_SIZE"] = (
                 self.settings.poco_browser_viewport_size
             )
+            environment["PLAYWRIGHT_MCP_OUTPUT_MODE"] = (
+                self.settings.playwright_mcp_output_mode
+            )
+            environment["PLAYWRIGHT_MCP_IMAGE_RESPONSES"] = (
+                self.settings.playwright_mcp_image_responses
+            )
         container = self.docker_client.containers.run(
             image=image,
             name=container_name,
@@ -203,13 +210,7 @@ class ContainerPool:
         self._wait_for_container_ready(container)
 
         step_started = time.perf_counter()
-        container.reload()
-        port_info = container.ports.get("8000/tcp")
-        if not port_info:
-            raise AppException(
-                error_code=ErrorCode.CONTAINER_START_FAILED,
-                message=f"Container {container_name} has no port mapping",
-            )
+        host_port = self._wait_for_port_mapping(container)
         logger.info(
             "timing",
             extra={
@@ -219,9 +220,9 @@ class ContainerPool:
                 "user_id": user_id,
                 "container_id": container_id,
                 "container_name": container_name,
+                "host_port": host_port,
             },
         )
-        host_port = port_info[0]["HostPort"]
         executor_url = f"http://{published_host}:{host_port}"
 
         self._wait_for_service_ready(executor_url)
@@ -311,6 +312,76 @@ class ContainerPool:
                 extra={"image": image, "error": str(exc)},
             )
             return False
+
+    @staticmethod
+    def _extract_host_port(container: "Container") -> str | None:
+        port_info = getattr(container, "ports", None) or {}
+        bindings = port_info.get("8000/tcp") if isinstance(port_info, dict) else None
+        if isinstance(bindings, list) and bindings:
+            host_port = bindings[0].get("HostPort")
+            if isinstance(host_port, str) and host_port.strip():
+                return host_port.strip()
+
+        attrs = getattr(container, "attrs", None) or {}
+        network = attrs.get("NetworkSettings") if isinstance(attrs, dict) else None
+        ports = network.get("Ports") if isinstance(network, dict) else None
+        bindings = ports.get("8000/tcp") if isinstance(ports, dict) else None
+        if isinstance(bindings, list) and bindings:
+            host_port = bindings[0].get("HostPort")
+            if isinstance(host_port, str) and host_port.strip():
+                return host_port.strip()
+
+        return None
+
+    def _wait_for_port_mapping(
+        self,
+        container: "Container",
+        timeout: int = 30,
+    ) -> str:
+        started = time.perf_counter()
+        attempts = 0
+
+        while time.perf_counter() - started < timeout:
+            attempts += 1
+            try:
+                container.reload()
+            except docker.errors.NotFound as exc:
+                raise AppException(
+                    error_code=ErrorCode.CONTAINER_START_FAILED,
+                    message=f"Container {container.name} disappeared before port mapping became available",
+                ) from exc
+
+            host_port = self._extract_host_port(container)
+            if host_port:
+                logger.info(
+                    "timing",
+                    extra={
+                        "step": "container_wait_port_mapping",
+                        "duration_ms": int((time.perf_counter() - started) * 1000),
+                        "attempts": attempts,
+                        "container_name": container.name,
+                        "host_port": host_port,
+                    },
+                )
+                return host_port
+
+            time.sleep(0.5)
+
+        logger.warning(
+            "timing",
+            extra={
+                "step": "container_wait_port_mapping_timeout",
+                "duration_ms": int((time.perf_counter() - started) * 1000),
+                "attempts": attempts,
+                "container_name": container.name,
+                "status": getattr(container, "status", None),
+                "ports": getattr(container, "ports", None),
+            },
+        )
+        raise AppException(
+            error_code=ErrorCode.CONTAINER_START_FAILED,
+            message=f"Container {container.name} has no port mapping",
+        )
 
     @staticmethod
     def _is_browser_enabled_container(container: "Container") -> bool:

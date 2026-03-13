@@ -6,7 +6,6 @@ from sqlalchemy.orm import Session
 from app.core.settings import get_settings
 from app.core.errors.error_codes import ErrorCode
 from app.core.errors.exceptions import AppException
-from app.repositories.message_repository import MessageRepository
 from app.repositories.project_repository import ProjectRepository
 from app.repositories.run_repository import RunRepository
 from app.repositories.session_repository import SessionRepository
@@ -17,6 +16,7 @@ from app.repositories.user_skill_install_repository import UserSkillInstallRepos
 from app.schemas.session import TaskConfig
 from app.schemas.task import TaskEnqueueRequest, TaskEnqueueResponse
 from app.services.model_config_service import get_allowed_model_ids, infer_provider_id
+from app.services.session_queue_service import SessionQueueService
 
 
 class TaskService:
@@ -229,61 +229,8 @@ class TaskService:
         self, db: Session, user_id: str, request: TaskEnqueueRequest
     ) -> TaskEnqueueResponse:
         """Enqueue a new run for a session (create session if needed)."""
-        base_config: dict | None = None
-        project_id = request.project_id
-        project = None
-        if project_id is not None:
-            project = ProjectRepository.get_by_id(db, project_id)
-            if not project or project.user_id != user_id:
-                raise AppException(
-                    error_code=ErrorCode.PROJECT_NOT_FOUND,
-                    message=f"Project not found: {project_id}",
-                )
-        if request.session_id:
-            db_session = SessionRepository.get_by_id(db, request.session_id)
-            if not db_session:
-                raise AppException(
-                    error_code=ErrorCode.NOT_FOUND,
-                    message=f"Session not found: {request.session_id}",
-                )
-            if db_session.user_id != user_id:
-                raise AppException(
-                    error_code=ErrorCode.FORBIDDEN,
-                    message="Session does not belong to the user",
-                )
-            # Clear previous execution state so the UI doesn't show stale file changes
-            # while a new run is queued/starting.
-            db_session.state_patch = {}
-            if project_id is not None and db_session.project_id != project_id:
-                raise AppException(
-                    error_code=ErrorCode.BAD_REQUEST,
-                    message="project_id does not match the session",
-                )
-            base_config = db_session.config_snapshot or {}
-            merged_config = self._build_config_snapshot(
-                db, user_id, request.config, base_config=base_config
-            )
-            merged_config = self._apply_project_repo_defaults(merged_config, project)
-        else:
-            base_config = {}
-            merged_config = self._build_config_snapshot(
-                db, user_id, request.config, base_config=base_config
-            )
-            merged_config = self._apply_project_repo_defaults(merged_config, project)
-            config_dict = merged_config
-            if project_id is not None:
-                # Validation is done upfront; keep this check for backward compat with older codepaths.
-                _ = project
-            db_session = SessionRepository.create(
-                session_db=db,
-                user_id=user_id,
-                config=config_dict,
-                project_id=project_id,
-                kind="chat",
-            )
-            db.flush()
-        if merged_config is not None:
-            db_session.config_snapshot = merged_config
+        session_queue_service = SessionQueueService()
+        schedule_mode, scheduled_at = self._resolve_schedule(request)
 
         prompt = request.prompt.strip()
         if not prompt:
@@ -306,41 +253,121 @@ class TaskService:
                 message=f"Invalid permission_mode: {permission_mode}",
             )
 
-        user_message_content = {
-            "_type": "UserMessage",
-            "content": [{"_type": "TextBlock", "text": prompt}],
-        }
+        base_config: dict | None = None
+        project_id = request.project_id
+        project = None
+        if project_id is not None:
+            project = ProjectRepository.get_by_id(db, project_id)
+            if not project or project.user_id != user_id:
+                raise AppException(
+                    error_code=ErrorCode.PROJECT_NOT_FOUND,
+                    message=f"Project not found: {project_id}",
+                )
 
-        db_message = MessageRepository.create(
-            session_db=db,
-            session_id=db_session.id,
-            role="user",
-            content=user_message_content,
-            text_preview=prompt[:500],
-        )
-        db.flush()
+        db_session = None
+        blocking_run = None
+        if request.session_id:
+            db_session = SessionRepository.get_by_id_for_update(db, request.session_id)
+            if not db_session:
+                raise AppException(
+                    error_code=ErrorCode.NOT_FOUND,
+                    message=f"Session not found: {request.session_id}",
+                )
+            if db_session.user_id != user_id:
+                raise AppException(
+                    error_code=ErrorCode.FORBIDDEN,
+                    message="Session does not belong to the user",
+                )
+            if project_id is not None and db_session.project_id != project_id:
+                raise AppException(
+                    error_code=ErrorCode.BAD_REQUEST,
+                    message="project_id does not match the session",
+                )
 
-        # Keep session-level config snapshots free of input_files.
-        # input_files are treated as per-run inputs and stored only in the run snapshot.
+            if schedule_mode == "immediate" and db_session.kind == "chat":
+                existing_response = session_queue_service.get_existing_enqueue_response(
+                    db,
+                    session_id=db_session.id,
+                    client_request_id=request.client_request_id,
+                )
+                if existing_response is not None:
+                    return existing_response
+
+                blocking_run = RunRepository.get_blocking_by_session(db, db_session.id)
+                if blocking_run is not None:
+                    base_config = session_queue_service.get_effective_base_config(
+                        db, db_session
+                    )
+                else:
+                    base_config = db_session.config_snapshot or {}
+            else:
+                base_config = db_session.config_snapshot or {}
+
+            merged_config = self._build_config_snapshot(
+                db, user_id, request.config, base_config=base_config
+            )
+            merged_config = self._apply_project_repo_defaults(merged_config, project)
+        else:
+            base_config = {}
+            merged_config = self._build_config_snapshot(
+                db, user_id, request.config, base_config=base_config
+            )
+            merged_config = self._apply_project_repo_defaults(merged_config, project)
+            db_session = SessionRepository.create(
+                session_db=db,
+                user_id=user_id,
+                config=merged_config,
+                project_id=project_id,
+                kind="chat",
+            )
+            db.flush()
+
         run_config_snapshot = dict(merged_config or {})
         if request.config is not None and request.config.input_files:
             run_config_snapshot["input_files"] = [
                 f.model_dump(mode="json") for f in request.config.input_files
             ]
+        run_config_snapshot = run_config_snapshot or None
 
-        schedule_mode, scheduled_at = self._resolve_schedule(request)
+        if (
+            blocking_run is not None
+            and schedule_mode == "immediate"
+            and db_session is not None
+        ):
+            item = session_queue_service.enqueue(
+                db,
+                db_session=db_session,
+                prompt=prompt,
+                permission_mode=permission_mode,
+                run_config_snapshot=run_config_snapshot,
+                client_request_id=request.client_request_id,
+            )
+            db.commit()
+            return TaskEnqueueResponse(
+                session_id=db_session.id,
+                accepted_type="queued_query",
+                queue_item_id=item.id,
+                status=item.status,
+                queued_query_count=session_queue_service.count_active_items(
+                    db, db_session.id
+                ),
+            )
 
-        db_run = RunRepository.create(
-            session_db=db,
-            session_id=db_session.id,
-            user_message_id=db_message.id,
+        if db_session is None:
+            raise AppException(
+                error_code=ErrorCode.INTERNAL_ERROR,
+                message="Failed to initialize session",
+            )
+
+        _, db_run = session_queue_service.materialize_run(
+            db,
+            db_session=db_session,
+            prompt=prompt,
             permission_mode=permission_mode,
             schedule_mode=schedule_mode,
+            run_config_snapshot=run_config_snapshot,
             scheduled_at=scheduled_at,
-            config_snapshot=run_config_snapshot,
         )
-
-        db_session.status = "pending"
 
         db.commit()
         db.refresh(db_session)
@@ -348,8 +375,12 @@ class TaskService:
 
         return TaskEnqueueResponse(
             session_id=db_session.id,
+            accepted_type="run",
             run_id=db_run.id,
             status=db_run.status,
+            queued_query_count=session_queue_service.count_active_items(
+                db, db_session.id
+            ),
         )
 
     def _build_config_snapshot(

@@ -237,10 +237,15 @@ export function useMcpCatalog() {
   );
 
   const updateServer = useCallback(
-    async (serverId: number, server_config: Record<string, unknown>) => {
+    async (
+      serverId: number,
+      server_config: Record<string, unknown>,
+      description?: string | null,
+    ) => {
       setLoadingId(serverId);
       try {
         const updated = await mcpService.updateServer(serverId, {
+          description,
           server_config,
         });
         setServers((prev) =>
@@ -261,10 +266,15 @@ export function useMcpCatalog() {
   );
 
   const createServer = useCallback(
-    async (name: string, server_config: Record<string, unknown>) => {
+    async (
+      name: string,
+      server_config: Record<string, unknown>,
+      description?: string | null,
+    ) => {
       setLoadingId(-1);
       try {
         const created = await mcpService.createServer({
+          description,
           name,
           server_config,
         });

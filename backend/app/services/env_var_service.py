@@ -44,7 +44,7 @@ def _require_scope(value: str) -> EnvVarScope:
             error_code=ErrorCode.BAD_REQUEST,
             message=f"Invalid env var scope: {value}",
         )
-    return cast(EnvVarScope, value)
+    return value
 
 
 def _normalize_key(key: str) -> str:

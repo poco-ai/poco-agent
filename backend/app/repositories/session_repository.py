@@ -18,10 +18,6 @@ class SessionRepository:
         *,
         kind: str = "chat",
     ) -> AgentSession:
-        """Creates a new session.
-
-        Note: Does not commit. Transaction handled by Service layer.
-        """
         db_session = AgentSession(
             user_id=user_id,
             config_snapshot=config,
@@ -34,7 +30,6 @@ class SessionRepository:
 
     @staticmethod
     def get_by_id(session_db: Session, session_id: uuid.UUID) -> AgentSession | None:
-        """Gets a session by ID."""
         return (
             session_db.query(AgentSession)
             .filter(
@@ -45,10 +40,23 @@ class SessionRepository:
         )
 
     @staticmethod
+    def get_by_id_for_update(
+        session_db: Session, session_id: uuid.UUID
+    ) -> AgentSession | None:
+        return (
+            session_db.query(AgentSession)
+            .filter(
+                AgentSession.id == session_id,
+                AgentSession.is_deleted.is_(False),
+            )
+            .with_for_update()
+            .first()
+        )
+
+    @staticmethod
     def get_by_sdk_session_id(
         session_db: Session, sdk_session_id: str
     ) -> AgentSession | None:
-        """Gets a session by SDK session ID."""
         return (
             session_db.query(AgentSession)
             .filter(
@@ -67,7 +75,6 @@ class SessionRepository:
         project_id: uuid.UUID | None = None,
         kind: str | None = None,
     ) -> list[AgentSession]:
-        """Lists sessions for a user."""
         query = session_db.query(AgentSession).filter(
             AgentSession.user_id == user_id,
             AgentSession.is_deleted.is_(False),
@@ -91,7 +98,6 @@ class SessionRepository:
         project_id: uuid.UUID | None = None,
         kind: str | None = None,
     ) -> list[AgentSession]:
-        """Lists all sessions."""
         query = session_db.query(AgentSession).filter(
             AgentSession.is_deleted.is_(False)
         )
@@ -108,7 +114,6 @@ class SessionRepository:
 
     @staticmethod
     def count_by_user(session_db: Session, user_id: str) -> int:
-        """Counts sessions for a user."""
         return (
             session_db.query(AgentSession)
             .filter(

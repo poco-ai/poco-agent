@@ -16,6 +16,7 @@ from app.repositories.message_repository import MessageRepository
 from app.repositories.project_repository import ProjectRepository
 from app.repositories.run_repository import RunRepository
 from app.repositories.scheduled_task_repository import ScheduledTaskRepository
+from app.repositories.session_queue_item_repository import SessionQueueItemRepository
 from app.repositories.session_repository import SessionRepository
 from app.repositories.tool_execution_repository import ToolExecutionRepository
 from app.repositories.usage_log_repository import UsageLogRepository
@@ -35,6 +36,13 @@ class SessionService:
         if isinstance(value, dict | list):
             return deepcopy(value)
         return value
+
+    def _ensure_no_active_queue_items(self, db: Session, session_id: uuid.UUID) -> None:
+        if SessionQueueItemRepository.has_active_items(db, session_id):
+            raise AppException(
+                error_code=ErrorCode.SESSION_HAS_ACTIVE_QUEUE_ITEMS,
+                message="Queued queries must be cleared before modifying this session",
+            )
 
     def create_session(
         self, db: Session, user_id: str, request: SessionCreateRequest
@@ -113,6 +121,15 @@ class SessionService:
                     )
                 db_session.title = title
 
+        if "is_pinned" in request.model_fields_set:
+            if request.is_pinned:
+                if not db_session.is_pinned:
+                    db_session.is_pinned = True
+                    db_session.pinned_at = datetime.now(timezone.utc)
+            else:
+                db_session.is_pinned = False
+                db_session.pinned_at = None
+
         if request.status is not None:
             db_session.status = request.status
         if request.sdk_session_id is not None:
@@ -186,15 +203,8 @@ class SessionService:
         *,
         user_id: str,
         reason: str | None = None,
-    ) -> tuple[AgentSession, int, int]:
-        """Cancel a session by marking all unfinished runs as canceled.
-
-        This is a best-effort local cancellation: it updates database state so the UI stops
-        polling and no new runs are claimed. Executor termination is handled by Executor Manager.
-
-        Returns:
-            (session, canceled_run_count, expired_user_input_request_count)
-        """
+    ) -> tuple[AgentSession, int, int, int]:
+        """Cancel a session by marking all unfinished runs and queued queries as canceled."""
         db_session = self.get_session(db, session_id)
         if db_session.user_id != user_id:
             raise AppException(
@@ -203,8 +213,6 @@ class SessionService:
             )
 
         now = datetime.now(timezone.utc)
-
-        # Cancel all unfinished runs (queued/claimed/running), including future scheduled runs.
         runs = (
             db.query(AgentRun)
             .filter(AgentRun.session_id == session_id)
@@ -220,7 +228,6 @@ class SessionService:
             run.lease_expires_at = None
             canceled_runs += 1
 
-            # Keep scheduled task summary fields in sync when the latest run is canceled.
             if run.scheduled_task_id:
                 db_task = ScheduledTaskRepository.get_by_id(db, run.scheduled_task_id)
                 if db_task and (
@@ -230,19 +237,19 @@ class SessionService:
                     db_task.last_run_status = run.status
                     db_task.last_error = None
 
-        # Expire any pending user input requests so the UI doesn't keep showing blocking cards.
+        canceled_queue_items = SessionQueueItemRepository.mark_canceled(
+            db, session_id=session_id
+        )
+
         pending_requests = UserInputRequestRepository.list_pending_by_session(
             db, session_id
         )
         expired_requests = 0
         for entry in pending_requests:
             entry.status = "expired"
-            # Ensure it is considered expired immediately.
             entry.expires_at = now
             expired_requests += 1
 
-        # Mark in-flight tool executions as ended so the UI doesn't keep showing spinners
-        # after the session is canceled (a ToolResultBlock may never arrive once we stop the executor).
         unfinished_tools = ToolExecutionRepository.list_unfinished_by_session(
             db, session_id
         )
@@ -267,7 +274,7 @@ class SessionService:
         db.commit()
         db.refresh(db_session)
 
-        return db_session, canceled_runs, expired_requests
+        return db_session, canceled_runs, canceled_queue_items, expired_requests
 
     def branch_session(
         self,
@@ -284,6 +291,7 @@ class SessionService:
                 error_code=ErrorCode.FORBIDDEN,
                 message="Session does not belong to the user",
             )
+        self._ensure_no_active_queue_items(db, source_session.id)
 
         cutoff_message = MessageRepository.get_by_id(db, cutoff_message_id)
         if not cutoff_message:
@@ -467,6 +475,7 @@ class SessionService:
                 error_code=ErrorCode.FORBIDDEN,
                 message="Session does not belong to the user",
             )
+        self._ensure_no_active_queue_items(db, db_session.id)
 
         user_message = MessageRepository.get_by_id(db, user_message_id)
         if (
@@ -584,6 +593,7 @@ class SessionService:
                 error_code=ErrorCode.FORBIDDEN,
                 message="Session does not belong to the user",
             )
+        self._ensure_no_active_queue_items(db, db_session.id)
 
         user_message = MessageRepository.get_by_id(db, user_message_id)
         if (

@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { chatService } from "@/features/chat/api/chat-api";
 
-// Validation error message keys
 const VALIDATION_ERRORS = {
   taskContentRequired: "validation.taskContentRequired",
   selectExecutionTime: "validation.selectExecutionTime",
@@ -102,8 +101,65 @@ const sendMessageSchema = z
     },
   );
 
+const queuedQueryItemSchema = z.object({
+  sessionId: z.string().trim().min(1, VALIDATION_ERRORS.missingSessionId),
+  itemId: z.string().uuid(),
+});
+
+const updateQueuedQuerySchema = queuedQueryItemSchema
+  .extend({
+    prompt: z.string().optional(),
+    attachments: z.array(inputFileSchema).optional(),
+  })
+  .refine(
+    (data) => data.prompt !== undefined || data.attachments !== undefined,
+    {
+      message: VALIDATION_ERRORS.messageContentRequired,
+      path: ["prompt"],
+    },
+  );
+
 export type CreateSessionInput = z.infer<typeof createSessionSchema>;
 export type SendMessageInput = z.infer<typeof sendMessageSchema>;
+export type UpdateQueuedQueryInput = z.infer<typeof updateQueuedQuerySchema>;
+export type QueuedQueryItemInput = z.infer<typeof queuedQueryItemSchema>;
+
+export interface TaskEnqueueActionResult {
+  sessionId: string;
+  acceptedType: "run" | "queued_query";
+  runId?: string;
+  queueItemId?: string;
+  status: string;
+  queuedQueryCount: number;
+}
+
+function createClientRequestId(): string {
+  if (
+    typeof crypto !== "undefined" &&
+    typeof crypto.randomUUID === "function"
+  ) {
+    return crypto.randomUUID();
+  }
+  return `req-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function mapTaskEnqueueResult(result: {
+  session_id: string;
+  accepted_type: "run" | "queued_query";
+  run_id?: string | null;
+  queue_item_id?: string | null;
+  status: string;
+  queued_query_count: number;
+}): TaskEnqueueActionResult {
+  return {
+    sessionId: result.session_id,
+    acceptedType: result.accepted_type,
+    runId: result.run_id ?? undefined,
+    queueItemId: result.queue_item_id ?? undefined,
+    status: result.status,
+    queuedQueryCount: result.queued_query_count,
+  };
+}
 
 export async function createSessionAction(input: CreateSessionInput) {
   const {
@@ -128,12 +184,9 @@ export async function createSessionAction(input: CreateSessionInput) {
       scheduled_at: scheduled_at || undefined,
     },
     permission_mode,
+    createClientRequestId(),
   );
-  return {
-    sessionId: result.session_id,
-    runId: result.run_id,
-    status: result.status,
-  };
+  return mapTaskEnqueueResult(result);
 }
 
 export async function sendMessageAction(input: SendMessageInput) {
@@ -149,12 +202,9 @@ export async function sendMessageAction(input: SendMessageInput) {
     model,
     model_provider_id,
     attachments,
+    createClientRequestId(),
   );
-  return {
-    sessionId: result.session_id,
-    runId: result.run_id,
-    status: result.status,
-  };
+  return mapTaskEnqueueResult(result);
 }
 
 const regenerateMessageSchema = z.object({
@@ -172,11 +222,7 @@ export async function regenerateMessageAction(input: RegenerateMessageInput) {
     user_message_id: userMessageId,
     assistant_message_id: assistantMessageId,
   });
-  return {
-    sessionId: result.session_id,
-    runId: result.run_id,
-    status: result.status,
-  };
+  return mapTaskEnqueueResult(result);
 }
 
 const editMessageAndRegenerateSchema = z.object({
@@ -198,11 +244,7 @@ export async function editMessageAndRegenerateAction(
     user_message_id: userMessageId,
     content,
   });
-  return {
-    sessionId: result.session_id,
-    runId: result.run_id,
-    status: result.status,
-  };
+  return mapTaskEnqueueResult(result);
 }
 
 const cancelSessionSchema = z.object({
@@ -263,4 +305,36 @@ export type RenameSessionTitleInput = z.infer<typeof renameSessionTitleSchema>;
 export async function renameSessionTitleAction(input: RenameSessionTitleInput) {
   const { sessionId, title } = renameSessionTitleSchema.parse(input);
   return chatService.updateSession(sessionId, { title });
+}
+
+const setSessionPinSchema = z.object({
+  sessionId: z.string().trim().min(1, VALIDATION_ERRORS.missingSessionId),
+  isPinned: z.boolean(),
+});
+
+export type SetSessionPinInput = z.infer<typeof setSessionPinSchema>;
+
+export async function setSessionPinAction(input: SetSessionPinInput) {
+  const { sessionId, isPinned } = setSessionPinSchema.parse(input);
+  return chatService.updateSession(sessionId, { is_pinned: isPinned });
+}
+
+export async function updateQueuedQueryAction(input: UpdateQueuedQueryInput) {
+  const { sessionId, itemId, prompt, attachments } =
+    updateQueuedQuerySchema.parse(input);
+  return chatService.updateQueuedQuery(sessionId, itemId, {
+    prompt,
+    attachments,
+  });
+}
+
+export async function deleteQueuedQueryAction(input: QueuedQueryItemInput) {
+  const { sessionId, itemId } = queuedQueryItemSchema.parse(input);
+  return chatService.deleteQueuedQuery(sessionId, itemId);
+}
+
+export async function sendQueuedQueryNowAction(input: QueuedQueryItemInput) {
+  const { sessionId, itemId } = queuedQueryItemSchema.parse(input);
+  const result = await chatService.sendQueuedQueryNow(sessionId, itemId);
+  return mapTaskEnqueueResult(result);
 }

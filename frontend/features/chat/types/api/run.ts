@@ -15,12 +15,16 @@ export interface TaskEnqueueRequest {
   timezone?: string | null;
   scheduled_at?: string | null; // ISO datetime
   project_id?: string | null;
+  client_request_id?: string | null;
 }
 
 export interface TaskEnqueueResponse {
   session_id: string; // UUID
-  run_id: string; // UUID
+  accepted_type: "run" | "queued_query";
+  run_id?: string | null; // UUID
+  queue_item_id?: string | null; // UUID
   status: string;
+  queued_query_count: number;
 }
 
 export interface RunResponse {

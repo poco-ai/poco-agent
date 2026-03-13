@@ -25,6 +25,7 @@ class CallbackHook(AgentHook):
     ) -> AgentCallbackRequest:
         return AgentCallbackRequest(
             session_id=context.session_id,
+            run_id=context.run_id,
             status=status,
             progress=progress,
             error_message=error_message,

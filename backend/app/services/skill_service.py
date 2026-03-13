@@ -140,6 +140,7 @@ class SkillService:
         return SkillResponse(
             id=skill.id,
             name=skill.name,
+            description=skill.description,
             entry=skill.entry,
             source=SourceInfo.model_validate(source_dict),
             scope=skill.scope,

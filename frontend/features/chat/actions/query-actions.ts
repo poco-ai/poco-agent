@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { chatService } from "@/features/chat/api/chat-api";
 
-// Validation error messages - translation keys that will be resolved by the caller
 const VALIDATION_ERRORS = {
   missingSessionId: "validation.missingSessionId",
   missingToolUseId: "validation.missingToolUseId",
@@ -69,6 +68,7 @@ export type GetMessageAttachmentsDeltaRawInput = z.infer<
 export type GetMessageAttachmentsInput = z.infer<typeof sessionIdSchema>;
 export type GetFilesInput = z.infer<typeof sessionIdSchema>;
 export type GetRunsBySessionInput = z.infer<typeof sessionIdSchema>;
+export type GetQueuedQueriesInput = z.infer<typeof sessionIdSchema>;
 export type GetToolExecutionsInput = z.infer<typeof toolExecutionsSchema>;
 export type GetToolExecutionsDeltaInput = z.infer<
   typeof toolExecutionsDeltaSchema
@@ -150,6 +150,11 @@ export async function getFilesAction(input: GetFilesInput) {
 export async function getRunsBySessionAction(input: GetRunsBySessionInput) {
   const { sessionId } = sessionIdSchema.parse(input);
   return chatService.getRunsBySession(sessionId, { limit: 1000, offset: 0 });
+}
+
+export async function getQueuedQueriesAction(input: GetQueuedQueriesInput) {
+  const { sessionId } = sessionIdSchema.parse(input);
+  return chatService.listQueuedQueries(sessionId);
 }
 
 export async function getToolExecutionsAction(input: GetToolExecutionsInput) {

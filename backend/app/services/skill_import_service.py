@@ -30,6 +30,7 @@ from app.schemas.skill_import import (
     SkillImportResultItem,
 )
 from app.services.storage_service import S3StorageService
+from app.utils.markdown_front_matter import parse_yaml_front_matter
 
 
 _SKILL_NAME_PATTERN = re.compile(r"^[A-Za-z0-9._-]+$")
@@ -627,6 +628,27 @@ class SkillImportService:
         version_id = str(uuid.uuid4())
         prefix = f"skills/{user_id}/{skill_name}/{version_id}/"
 
+        # Extract common root for path resolution
+        infos = [
+            info for info in zipf.infolist() if info.filename and not info.is_dir()
+        ]
+        common_root_names: list[str] = []
+        for info in infos:
+            p = PurePosixPath(info.filename)
+            if _is_ignored_path(p):
+                continue
+            if p.is_absolute() or ".." in p.parts:
+                continue
+            common_root_names.append(info.filename)
+        common_root = _extract_common_root(common_root_names)
+
+        # Extract description from skill.md frontmatter
+        skill_description = self._extract_skill_description(
+            zipf=zipf,
+            selection_dir=selection_path,
+            common_root=common_root,
+        )
+
         uploaded = self._upload_skill_from_zip(
             zipf=zipf,
             selection_dir=selection_path,
@@ -654,6 +676,7 @@ class SkillImportService:
         if existing is None:
             skill = Skill(
                 name=skill_name,
+                description=skill_description,
                 scope="user",
                 owner_user_id=user_id,
                 entry=entry,
@@ -664,6 +687,7 @@ class SkillImportService:
         else:
             skill = existing
             skill.entry = entry
+            skill.description = skill_description
             skill.source = dict(archive_source or {})
 
         install = UserSkillInstallRepository.get_by_user_and_skill(
@@ -780,3 +804,55 @@ class SkillImportService:
             uploaded += 1
 
         return uploaded
+
+    @staticmethod
+    def _extract_skill_description(
+        *,
+        zipf: zipfile.ZipFile,
+        selection_dir: PurePosixPath,
+        common_root: str | None,
+    ) -> str | None:
+        """Extract description from skill.md frontmatter in the zip archive."""
+        skill_md_path: PurePosixPath | None = None
+
+        # Find skill.md (case-insensitive) in the selection directory
+        for info in zipf.infolist():
+            if info.is_dir() or not info.filename:
+                continue
+            raw_path = PurePosixPath(info.filename)
+            if _is_ignored_path(raw_path):
+                continue
+            if raw_path.is_absolute() or ".." in raw_path.parts:
+                continue
+
+            rel_path = _strip_common_root(raw_path, common_root)
+            if rel_path.name.lower() != "skill.md":
+                continue
+
+            # Check if it's in the selection directory
+            if selection_dir == PurePosixPath("."):
+                # Root selection: skill.md must be at root
+                if rel_path.parent == PurePosixPath("."):
+                    skill_md_path = raw_path
+                    break
+            else:
+                # Check if skill.md is in the selection directory
+                if len(rel_path.parts) == len(selection_dir.parts) + 1:
+                    if rel_path.parts[:-1] == selection_dir.parts:
+                        skill_md_path = raw_path
+                        break
+
+        if skill_md_path is None:
+            return None
+
+        try:
+            with zipf.open(skill_md_path.as_posix(), "r") as f:
+                content = f.read().decode("utf-8")
+            frontmatter = parse_yaml_front_matter(content)
+            description = frontmatter.get("description")
+            if isinstance(description, str):
+                # Truncate to max length to fit database constraint
+                return description[:1000] if len(description) > 1000 else description
+            return None
+        except Exception:
+            return None

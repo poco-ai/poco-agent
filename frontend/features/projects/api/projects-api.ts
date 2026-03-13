@@ -52,6 +52,8 @@ function mapSessionToTask(session: SessionResponse): TaskHistoryItem {
     timestamp: session.updated_at || session.created_at,
     status: session.status as TaskHistoryItem["status"],
     projectId: session.project_id || undefined,
+    isPinned: session.is_pinned ?? false,
+    pinnedAt: session.pinned_at ?? null,
   };
 }
 

@@ -6,8 +6,6 @@ from pydantic import BaseModel, Field
 
 
 class CallbackStatus(str, Enum):
-    """Callback status enum."""
-
     ACCEPTED = "accepted"
     RUNNING = "running"
     COMPLETED = "completed"
@@ -15,26 +13,20 @@ class CallbackStatus(str, Enum):
 
 
 class TodoItem(BaseModel):
-    """Todo item."""
-
     content: str
     status: str
     active_form: str | None = None
 
 
 class McpStatus(BaseModel):
-    """MCP status."""
-
     server_name: str
     status: str
     message: str | None = None
 
 
 class FileChange(BaseModel):
-    """File change record."""
-
     path: str
-    status: str  # "added" | "modified" | "staged" | "deleted" | "renamed"
+    status: str
     added_lines: int = 0
     deleted_lines: int = 0
     diff: str | None = None
@@ -42,8 +34,6 @@ class FileChange(BaseModel):
 
 
 class WorkspaceState(BaseModel):
-    """Workspace state."""
-
     repository: str | None = None
     branch: str | None = None
     total_added_lines: int = 0
@@ -53,14 +43,10 @@ class WorkspaceState(BaseModel):
 
 
 class BrowserState(BaseModel):
-    """Browser/desktop capability state exposed to the UI."""
-
     enabled: bool = False
 
 
 class AgentCurrentState(BaseModel):
-    """Agent current state."""
-
     todos: list[TodoItem] = Field(default_factory=list)
     mcp_status: list[McpStatus] = Field(default_factory=list)
     browser: BrowserState | None = None
@@ -69,9 +55,8 @@ class AgentCurrentState(BaseModel):
 
 
 class AgentCallbackRequest(BaseModel):
-    """Agent execution callback request."""
-
     session_id: str
+    run_id: str | None = None
     time: datetime
     status: CallbackStatus
     progress: int
@@ -86,8 +71,6 @@ class AgentCallbackRequest(BaseModel):
 
 
 class CallbackResponse(BaseModel):
-    """Callback response."""
-
     session_id: str
     status: str
     callback_status: CallbackStatus | None = None

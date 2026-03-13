@@ -11,6 +11,7 @@ class AgentCallbackRequest(BaseModel):
     """Callback request sent during agent execution."""
 
     session_id: str
+    run_id: str | None = None
     time: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     status: CallbackStatus
     progress: int

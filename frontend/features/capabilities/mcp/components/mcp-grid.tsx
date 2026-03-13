@@ -149,6 +149,11 @@ export function McpGrid({
                           : t("mcpGrid.user")}
                       </Badge>
                     </div>
+                    {server.description && (
+                      <p className="mt-1 truncate text-xs text-muted-foreground">
+                        {server.description}
+                      </p>
+                    )}
                   </div>
 
                   <div className="flex items-center gap-2 flex-shrink-0">

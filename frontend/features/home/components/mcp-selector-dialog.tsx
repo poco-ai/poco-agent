@@ -177,7 +177,10 @@ export function McpSelectorDialog({
                       </div>
                       <div>
                         <div className="text-sm font-medium">{server.name}</div>
-                        <div className="text-xs text-muted-foreground">MCP</div>
+                        <div className="text-xs text-muted-foreground">
+                          {server.description ||
+                            t("library.mcpLibrary.descriptionFallback")}
+                        </div>
                       </div>
                     </div>
                     <Switch
@@ -185,7 +188,9 @@ export function McpSelectorDialog({
                       onCheckedChange={(checked) =>
                         handleToggle(server.id, checked)
                       }
-                      aria-label={`Toggle ${server.name}`}
+                      aria-label={t("hero.mcpSelector.toggleServer", {
+                        name: server.name,
+                      })}
                     />
                   </div>
                 );

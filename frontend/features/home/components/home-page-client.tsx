@@ -15,6 +15,7 @@ import {
 } from "@/features/task-composer";
 
 import { HomeHeader } from "./home-header";
+import { HomeBottomCardDeck } from "./home-bottom-card-deck";
 import { ConnectorsBar } from "@/features/connectors";
 
 import { useAppShell } from "@/components/shell/app-shell-context";
@@ -44,7 +45,6 @@ export function HomePageClient() {
 
   const [inputValue, setInputValue] = React.useState("");
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const [isInputFocused, setIsInputFocused] = React.useState(false);
   const [mode, setMode] = React.useState<ComposerMode>("task");
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
 
@@ -123,8 +123,29 @@ export function HomePageClient() {
     [],
   );
 
-  // Determine if connectors bar should be expanded
-  const shouldExpandConnectors = isInputFocused || inputValue.trim().length > 0;
+  const handleFillSkillCreatorPrompt = React.useCallback(() => {
+    const prompt = t("hero.skillCreatorCard.prefillPrompt");
+    setInputValue(prompt);
+
+    requestAnimationFrame(() => {
+      const textarea = textareaRef.current;
+      if (!textarea) return;
+      textarea.focus();
+      textarea.setSelectionRange(prompt.length, prompt.length);
+    });
+  }, [t]);
+
+  const bottomCards = React.useMemo(
+    () => [
+      {
+        id: "skill-creator",
+        title: t("hero.skillCreatorCard.title"),
+        description: t("hero.skillCreatorCard.description"),
+        onClick: handleFillSkillCreatorPrompt,
+      },
+    ],
+    [handleFillSkillCreatorPrompt, t],
+  );
 
   const handleSendTask = React.useCallback(
     async (options?: TaskSendOptions) => {
@@ -255,15 +276,14 @@ export function HomePageClient() {
         title={t("hero.title")}
         mode={mode}
         onModeChange={setMode}
-        footer={<ConnectorsBar forceExpanded={shouldExpandConnectors} />}
+        footer={<ConnectorsBar />}
+        bottomPanel={<HomeBottomCardDeck cards={bottomCards} />}
         composerProps={{
           textareaRef,
           value: inputValue,
           onChange: setInputValue,
           onSend: handleSendTask,
           isSubmitting,
-          onFocus: () => setIsInputFocused(true),
-          onBlur: () => setIsInputFocused(false),
         }}
       />
     </div>

@@ -4,6 +4,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const API_PREFIX = "/api/v1";
+const IS_DEV = process.env.NODE_ENV !== "production";
 
 function normalizeBaseUrl(url: string): string {
   return url.endsWith("/") ? url.slice(0, -1) : url;
@@ -70,6 +71,10 @@ async function proxyRequest(
   }
 
   const upstream = await fetch(targetUrl, init);
+
+  if (IS_DEV && upstream.status === 404) {
+    console.warn(`[API proxy] ${method} ${targetUrl} returned 404`);
+  }
 
   const responseHeaders = stripHopByHopHeaders(upstream.headers);
   return new Response(upstream.body, {

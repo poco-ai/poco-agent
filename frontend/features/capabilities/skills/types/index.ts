@@ -3,6 +3,7 @@ import type { SourceInfo } from "@/features/capabilities/types/source";
 export interface Skill {
   id: number;
   name: string;
+  description: string | null;
   entry: Record<string, unknown>;
   source?: SourceInfo | null;
   scope: string;
@@ -14,12 +15,14 @@ export interface Skill {
 export interface SkillCreateInput {
   name: string;
   entry: Record<string, unknown>;
+  description?: string | null;
   scope?: string | null;
 }
 
 export interface SkillUpdateInput {
   name?: string | null;
   entry?: Record<string, unknown> | null;
+  description?: string | null;
   scope?: string | null;
 }
 

@@ -1,0 +1,51 @@
+name: feishu-bot
+
+on:
+  branch_protection_rule:
+    types: [created, deleted]
+  check_run:
+    types: [rerequested, completed]
+  create:
+  delete:
+  deployment_status:
+  issues:
+    types: [opened, edited, milestoned, pinned, reopened]
+  issue_comment:
+    types: [created, deleted]
+  label:
+    types: [created, deleted]
+  merge_group:
+    types: [checks_requested]
+  milestone:
+    types: [opened, deleted]
+  page_build:
+  project:
+    types: [created, deleted, reopened]
+  project_card:
+    types: [created, deleted]
+  project_column:
+    types: [created, deleted]
+  pull_request:
+    branches: ["main"]
+    types: [opened, reopened]
+  pull_request_target:
+    types: [assigned, opened, synchronize, reopened]
+  registry_package:
+    types: [published]
+  release:
+    types: [published]
+  status:
+  watch:
+    types: [started]
+  schedule:
+    - cron: "30 2 * * *"
+
+jobs:
+  send-event:
+    name: Webhook
+    runs-on: ubuntu-latest
+    steps:
+      - uses: junka/feishu-bot-webhook-action@main
+        with:
+          webhook: ${{ secrets.FEISHU_BOT_WEBHOOK }}
+          signkey: ${{ secrets.FEISHU_BOT_SIGNKEY }}

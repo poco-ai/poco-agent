@@ -5,14 +5,16 @@ import {
   Loader2,
   ArrowUp,
   Plus,
+  Github,
   Settings2,
   Clock,
   Chrome,
-  Brain,
   Paperclip,
   Code2,
   SquareTerminal,
   ListTodo,
+  Mic,
+  MicOff,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -34,6 +36,7 @@ import {
 import { useT } from "@/lib/i18n/client";
 import type { ComposerMode } from "@/features/task-composer/types";
 import { COMPOSER_MODE_SEQUENCE } from "@/features/task-composer/lib/mode-utils";
+import type { VoiceInputStatus } from "@/features/voice";
 
 const MODE_ICONS: Record<
   ComposerMode,
@@ -50,13 +53,15 @@ interface ComposerToolbarProps {
   isSubmitting?: boolean;
   isUploading: boolean;
   canSubmit: boolean;
+  hasVoiceSupport: boolean;
+  voiceStatus: VoiceInputStatus;
+  repoUrl: string;
+  repoDialogOpen: boolean;
   browserEnabled: boolean;
-  memoryEnabled: boolean;
-  showMemoryToggle: boolean;
   onOpenRepoDialog: () => void;
   onBrowserEnabledChange: (enabled: boolean) => void;
-  onMemoryEnabledChange: (enabled: boolean) => void;
   onOpenFileInput: () => void;
+  onToggleVoiceInput: () => void;
   onSubmit: () => void;
   scheduledSummary?: string;
   onOpenScheduledSettings?: () => void;
@@ -73,13 +78,15 @@ export function ComposerToolbar({
   isSubmitting,
   isUploading,
   canSubmit,
+  hasVoiceSupport,
+  voiceStatus,
+  repoUrl,
+  repoDialogOpen,
   browserEnabled,
-  memoryEnabled,
-  showMemoryToggle,
   onOpenRepoDialog,
   onBrowserEnabledChange,
-  onMemoryEnabledChange,
   onOpenFileInput,
+  onToggleVoiceInput,
   onSubmit,
   scheduledSummary,
   onOpenScheduledSettings,
@@ -132,69 +139,23 @@ export function ComposerToolbar({
           </TooltipContent>
         </Tooltip>
 
-        {/* Configure menu: mode + browser */}
         <Tooltip>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <TooltipTrigger asChild>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  disabled={disabled}
-                  className="size-9 rounded-xl border border-transparent text-muted-foreground hover:bg-accent hover:text-foreground data-[state=open]:border-border data-[state=open]:bg-accent/60 data-[state=open]:text-foreground"
-                  aria-label={t("hero.configure")}
-                  data-onboarding="home-mode-toggle"
-                >
-                  <Settings2 className="size-4" />
-                </Button>
-              </TooltipTrigger>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              align="start"
-              side="top"
-              sideOffset={8}
-              className="w-52"
+          <TooltipTrigger asChild>
+            <Button
+              type="button"
+              variant={repoDialogOpen || repoUrl.trim() ? "secondary" : "ghost"}
+              size="icon"
+              disabled={disabled}
+              className="size-9 rounded-xl hover:bg-accent"
+              aria-label={t("hero.importCode")}
+              title={t("hero.importCode")}
+              onClick={onOpenRepoDialog}
             >
-              <DropdownMenuRadioGroup
-                value={mode}
-                onValueChange={(next) => onModeChange(next as ComposerMode)}
-              >
-                {COMPOSER_MODE_SEQUENCE.map((value) => {
-                  const Icon = MODE_ICONS[value];
-                  return (
-                    <DropdownMenuRadioItem key={value} value={value}>
-                      <Icon className="size-4" />
-                      <span>{t(`hero.modeLabels.${value}`)}</span>
-                    </DropdownMenuRadioItem>
-                  );
-                })}
-              </DropdownMenuRadioGroup>
-              <DropdownMenuSeparator />
-              <DropdownMenuCheckboxItem
-                checked={browserEnabled}
-                onCheckedChange={(next) => {
-                  onBrowserEnabledChange(Boolean(next));
-                }}
-              >
-                <Chrome className="size-4" />
-                <span>{t("hero.browser.toggle")}</span>
-              </DropdownMenuCheckboxItem>
-              {showMemoryToggle ? (
-                <DropdownMenuCheckboxItem
-                  checked={memoryEnabled}
-                  onCheckedChange={(next) => {
-                    onMemoryEnabledChange(Boolean(next));
-                  }}
-                >
-                  <Brain className="size-4" />
-                  <span>{t("chat.toolNameMap.memory")}</span>
-                </DropdownMenuCheckboxItem>
-              ) : null}
-            </DropdownMenuContent>
-          </DropdownMenu>
+              <Github className="size-4" />
+            </Button>
+          </TooltipTrigger>
           <TooltipContent side="top" sideOffset={8}>
-            {t("hero.configure")}
+            {t("hero.importCode")}
           </TooltipContent>
         </Tooltip>
 
@@ -255,9 +216,101 @@ export function ComposerToolbar({
 
       {/* Right: send */}
       <div className="flex items-center gap-1">
+        {/* Configure menu: mode + browser */}
+        <Tooltip>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  disabled={disabled}
+                  className="size-9 rounded-xl border border-transparent text-muted-foreground hover:bg-accent hover:text-foreground data-[state=open]:border-border data-[state=open]:bg-accent/60 data-[state=open]:text-foreground"
+                  aria-label={t("hero.configure")}
+                  data-onboarding="home-mode-toggle"
+                >
+                  <Settings2 className="size-4" />
+                </Button>
+              </TooltipTrigger>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="start"
+              side="top"
+              sideOffset={8}
+              className="w-52"
+            >
+              <DropdownMenuRadioGroup
+                value={mode}
+                onValueChange={(next) => onModeChange(next as ComposerMode)}
+              >
+                {COMPOSER_MODE_SEQUENCE.map((value) => {
+                  const Icon = MODE_ICONS[value];
+                  return (
+                    <DropdownMenuRadioItem key={value} value={value}>
+                      <Icon className="size-4" />
+                      <span>{t(`hero.modeLabels.${value}`)}</span>
+                    </DropdownMenuRadioItem>
+                  );
+                })}
+              </DropdownMenuRadioGroup>
+              <DropdownMenuSeparator />
+              <DropdownMenuCheckboxItem
+                checked={browserEnabled}
+                onCheckedChange={(next) => {
+                  onBrowserEnabledChange(Boolean(next));
+                }}
+              >
+                <Chrome className="size-4" />
+                <span>{t("hero.browser.toggle")}</span>
+              </DropdownMenuCheckboxItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <TooltipContent side="top" sideOffset={8}>
+            {t("hero.configure")}
+          </TooltipContent>
+        </Tooltip>
+
+        {hasVoiceSupport ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                variant={voiceStatus === "recording" ? "destructive" : "ghost"}
+                size="icon"
+                disabled={disabled || voiceStatus === "transcribing"}
+                className="size-9 rounded-xl"
+                aria-label={
+                  voiceStatus === "transcribing"
+                    ? t("hero.transcribingVoiceInput")
+                    : voiceStatus === "recording"
+                      ? t("hero.stopVoiceInput")
+                      : t("hero.startVoiceInput")
+                }
+                onClick={onToggleVoiceInput}
+              >
+                {voiceStatus === "transcribing" ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : voiceStatus === "recording" ? (
+                  <MicOff className="size-4" />
+                ) : (
+                  <Mic className="size-4" />
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="top" sideOffset={8}>
+              {voiceStatus === "transcribing"
+                ? t("hero.transcribingVoiceInput")
+                : voiceStatus === "recording"
+                  ? t("hero.stopVoiceInput")
+                  : t("hero.startVoiceInput")}
+            </TooltipContent>
+          </Tooltip>
+        ) : null}
+
         <Button
           onClick={onSubmit}
-          disabled={!canSubmit || disabled}
+          disabled={!canSubmit || disabled || voiceStatus !== "idle"}
           size="icon"
           className="size-9 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground"
           title={t("hero.send")}

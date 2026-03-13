@@ -13,6 +13,7 @@ from app.models.agent_scheduled_task import AgentScheduledTask
 from app.repositories.message_repository import MessageRepository
 from app.repositories.project_repository import ProjectRepository
 from app.repositories.run_repository import RunRepository
+from app.repositories.session_queue_item_repository import SessionQueueItemRepository
 from app.repositories.scheduled_task_repository import ScheduledTaskRepository
 from app.repositories.session_repository import SessionRepository
 from app.schemas.scheduled_task import (
@@ -26,12 +27,11 @@ from app.services.task_service import TaskService
 
 logger = logging.getLogger(__name__)
 
+task_service = TaskService()
+
 
 class ScheduledTaskService:
     """Service layer for scheduled task management and dispatch."""
-
-    def __init__(self) -> None:
-        self._task_service = TaskService()
 
     @staticmethod
     def _validate_cron(expr: str) -> str:
@@ -119,7 +119,7 @@ class ScheduledTaskService:
 
         # Build a pinned config snapshot using existing TaskService merge logic
         config_snapshot = (
-            self._task_service._build_config_snapshot(  # noqa: SLF001
+            task_service._build_config_snapshot(  # noqa: SLF001
                 db,
                 user_id,
                 request.config,
@@ -417,6 +417,8 @@ class ScheduledTaskService:
 
         # Skip if an unfinished run already exists (avoid unbounded queue growth).
         if not force:
+            if SessionQueueItemRepository.has_active_items(db, session_id):
+                return None
             existing_run = (
                 db.query(AgentRun)
                 .filter(AgentRun.session_id == session_id)

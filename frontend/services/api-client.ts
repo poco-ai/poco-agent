@@ -23,6 +23,12 @@ export const API_ENDPOINTS = {
   sessionRegenerate: (sessionId: string) => `/sessions/${sessionId}/regenerate`,
   sessionEditMessage: (sessionId: string) =>
     `/sessions/${sessionId}/edit-message`,
+  sessionQueuedQueries: (sessionId: string) =>
+    `/sessions/${sessionId}/queued-queries`,
+  sessionQueuedQuery: (sessionId: string, itemId: string) =>
+    `/sessions/${sessionId}/queued-queries/${itemId}`,
+  sessionQueuedQuerySendNow: (sessionId: string, itemId: string) =>
+    `/sessions/${sessionId}/queued-queries/${itemId}/send-now`,
   sessionState: (sessionId: string) => `/sessions/${sessionId}/state`,
   sessionMessages: (sessionId: string) => `/sessions/${sessionId}/messages`,
   sessionMessagesDelta: (sessionId: string) =>
@@ -80,6 +86,7 @@ export const API_ENDPOINTS = {
 
   // Attachments
   attachmentsUpload: "/attachments/upload",
+  audioTranscriptions: "/audio/transcriptions",
 
   // Environment Variables
   envVars: "/env-vars",

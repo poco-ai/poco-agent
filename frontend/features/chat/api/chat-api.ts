@@ -1,38 +1,40 @@
 /**
- * Chat Service – Session execution and messaging.
+ * Chat Service - Session execution and messaging.
  *
- * This module is the **API orchestration layer** for the chat feature.
+ * This module is the API orchestration layer for the chat feature.
  * Complex business logic (message parsing, file-tree building) has been
  * extracted into dedicated modules:
  *
- * - `../services/message-parser.ts` – raw API messages → UI-friendly ChatMessage[]
- * - `../services/file-tree-builder.ts` – flat file list → hierarchical tree
+ * - `../services/message-parser.ts` - raw API messages -> UI-friendly ChatMessage[]
+ * - `../services/file-tree-builder.ts` - flat file list -> hierarchical tree
  */
 
 import { apiClient, API_ENDPOINTS } from "@/services/api-client";
 import type {
+  ComputerBrowserScreenshotResponse,
   ExecutionSession,
   FileNode,
-  SessionCancelRequest,
-  SessionCancelResponse,
-  SessionBranchRequest,
-  SessionBranchResponse,
-  SessionEditMessageRequest,
+  InputFile,
   MessageAttachmentsDeltaResponse,
   MessageAttachmentsResponse,
+  MessageDeltaResponse,
   MessageResponse,
+  RunResponse,
+  SessionBranchRequest,
+  SessionBranchResponse,
+  SessionCancelRequest,
+  SessionCancelResponse,
+  SessionEditMessageRequest,
+  SessionQueueItemResponse,
+  SessionQueueItemUpdateRequest,
   SessionRegenerateRequest,
   SessionResponse,
   SessionUpdateRequest,
-  ToolExecutionResponse,
-  ToolExecutionDeltaResponse,
-  ComputerBrowserScreenshotResponse,
+  TaskConfig,
   TaskEnqueueRequest,
   TaskEnqueueResponse,
-  TaskConfig,
-  InputFile,
-  RunResponse,
-  MessageDeltaResponse,
+  ToolExecutionDeltaResponse,
+  ToolExecutionResponse,
 } from "@/features/chat/types";
 
 import {
@@ -41,10 +43,6 @@ import {
   type RawApiMessage,
 } from "../services/message-parser";
 import { buildFileTree } from "../services/file-tree-builder";
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
 
 function buildQuery(params?: Record<string, string | number | undefined>) {
   if (!params) return "";
@@ -70,6 +68,8 @@ function toExecutionSession(
     task_name: undefined,
     user_prompt: undefined,
     title: session.title,
+    queued_query_count: session.queued_query_count ?? 0,
+    next_queued_query_preview: session.next_queued_query_preview ?? null,
   };
 }
 
@@ -83,16 +83,12 @@ function createDefaultSession(sessionId: string): ExecutionSession {
     task_name: undefined,
     user_prompt: undefined,
     title: null,
+    queued_query_count: 0,
+    next_queued_query_preview: null,
   };
 }
 
-// ---------------------------------------------------------------------------
-// Service
-// ---------------------------------------------------------------------------
-
 export const chatService = {
-  // ---- Session CRUD ----
-
   listSessions: async (params?: {
     user_id?: string;
     limit?: number;
@@ -175,8 +171,6 @@ export const chatService = {
     );
   },
 
-  // ---- Task enqueue ----
-
   enqueueTask: async (
     request: TaskEnqueueRequest,
   ): Promise<TaskEnqueueResponse> => {
@@ -193,6 +187,7 @@ export const chatService = {
       scheduled_at?: string;
     },
     permission_mode?: string,
+    clientRequestId?: string,
   ): Promise<TaskEnqueueResponse> => {
     return chatService.enqueueTask({
       prompt,
@@ -202,6 +197,7 @@ export const chatService = {
       timezone: schedule?.timezone,
       scheduled_at: schedule?.scheduled_at,
       project_id: projectId,
+      client_request_id: clientRequestId,
     });
   },
 
@@ -211,6 +207,7 @@ export const chatService = {
     model?: string | null,
     modelProviderId?: string | null,
     attachments?: InputFile[],
+    clientRequestId?: string,
   ): Promise<TaskEnqueueResponse> => {
     const normalizedModel = (model || "").trim() || undefined;
     const normalizedModelProviderId =
@@ -232,11 +229,47 @@ export const chatService = {
       prompt: content,
       session_id: sessionId,
       schedule_mode: "immediate",
-      config,
+      config: attachments?.length ? { input_files: attachments } : undefined,
+      client_request_id: clientRequestId,
     });
   },
 
-  // ---- Runs & tool executions ----
+  listQueuedQueries: async (
+    sessionId: string,
+  ): Promise<SessionQueueItemResponse[]> => {
+    return apiClient.get<SessionQueueItemResponse[]>(
+      API_ENDPOINTS.sessionQueuedQueries(sessionId),
+    );
+  },
+
+  updateQueuedQuery: async (
+    sessionId: string,
+    itemId: string,
+    payload: SessionQueueItemUpdateRequest,
+  ): Promise<SessionQueueItemResponse> => {
+    return apiClient.patch<SessionQueueItemResponse>(
+      API_ENDPOINTS.sessionQueuedQuery(sessionId, itemId),
+      payload,
+    );
+  },
+
+  deleteQueuedQuery: async (
+    sessionId: string,
+    itemId: string,
+  ): Promise<SessionQueueItemResponse> => {
+    return apiClient.delete<SessionQueueItemResponse>(
+      API_ENDPOINTS.sessionQueuedQuery(sessionId, itemId),
+    );
+  },
+
+  sendQueuedQueryNow: async (
+    sessionId: string,
+    itemId: string,
+  ): Promise<TaskEnqueueResponse> => {
+    return apiClient.post<TaskEnqueueResponse>(
+      API_ENDPOINTS.sessionQueuedQuerySendNow(sessionId, itemId),
+    );
+  },
 
   getRunsBySession: async (
     sessionId: string,
@@ -280,8 +313,6 @@ export const chatService = {
       API_ENDPOINTS.sessionBrowserScreenshot(sessionId, toolUseId),
     );
   },
-
-  // ---- Messages ----
 
   getMessages: async (
     sessionId: string,
@@ -372,8 +403,6 @@ export const chatService = {
     );
   },
 
-  // ---- Files ----
-
   getFiles: async (sessionId?: string): Promise<FileNode[]> => {
     if (!sessionId) return [];
 
@@ -388,7 +417,6 @@ export const chatService = {
         console.warn("[Chat Service] Failed to get workspace files:", err);
       }
 
-      // Fallback to file changes from session state
       if (!rawFiles || rawFiles.length === 0) {
         try {
           const session = await chatService.getSessionRaw(sessionId);

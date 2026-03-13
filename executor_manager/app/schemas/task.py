@@ -53,7 +53,6 @@ class TaskCreateResponse(BaseModel):
     task_id: str
     session_id: str
     status: str
-    executor_url: str | None = None
     container_id: str | None = None
 
 

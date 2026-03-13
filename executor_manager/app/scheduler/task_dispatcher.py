@@ -54,6 +54,25 @@ class TaskDispatcher:
             cls.container_pool = ContainerPool()
         return cls.container_pool
 
+    @classmethod
+    async def resolve_executor_target(
+        cls,
+        *,
+        session_id: str,
+        user_id: str,
+        browser_enabled: bool,
+        container_mode: str,
+        container_id: str | None,
+    ) -> tuple[str, str | None]:
+        container_pool = cls.get_container_pool()
+        return await container_pool.get_or_create_container(
+            session_id=session_id,
+            user_id=user_id,
+            browser_enabled=browser_enabled,
+            container_mode=container_mode,
+            container_id=container_id,
+        )
+
     @staticmethod
     async def dispatch(
         task_id: str,
@@ -80,7 +99,6 @@ class TaskDispatcher:
         settings = get_settings()
         executor_client = ExecutorClient()
         backend_client = BackendClient()
-        container_pool = TaskDispatcher.get_container_pool()
         config_resolver = ConfigResolver(backend_client)
         skill_stager = SkillStager()
         plugin_stager = PluginStager()
@@ -92,7 +110,10 @@ class TaskDispatcher:
         container_mode = config.get("container_mode", "ephemeral")
         container_id = config.get("container_id")
 
-        callback_url = f"{settings.callback_base_url}/api/v1/callback"
+        callback_base_url = (settings.callback_base_url or "").strip().rstrip("/")
+        if not callback_base_url:
+            raise ValueError("callback_base_url cannot be empty")
+        callback_url = f"{callback_base_url}/api/v1/callback"
         callback_token = settings.callback_token
 
         executor_url = None
@@ -244,7 +265,7 @@ class TaskDispatcher:
 
             step_started = time.perf_counter()
             browser_enabled = bool(resolved_config.get("browser_enabled"))
-            executor_url, container_id = await container_pool.get_or_create_container(
+            executor_url, container_id = await TaskDispatcher.resolve_executor_target(
                 session_id=session_id,
                 user_id=user_id,
                 browser_enabled=browser_enabled,
@@ -287,7 +308,7 @@ class TaskDispatcher:
                 callback_url=callback_url,
                 callback_token=callback_token,
                 config=resolved_config,
-                callback_base_url=settings.callback_base_url,
+                callback_base_url=callback_base_url,
                 sdk_session_id=sdk_session_id,
             )
             logger.info(
@@ -319,7 +340,7 @@ class TaskDispatcher:
         except Exception as e:
             logger.error(f"Failed to dispatch task {task_id}: {e}")
             await backend_client.update_session_status(session_id, "failed")
-            await container_pool.cancel_task(session_id)
+            await TaskDispatcher.get_container_pool().cancel_task(session_id)
             raise
         finally:
             reset_request_id(request_id_token)

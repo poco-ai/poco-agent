@@ -1,11 +1,14 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import {
   listTaskHistoryAction,
   moveTaskToProjectAction,
 } from "@/features/projects/actions/project-actions";
-import { renameSessionTitleAction } from "@/features/chat/actions/session-actions";
+import {
+  renameSessionTitleAction,
+  setSessionPinAction,
+} from "@/features/chat/actions/session-actions";
 import type {
   AddTaskOptions,
   TaskHistoryItem,
@@ -17,35 +20,6 @@ import {
   hasStartupPreloadValue,
 } from "@/lib/startup-preload";
 import { toast } from "sonner";
-
-const PINNED_TASK_IDS_STORAGE_KEY = "poco_pinned_task_ids";
-
-function readPinnedTaskIds(): string[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = window.localStorage.getItem(PINNED_TASK_IDS_STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed.filter(
-      (item): item is string => typeof item === "string" && item.length > 0,
-    );
-  } catch {
-    return [];
-  }
-}
-
-function writePinnedTaskIds(taskIds: string[]): void {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(
-      PINNED_TASK_IDS_STORAGE_KEY,
-      JSON.stringify(taskIds),
-    );
-  } catch (error) {
-    console.error("Failed to persist pinned task ids", error);
-  }
-}
 
 interface UseTaskHistoryOptions {
   initialTasks?: TaskHistoryItem[];
@@ -60,11 +34,25 @@ export function useTaskHistory(options: UseTaskHistoryOptions = {}) {
   const hasConsumedStartupPreloadRef = useRef(hasPreloadedTasks);
   const [taskHistory, setTaskHistory] =
     useState<TaskHistoryItem[]>(seededTasks);
-  const [pinnedTaskIds, setPinnedTaskIds] = useState<string[]>(() =>
-    readPinnedTaskIds(),
-  );
   const [isLoading, setIsLoading] = useState(
     !hasPreloadedTasks && !initialTasks.length,
+  );
+
+  const pinnedTaskIds = useMemo(
+    () =>
+      [...taskHistory]
+        .filter((task) => task.isPinned)
+        .sort((left, right) => {
+          const leftTime = left.pinnedAt
+            ? new Date(left.pinnedAt).getTime()
+            : new Date(left.timestamp).getTime();
+          const rightTime = right.pinnedAt
+            ? new Date(right.pinnedAt).getTime()
+            : new Date(right.timestamp).getTime();
+          return rightTime - leftTime;
+        })
+        .map((task) => task.id),
+    [taskHistory],
   );
 
   const fetchTasks = useCallback(async () => {
@@ -103,19 +91,6 @@ export function useTaskHistory(options: UseTaskHistoryOptions = {}) {
     fetchTasks();
   }, [fetchTasks]);
 
-  useEffect(() => {
-    writePinnedTaskIds(pinnedTaskIds);
-  }, [pinnedTaskIds]);
-
-  useEffect(() => {
-    if (!taskHistory.length) return;
-    const validTaskIds = new Set(taskHistory.map((task) => task.id));
-    setPinnedTaskIds((prev) => {
-      const next = prev.filter((taskId) => validTaskIds.has(taskId));
-      return next.length === prev.length ? prev : next;
-    });
-  }, [taskHistory]);
-
   const addTask = useCallback((title: string, options?: AddTaskOptions) => {
     const newTask: TaskHistoryItem = {
       // Use sessionId if provided, otherwise fallback to random (for optimistic updates)
@@ -126,6 +101,8 @@ export function useTaskHistory(options: UseTaskHistoryOptions = {}) {
       timestamp: options?.timestamp || new Date().toISOString(),
       status: options?.status || "pending",
       projectId: options?.projectId,
+      isPinned: false,
+      pinnedAt: null,
     };
     setTaskHistory((prev) => [newTask, ...prev]);
     return newTask;
@@ -147,6 +124,8 @@ export function useTaskHistory(options: UseTaskHistoryOptions = {}) {
             timestamp: taskUpdates.timestamp ?? new Date().toISOString(),
             status: taskUpdates.status ?? "pending",
             projectId: taskUpdates.projectId,
+            isPinned: taskUpdates.isPinned ?? false,
+            pinnedAt: taskUpdates.pinnedAt ?? null,
           };
           return [newTask, ...prev];
         }
@@ -175,9 +154,7 @@ export function useTaskHistory(options: UseTaskHistoryOptions = {}) {
     async (taskId: string) => {
       // Optimistic update
       const previousTasks = taskHistory;
-      const previousPinnedTaskIds = pinnedTaskIds;
       setTaskHistory((prev) => prev.filter((task) => task.id !== taskId));
-      setPinnedTaskIds((prev) => prev.filter((id) => id !== taskId));
 
       try {
         const { deleteSessionAction } =
@@ -187,10 +164,9 @@ export function useTaskHistory(options: UseTaskHistoryOptions = {}) {
         console.error("Failed to delete task", error);
         // Rollback on error
         setTaskHistory(previousTasks);
-        setPinnedTaskIds(previousPinnedTaskIds);
       }
     },
-    [pinnedTaskIds, taskHistory],
+    [taskHistory],
   );
 
   const moveTask = useCallback(
@@ -240,12 +216,47 @@ export function useTaskHistory(options: UseTaskHistoryOptions = {}) {
     [t],
   );
 
-  const toggleTaskPin = useCallback((taskId: string) => {
-    setPinnedTaskIds((prev) => {
-      const next = prev.filter((id) => id !== taskId);
-      return prev.includes(taskId) ? next : [taskId, ...next];
-    });
-  }, []);
+  const toggleTaskPin = useCallback(
+    (taskId: string) => {
+      const previousTasks = taskHistory;
+      const currentTask = taskHistory.find((task) => task.id === taskId);
+
+      if (!currentTask) {
+        return;
+      }
+
+      const nextPinned = !Boolean(currentTask.isPinned);
+      const toggledAt = nextPinned ? new Date().toISOString() : null;
+
+      setTaskHistory((prev) => {
+        return prev.map((task) => {
+          if (task.id !== taskId) {
+            return task;
+          }
+
+          return {
+            ...task,
+            isPinned: nextPinned,
+            pinnedAt: toggledAt,
+          };
+        });
+      });
+
+      void (async () => {
+        try {
+          await setSessionPinAction({
+            sessionId: taskId,
+            isPinned: nextPinned,
+          });
+        } catch (error) {
+          console.error("Failed to update task pin status", error);
+          setTaskHistory(previousTasks);
+          toast.error(t("task.toasts.pinFailed"));
+        }
+      })();
+    },
+    [taskHistory, t],
+  );
 
   return {
     taskHistory,

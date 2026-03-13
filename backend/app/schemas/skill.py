@@ -8,18 +8,21 @@ from app.schemas.source import SourceInfo
 class SkillCreateRequest(BaseModel):
     name: str
     entry: dict
+    description: str | None = None
     scope: str | None = None
 
 
 class SkillUpdateRequest(BaseModel):
     name: str | None = None
     entry: dict | None = None
+    description: str | None = None
     scope: str | None = None
 
 
 class SkillResponse(BaseModel):
     id: int
     name: str
+    description: str | None
     entry: dict
     source: SourceInfo
     scope: str

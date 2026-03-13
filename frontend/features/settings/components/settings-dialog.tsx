@@ -60,6 +60,7 @@ import { useSettingsLanguage } from "@/features/settings/hooks/use-settings-lang
 import { useUsageAnalytics } from "@/features/settings/hooks/use-usage-analytics";
 import { formatMonthLabel } from "@/features/settings/lib/usage-analytics";
 import type {
+  ApiProviderConfig,
   SettingsSidebarItem,
   SettingsTabId,
   SettingsTabRequest,
@@ -101,6 +102,7 @@ export function SettingsDialog({
     tabRequest?.tab ?? "account",
   );
   const [mobileView, setMobileView] = React.useState<MobileView>("overview");
+
   const {
     providerConfigs,
     isLoading: isLoadingProviders,

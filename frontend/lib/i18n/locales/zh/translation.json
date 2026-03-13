@@ -58,6 +58,7 @@
     "voiceInput": "语音输入",
     "startVoiceInput": "开始语音输入",
     "stopVoiceInput": "停止语音输入",
+    "transcribingVoiceInput": "正在转写语音",
     "send": "发送",
     "placeholder": "分配一个任务或提出任何问题",
     "inputPrompts": {
@@ -84,6 +85,14 @@
       "task": "任务模式",
       "plan": "计划模式",
       "scheduled": "定时模式"
+    },
+    "skillCreatorCard": {
+      "title": "创建技能",
+      "description": "使用定制技能为重复性任务自动化你的工作流程。",
+      "prefillPrompt": "帮我一起使用 /skill-creator 创建一个技能。首先问我技能应该做什么。"
+    },
+    "bottomCards": {
+      "selectCard": "选择第 {{index}} 张卡片"
     },
     "repo": {
       "toggle": "仓库设置",
@@ -156,7 +165,8 @@
       "fileTooLarge": "文件过大，最大支持 100MB",
       "duplicateFileName": "已存在同名附件：{{name}}，请先删除或重命名",
       "voiceInputNotSupported": "当前浏览器不支持语音输入",
-      "voiceInputFailed": "语音输入启动失败，请重试"
+      "voiceInputFailed": "语音输入失败，请重试",
+      "voiceInputPermissionDenied": "麦克风权限被拒绝，请开启后重试"
     },
     "mcpSelector": {
       "title": "选择 MCP 服务器",
@@ -164,6 +174,7 @@
       "loading": "加载中...",
       "noServers": "没有已安装的 MCP 服务器。请先在 MCP 页面安装服务器。",
       "selected": "已选择 {{count}}/{{total}} 个服务器",
+      "toggleServer": "切换 {{name}}",
       "cancel": "取消",
       "confirm": "确认"
     },
@@ -1306,7 +1317,8 @@
     "namePlaceholder": "请输入任务名称",
     "toasts": {
       "renamed": "已重命名任务",
-      "renameFailed": "重命名失败"
+      "renameFailed": "重命名失败",
+      "pinFailed": "更新置顶状态失败"
     }
   },
   "project": {
@@ -1613,6 +1625,9 @@
     "turnOffAll": "全部关闭"
   },
   "mcpSettings": {
+    "descriptionHint": "用于在列表和任务配置中快速识别用途；不影响 MCP 实际连接。",
+    "descriptionPlaceholder": "例如：连接 GitHub 仓库并搜索 issue / PR",
+    "descriptionRecommended": "描述（推荐填写）",
     "mcpName": "MCP 名称",
     "jsonConfig": "完整的 JSON 配置",
     "configureServer": "配置 MCP 服务器",

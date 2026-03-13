@@ -10,6 +10,7 @@ class Skill(Base, TimestampMixin):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     # Name is used as the directory name under ~/.claude/skills/<name>/ (staged into workspace).
     name: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[str | None] = mapped_column(String(1000), nullable=True)
     scope: Mapped[str] = mapped_column(String(20), default="user", nullable=False)
     owner_user_id: Mapped[str] = mapped_column(String(255), nullable=False)
     # Location info for staging the skill into workspace (e.g. {"s3_key": "...", "is_prefix": true}).

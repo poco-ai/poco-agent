@@ -58,6 +58,7 @@ interface McpSettingsDialogProps {
   onSave: (payload: {
     serverId?: number;
     name?: string;
+    description?: string | null;
     serverConfig: Record<string, unknown>;
   }) => Promise<void>;
 }
@@ -72,6 +73,7 @@ export function McpSettingsDialog({
   const { t } = useT("translation");
   const [jsonConfig, setJsonConfig] = React.useState("{}");
   const [name, setName] = React.useState("");
+  const [description, setDescription] = React.useState("");
   const [isSaving, setIsSaving] = React.useState(false);
   const [saveError, setSaveError] = React.useState<string | null>(null);
   const [validationItems, setValidationItems] = React.useState<
@@ -83,9 +85,11 @@ export function McpSettingsDialog({
       const configObj = item.server.server_config || {};
       setJsonConfig(JSON.stringify(configObj, null, 2));
       setName(item.server.name || "");
+      setDescription(item.server.description || "");
     } else if (isNew) {
       setJsonConfig("{}");
       setName("");
+      setDescription("");
     }
     setIsSaving(false);
     setSaveError(null);
@@ -128,6 +132,7 @@ export function McpSettingsDialog({
                   try {
                     const parsed = JSON.parse(jsonConfig);
                     const trimmedName = name.trim();
+                    const trimmedDescription = description.trim();
                     if (isNew && !trimmedName) {
                       setSaveError(t("mcpSettings.nameRequired"));
                       return;
@@ -135,6 +140,7 @@ export function McpSettingsDialog({
                     await onSave({
                       serverId: item?.server.id,
                       name: trimmedName,
+                      description: trimmedDescription || null,
                       serverConfig: parsed,
                     });
                     onClose();
@@ -179,6 +185,27 @@ export function McpSettingsDialog({
               }}
               className="bg-muted/50 font-mono text-sm"
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+              {t("mcpSettings.descriptionRecommended")}
+            </Label>
+            <Input
+              value={description}
+              onChange={(e) => {
+                setDescription(e.target.value);
+                if (saveError || validationItems.length > 0) {
+                  setSaveError(null);
+                  setValidationItems([]);
+                }
+              }}
+              placeholder={t("mcpSettings.descriptionPlaceholder")}
+              className="bg-muted/50 text-sm"
+            />
+            <p className="text-xs text-muted-foreground">
+              {t("mcpSettings.descriptionHint")}
+            </p>
           </div>
 
           <div className="flex min-h-0 flex-1 flex-col gap-2">

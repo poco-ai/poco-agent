@@ -87,4 +87,6 @@ export interface ExecutionSession {
   task_name?: string;
   user_prompt?: string;
   title?: string | null;
+  queued_query_count?: number;
+  next_queued_query_preview?: string | null;
 }

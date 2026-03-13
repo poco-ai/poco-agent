@@ -3,6 +3,7 @@ import type { SourceInfo } from "@/features/capabilities/types/source";
 export interface McpServer {
   id: number;
   name: string;
+  description: string | null;
   source?: SourceInfo | null;
   scope: string;
   owner_user_id: string | null;
@@ -13,12 +14,14 @@ export interface McpServer {
 
 export interface McpServerCreateInput {
   name: string;
+  description?: string | null;
   server_config: Record<string, unknown>;
   scope?: string | null;
 }
 
 export interface McpServerUpdateInput {
   name?: string | null;
+  description?: string | null;
   server_config?: Record<string, unknown> | null;
   scope?: string | null;
 }

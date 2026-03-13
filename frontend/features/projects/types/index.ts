@@ -23,6 +23,8 @@ export interface TaskHistoryItem {
   timestamp: string;
   status: "pending" | "running" | "completed" | "failed" | "canceled";
   projectId?: string;
+  isPinned?: boolean;
+  pinnedAt?: string | null;
   hasPendingUserInput?: boolean;
 }
 

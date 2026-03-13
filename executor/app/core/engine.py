@@ -72,14 +72,16 @@ class AgentExecutor:
         session_id: str,
         hooks: list,
         sdk_session_id: str | None = None,
+        *,
+        run_id: str | None = None,
         user_input_client: UserInputClient | None = None,
         memory_client: MemoryClient | None = None,
-        *,
         request_id: str | None = None,
         trace_id: str | None = None,
     ):
         self.session_id = session_id
         self.sdk_session_id = sdk_session_id
+        self.run_id = run_id
         self.hooks = HookManager(hooks)
         self.user_input_client = user_input_client
         self.memory_client = memory_client
@@ -97,7 +99,11 @@ class AgentExecutor:
     ):
         # Initialize context early so we can always report failures via callbacks,
         # even if workspace preparation (e.g. repo clone) fails.
-        ctx = ExecutionContext(self.session_id, str(self.workspace.root_path))
+        ctx = ExecutionContext(
+            self.session_id,
+            str(self.workspace.root_path),
+            run_id=self.run_id,
+        )
         if config.browser_enabled:
             ctx.current_state.browser = BrowserState(enabled=True)
 
@@ -414,14 +420,13 @@ class AgentExecutor:
 
         return configs
 
-    @staticmethod
-    def _inject_playwright_mcp(mcp_servers: dict) -> dict:
+    def _inject_playwright_mcp(self, mcp_servers: dict) -> dict:
         """Inject built-in Playwright MCP (CDP mode) for browser-enabled tasks.
 
         This keeps the Playwright MCP concept/config hidden from end users: they only toggle `browser_enabled`, and the executor wires the MCP server internally.
         """
 
-        # TODO: 这里的实现不够优雅
+        # TODO: Refactor this injection path to use a structured MCP config builder.
         key = "__poco_playwright"
         if key in mcp_servers:
             return mcp_servers
@@ -434,6 +439,24 @@ class AgentExecutor:
         viewport_raw = (os.environ.get("POCO_BROWSER_VIEWPORT_SIZE") or "").strip()
         viewport = parse_viewport_size(viewport_raw) or (1366, 768)
         viewport_size = format_viewport_size(*viewport)
+        output_mode = (
+            (os.environ.get("PLAYWRIGHT_MCP_OUTPUT_MODE") or "").strip().lower()
+        )
+        if output_mode not in {"file", "stdout"}:
+            output_mode = "file"
+        image_responses = (
+            (os.environ.get("PLAYWRIGHT_MCP_IMAGE_RESPONSES") or "").strip().lower()
+        )
+        if image_responses not in {"allow", "omit"}:
+            image_responses = "omit"
+        playwright_launch_command = (
+            "exec npx -y @playwright/mcp@latest "
+            f"--cdp-endpoint {cdp_endpoint!r} "
+            "--caps vision "
+            f"--viewport-size {viewport_size!r} "
+            f"--output-mode {output_mode!r} "
+            f"--image-responses {image_responses!r}"
+        )
 
         # Wait for Chrome's CDP endpoint before starting the MCP server to avoid flakiness on startup.
         wait_then_start = f"""
@@ -453,7 +476,7 @@ while time.time() < deadline:
 else:
     raise SystemExit("CDP endpoint not ready: " + url)
 PY
-exec npx -y @playwright/mcp@latest --cdp-endpoint {cdp_endpoint!r} --caps vision --viewport-size {viewport_size!r}
+{playwright_launch_command}
 """.strip()
 
         injected = dict(mcp_servers)

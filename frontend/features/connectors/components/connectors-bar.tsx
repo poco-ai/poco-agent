@@ -8,25 +8,26 @@ import type { ConnectorType } from "../constants/connectors";
 /**
  * Connectors Bar Entry Component
  *
- * Displays an expandable card that shows MCP, Skill, and Apps sections
+ * Displays a connectors entry row that opens MCP/Skill/Plugin controls in a dialog
  * Can optionally show connectors dialog
  */
 export interface ConnectorsBarProps {
   showDialog?: boolean;
   defaultTab?: ConnectorType;
-  forceExpanded?: boolean;
 }
 
 export function ConnectorsBar({
   showDialog = false,
   defaultTab = "app",
-  forceExpanded = false,
 }: ConnectorsBarProps = {}) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isVisible, setIsVisible] = useState(true);
+
+  if (!isVisible) return null;
 
   return (
-    <div className="mt-4 w-full">
-      <CardNav forceExpanded={forceExpanded} />
+    <div className="w-full">
+      <CardNav embedded showDismiss onDismiss={() => setIsVisible(false)} />
       {showDialog && (
         <ConnectorsDialog
           open={isOpen}

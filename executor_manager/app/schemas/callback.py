@@ -14,26 +14,20 @@ class CallbackStatus(str, Enum):
 
 
 class TodoItem(BaseModel):
-    """Todo item."""
-
     content: str
-    status: str  # "pending" | "in_progress" | "completed"
+    status: str
     active_form: str | None = None
 
 
 class McpStatus(BaseModel):
-    """MCP server status."""
-
     server_name: str
-    status: str  # "connected" | "disconnected" | "error"
+    status: str
     message: str | None = None
 
 
 class FileChange(BaseModel):
-    """File change info."""
-
     path: str
-    status: str  # "added" | "modified" | "staged" | "deleted" | "renamed"
+    status: str
     added_lines: int = 0
     deleted_lines: int = 0
     diff: str | None = None
@@ -41,8 +35,6 @@ class FileChange(BaseModel):
 
 
 class WorkspaceState(BaseModel):
-    """Workspace state info."""
-
     repository: str | None = None
     branch: str | None = None
     total_added_lines: int = 0
@@ -52,14 +44,10 @@ class WorkspaceState(BaseModel):
 
 
 class BrowserState(BaseModel):
-    """Browser/desktop capability state exposed to the UI."""
-
     enabled: bool = False
 
 
 class AgentCurrentState(BaseModel):
-    """Agent current state."""
-
     todos: list[TodoItem] = Field(default_factory=list)
     mcp_status: list[McpStatus] = Field(default_factory=list)
     browser: BrowserState | None = None
@@ -68,9 +56,8 @@ class AgentCurrentState(BaseModel):
 
 
 class AgentCallbackRequest(BaseModel):
-    """Agent execution callback request."""
-
     session_id: str
+    run_id: str | None = None
     time: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     status: CallbackStatus
     progress: int
@@ -85,9 +72,7 @@ class AgentCallbackRequest(BaseModel):
 
 
 class CallbackReceiveResponse(BaseModel):
-    """Callback receive response."""
-
-    status: str  # "received"
+    status: str
     session_id: str
     callback_status: CallbackStatus
     progress: int

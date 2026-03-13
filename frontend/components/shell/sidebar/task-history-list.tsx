@@ -144,7 +144,10 @@ function DraggableTask({
           </div>
         </div>
       ) : (
-        <div className="relative group/task-card">
+        <div
+          className="relative group/task-card"
+          data-active={isActive ? "true" : undefined}
+        >
           <SidebarMenuButton
             isActive={isActive}
             className={cn(
@@ -164,6 +167,7 @@ function DraggableTask({
                   isRunningTask &&
                     "motion-safe:animate-[running-status-dot-blink_1.05s_ease-in-out_infinite] motion-reduce:animate-none",
                   "group-hover/task-card:opacity-0",
+                  "group-data-[active=true]/task-card:opacity-0",
                 )}
                 aria-hidden="true"
               />
@@ -171,7 +175,7 @@ function DraggableTask({
 
               {/* Hover: drag handle (overlays the dot) */}
               <div
-                className="absolute inset-0 flex items-center justify-center text-muted-foreground opacity-0 group-hover/task-card:opacity-100 transition-opacity cursor-grab active:cursor-grabbing group-data-[collapsible=icon]:hidden"
+                className="absolute inset-0 flex items-center justify-center text-muted-foreground opacity-0 group-hover/task-card:opacity-100 group-data-[active=true]/task-card:opacity-100 transition-opacity cursor-grab active:cursor-grabbing group-data-[collapsible=icon]:hidden"
                 {...listeners}
                 onClick={(e) => e.stopPropagation()}
               >
@@ -198,7 +202,7 @@ function DraggableTask({
                 "pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 shrink-0 size-5 flex items-center justify-center rounded-lg text-muted-foreground transition-opacity group-data-[collapsible=icon]:hidden",
                 isDropdownOpen
                   ? "opacity-0"
-                  : "opacity-100 group-hover/task-card:opacity-0",
+                  : "opacity-100 group-hover/task-card:opacity-0 group-data-[active=true]/task-card:opacity-0",
               )}
               aria-hidden="true"
             >
@@ -232,7 +236,7 @@ function DraggableTask({
                   (e.currentTarget as HTMLElement).click();
                 }
               }}
-              className="absolute top-1/2 right-2 -translate-y-1/2 shrink-0 size-5 flex items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground opacity-0 transition-opacity group-hover/task-card:opacity-100 data-[state=open]:opacity-100 group-data-[collapsible=icon]:hidden cursor-pointer focus-visible:outline-none z-10"
+              className="absolute top-1/2 right-2 -translate-y-1/2 shrink-0 size-5 flex items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground opacity-0 transition-opacity group-hover/task-card:opacity-100 group-data-[active=true]/task-card:opacity-100 data-[state=open]:opacity-100 group-data-[collapsible=icon]:hidden cursor-pointer focus-visible:outline-none z-10"
             >
               <MoreHorizontal className="size-3.5" />
             </div>

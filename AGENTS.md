@@ -130,7 +130,7 @@ pre-commit run --all-files  # Run manually
 Each Python service requires a `.env` file. See `backend/.env.example` for the Backend template.
 
 **Backend:** DATABASE_URL, HOST, PORT, CORS_ORIGINS, SECRET_KEY, DEBUG
-**Executor Manager:** backend_url, executor_url, callback_base_url, max_concurrent_tasks, callback_token
+**Executor Manager:** backend_url, callback_base_url, max_concurrent_tasks, callback_token
 **Executor:** DEFAULT_MODEL, workspace mount path
 
 ## Development Standards

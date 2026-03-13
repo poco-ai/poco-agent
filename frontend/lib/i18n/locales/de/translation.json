@@ -57,6 +57,7 @@
     "voiceInput": "Spracheingabe",
     "startVoiceInput": "Spracheingabe starten",
     "stopVoiceInput": "Spracheingabe stoppen",
+    "transcribingVoiceInput": "Sprache wird transkribiert",
     "send": "Senden",
     "placeholder": "Weise eine Aufgabe zu oder stelle eine Frage",
     "inputPrompts": {
@@ -83,6 +84,14 @@
       "task": "Aufgabenmodus",
       "plan": "Planmodus",
       "scheduled": "Zeitplanmodus"
+    },
+    "skillCreatorCard": {
+      "title": "Skill erstellen",
+      "description": "Nutze benutzerdefinierte Skills, um wiederkehrende Arbeitsabläufe zu automatisieren.",
+      "prefillPrompt": "Hilf mir dabei, mit /skill-creator einen Skill zu erstellen. Frage mich zuerst, was der Skill tun soll."
+    },
+    "bottomCards": {
+      "selectCard": "Karte {{index}} auswählen"
     },
     "repo": {
       "toggle": "Repository-Einstellungen",
@@ -155,7 +164,8 @@
       "fileTooLarge": "Datei zu groß, maximal 100 MB unterstützt",
       "duplicateFileName": "Ein Anhang mit dem Namen {{name}} existiert bereits. Bitte entfernen oder benennen Sie ihn um.",
       "voiceInputNotSupported": "Spracheingabe wird in diesem Browser nicht unterstützt",
-      "voiceInputFailed": "Spracheingabe konnte nicht gestartet werden, bitte versuchen Sie es erneut"
+      "voiceInputFailed": "Spracheingabe fehlgeschlagen, bitte versuchen Sie es erneut",
+      "voiceInputPermissionDenied": "Mikrofonberechtigung verweigert. Bitte aktivieren und erneut versuchen"
     },
     "mcpSelector": {
       "title": "MCP-Server auswählen",
@@ -163,6 +173,7 @@
       "loading": "Laden...",
       "noServers": "Keine MCP-Server installiert. Bitte installieren Sie zuerst Server von der MCP-Seite.",
       "selected": "{{count}}/{{total}} Server ausgewählt",
+      "toggleServer": "{{name}} umschalten",
       "cancel": "Abbrechen",
       "confirm": "Bestätigen"
     },
@@ -1207,7 +1218,8 @@
     "namePlaceholder": "Aufgabennamen eingeben",
     "toasts": {
       "renamed": "Aufgabe umbenannt",
-      "renameFailed": "Umbenennung fehlgeschlagen"
+      "renameFailed": "Umbenennung fehlgeschlagen",
+      "pinFailed": "Anheftungsstatus konnte nicht aktualisiert werden"
     }
   },
   "project": {
@@ -1505,6 +1517,9 @@
   },
   "mcpSettings": {
     "configureServer": "MCP-Server konfigurieren",
+    "descriptionHint": "Hilft dabei, dieses MCP in Listen und bei der Aufgaben-Konfiguration zu erkennen. Beeinflusst die eigentliche Verbindung nicht.",
+    "descriptionPlaceholder": "z. B. GitHub-Issues und Pull Requests durchsuchen",
+    "descriptionRecommended": "Beschreibung (empfohlen)",
     "fullJsonConfig": "Vollständige JSON-Konfiguration",
     "mcpName": "MCP-Name",
     "jsonConfig": "Vollständige JSON-Konfiguration",

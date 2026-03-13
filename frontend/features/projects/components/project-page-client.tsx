@@ -37,13 +37,10 @@ export function ProjectPageClient({ projectId }: ProjectPageClientProps) {
 
   const [inputValue, setInputValue] = React.useState("");
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const [isInputFocused, setIsInputFocused] = React.useState(false);
   const [mode, setMode] = React.useState<ComposerMode>("task");
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
 
   useAutosizeTextarea(textareaRef, inputValue);
-
-  const shouldExpandConnectors = isInputFocused || inputValue.trim().length > 0;
 
   const projectTaskCount = React.useMemo(
     () =>
@@ -169,15 +166,13 @@ export function ProjectPageClient({ projectId }: ProjectPageClientProps) {
         title={projectTitle}
         mode={mode}
         onModeChange={setMode}
-        footer={<ConnectorsBar forceExpanded={shouldExpandConnectors} />}
+        footer={<ConnectorsBar />}
         composerProps={{
           textareaRef,
           value: inputValue,
           onChange: setInputValue,
           onSend: handleSendTask,
           isSubmitting,
-          onFocus: () => setIsInputFocused(true),
-          onBlur: () => setIsInputFocused(false),
           allowProjectize: false,
           onRepoDefaultsSave: async (payload) => {
             await updateProject(projectId, payload);

@@ -45,7 +45,7 @@ class RunPullService:
         self.settings = get_settings()
         self.backend_client = BackendClient()
         self.executor_client = ExecutorClient()
-        self.container_pool = TaskDispatcher.get_container_pool()
+        self.container_pool = None
         self.config_resolver = ConfigResolver(self.backend_client)
         self.skill_stager = SkillStager()
         self.plugin_stager = PluginStager()
@@ -174,8 +174,15 @@ class RunPullService:
                             "schedule_modes": schedule_modes,
                         },
                     )
+            except asyncio.CancelledError:
+                self._semaphore.release()
+                return
             except Exception as e:
-                logger.error(f"Failed to claim run from backend: {e}")
+                logger.error(
+                    "Failed to claim run from backend: %s: %r",
+                    type(e).__name__,
+                    e,
+                )
                 self._semaphore.release()
                 return
 
@@ -243,7 +250,10 @@ class RunPullService:
         container_mode = config_snapshot.get("container_mode", "ephemeral")
         container_id = config_snapshot.get("container_id")
 
-        callback_url = f"{self.settings.callback_base_url}/api/v1/callback"
+        callback_base_url = (self.settings.callback_base_url or "").strip().rstrip("/")
+        if not callback_base_url:
+            raise ValueError("callback_base_url cannot be empty")
+        callback_url = f"{callback_base_url}/api/v1/callback"
         ctx = {
             "run_id": run_id_str,
             "session_id": session_id,
@@ -399,6 +409,8 @@ class RunPullService:
 
             step_started = time.perf_counter()
             browser_enabled = bool(resolved_config.get("browser_enabled"))
+            if self.container_pool is None:
+                self.container_pool = TaskDispatcher.get_container_pool()
             (
                 executor_url,
                 container_id,
@@ -430,7 +442,7 @@ class RunPullService:
                 callback_url=callback_url,
                 callback_token=self.settings.callback_token,
                 config=resolved_config,
-                callback_base_url=self.settings.callback_base_url,
+                callback_base_url=callback_base_url,
                 sdk_session_id=sdk_session_id,
                 permission_mode=permission_mode,
             )
@@ -486,7 +498,8 @@ class RunPullService:
                 logger.error(f"Failed to mark run {run_id} as failed: {fail_err}")
 
             try:
-                await self.container_pool.cancel_task(session_id)
+                if self.container_pool:
+                    await self.container_pool.cancel_task(session_id)
             except Exception as cancel_err:
                 logger.error(
                     f"Failed to cancel task for session {session_id}: {cancel_err}"

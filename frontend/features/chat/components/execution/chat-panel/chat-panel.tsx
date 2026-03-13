@@ -89,6 +89,25 @@ function formatAsMarkdownQuote(text: string): string {
     .join("\n");
 }
 
+function getQueuedQueryPreview(
+  content: string,
+  attachments: InputFile[] | undefined,
+  t: (key: string, options?: Record<string, unknown>) => string,
+): string | null {
+  const trimmedContent = content.trim();
+  if (trimmedContent) {
+    return trimmedContent;
+  }
+
+  if ((attachments?.length ?? 0) > 0) {
+    return t("chatPanel.fileAttachment", {
+      count: attachments?.length ?? 0,
+    });
+  }
+
+  return null;
+}
+
 function ChatHistorySkeleton() {
   const shimmerDelay = (index: number) => ({
     animationDelay: `${index * 0.08}s`,
@@ -184,11 +203,13 @@ export function ChatPanel({
   // Pending message queue hook
   const {
     pendingMessages,
+    isLoadingPendingMessages,
     addPendingMessage,
+    refreshPendingMessages,
     sendPendingMessage,
     modifyPendingMessage,
     deletePendingMessage,
-  } = usePendingMessages({ session, sendMessage });
+  } = usePendingMessages({ session });
 
   // Determine if session is running/active
   const isSessionActive =
@@ -623,13 +644,9 @@ export function ChatPanel({
         return;
       }
 
-      const pendingModelOverride = draftModelSelection?.modelId
-        ? draftModelSelection
-        : undefined;
-
       if (isSessionActive) {
         // Session is running, add to pending queue
-        addPendingMessage(content, attachments, pendingModelOverride);
+        addPendingMessage(content, attachments);
       } else {
         // Optimistically update sidebar task status so it reflects the new turn immediately.
         touchTask(session.session_id, {
@@ -642,7 +659,7 @@ export function ChatPanel({
         if (session.status !== "running" && session.status !== "pending") {
           updateSession({ status: "pending" });
         }
-        await sendMessage(content, attachments, pendingModelOverride);
+        await sendMessage(content, attachments);
         // Ensure sidebar converges to backend truth (status/updated_at/title).
         await refreshTasks();
       }
@@ -651,12 +668,139 @@ export function ChatPanel({
       addPendingMessage,
       draftModelSelection,
       hasActiveUserInput,
-      isSessionActive,
+      pendingMessages,
+      refreshPendingMessages,
       refreshTasks,
       sendMessage,
+      session?.next_queued_query_preview,
       session?.session_id,
       session?.status,
+      t,
       touchTask,
+      updateSession,
+    ],
+  );
+
+  const handleSendPendingMessage = React.useCallback(
+    async (messageId: string) => {
+      try {
+        const result = await sendPendingMessage(messageId);
+        if (!result) {
+          return;
+        }
+
+        const remainingMessages = pendingMessages.filter(
+          (message) => message.id !== messageId,
+        );
+
+        updateSession({
+          status: "pending",
+          queued_query_count: result.queuedQueryCount,
+          next_queued_query_preview:
+            result.queuedQueryCount > 0
+              ? getQueuedQueryPreview(
+                  remainingMessages[0]?.content ?? "",
+                  remainingMessages[0]?.attachments,
+                  t,
+                )
+              : null,
+        });
+
+        if (result.acceptedType === "run" && session?.session_id) {
+          touchTask(session.session_id, {
+            status: "pending",
+            timestamp: new Date().toISOString(),
+            bumpToTop: true,
+          });
+        }
+
+        await refreshTasks();
+      } catch (error) {
+        console.error("[ChatPanel] Failed to send queued query:", error);
+        toast.error(t("hero.toasts.actionFailed"));
+        await refreshPendingMessages();
+      }
+    },
+    [
+      pendingMessages,
+      refreshPendingMessages,
+      refreshTasks,
+      sendPendingMessage,
+      session?.session_id,
+      t,
+      touchTask,
+      updateSession,
+    ],
+  );
+
+  const handleModifyPendingMessage = React.useCallback(
+    async (messageId: string) => {
+      try {
+        const draft = await modifyPendingMessage(messageId);
+        if (!draft) {
+          return;
+        }
+
+        const remainingMessages = pendingMessages.filter(
+          (message) => message.id !== messageId,
+        );
+        updateSession({
+          queued_query_count: remainingMessages.length,
+          next_queued_query_preview: getQueuedQueryPreview(
+            remainingMessages[0]?.content ?? "",
+            remainingMessages[0]?.attachments,
+            t,
+          ),
+        });
+        inputRef.current?.setDraftAndFocus({
+          value: draft.content,
+          attachments: draft.attachments,
+        });
+        await refreshTasks();
+      } catch (error) {
+        console.error("[ChatPanel] Failed to modify queued query:", error);
+        toast.error(t("hero.toasts.actionFailed"));
+        await refreshPendingMessages();
+      }
+    },
+    [
+      modifyPendingMessage,
+      pendingMessages,
+      refreshPendingMessages,
+      refreshTasks,
+      t,
+      updateSession,
+    ],
+  );
+
+  const handleDeletePendingMessage = React.useCallback(
+    async (messageId: string) => {
+      try {
+        await deletePendingMessage(messageId);
+        const remainingMessages = pendingMessages.filter(
+          (message) => message.id !== messageId,
+        );
+        updateSession({
+          queued_query_count: remainingMessages.length,
+          next_queued_query_preview: getQueuedQueryPreview(
+            remainingMessages[0]?.content ?? "",
+            remainingMessages[0]?.attachments,
+            t,
+          ),
+        });
+        await refreshTasks();
+      } catch (error) {
+        console.error("[ChatPanel] Failed to delete queued query:", error);
+        toast.error(t("hero.toasts.actionFailed"));
+        await refreshPendingMessages();
+      }
+    },
+    [
+      deletePendingMessage,
+      pendingMessages,
+      refreshPendingMessages,
+      refreshTasks,
+      t,
       updateSession,
     ],
   );
@@ -793,6 +937,10 @@ export function ChatPanel({
     !isLoadingHistory &&
     (displayMessages.length > 0 || showTypingIndicator) &&
     Boolean(session?.session_id);
+  const queuedMessageCount = Math.max(
+    session?.queued_query_count ?? 0,
+    pendingMessages.length,
+  );
 
   const handleExportConversationImage = React.useCallback(
     async (mode: ConversationImageExportMode) => {
@@ -1044,12 +1192,15 @@ export function ChatPanel({
       )}
 
       {/* Pending Messages Queue */}
-      {pendingMessages.length > 0 && (
+      {queuedMessageCount > 0 && (
         <PendingMessageList
           messages={pendingMessages}
-          onSend={sendPendingMessage}
-          onModify={modifyPendingMessage}
-          onDelete={deletePendingMessage}
+          queuedCount={session?.queued_query_count}
+          nextPreview={session?.next_queued_query_preview}
+          isLoading={isLoadingPendingMessages}
+          onSend={handleSendPendingMessage}
+          onModify={handleModifyPendingMessage}
+          onDelete={handleDeletePendingMessage}
           className={isRightPanelCollapsed ? "px-[20%]" : undefined}
         />
       )}

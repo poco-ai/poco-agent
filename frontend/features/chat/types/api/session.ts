@@ -12,6 +12,7 @@ export interface SessionUpdateRequest {
   status?: string | null;
   sdk_session_id?: string | null;
   title?: string | null;
+  is_pinned?: boolean | null;
   workspace_archive_url?: string | null;
   state_patch?: ApiStatePatch | null;
   workspace_files_prefix?: string | null;
@@ -29,6 +30,7 @@ export interface SessionCancelResponse {
   session_id: string;
   status: string;
   canceled_runs: number;
+  canceled_queued_queries: number;
   expired_user_input_requests: number;
   executor_cancelled: boolean;
 }
@@ -59,6 +61,8 @@ export interface SessionResponse {
   sdk_session_id: string | null;
   project_id?: string | null;
   title?: string | null;
+  is_pinned?: boolean;
+  pinned_at?: string | null;
   config_snapshot: Record<string, unknown> | null;
   workspace_archive_url: string | null;
   state_patch?: ApiStatePatch | null;
@@ -66,6 +70,8 @@ export interface SessionResponse {
   workspace_files_prefix?: string | null;
   workspace_manifest_key?: string | null;
   workspace_archive_key?: string | null;
+  queued_query_count?: number;
+  next_queued_query_preview?: string | null;
   status: string;
   created_at: string; // ISO datetime
   updated_at: string; // ISO datetime
@@ -76,6 +82,8 @@ export interface SessionStateResponse {
   status: string;
   state_patch?: ApiStatePatch | null;
   workspace_export_status?: string | null;
+  queued_query_count?: number;
+  next_queued_query_preview?: string | null;
   updated_at: string;
 }
 

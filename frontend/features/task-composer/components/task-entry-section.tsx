@@ -12,6 +12,8 @@ interface TaskEntrySectionProps {
   mode: ComposerMode;
   onModeChange: (mode: ComposerMode) => void;
   footer?: React.ReactNode;
+  afterHints?: React.ReactNode;
+  bottomPanel?: React.ReactNode;
   composerProps: Omit<
     React.ComponentProps<typeof TaskComposer>,
     "mode" | "onModeChange"
@@ -24,6 +26,8 @@ export function TaskEntrySection({
   mode,
   onModeChange,
   footer,
+  afterHints,
+  bottomPanel,
   composerProps,
   className,
 }: TaskEntrySectionProps) {
@@ -45,14 +49,19 @@ export function TaskEntrySection({
           {...composerProps}
           mode={mode}
           onModeChange={onModeChange}
+          bottomAddon={footer}
         />
-
-        {footer}
 
         {composerProps.value.length === 0 ? (
           <KeyboardHints className="mt-4" />
         ) : null}
+
+        {afterHints}
       </div>
+
+      {bottomPanel ? (
+        <div className="mt-auto w-full max-w-2xl pt-8 pb-6">{bottomPanel}</div>
+      ) : null}
     </div>
   );
 }

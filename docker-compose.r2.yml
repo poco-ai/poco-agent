@@ -100,6 +100,8 @@ services:
       MAX_UPLOAD_SIZE_MB: ${MAX_UPLOAD_SIZE_MB:-100}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_BASE_URL: ${OPENAI_BASE_URL:-}
+      OPENAI_AUDIO_TRANSCRIPTION_MODEL: ${OPENAI_AUDIO_TRANSCRIPTION_MODEL:-whisper-1}
+      MAX_AUDIO_UPLOAD_SIZE_MB: ${MAX_AUDIO_UPLOAD_SIZE_MB:-25}
       MEM0_ENABLED: ${MEM0_ENABLED:-false}
       MEM0_VECTOR_PROVIDER: ${MEM0_VECTOR_PROVIDER:-pgvector}
       MEM0_POSTGRES_HOST: ${MEM0_POSTGRES_HOST:-mem0-postgres}
@@ -161,6 +163,9 @@ services:
       EXECUTOR_LOCAL_BROWSER_IMAGE: ${EXECUTOR_LOCAL_BROWSER_IMAGE:-}
       # Default desktop viewport for browser-enabled runs (Playwright MCP).
       POCO_BROWSER_VIEWPORT_SIZE: ${POCO_BROWSER_VIEWPORT_SIZE:-1366x768}
+      # Default Playwright MCP output handling for browser-enabled runs.
+      PLAYWRIGHT_MCP_OUTPUT_MODE: ${PLAYWRIGHT_MCP_OUTPUT_MODE:-file}
+      PLAYWRIGHT_MCP_IMAGE_RESPONSES: ${PLAYWRIGHT_MCP_IMAGE_RESPONSES:-omit}
       # Timezone passed through to executor containers.
       EXECUTOR_TIMEZONE: ${EXECUTOR_TIMEZONE:-Asia/Shanghai}
       # Manager accesses executor containers through published host ports.

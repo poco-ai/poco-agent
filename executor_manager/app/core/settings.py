@@ -1,4 +1,5 @@
 from functools import lru_cache
+from typing import Literal
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -17,7 +18,6 @@ class Settings(BaseSettings):
 
     # External service URLs
     backend_url: str = Field(default="http://localhost:8000")
-    executor_url: str = Field(default="http://localhost:8080")
     callback_base_url: str = Field(default="http://localhost:8001")
 
     # Scheduler configuration
@@ -119,6 +119,12 @@ class Settings(BaseSettings):
     # Default desktop viewport used by the Playwright MCP inside executor containers.
     poco_browser_viewport_size: str = Field(
         default="1366x768", alias="POCO_BROWSER_VIEWPORT_SIZE"
+    )
+    playwright_mcp_output_mode: Literal["file", "stdout"] = Field(
+        default="file", alias="PLAYWRIGHT_MCP_OUTPUT_MODE"
+    )
+    playwright_mcp_image_responses: Literal["allow", "omit"] = Field(
+        default="omit", alias="PLAYWRIGHT_MCP_IMAGE_RESPONSES"
     )
     executor_timezone: str = Field(default="Asia/Shanghai", alias="EXECUTOR_TIMEZONE")
     # When the manager spawns executor containers via the Docker daemon, it maps the executor

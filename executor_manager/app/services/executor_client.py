@@ -14,7 +14,6 @@ class ExecutorClient:
 
     def __init__(self) -> None:
         self.settings = get_settings()
-        self.executor_url = self.settings.executor_url
 
     @staticmethod
     def _trace_headers() -> dict[str, str]:

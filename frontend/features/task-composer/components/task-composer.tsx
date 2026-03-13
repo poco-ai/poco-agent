@@ -19,6 +19,7 @@ import { useAppShell } from "@/components/shell/app-shell-context";
 import { useMemoryFeatureEnabled } from "@/hooks/use-memory-feature-enabled";
 import { useFileDropUpload } from "@/features/task-composer/hooks/use-file-drop-upload";
 import { useFileUpload } from "@/features/task-composer/hooks/use-file-upload";
+import { appendTranscribedText, useVoiceInput } from "@/features/voice";
 import type { RunScheduleMode } from "@/features/task-composer/model/run-schedule";
 import type {
   ComposerMode,
@@ -44,6 +45,7 @@ interface TaskComposerProps {
     git_branch: string | null;
     git_token_env_key: string | null;
   }) => void | Promise<void>;
+  bottomAddon?: React.ReactNode;
   onFocus?: () => void;
   onBlur?: () => void;
 }
@@ -72,6 +74,7 @@ export function TaskComposer({
   isSubmitting,
   allowProjectize = true,
   onRepoDefaultsSave,
+  bottomAddon,
   onFocus,
   onBlur,
 }: TaskComposerProps) {
@@ -80,6 +83,11 @@ export function TaskComposer({
   const memoryFeatureEnabled = useMemoryFeatureEnabled();
   const isComposing = React.useRef(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const latestValueRef = React.useRef(value);
+
+  React.useEffect(() => {
+    latestValueRef.current = value;
+  }, [value]);
 
   // ---- File upload (shared hook) ----
   const upload = useFileUpload({ t });
@@ -93,6 +101,24 @@ export function TaskComposer({
     value,
     onChange,
     textareaRef,
+  });
+  const voiceInput = useVoiceInput({
+    t,
+    language: lng,
+    onTranscription: React.useCallback(
+      (text: string) => {
+        const nextValue = appendTranscribedText(latestValueRef.current, text);
+        onChange(nextValue);
+
+        requestAnimationFrame(() => {
+          const textarea = textareaRef.current;
+          if (!textarea) return;
+          textarea.focus();
+          textarea.setSelectionRange(nextValue.length, nextValue.length);
+        });
+      },
+      [onChange, textareaRef],
+    ),
   });
 
   // ---- Browser toggle ----
@@ -212,7 +238,9 @@ export function TaskComposer({
   ]);
 
   const handleSubmit = React.useCallback(() => {
-    if (isSubmitting || upload.isUploading || !canSubmit) return;
+    if (isSubmitting || upload.isUploading || voiceInput.isBusy || !canSubmit) {
+      return;
+    }
 
     const payload: TaskSendOptions = {
       attachments: upload.attachments,
@@ -277,6 +305,7 @@ export function TaskComposer({
     scheduledTimezone,
     upload,
     value,
+    voiceInput.isBusy,
   ]);
 
   // ---- Render ----
@@ -422,13 +451,17 @@ export function TaskComposer({
               isSubmitting={isSubmitting}
               isUploading={upload.isUploading}
               canSubmit={canSubmit}
+              hasVoiceSupport={voiceInput.isSupported}
+              voiceStatus={voiceInput.status}
+              repoUrl={repoUrl}
+              repoDialogOpen={repoDialogOpen}
               browserEnabled={browserEnabled}
-              memoryEnabled={memoryEnabled}
-              showMemoryToggle={memoryFeatureEnabled}
               onOpenRepoDialog={() => setRepoDialogOpen(true)}
               onBrowserEnabledChange={setBrowserEnabled}
-              onMemoryEnabledChange={setMemoryEnabled}
               onOpenFileInput={() => fileInputRef.current?.click()}
+              onToggleVoiceInput={() => {
+                void voiceInput.toggleRecording();
+              }}
               onSubmit={handleSubmit}
               scheduledSummary={
                 mode === "scheduled" ? scheduledSummary : undefined
@@ -441,6 +474,10 @@ export function TaskComposer({
             />
           </div>
         </div>
+
+        {bottomAddon ? (
+          <div className="border-t border-border/60">{bottomAddon}</div>
+        ) : null}
       </div>
 
       {fileDrop.isDragActive ? (

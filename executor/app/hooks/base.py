@@ -5,9 +5,10 @@ from app.schemas.state import AgentCurrentState
 
 
 class ExecutionContext:
-    def __init__(self, session_id: str, cwd: str):
+    def __init__(self, session_id: str, cwd: str, *, run_id: str | None = None):
         self.session_id = session_id
         self.cwd = cwd
+        self.run_id = run_id
         self.current_state = AgentCurrentState()
 
 

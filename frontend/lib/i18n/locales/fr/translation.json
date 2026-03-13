@@ -56,6 +56,7 @@
     "voiceInput": "Saisie vocale",
     "startVoiceInput": "Démarrer la saisie vocale",
     "stopVoiceInput": "Arrêter la saisie vocale",
+    "transcribingVoiceInput": "Transcription vocale en cours",
     "send": "Envoyer",
     "placeholder": "Assignez une tâche ou posez une question",
     "inputPrompts": {
@@ -82,6 +83,14 @@
       "task": "Mode tâche",
       "plan": "Mode plan",
       "scheduled": "Mode planifié"
+    },
+    "skillCreatorCard": {
+      "title": "Créer une compétence",
+      "description": "Utilisez des compétences personnalisées pour automatiser les flux de travail répétitifs.",
+      "prefillPrompt": "Aide-moi à utiliser /skill-creator pour créer une compétence. Commence par me demander ce que la compétence doit faire."
+    },
+    "bottomCards": {
+      "selectCard": "Sélectionner la carte {{index}}"
     },
     "repo": {
       "toggle": "Paramètres du dépôt",
@@ -154,7 +163,8 @@
       "fileTooLarge": "Fichier trop volumineux, max 100 Mo supporté",
       "duplicateFileName": "Une pièce jointe nommée {{name}} existe déjà. Veuillez la supprimer ou la renommer.",
       "voiceInputNotSupported": "La saisie vocale n'est pas prise en charge dans ce navigateur",
-      "voiceInputFailed": "Impossible de démarrer la saisie vocale, veuillez réessayer"
+      "voiceInputFailed": "La saisie vocale a échoué, veuillez réessayer",
+      "voiceInputPermissionDenied": "Accès au microphone refusé, veuillez l'autoriser puis réessayer"
     },
     "mcpSelector": {
       "title": "Sélectionner les serveurs MCP",
@@ -162,6 +172,7 @@
       "loading": "Chargement...",
       "noServers": "Aucun serveur MCP installé. Veuillez d'abord installer des serveurs depuis la page MCP.",
       "selected": "{{count}}/{{total}} serveurs sélectionnés",
+      "toggleServer": "Activer ou désactiver {{name}}",
       "cancel": "Annuler",
       "confirm": "Confirmer"
     },
@@ -1203,7 +1214,8 @@
     "namePlaceholder": "Entrez le nom de la tâche",
     "toasts": {
       "renamed": "Tâche renommée",
-      "renameFailed": "Échec du renommage"
+      "renameFailed": "Échec du renommage",
+      "pinFailed": "Échec de la mise à jour de l'état d'épinglage"
     }
   },
   "project": {
@@ -1501,6 +1513,9 @@
   },
   "mcpSettings": {
     "configureServer": "Configurer le serveur MCP",
+    "descriptionHint": "Aide à identifier ce MCP dans les listes et lors de la configuration des tâches. N'affecte pas la connexion réelle.",
+    "descriptionPlaceholder": "Ex. rechercher des issues et pull requests GitHub",
+    "descriptionRecommended": "Description (recommandée)",
     "fullJsonConfig": "Configuration JSON complète",
     "mcpName": "Nom MCP",
     "jsonConfig": "Configuration JSON complète",

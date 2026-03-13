@@ -58,6 +58,7 @@
     "voiceInput": "Voice input",
     "startVoiceInput": "Start voice input",
     "stopVoiceInput": "Stop voice input",
+    "transcribingVoiceInput": "Transcribing voice input",
     "send": "Send",
     "placeholder": "Assign a task or ask any question",
     "inputPrompts": {
@@ -84,6 +85,14 @@
       "task": "Task Mode",
       "plan": "Plan Mode",
       "scheduled": "Scheduled Mode"
+    },
+    "skillCreatorCard": {
+      "title": "Create a skill",
+      "description": "Use custom skills to automate repetitive workflows.",
+      "prefillPrompt": "Help me use /skill-creator to create a skill. First, ask me what the skill should do."
+    },
+    "bottomCards": {
+      "selectCard": "Select card {{index}}"
     },
     "repo": {
       "toggle": "Repository settings",
@@ -156,7 +165,8 @@
       "fileTooLarge": "File too large, max 100MB supported",
       "duplicateFileName": "An attachment named {{name}} already exists. Please remove or rename it.",
       "voiceInputNotSupported": "Voice input is not supported in this browser",
-      "voiceInputFailed": "Failed to start voice input, please try again"
+      "voiceInputFailed": "Voice input failed, please try again",
+      "voiceInputPermissionDenied": "Microphone permission denied, please enable it and try again"
     },
     "mcpSelector": {
       "title": "Select MCP Servers",
@@ -164,6 +174,7 @@
       "loading": "Loading...",
       "noServers": "No installed MCP servers. Please install servers from the MCP page first.",
       "selected": "{{count}}/{{total}} servers selected",
+      "toggleServer": "Toggle {{name}}",
       "cancel": "Cancel",
       "confirm": "Confirm"
     },
@@ -1306,7 +1317,8 @@
     "namePlaceholder": "Enter task name",
     "toasts": {
       "renamed": "Task renamed",
-      "renameFailed": "Failed to rename task"
+      "renameFailed": "Failed to rename task",
+      "pinFailed": "Failed to update pin status"
     }
   },
   "project": {
@@ -1614,6 +1626,9 @@
   },
   "mcpSettings": {
     "configureServer": "Configure MCP Server",
+    "descriptionHint": "Helps users identify this MCP in lists and task setup. Does not affect the actual connection.",
+    "descriptionPlaceholder": "e.g. Search GitHub issues and pull requests",
+    "descriptionRecommended": "Description (recommended)",
     "fullJsonConfig": "Complete JSON configuration",
     "mcpName": "MCP Name",
     "jsonConfig": "Complete JSON configuration",
