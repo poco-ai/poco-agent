@@ -1,7 +1,7 @@
 """add description to skills table
 
 Revision ID: ac35ccd45c9d
-Revises: 74e90ae3d7a1
+Revises: 98b9968cc9be
 Create Date: 2026-03-12 13:30:51.323371
 
 """
