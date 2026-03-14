@@ -77,6 +77,7 @@ export const API_ENDPOINTS = {
 
   // Models
   models: "/models",
+  modelProvider: (providerId: string) => `/models/providers/${providerId}`,
 
   // Runs
   runsBySession: (sessionId: string) => `/runs/session/${sessionId}`,

@@ -1,5 +1,6 @@
 import type { AddTaskOptions } from "@/features/projects/types";
 import type { InputFile } from "@/features/chat/types/api/session";
+import type { ModelSelection } from "@/features/chat/lib/model-catalog";
 import type { RunScheduleMode } from "@/features/task-composer/model/run-schedule";
 
 export type ComposerMode = "plan" | "task" | "scheduled";
@@ -34,7 +35,7 @@ export interface TaskSubmitInput {
   prompt: string;
   mode: ComposerMode;
   options?: TaskSendOptions;
-  selectedModel?: string | null;
+  selectedModel?: ModelSelection | null;
   projectId?: string;
 }
 

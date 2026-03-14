@@ -56,6 +56,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useLanguage } from "@/hooks/use-language";
 import { useAppShell } from "@/components/shell/app-shell-context";
+import { ModelSelector } from "@/features/chat/components/chat/model-selector";
+import { useModelCatalog } from "@/features/chat/hooks/use-model-catalog";
+import {
+  normalizeModelSelection,
+  type ModelSelection,
+} from "@/features/chat/lib/model-catalog";
 
 interface ChatPanelProps {
   session: ExecutionSession | null;
@@ -158,6 +164,13 @@ export function ChatPanel({
   const { refreshTasks, touchTask } = useTaskHistoryContext();
   const { projects, pinnedTaskIds, toggleTaskPin, moveTask, removeTask } =
     useAppShell();
+  const {
+    modelConfig,
+    modelOptions,
+    isLoading: isLoadingModelCatalog,
+  } = useModelCatalog({
+    enabled: Boolean(session?.session_id),
+  });
   const [isCancelling, setIsCancelling] = React.useState(false);
   const [isExportingImage, setIsExportingImage] = React.useState(false);
   const [isRenameDialogOpen, setIsRenameDialogOpen] = React.useState(false);
@@ -170,6 +183,8 @@ export function ChatPanel({
   const quoteButtonRef = React.useRef<HTMLButtonElement>(null);
   const [quoteSelection, setQuoteSelection] =
     React.useState<QuoteSelectionState | null>(null);
+  const [draftModelSelection, setDraftModelSelection] =
+    React.useState<ModelSelection | null>(null);
 
   // Message management hook
   const {
@@ -182,6 +197,7 @@ export function ChatPanel({
     beginOptimisticEditMessage,
     commitOptimisticHistoryMutation,
     rollbackOptimisticHistoryMutation,
+    reloadMessagesSnapshot,
     runUsageByUserMessageId,
   } = useChatMessages({ session });
 
@@ -199,6 +215,7 @@ export function ChatPanel({
   // Determine if session is running/active
   const isSessionActive =
     session?.status === "running" || session?.status === "pending";
+  const defaultModelId = (modelConfig?.default_model || "").trim();
 
   const {
     requests: userInputRequests,
@@ -232,11 +249,102 @@ export function ChatPanel({
   React.useEffect(() => {
     setStickyUserInput(null);
     setQuoteSelection(null);
+    setDraftModelSelection(null);
     if (stickyTimerRef.current) {
       window.clearTimeout(stickyTimerRef.current);
       stickyTimerRef.current = null;
     }
   }, [session?.session_id]);
+
+  const defaultSelection = React.useMemo(() => {
+    const defaultOption = modelOptions.find((option) => option.isDefault);
+    return defaultOption
+      ? {
+          modelId: defaultOption.modelId,
+          providerId: defaultOption.providerId,
+        }
+      : null;
+  }, [modelOptions]);
+
+  const persistedModelSelection = React.useMemo(() => {
+    const snapshotModelId =
+      (session?.config_snapshot?.model || defaultModelId || "").trim() || null;
+    const inferredProviderId =
+      (session?.config_snapshot?.model_provider_id || "").trim() ||
+      modelOptions.find((option) => option.modelId === snapshotModelId)
+        ?.providerId ||
+      defaultSelection?.providerId ||
+      null;
+    return normalizeModelSelection({
+      modelId: snapshotModelId,
+      providerId: inferredProviderId,
+    });
+  }, [
+    defaultModelId,
+    defaultSelection?.providerId,
+    modelOptions,
+    session?.config_snapshot?.model,
+    session?.config_snapshot?.model_provider_id,
+  ]);
+
+  const selectedModelSelection = React.useMemo(
+    () =>
+      normalizeModelSelection(draftModelSelection ?? persistedModelSelection),
+    [draftModelSelection, persistedModelSelection],
+  );
+  const selectedModelId = selectedModelSelection.modelId;
+  const selectedModelLabel = React.useMemo(() => {
+    if (!selectedModelSelection.modelId) {
+      return null;
+    }
+    return (
+      modelOptions.find(
+        (option) =>
+          option.modelId === selectedModelSelection.modelId &&
+          (selectedModelSelection.providerId
+            ? option.providerId === selectedModelSelection.providerId
+            : true),
+      )?.displayName || selectedModelSelection.modelId
+    );
+  }, [
+    modelOptions,
+    selectedModelSelection.modelId,
+    selectedModelSelection.providerId,
+  ]);
+
+  React.useEffect(() => {
+    if (!draftModelSelection?.modelId) {
+      return;
+    }
+    if (
+      draftModelSelection.modelId === persistedModelSelection.modelId &&
+      (draftModelSelection.providerId || "") ===
+        (persistedModelSelection.providerId || "")
+    ) {
+      setDraftModelSelection(null);
+    }
+  }, [draftModelSelection, persistedModelSelection]);
+
+  const handleSelectModel = React.useCallback(
+    (selection: ModelSelection | null) => {
+      const nextSelection = normalizeModelSelection(
+        selection ?? defaultSelection,
+      );
+      if (!nextSelection.modelId || !defaultSelection?.modelId) {
+        return;
+      }
+      if (
+        nextSelection.modelId === persistedModelSelection.modelId &&
+        (nextSelection.providerId || "") ===
+          (persistedModelSelection.providerId || "")
+      ) {
+        setDraftModelSelection(null);
+        return;
+      }
+      setDraftModelSelection(nextSelection);
+    },
+    [defaultSelection, persistedModelSelection],
+  );
 
   const updateQuoteSelection = React.useCallback(() => {
     const container = conversationRef.current;
@@ -492,7 +600,10 @@ export function ChatPanel({
             sessionId: session.session_id,
             userMessageId,
             content: trimmedContent,
+            model: selectedModelSelection.modelId ?? undefined,
+            model_provider_id: selectedModelSelection.providerId ?? undefined,
           });
+          await reloadMessagesSnapshot();
           commitOptimisticHistoryMutation(mutationToken);
           void refreshTasks();
         } catch (error) {
@@ -510,7 +621,9 @@ export function ChatPanel({
       beginOptimisticEditMessage,
       commitOptimisticHistoryMutation,
       refreshTasks,
+      reloadMessagesSnapshot,
       rollbackOptimisticHistoryMutation,
+      selectedModelSelection,
       session?.session_id,
       session?.status,
       t,
@@ -560,7 +673,11 @@ export function ChatPanel({
         updateSession({ status: "pending" });
       }
 
-      const result = await sendMessage(content, attachments);
+      const result = await sendMessage(
+        content,
+        attachments,
+        selectedModelSelection,
+      );
 
       if (!result) {
         if (shouldMarkSessionPending) {
@@ -599,6 +716,7 @@ export function ChatPanel({
       refreshPendingMessages,
       refreshTasks,
       sendMessage,
+      selectedModelSelection,
       session?.next_queued_query_preview,
       session?.session_id,
       session?.status,
@@ -770,7 +888,10 @@ export function ChatPanel({
             sessionId: session.session_id,
             userMessageId: userMessageIdNumber,
             assistantMessageId: assistantMessageIdNumber,
+            model: selectedModelSelection.modelId ?? undefined,
+            model_provider_id: selectedModelSelection.providerId ?? undefined,
           });
+          await reloadMessagesSnapshot();
           commitOptimisticHistoryMutation(mutationToken);
           void refreshTasks();
         } catch (error) {
@@ -786,7 +907,9 @@ export function ChatPanel({
       beginOptimisticRegenerate,
       commitOptimisticHistoryMutation,
       refreshTasks,
+      reloadMessagesSnapshot,
       rollbackOptimisticHistoryMutation,
+      selectedModelSelection,
       session?.session_id,
       session?.status,
       t,
@@ -926,6 +1049,17 @@ export function ChatPanel({
           action={
             session?.session_id || onToggleRightPanel ? (
               <div className="flex items-center gap-1">
+                {selectedModelId ? (
+                  <ModelSelector
+                    options={modelOptions}
+                    selection={selectedModelSelection}
+                    defaultSelection={defaultSelection}
+                    fallbackLabel={selectedModelLabel || selectedModelId}
+                    onChange={handleSelectModel}
+                    disabled={isLoadingModelCatalog}
+                    triggerClassName="h-8 max-w-[220px] px-2"
+                  />
+                ) : null}
                 {session?.session_id ? (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>

@@ -1297,6 +1297,22 @@
     "anthropicBaseUrl": "Anthropic Base URL",
     "anthropicBaseUrlHint": "Переопределить стандартный endpoint Anthropic.",
     "anthropicBaseUrlPlaceholder": "https://api.anthropic.com",
+    "providerConfigDescription": "Управляйте учетными данными провайдера и списком моделей, доступных в селекторе.",
+    "providerListEmpty": "Пока нет доступных провайдеров моделей.",
+    "providerStatusNone": "Не настроено",
+    "providerStatusSystem": "Предустановленный сервис",
+    "providerStatusUser": "Пользовательский",
+    "providerModels": "Применяется к: {{models}}",
+    "providerApiKeyLabel": "API-ключ {{provider}}",
+    "providerApiKeyHint": "Оставьте поле пустым, чтобы сохранить текущий пользовательский ключ без изменений.",
+    "providerApiKeyPlaceholder": "Введите API-ключ {{provider}}",
+    "providerBaseUrlLabel": "Пользовательский Base URL",
+    "providerBaseUrlHint": "Оставьте поле пустым, чтобы использовать API endpoint по умолчанию.",
+    "providerBaseUrlRequired": "При включении пользовательского endpoint необходимо указать Base URL.",
+    "providerSaveSuccess": "Настройки провайдера сохранены",
+    "providerSaveError": "Не удалось сохранить настройки провайдера",
+    "providerClearSuccess": "Пользовательские настройки провайдера удалены",
+    "providerClearCustom": "Удалить пользовательские настройки",
     "claudeCode": "Claude Code",
     "language": "Язык",
     "english": "English",
@@ -1379,7 +1395,16 @@
           "hint": "Open the settings dialog."
         }
       }
-    }
+    },
+    "providerDiscoverError": "Не удалось получить модели провайдера",
+    "providerModelsPlaceholder": "Пользовательские модели пока не добавлены",
+    "providerModelsSearchPlaceholder": "Введите имя модели и нажмите Enter",
+    "providerModelsAdd": "Добавить модель",
+    "providerModelsDiscovering": "Загрузка моделей...",
+    "providerModelsManualHint": "Для этого провайдера автоматическое обнаружение недоступно. Введите имена моделей вручную.",
+    "providerModelsEmpty": "Модели не найдены",
+    "providerModelsUseCustom": "Использовать пользовательскую модель: {{model}}",
+    "providerFieldAnnotation": "Оставьте API Key пустым, чтобы сохранить текущий ключ. Оставьте Base URL пустым, чтобы использовать endpoint по умолчанию. Имена моделей вводятся вручную, затем нажмите Enter или кнопку добавления."
   },
   "validation": {
     "projectNameRequired": "Пожалуйста, введите имя проекта",
@@ -1600,7 +1625,17 @@
     },
     "gpt4Turbo": {
       "description": "Быстрый и эффективный"
-    }
+    },
+    "customBadge": "Пользовательский",
+    "customModelAction": "Пользовательская модель",
+    "customModelTitle": "Использовать пользовательскую модель",
+    "customModelDescription": "Добавьте любое имя модели, которое поддерживает настроенный провайдер.",
+    "customModelPlaceholder": "например, gpt-5 или claude-sonnet-4-5",
+    "customModelHint": "Поддерживаемые префиксы: claude-, gpt, o1/o3/o4, glm-, MiniMax-, deepseek-.",
+    "customModelRequired": "Введите имя модели.",
+    "customModelUnsupported": "Это имя модели не соответствует ни одному поддерживаемому провайдеру.",
+    "customModelProviderUnavailable": "Перед использованием этой модели сначала настройте учетные данные провайдера.",
+    "customModelSaved": "Пользовательская модель добавлена"
   },
   "creditsPopover": {
     "proPlan": "Pro план",

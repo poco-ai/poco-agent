@@ -13,7 +13,6 @@ import {
   submitTask,
   useAutosizeTextarea,
 } from "@/features/task-composer";
-import type { ModelConfigResponse } from "@/features/chat/types";
 
 import { HomeHeader } from "./home-header";
 import { HomeBottomCardDeck } from "./home-bottom-card-deck";
@@ -21,9 +20,23 @@ import { ConnectorsBar } from "@/features/connectors";
 
 import { useAppShell } from "@/components/shell/app-shell-context";
 import { toast } from "sonner";
-import { modelConfigService } from "@/features/home/api/model-config-api";
+import { useModelCatalog } from "@/features/chat/hooks/use-model-catalog";
+import {
+  normalizeModelSelection,
+  type ModelSelection,
+} from "@/features/chat/lib/model-catalog";
 
 const MODEL_STORAGE_KEY = "poco_selected_model";
+
+function isSameSelection(
+  left: ModelSelection | null | undefined,
+  right: ModelSelection | null | undefined,
+): boolean {
+  return (
+    (left?.modelId || "") === (right?.modelId || "") &&
+    (left?.providerId || "") === (right?.providerId || "")
+  );
+}
 
 export function HomePageClient() {
   const { t } = useT("translation");
@@ -35,67 +48,80 @@ export function HomePageClient() {
   const [mode, setMode] = React.useState<ComposerMode>("task");
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
 
-  const [modelConfig, setModelConfig] =
-    React.useState<ModelConfigResponse | null>(null);
-  const [selectedModel, setSelectedModel] = React.useState<string | null>(null);
+  const [selectedModel, setSelectedModel] =
+    React.useState<ModelSelection | null>(null);
+  const { modelConfig, modelOptions } = useModelCatalog();
+  const selectableOptionKeys = React.useMemo(
+    () =>
+      new Set(
+        modelOptions
+          .filter((option) => option.isAvailable && !option.isDefault)
+          .map((option) => option.optionKey),
+      ),
+    [modelOptions],
+  );
 
   useAutosizeTextarea(textareaRef, inputValue);
-
-  React.useEffect(() => {
-    let active = true;
-    modelConfigService
-      .get()
-      .then((cfg) => {
-        if (!active) return;
-        setModelConfig(cfg);
-      })
-      .catch((error) => {
-        console.error("[Home] Failed to load model config:", error);
-      });
-    return () => {
-      active = false;
-    };
-  }, []);
 
   React.useEffect(() => {
     const defaultModel = (modelConfig?.default_model || "").trim();
     if (!defaultModel) return;
 
-    let saved: string | null = null;
+    let saved: ModelSelection | null = null;
     try {
-      saved = localStorage.getItem(MODEL_STORAGE_KEY);
+      const raw = localStorage.getItem(MODEL_STORAGE_KEY);
+      saved = raw ? normalizeModelSelection(JSON.parse(raw)) : null;
     } catch {
       saved = null;
     }
 
-    const cleaned = (saved || "").trim();
-    if (!cleaned || cleaned === defaultModel) {
-      setSelectedModel(null);
+    if (!saved?.modelId || saved.modelId === defaultModel) {
+      setSelectedModel((prev) => (prev ? null : prev));
       return;
     }
 
-    const allowed = new Set(
-      (modelConfig?.model_list || [])
-        .map((m) => (m || "").trim())
-        .filter(Boolean),
-    );
-    setSelectedModel(allowed.has(cleaned) ? cleaned : null);
-  }, [modelConfig]);
-
-  const handleSelectModel = React.useCallback((model: string | null) => {
-    const cleaned = (model || "").trim();
-    const next = cleaned ? cleaned : null;
-    setSelectedModel(next);
-    try {
-      if (!next) {
+    const resolvedProviderId =
+      saved.providerId ||
+      modelOptions.find((option) => option.modelId === saved.modelId)
+        ?.providerId ||
+      "";
+    const normalizedSaved = {
+      modelId: saved.modelId,
+      providerId: resolvedProviderId || null,
+    };
+    const selectionKey = `${resolvedProviderId}:${saved.modelId}`;
+    if (!selectableOptionKeys.has(selectionKey)) {
+      try {
         localStorage.removeItem(MODEL_STORAGE_KEY);
-      } else {
-        localStorage.setItem(MODEL_STORAGE_KEY, next);
+      } catch {
+        // Ignore storage failures (e.g., privacy mode).
       }
-    } catch {
-      // Ignore storage failures (e.g., privacy mode).
+      setSelectedModel((prev) => (prev ? null : prev));
+      return;
     }
-  }, []);
+
+    setSelectedModel((prev) =>
+      isSameSelection(prev, normalizedSaved) ? prev : normalizedSaved,
+    );
+  }, [modelConfig, modelOptions, selectableOptionKeys]);
+
+  const handleSelectModel = React.useCallback(
+    (selection: ModelSelection | null) => {
+      const next = normalizeModelSelection(selection);
+      const hasSelection = Boolean(next.modelId);
+      setSelectedModel(hasSelection ? next : null);
+      try {
+        if (!hasSelection) {
+          localStorage.removeItem(MODEL_STORAGE_KEY);
+        } else {
+          localStorage.setItem(MODEL_STORAGE_KEY, JSON.stringify(next));
+        }
+      } catch {
+        // Ignore storage failures (e.g., privacy mode).
+      }
+    },
+    [],
+  );
 
   const handleFillSkillCreatorPrompt = React.useCallback(() => {
     const prompt = t("hero.skillCreatorCard.prefillPrompt");
@@ -241,6 +267,7 @@ export function HomePageClient() {
       <HomeHeader
         onOpenSettings={openSettings}
         modelConfig={modelConfig}
+        modelOptions={modelOptions}
         selectedModel={selectedModel}
         onSelectModel={handleSelectModel}
       />

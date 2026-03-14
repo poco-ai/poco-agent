@@ -275,6 +275,8 @@ async def regenerate_message(
         user_id=user_id,
         user_message_id=request.user_message_id,
         assistant_message_id=request.assistant_message_id,
+        model=request.model,
+        model_provider_id=request.model_provider_id,
     )
     return Response.success(data=result, message="Message regenerated successfully")
 
@@ -295,6 +297,8 @@ async def edit_message_and_regenerate(
         user_id=user_id,
         user_message_id=request.user_message_id,
         content=request.content,
+        model=request.model,
+        model_provider_id=request.model_provider_id,
     )
     return Response.success(data=result, message="Message edited and regenerated")
 

@@ -467,6 +467,8 @@ class SessionService:
         user_id: str,
         user_message_id: int,
         assistant_message_id: int,
+        model: str | None = None,
+        model_provider_id: str | None = None,
     ) -> TaskEnqueueResponse:
         """Regenerate a prior turn by trimming subsequent history in-place."""
         db_session = self.get_session(db, session_id)
@@ -521,6 +523,11 @@ class SessionService:
             input_files = latest_target_run.config_snapshot.get("input_files")
             if isinstance(input_files, list):
                 run_config_snapshot["input_files"] = self._deepcopy_json(input_files)
+        # Override model with current selection if provided
+        if model is not None:
+            run_config_snapshot["model"] = model
+        if model_provider_id is not None:
+            run_config_snapshot["model_provider_id"] = model_provider_id
 
         runs_to_delete = (
             db.query(AgentRun)
@@ -585,6 +592,8 @@ class SessionService:
         user_id: str,
         user_message_id: int,
         content: str,
+        model: str | None = None,
+        model_provider_id: str | None = None,
     ) -> TaskEnqueueResponse:
         """Replace a user message then regenerate by deleting all later history."""
         db_session = self.get_session(db, session_id)
@@ -630,6 +639,11 @@ class SessionService:
             input_files = latest_target_run.config_snapshot.get("input_files")
             if isinstance(input_files, list):
                 run_config_snapshot["input_files"] = self._deepcopy_json(input_files)
+        # Override model with current selection if provided
+        if model is not None:
+            run_config_snapshot["model"] = model
+        if model_provider_id is not None:
+            run_config_snapshot["model_provider_id"] = model_provider_id
 
         user_message.content = {
             "_type": "UserMessage",

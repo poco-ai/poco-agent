@@ -5,8 +5,12 @@ import * as React from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ModelSelector } from "./model-selector";
 import { UsageTooltip } from "./usage-tooltip";
-import type { ModelInfo, UsageStats } from "@/types";
+import type { UsageStats } from "@/types";
 import { PageHeaderShell } from "@/components/shared/page-header-shell";
+import type {
+  ModelCatalogOption,
+  ModelSelection,
+} from "@/features/chat/lib/model-catalog";
 
 // Default usage stats for now
 const DEFAULT_USAGE_STATS: UsageStats = {
@@ -19,19 +23,33 @@ const DEFAULT_USAGE_STATS: UsageStats = {
 };
 
 interface ChatHeaderProps {
-  model: ModelInfo;
-  onModelChange: (model: ModelInfo) => void;
+  modelOptions: ModelCatalogOption[];
+  selectedModel: ModelSelection | null;
+  defaultSelection?: ModelSelection | null;
+  onModelChange: (selection: ModelSelection | null) => void;
   title?: string;
 }
 
-export function ChatHeader({ model, onModelChange, title }: ChatHeaderProps) {
+export function ChatHeader({
+  modelOptions,
+  selectedModel,
+  defaultSelection,
+  onModelChange,
+  title,
+}: ChatHeaderProps) {
   const usageStats = React.useMemo(() => DEFAULT_USAGE_STATS, []);
 
   return (
     <PageHeaderShell
       left={
         <div className="flex items-center gap-3 sm:gap-4">
-          <ModelSelector model={model} onChange={onModelChange} />
+          <ModelSelector
+            options={modelOptions}
+            selection={selectedModel}
+            defaultSelection={defaultSelection}
+            fallbackLabel={selectedModel?.modelId || undefined}
+            onChange={onModelChange}
+          />
           {title ? (
             <>
               <div className="hidden h-4 w-px bg-border sm:block" />

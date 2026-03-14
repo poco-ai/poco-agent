@@ -24,8 +24,8 @@ repos:
         files: ^frontend/.*\.[jt]sx?$
         types: [file]
         additional_dependencies:
-          - eslint
-          - eslint-config-next
+          - eslint-config-next@16.1.1
+          - eslint-config-prettier@10.1.8
 
   - repo: https://github.com/rbubley/mirrors-prettier
     rev: v3.7.4

@@ -151,6 +151,11 @@ export function SkillsGrid({
                           : t("library.skillsManager.scope.user")}
                       </Badge>
                     </div>
+                    {skill.description ? (
+                      <p className="text-xs text-muted-foreground truncate mt-0.5">
+                        {skill.description}
+                      </p>
+                    ) : null}
                   </div>
 
                   {isInstalled && install ? (

@@ -155,8 +155,12 @@ services:
 
       # Image used by the manager to spawn executor containers via docker.sock.
       EXECUTOR_IMAGE: ${EXECUTOR_IMAGE:-ghcr.io/poco-ai/poco-executor:lite}
+      # Prefer local images first when enabled; fall back to the remote image settings below.
+      EXECUTOR_PREFER_LOCAL_IMAGE: ${EXECUTOR_PREFER_LOCAL_IMAGE:-false}
+      EXECUTOR_LOCAL_IMAGE: ${EXECUTOR_LOCAL_IMAGE:-}
       # Optional: executor image with desktop/browser stack (used when browser_enabled=true).
       EXECUTOR_BROWSER_IMAGE: ${EXECUTOR_BROWSER_IMAGE:-ghcr.io/poco-ai/poco-executor:full}
+      EXECUTOR_LOCAL_BROWSER_IMAGE: ${EXECUTOR_LOCAL_BROWSER_IMAGE:-}
       # Default desktop viewport for browser-enabled runs (Playwright MCP).
       POCO_BROWSER_VIEWPORT_SIZE: ${POCO_BROWSER_VIEWPORT_SIZE:-1366x768}
       # Default Playwright MCP output handling for browser-enabled runs.

@@ -247,17 +247,71 @@ class ContainerPool:
 
     def _resolve_executor_image(self, *, browser_enabled: bool) -> str:
         """Pick executor image based on browser requirement."""
+        fallback_image = self._resolve_fallback_executor_image(
+            browser_enabled=browser_enabled
+        )
+        if not self.settings.executor_prefer_local_image:
+            return fallback_image
+
+        local_candidate = self._resolve_local_executor_image(
+            browser_enabled=browser_enabled
+        )
+        if not local_candidate:
+            return fallback_image
+
+        if self._local_image_exists(local_candidate):
+            logger.info(
+                "executor_local_image_selected",
+                extra={
+                    "browser_enabled": bool(browser_enabled),
+                    "image": local_candidate,
+                    "fallback_image": fallback_image,
+                },
+            )
+            return local_candidate
+
+        logger.info(
+            "executor_local_image_missing_falling_back",
+            extra={
+                "browser_enabled": bool(browser_enabled),
+                "local_image": local_candidate,
+                "fallback_image": fallback_image,
+            },
+        )
+        return fallback_image
+
+    def _resolve_fallback_executor_image(self, *, browser_enabled: bool) -> str:
         if not browser_enabled:
             return self.settings.executor_image
+
         candidate = (self.settings.executor_browser_image or "").strip()
         if candidate:
             return candidate
+
         # Backward-compatible fallback: may not have a desktop stack, but keeps the system running.
         logger.warning(
             "executor_browser_image_not_configured_falling_back",
             extra={"executor_image": self.settings.executor_image},
         )
         return self.settings.executor_image
+
+    def _resolve_local_executor_image(self, *, browser_enabled: bool) -> str:
+        if browser_enabled:
+            return (self.settings.executor_local_browser_image or "").strip()
+        return (self.settings.executor_local_image or "").strip()
+
+    def _local_image_exists(self, image: str) -> bool:
+        try:
+            self.docker_client.images.get(image)
+            return True
+        except docker.errors.ImageNotFound:
+            return False
+        except docker.errors.DockerException as exc:
+            logger.warning(
+                "executor_local_image_check_failed",
+                extra={"image": image, "error": str(exc)},
+            )
+            return False
 
     @staticmethod
     def _extract_host_port(container: "Container") -> str | None:

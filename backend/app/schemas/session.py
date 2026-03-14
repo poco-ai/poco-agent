@@ -15,6 +15,9 @@ class TaskConfig(BaseModel):
     git_branch: str = "main"
     git_token_env_key: str | None = None
     model: str | None = None
+    # Optional explicit provider binding for the selected model.
+    model_provider_id: str | None = None
+    # Built-in browser capability toggle (Playwright MCP is injected internally by the executor).
     browser_enabled: bool = False
     memory_enabled: bool = False
     mcp_config: dict[str, bool] = Field(default_factory=dict)
@@ -112,6 +115,8 @@ class SessionRegenerateRequest(BaseModel):
 
     user_message_id: int = Field(gt=0)
     assistant_message_id: int = Field(gt=0)
+    model: str | None = None
+    model_provider_id: str | None = None
 
 
 class SessionEditMessageRequest(BaseModel):
@@ -119,6 +124,8 @@ class SessionEditMessageRequest(BaseModel):
 
     user_message_id: int = Field(gt=0)
     content: str = Field(min_length=1)
+    model: str | None = None
+    model_provider_id: str | None = None
 
 
 class SessionBranchResponse(BaseModel):

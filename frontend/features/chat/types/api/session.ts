@@ -42,11 +42,15 @@ export interface SessionBranchRequest {
 export interface SessionRegenerateRequest {
   user_message_id: number;
   assistant_message_id: number;
+  model?: string | null;
+  model_provider_id?: string | null;
 }
 
 export interface SessionEditMessageRequest {
   user_message_id: number;
   content: string;
+  model?: string | null;
+  model_provider_id?: string | null;
 }
 
 export interface SessionBranchResponse {
@@ -159,6 +163,8 @@ export interface TaskConfig {
   git_token_env_key?: string | null;
   /** Optional explicit model override for this session/run. */
   model?: string | null;
+  /** Optional explicit provider binding for the selected model. */
+  model_provider_id?: string | null;
   /** Built-in browser capability toggle (Playwright MCP is injected internally). */
   browser_enabled?: boolean;
   /** Built-in memory capability toggle (Memory MCP is injected internally). */

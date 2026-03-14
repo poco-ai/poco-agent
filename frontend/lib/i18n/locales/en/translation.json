@@ -1414,6 +1414,22 @@
     "anthropicBaseUrl": "Anthropic Base URL",
     "anthropicBaseUrlHint": "Override the default Anthropic API endpoint.",
     "anthropicBaseUrlPlaceholder": "https://api.anthropic.com",
+    "providerConfigDescription": "Manage provider credentials and the model list exposed to the selector.",
+    "providerListEmpty": "No model providers available yet.",
+    "providerStatusNone": "Unconfigured",
+    "providerStatusSystem": "Preset Service",
+    "providerStatusUser": "Custom",
+    "providerModels": "Applies to: {{models}}",
+    "providerApiKeyLabel": "{{provider}} API Key",
+    "providerApiKeyHint": "Leave this blank to keep the existing custom key unchanged.",
+    "providerApiKeyPlaceholder": "Enter your {{provider}} API key",
+    "providerBaseUrlLabel": "Custom Base URL",
+    "providerBaseUrlHint": "Leave this blank to use the default API endpoint.",
+    "providerBaseUrlRequired": "Base URL is required when custom endpoint is enabled.",
+    "providerSaveSuccess": "Provider settings saved",
+    "providerSaveError": "Failed to save provider settings",
+    "providerClearSuccess": "Custom provider settings removed",
+    "providerClearCustom": "Remove custom",
     "claudeCode": "Claude Code",
     "language": "Language",
     "english": "English",
@@ -1496,7 +1512,16 @@
           "hint": "Open the settings dialog."
         }
       }
-    }
+    },
+    "providerDiscoverError": "Failed to discover provider models",
+    "providerModelsPlaceholder": "No custom models added yet",
+    "providerModelsSearchPlaceholder": "Enter a model name, then press Enter",
+    "providerModelsAdd": "Add model",
+    "providerModelsDiscovering": "Loading models...",
+    "providerModelsManualHint": "Discovery is unavailable for this provider. Enter the model names manually.",
+    "providerModelsEmpty": "No models found",
+    "providerModelsUseCustom": "Use custom model: {{model}}",
+    "providerFieldAnnotation": "Leave API Key blank to keep the current key. Leave Base URL blank to use the default endpoint. Enter model names manually and press Enter or click add."
   },
   "validation": {
     "projectNameRequired": "Please enter a project name",
@@ -1726,7 +1751,17 @@
     },
     "gpt4Turbo": {
       "description": "Fast and efficient"
-    }
+    },
+    "customBadge": "Custom",
+    "customModelAction": "Custom model",
+    "customModelTitle": "Use a custom model",
+    "customModelDescription": "Add any model name supported by the configured provider.",
+    "customModelPlaceholder": "e.g. gpt-5 or claude-sonnet-4-5",
+    "customModelHint": "Supported prefixes: claude-, gpt, o1/o3/o4, glm-, MiniMax-, deepseek-.",
+    "customModelRequired": "Enter a model name.",
+    "customModelUnsupported": "This model name does not match a supported provider.",
+    "customModelProviderUnavailable": "Configure the provider credentials before using this model.",
+    "customModelSaved": "Custom model added"
   },
   "creditsPopover": {
     "proPlan": "Pro Plan",
