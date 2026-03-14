@@ -96,7 +96,26 @@ export function usePendingMessages({
       const items = await getQueuedQueriesAction({ sessionId });
       if (requestIdRef.current !== requestId) return;
       lastLoadedSessionIdRef.current = sessionId;
-      setPendingMessages(sortPendingMessages(items.map(toPendingMessage)));
+
+      // Check for duplicate/undefined IDs
+      const ids = items.map((item) => item?.queue_item_id);
+      const uniqueIds = new Set(ids);
+      if (ids.length !== uniqueIds.size) {
+        console.error("[PendingMessages] Duplicate IDs detected!", {
+          ids,
+          items,
+        });
+      }
+      const undefinedIds = items.filter((item) => !item?.queue_item_id);
+      if (undefinedIds.length > 0) {
+        console.error(
+          "[PendingMessages] Items with undefined IDs:",
+          undefinedIds,
+        );
+      }
+
+      const messages = items.map(toPendingMessage);
+      setPendingMessages(sortPendingMessages(messages));
     } catch (error) {
       console.error("[PendingMessages] Failed to load queued queries:", error);
       if (requestIdRef.current !== requestId) return;
@@ -204,6 +223,7 @@ export function usePendingMessages({
           sessionId,
           itemId: messageId,
         });
+        await refreshPendingMessages();
         return result;
       } catch (error) {
         console.error("[PendingMessages] Failed to send queued query:", error);

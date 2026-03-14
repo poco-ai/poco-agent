@@ -38,7 +38,7 @@ function getMessagePreview(
 ): string | null {
   if (!message) return null;
 
-  const content = message.content.trim();
+  const content = message.content?.trim();
   if (content) {
     return content;
   }

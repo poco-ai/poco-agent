@@ -644,29 +644,63 @@ export function ChatPanel({
         return;
       }
 
-      if (isSessionActive) {
-        // Session is running, add to pending queue
-        addPendingMessage(content, attachments);
-      } else {
-        // Optimistically update sidebar task status so it reflects the new turn immediately.
-        touchTask(session.session_id, {
-          status: "pending",
-          timestamp: new Date().toISOString(),
-          bumpToTop: true,
-        });
+      const previousStatus = session.status;
+      const shouldMarkSessionPending =
+        session.status !== "running" && session.status !== "pending";
+      const previousQueueHeadPreview =
+        getQueuedQueryPreview(
+          pendingMessages[0]?.content ?? "",
+          pendingMessages[0]?.attachments,
+          t,
+        ) ||
+        session.next_queued_query_preview ||
+        null;
+      const nextPreview = getQueuedQueryPreview(content, attachments, t);
 
-        // Session is idle, send immediately and mark as active
-        if (session.status !== "running" && session.status !== "pending") {
-          updateSession({ status: "pending" });
-        }
-        await sendMessage(content, attachments);
-        // Ensure sidebar converges to backend truth (status/updated_at/title).
-        await refreshTasks();
+      touchTask(session.session_id, {
+        status: "pending",
+        timestamp: new Date().toISOString(),
+        bumpToTop: true,
+      });
+
+      if (shouldMarkSessionPending) {
+        updateSession({ status: "pending" });
       }
+
+      const result = await sendMessage(content, attachments);
+
+      if (!result) {
+        if (shouldMarkSessionPending) {
+          updateSession({ status: previousStatus });
+        }
+        return;
+      }
+
+      if (result.acceptedType === "queued_query") {
+        addPendingMessage({
+          id: result.queueItemId ?? `queued-${Date.now()}`,
+          content,
+          attachments,
+          status: "queued",
+        });
+      }
+
+      updateSession({
+        ...(result.acceptedType === "queued_query"
+          ? { status: "pending" as const }
+          : {}),
+        queued_query_count: result.queuedQueryCount,
+        next_queued_query_preview:
+          result.queuedQueryCount > 0
+            ? (previousQueueHeadPreview ?? nextPreview)
+            : null,
+      });
+
+      void refreshPendingMessages();
+      await refreshTasks();
     },
     [
       addPendingMessage,
-      draftModelSelection,
       hasActiveUserInput,
       pendingMessages,
       refreshPendingMessages,
