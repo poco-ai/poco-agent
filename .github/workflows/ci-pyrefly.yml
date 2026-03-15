@@ -24,7 +24,6 @@ jobs:
           - backend
           - executor
           - executor_manager
-          - im
     name: Pyrefly (${{ matrix.service }})
     steps:
       - name: Checkout

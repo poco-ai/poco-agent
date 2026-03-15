@@ -32,7 +32,7 @@ jobs:
           pip install ruff
 
       - name: Run Ruff Check
-        run: ruff check --output-format=github backend executor executor_manager im
+        run: ruff check --output-format=github backend executor executor_manager
 
       - name: Run Ruff Format Check
-        run: ruff format --check backend executor executor_manager im
+        run: ruff format --check backend executor executor_manager
