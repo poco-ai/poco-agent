@@ -39,10 +39,6 @@ class Settings(BaseSettings):
     im_event_dispatch_enabled: bool = Field(
         default=False, alias="IM_EVENT_DISPATCH_ENABLED"
     )
-    im_event_callback_url: str | None = Field(
-        default=None, alias="IM_EVENT_CALLBACK_URL"
-    )
-    im_event_token: str | None = Field(default=None, alias="IM_EVENT_TOKEN")
     im_event_dispatch_interval_seconds: float = Field(
         default=0.5, alias="IM_EVENT_DISPATCH_INTERVAL_SECONDS"
     )
@@ -53,17 +49,13 @@ class Settings(BaseSettings):
         default=30, alias="IM_EVENT_DISPATCH_LEASE_SECONDS"
     )
 
-    # Embedded IM integration (stage 1 migration compatibility)
-    backend_url: str = Field(default="http://localhost:8000", alias="BACKEND_URL")
+    # Embedded IM integration
     backend_user_id: str = Field(default="default", alias="BACKEND_USER_ID")
     frontend_public_url: str = Field(
         default="http://localhost:3000", alias="FRONTEND_PUBLIC_URL"
     )
     frontend_default_language: str = Field(
         default="zh", alias="FRONTEND_DEFAULT_LANG"
-    )
-    backend_event_token: str | None = Field(
-        default=None, alias="BACKEND_EVENT_TOKEN"
     )
 
     telegram_bot_token: str = Field(default="", alias="TELEGRAM_BOT_TOKEN")
