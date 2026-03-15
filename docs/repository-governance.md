@@ -56,6 +56,12 @@
 - 当前默认开发分支为 `main`。
 - [CONTRIBUTING.md](/D:/codespace/poco-claw/CONTRIBUTING.md) 已要求从 `main` 拉短分支并通过 PR 合入。
 - GitHub Actions 已对 `main` 上的 push 和 PR 执行基础检查。
+- GitHub 仓库当前已启用：
+  - squash merge
+  - auto-merge
+  - merge 后自动删除分支
+  - 禁用 merge commit
+  - 禁用 rebase merge
 
 ## 3. Pull Request 规范
 
@@ -192,6 +198,9 @@ PR 描述至少包含：
 - [close-stale-issues.yml](/D:/codespace/poco-claw/.github/workflows/close-stale-issues.yml)
 - [opencode.yml](/D:/codespace/poco-claw/.github/workflows/opencode.yml)
 - [feishu-bot.yml](/D:/codespace/poco-claw/.github/workflows/feishu-bot.yml)
+- GitHub 仓库级安全设置当前已启用：
+  - secret scanning
+  - push protection
 
 ### 6.2 治理缺口
 
@@ -272,13 +281,16 @@ PR 描述至少包含：
 | Dependabot | `.github/dependabot.yml` | 已落地 |
 | Docker 发布 | `docker-images.yml` | 已落地 |
 | CODEOWNERS | `.github/CODEOWNERS` | 已落地 |
-| Labeler | `.github/labeler.yml`、`.github/workflows/labeler.yml` | 已落地（当前仅覆盖 `documentation`） |
+| Labeler | `.github/labeler.yml`、`.github/workflows/labeler.yml` | 已落地 |
+| GitHub labels | repository labels | 已落地 |
+| Merge strategy | repository settings | 已落地 |
+| Branch protection | repository settings | 缺失 |
 
 ## 12. 下一步建议
 
 基于当前仓库现状，建议按以下顺序补治理自动化：
 
-1. 扩展 GitHub labels 集合后，再补路径级业务标签
+1. 为 `main` 补 GitHub 仓库设置层的保护与必检规则
 2. 把当前分散的 CI workflow 收敛成更清晰的必检集合
 3. 评估是否需要引入 Changesets
 

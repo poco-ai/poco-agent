@@ -1,3 +1,10 @@
+repo:
+  - changed-files:
+      - any-glob-to-any-file:
+          - ".gitattributes"
+          - ".gitignore"
+          - "pyproject.toml"
+
 documentation:
   - changed-files:
       - any-glob-to-any-file:
@@ -7,3 +14,41 @@ documentation:
           - "AGENTS.md"
           - "docs/**"
           - ".github/pull_request_template.md"
+
+backend:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "backend/**"
+
+executor:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "executor/**"
+
+executor-manager:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "executor_manager/**"
+
+frontend:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "frontend/**"
+
+im:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "im/**"
+
+docker:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "docker/**"
+          - "docker-compose.yml"
+          - "docker-compose.r2.yml"
+
+ci:
+  - changed-files:
+      - any-glob-to-any-file:
+          - ".github/workflows/**"
+          - ".pre-commit-config.yaml"
