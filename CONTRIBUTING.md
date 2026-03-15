@@ -2,14 +2,19 @@
 
 本文档说明 Poco 仓库的贡献流程，以及提交代码时需要遵循的开发规范。
 
+与仓库治理、发布、Docker、CI/CD、分支策略相关的正式规则，请同时参考：
+
+- [仓库治理草案](docs/repository-governance.md)
+
 ## 1. 标准贡献流程
 
 1. 先同步最新代码并从 `main` 创建分支。
 2. 在单一主题分支中开发，避免把不相关改动放在同一个 PR。
-3. 本地完成自检（见“提交前检查”）。
-4. 推送分支并发起 PR 到 `main`。
-5. 维护者进行 Review，提出修改意见。
-6. 修改后继续 push 到同一分支，直到 Review 通过并由维护者合并。
+3. 如改动涉及治理、发布、Docker、CI/CD 或仓库自动化，先阅读治理文档再修改。
+4. 本地完成自检（见“提交前检查”）。
+5. 推送分支并发起 PR 到 `main`。
+6. 维护者进行 Review，提出修改意见。
+7. 修改后继续 push 到同一分支，直到 Review 通过并由维护者合并。
 
 ## 2. 分支与提交规范
 
@@ -20,6 +25,8 @@
 - `refactor/<short-description>`
 - `docs/<short-description>`
 - `chore/<short-description>`
+
+推荐保持短分支工作流，不直接向 `main` 推送日常改动。
 
 提交信息建议遵循 Conventional Commits（与仓库现有历史一致）：
 
@@ -34,7 +41,42 @@
 - 单次 commit 尽量聚焦一个逻辑点。
 - 避免在同一个 commit 中混入重构、格式化、功能改动三类内容。
 
-## 3. 提交前检查
+## 3. PR 标题与合并建议
+
+建议 PR 标题使用 Conventional Commits：
+
+```text
+<type>(<optional-scope>): <summary>
+```
+
+推荐 `type`：
+
+- `feat`
+- `fix`
+- `docs`
+- `refactor`
+- `test`
+- `build`
+- `ci`
+- `chore`
+- `perf`
+- `revert`
+
+推荐 `scope`：
+
+- `repo`
+- `backend`
+- `executor`
+- `executor-manager`
+- `frontend`
+- `im`
+- `docker`
+- `docs`
+- `ci`
+
+建议优先使用 **squash merge**，保证 `main` 历史保持清晰、聚焦。
+
+## 4. 提交前检查
 
 在仓库根目录执行：
 
@@ -67,7 +109,7 @@ uv run -m alembic upgrade head
 
 然后人工检查自动生成的 migration 是否符合预期。
 
-## 4. PR 描述建议模板
+## 5. PR 描述建议模板
 
 建议在 PR 描述中至少包含以下信息：
 
@@ -79,13 +121,18 @@ uv run -m alembic upgrade head
 - 如涉及数据库：提供 migration 和回滚说明
 - 如涉及破坏性变更：明确写出升级注意事项
 
-## 5. 开发规范
+仓库现在提供了默认 PR 模板：
+
+- [PR 模板](.github/pull_request_template.md)
+
+## 6. 开发规范
 
 ### 5.1 通用规范
 
 - 不提交密钥、令牌、私有配置或任何敏感信息。
 - 新增功能时，同步更新相关文档（README、docs 或 API 文档）。
 - 保持改动最小化，优先修复根因，不做无关重构。
+- 修改仓库治理、发布、Docker、CI/CD、版本策略时，必须同步更新相关文档。
 
 ### 5.2 Python（后端相关服务）
 
@@ -116,7 +163,7 @@ uv run -m alembic upgrade head
   - `frontend/lib/i18n/settings.ts`
   - `frontend/lib/i18n/locales/*/translation.json`
 
-## 6. Review 与合并标准
+## 7. Review 与合并标准
 
 通常满足以下条件后可进入合并流程：
 
@@ -127,3 +174,9 @@ uv run -m alembic upgrade head
 - Review 意见已处理或达成一致。
 
 最终合并由仓库维护者执行。
+
+## 8. 发布与治理说明
+
+- release 当前以 `main` 上的 tag 为入口。
+- Docker 镜像发布当前由 GitHub Actions 在 `v*` tag 上执行。
+- 涉及分支策略、发布策略、Docker 行为、CI/CD 自动化、仓库规则的改动，请以 [仓库治理草案](docs/repository-governance.md) 为准，并同步更新相关文档。

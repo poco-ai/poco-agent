@@ -58,6 +58,12 @@
 
 详细的部署文档和问题排查，请参考 [部署指南](https://docs.poco-ai.com/zh/deployment)。
 
+## 仓库文档
+
+- [贡献指南](CONTRIBUTING.md)
+- [仓库治理草案](docs/repository-governance.md)
+- [AI 代理说明](AGENTS.md)
+
 ## Star History
 
 [![Star History Chart](https://api.star-history.com/svg?repos=poco-ai/poco-agent&type=date&legend=top-left)](https://www.star-history.com/#poco-ai/poco-agent&type=date&legend=top-left)

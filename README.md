@@ -58,6 +58,12 @@ Visit: `http://localhost:3000` after startup completes.
 
 For detailed deployment documentation and troubleshooting, please refer to the [Deployment Guide](https://docs.poco-ai.com/en/deployment).
 
+## Repository Docs
+
+- [Contribution Guide](CONTRIBUTING.md)
+- [Repository Governance Draft](docs/repository-governance.md)
+- [AI Agent Guide](AGENTS.md)
+
 ## Star History
 
 [![Star History Chart](https://api.star-history.com/svg?repos=poco-ai/poco-agent&type=date&legend=top-left)](https://www.star-history.com/#poco-ai/poco-agent&type=date&legend=top-left)

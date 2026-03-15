@@ -2,6 +2,18 @@
 
 This file provides guidance for AI coding agents working with code in this repository.
 
+## Repository Governance
+
+When a task touches governance, release flow, branching policy, Docker behavior, CI/CD, or repository automation, read [docs/repository-governance.md](docs/repository-governance.md) before making changes.
+
+If such a change modifies repository rules or release behavior, update the relevant documentation in the same change.
+
+For governance-related work:
+
+- Prefer small, auditable changes over broad repo-wide cleanups.
+- Keep code changes and governance/documentation changes synchronized.
+- If the task changes `.github/`, Docker build/publish behavior, branch strategy, or release/tag rules, treat the governance document as the source of truth.
+
 ## Project Overview
 
 Poco is a multi-service AI agent execution platform that orchestrates Claude AI agents to perform coding tasks. The system consists of four main components:
