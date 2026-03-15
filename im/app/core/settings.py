@@ -57,6 +57,19 @@ class Settings(BaseSettings):
         default=None, alias="DINGTALK_WEBHOOK_URL"
     )
 
+    # Feishu bot integration
+    feishu_enabled: bool = Field(default=False, alias="FEISHU_ENABLED")
+    feishu_stream_enabled: bool = Field(default=True, alias="FEISHU_STREAM_ENABLED")
+    feishu_app_id: str | None = Field(default=None, alias="FEISHU_APP_ID")
+    feishu_app_secret: str | None = Field(default=None, alias="FEISHU_APP_SECRET")
+    feishu_verification_token: str | None = Field(
+        default=None, alias="FEISHU_VERIFICATION_TOKEN"
+    )
+    feishu_base_url: str = Field(
+        default="https://open.feishu.cn",
+        alias="FEISHU_BASE_URL",
+    )
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
