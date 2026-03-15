@@ -100,7 +100,7 @@ PR 描述至少包含：
 
 - [CONTRIBUTING.md](/D:/codespace/poco-claw/CONTRIBUTING.md) 已对分支命名、提交格式和 PR 描述给出建议。
 - 仓库已提供 [PR 模板](/D:/codespace/poco-claw/.github/pull_request_template.md) 作为最小描述骨架。
-- 当前 **未自动校验 PR 标题**，属于治理缺口。
+- 仓库已提供 [PR 标题校验 workflow](/D:/codespace/poco-claw/.github/workflows/ci-pr-title.yml)。
 
 ## 4. 版本与发布策略
 
@@ -180,7 +180,10 @@ PR 描述至少包含：
 
 仓库当前已有以下 workflow：
 
+- [ci-pr-title.yml](/D:/codespace/poco-claw/.github/workflows/ci-pr-title.yml)
 - [ci-eslint.yml](/D:/codespace/poco-claw/.github/workflows/ci-eslint.yml)
+- [ci-actionlint.yml](/D:/codespace/poco-claw/.github/workflows/ci-actionlint.yml)
+- [ci-gitleaks.yml](/D:/codespace/poco-claw/.github/workflows/ci-gitleaks.yml)
 - [ci-markdownlint.yml](/D:/codespace/poco-claw/.github/workflows/ci-markdownlint.yml)
 - [ci-prettier.yml](/D:/codespace/poco-claw/.github/workflows/ci-prettier.yml)
 - [ci-pyrefly.yml](/D:/codespace/poco-claw/.github/workflows/ci-pyrefly.yml)
@@ -194,13 +197,7 @@ PR 描述至少包含：
 
 当前仓库尚未落地以下自动化：
 
-- PR title 校验
 - changeset 校验
-- actionlint
-- secret scanning（例如 gitleaks）
-- labeler
-- CODEOWNERS
-- Dependabot
 
 这些属于后续治理完善项，而不是当前阶段必须一次性补齐的基础设施。
 
@@ -269,22 +266,20 @@ PR 描述至少包含：
 | Python 代码检查 | `ci-ruff.yml`、`ci-pyrefly.yml`、`.pre-commit-config.yaml` | 已落地 |
 | Frontend 检查 | `ci-eslint.yml`、`ci-prettier.yml`、`.pre-commit-config.yaml` | 已落地 |
 | Markdown 检查 | `ci-markdownlint.yml` | 已落地 |
+| PR 标题校验 | `ci-pr-title.yml` | 已落地 |
+| Workflow 静态检查 | `ci-actionlint.yml` | 已落地 |
+| Secret scanning | `ci-gitleaks.yml` | 已落地 |
+| Dependabot | `.github/dependabot.yml` | 已落地 |
 | Docker 发布 | `docker-images.yml` | 已落地 |
-| PR 标题校验 | 无 | 缺失 |
-| CODEOWNERS | 无 | 缺失 |
-| Labeler | 无 | 缺失 |
-| Dependabot | 无 | 缺失 |
-| Secret scanning | 无 | 缺失 |
-| Actionlint | 无 | 缺失 |
+| CODEOWNERS | `.github/CODEOWNERS` | 已落地 |
+| Labeler | `.github/labeler.yml`、`.github/workflows/labeler.yml` | 已落地（当前仅覆盖 `documentation`） |
 
 ## 12. 下一步建议
 
 基于当前仓库现状，建议按以下顺序补治理自动化：
 
-1. 增加 PR title Conventional Commits 校验
-2. 增加 CODEOWNERS
-3. 增加 actionlint 与 secret scanning
-4. 把当前分散的 CI workflow 收敛成更清晰的必检集合
-5. 评估是否需要引入 labeler / Dependabot / Changesets
+1. 扩展 GitHub labels 集合后，再补路径级业务标签
+2. 把当前分散的 CI workflow 收敛成更清晰的必检集合
+3. 评估是否需要引入 Changesets
 
 在这些缺口补齐前，本文档应作为 **人工 review 与 AI 代理执行** 的主要治理依据。

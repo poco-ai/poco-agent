@@ -1,0 +1,20 @@
+# Default owner
+* @jaredshuai
+
+# Documentation and governance
+/README.md @jaredshuai
+/README_zh.md @jaredshuai
+/CONTRIBUTING.md @jaredshuai
+/AGENTS.md @jaredshuai
+/docs/ @jaredshuai
+
+# Repository automation and governance
+/.github/ @jaredshuai
+/docker/ @jaredshuai
+
+# Application code
+/backend/ @jaredshuai
+/executor/ @jaredshuai
+/executor_manager/ @jaredshuai
+/frontend/ @jaredshuai
+/im/ @jaredshuai

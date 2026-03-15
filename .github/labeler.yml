@@ -1,0 +1,9 @@
+documentation:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "README.md"
+          - "README_zh.md"
+          - "CONTRIBUTING.md"
+          - "AGENTS.md"
+          - "docs/**"
+          - ".github/pull_request_template.md"

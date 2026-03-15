@@ -62,6 +62,8 @@
 - `perf`
 - `revert`
 
+当前仓库已通过 GitHub Actions 对 PR 标题进行校验，因此建议在创建 PR 前先自行确认标题格式。
+
 推荐 `scope`：
 
 - `repo`
@@ -76,7 +78,13 @@
 
 建议优先使用 **squash merge**，保证 `main` 历史保持清晰、聚焦。
 
-## 4. 提交前检查
+## 4. Review 路由与标签
+
+- 核心目录当前已由 [CODEOWNERS](.github/CODEOWNERS) 覆盖。
+- 文档类变更当前会通过 labeler 自动标记为 `documentation`。
+- 其他路径级 label 规则会在仓库 labels 体系补齐后逐步扩展。
+
+## 5. 提交前检查
 
 在仓库根目录执行：
 
@@ -109,7 +117,7 @@ uv run -m alembic upgrade head
 
 然后人工检查自动生成的 migration 是否符合预期。
 
-## 5. PR 描述建议模板
+## 6. PR 描述建议模板
 
 建议在 PR 描述中至少包含以下信息：
 
@@ -125,7 +133,7 @@ uv run -m alembic upgrade head
 
 - [PR 模板](.github/pull_request_template.md)
 
-## 6. 开发规范
+## 7. 开发规范
 
 ### 5.1 通用规范
 
@@ -163,7 +171,7 @@ uv run -m alembic upgrade head
   - `frontend/lib/i18n/settings.ts`
   - `frontend/lib/i18n/locales/*/translation.json`
 
-## 7. Review 与合并标准
+## 8. Review 与合并标准
 
 通常满足以下条件后可进入合并流程：
 
@@ -175,7 +183,7 @@ uv run -m alembic upgrade head
 
 最终合并由仓库维护者执行。
 
-## 8. 发布与治理说明
+## 9. 发布与治理说明
 
 - release 当前以 `main` 上的 tag 为入口。
 - Docker 镜像发布当前由 GitHub Actions 在 `v*` tag 上执行。

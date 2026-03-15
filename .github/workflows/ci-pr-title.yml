@@ -1,0 +1,43 @@
+name: CI PR Title
+
+on:
+  pull_request_target:
+    types:
+      - opened
+      - edited
+      - reopened
+      - synchronize
+
+permissions:
+  pull-requests: read
+
+jobs:
+  pr-title:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate PR title
+        uses: amannn/action-semantic-pull-request@v6
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          types: |
+            feat
+            fix
+            docs
+            refactor
+            test
+            build
+            ci
+            chore
+            perf
+            revert
+          scopes: |
+            repo
+            docs
+            backend
+            executor
+            executor-manager
+            frontend
+            im
+            docker
+            ci
