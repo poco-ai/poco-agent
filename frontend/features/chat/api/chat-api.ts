@@ -30,6 +30,7 @@ import type {
   SessionRegenerateRequest,
   SessionResponse,
   SessionUpdateRequest,
+  SubmitSkillResponse,
   TaskConfig,
   TaskEnqueueRequest,
   TaskEnqueueResponse,
@@ -441,5 +442,15 @@ export const chatService = {
       console.error("[Chat Service] Failed to get files:", error);
       return [];
     }
+  },
+
+  submitSkill: async (
+    sessionId: string,
+    body: { folder_path: string; skill_name?: string },
+  ): Promise<SubmitSkillResponse> => {
+    return apiClient.post<SubmitSkillResponse>(
+      API_ENDPOINTS.sessionWorkspaceSubmitSkill(sessionId),
+      body,
+    );
   },
 };

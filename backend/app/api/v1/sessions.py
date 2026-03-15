@@ -39,7 +39,9 @@ from app.schemas.computer import ComputerBrowserScreenshotResponse
 from app.schemas.tool_execution import ToolExecutionDeltaResponse, ToolExecutionResponse
 from app.schemas.usage import UsageResponse
 from app.schemas.workspace import FileNode, WorkspaceArchiveResponse
+from app.schemas.workspace import SubmitSkillRequest, SubmitSkillResponse
 from app.services.message_service import MessageService
+from app.services.pending_skill_creation_service import PendingSkillCreationService
 from app.services.session_service import SessionService
 from app.services.storage_service import S3StorageService
 from app.services.tool_execution_service import ToolExecutionService
@@ -59,6 +61,7 @@ message_service = MessageService()
 tool_execution_service = ToolExecutionService()
 usage_service = UsageService()
 storage_service = S3StorageService()
+pending_skill_creation_service = PendingSkillCreationService()
 
 
 def _cancel_executor_manager(session_id: uuid.UUID, reason: str | None) -> bool:
@@ -709,4 +712,40 @@ async def get_session_workspace_archive(
     return Response.success(
         data=WorkspaceArchiveResponse(url=url, filename=filename),
         message="Workspace archive URL generated",
+    )
+
+
+@router.post(
+    "/{session_id}/workspace/submit-skill",
+    response_model=ResponseSchema[SubmitSkillResponse],
+)
+async def submit_session_workspace_skill(
+    session_id: uuid.UUID,
+    request: SubmitSkillRequest,
+    user_id: str = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+) -> JSONResponse:
+    """Submit a workspace folder for skill creation review."""
+    db_session = session_service.get_session(db, session_id)
+    if db_session.user_id != user_id:
+        raise AppException(
+            error_code=ErrorCode.FORBIDDEN,
+            message="Session does not belong to the user",
+        )
+
+    pending = pending_skill_creation_service.submit_from_workspace(
+        db,
+        user_id=user_id,
+        session=db_session,
+        folder_path=request.folder_path,
+        skill_name=request.skill_name,
+    )
+    db.commit()
+    db.refresh(pending)
+    return Response.success(
+        data=SubmitSkillResponse(
+            pending_id=str(pending.id),
+            status=pending.status,
+        ),
+        message="Skill submission queued successfully",
     )

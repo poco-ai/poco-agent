@@ -11,6 +11,7 @@ import {
   ChevronRight,
   ChevronDown,
   Download,
+  PackagePlus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { FileNode } from "@/features/chat/types";
@@ -19,6 +20,12 @@ import { toast } from "sonner";
 import { PanelHeaderAction } from "@/components/shared/panel-header";
 import { useT } from "@/lib/i18n/client";
 import { useIsMobile } from "@/hooks/use-mobile";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 
 interface FileSidebarProps {
   files: FileNode[];
@@ -26,6 +33,8 @@ interface FileSidebarProps {
   selectedFile?: FileNode;
   sessionId?: string;
   embedded?: boolean;
+  onPackageSkill?: (node: FileNode) => void;
+  onDownloadFile?: (node: FileNode) => void;
 }
 
 const isSameOriginUrl = (url: string) => {
@@ -47,7 +56,7 @@ const triggerDownload = (url: string, filename: string) => {
   document.body.removeChild(link);
 };
 
-const downloadFileFromUrl = async (url: string, filename: string) => {
+export const downloadFileFromUrl = async (url: string, filename: string) => {
   const absoluteUrl = new URL(url, window.location.origin).toString();
   try {
     const response = await fetch(absoluteUrl, {
@@ -75,14 +84,19 @@ function FileTreeItem({
   onSelect,
   selectedId,
   level = 0,
+  onPackageSkill,
+  onDownloadFile,
 }: {
   node: FileNode;
   onSelect: (file: FileNode) => void;
   selectedId?: string;
   level?: number;
+  onPackageSkill?: (node: FileNode) => void;
+  onDownloadFile?: (node: FileNode) => void;
 }) {
   const [isExpanded, setIsExpanded] = React.useState(level === 0);
   const isMobile = useIsMobile();
+  const { t } = useT("translation");
 
   // Check if this node or any of its children is the selected one
   const containsSelected = React.useMemo(() => {
@@ -188,27 +202,45 @@ function FileTreeItem({
 
   return (
     <div className="w-full min-w-0 max-w-full basis-full overflow-hidden">
-      <div
-        className={cn(
-          "group/item relative box-border flex w-full min-w-0 max-w-full items-center gap-2 overflow-hidden rounded-md py-1.5 transition-colors cursor-pointer",
-          selectedId === node.id
-            ? "bg-sidebar-accent text-sidebar-accent-foreground"
-            : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground",
-        )}
-        style={{
-          paddingInlineStart: `${paddingStartRem}rem`,
-          paddingInlineEnd: "0.5rem",
-        }}
-        onClick={handleClick}
-      >
-        <span className="shrink-0">{nodeIcon}</span>
-        <span
-          className="block w-0 flex-1 min-w-0 max-w-full truncate text-sm"
-          title={node.name}
-        >
-          {node.name}
-        </span>
-      </div>
+      <ContextMenu>
+        <ContextMenuTrigger asChild>
+          <div
+            className={cn(
+              "group/item relative box-border flex w-full min-w-0 max-w-full items-center gap-2 overflow-hidden rounded-md py-1.5 transition-colors cursor-pointer",
+              selectedId === node.id
+                ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground",
+            )}
+            style={{
+              paddingInlineStart: `${paddingStartRem}rem`,
+              paddingInlineEnd: "0.5rem",
+            }}
+            onClick={handleClick}
+          >
+            <span className="shrink-0">{nodeIcon}</span>
+            <span
+              className="block w-0 flex-1 min-w-0 max-w-full truncate text-sm"
+              title={node.name}
+            >
+              {node.name}
+            </span>
+          </div>
+        </ContextMenuTrigger>
+        <ContextMenuContent>
+          {node.type === "folder" && onPackageSkill ? (
+            <ContextMenuItem onClick={() => onPackageSkill?.(node)}>
+              <PackagePlus className="mr-2 size-4" />
+              {t("fileSidebar.packageAsSkill")}
+            </ContextMenuItem>
+          ) : null}
+          {node.type === "file" && node.url && onDownloadFile ? (
+            <ContextMenuItem onClick={() => onDownloadFile?.(node)}>
+              <Download className="mr-2 size-4" />
+              {t("fileSidebar.downloadFile")}
+            </ContextMenuItem>
+          ) : null}
+        </ContextMenuContent>
+      </ContextMenu>
       {node.type === "folder" && isExpanded && node.children && (
         <div className="w-full min-w-0 max-w-full basis-full overflow-hidden">
           {node.children.map((child) => (
@@ -218,6 +250,8 @@ function FileTreeItem({
               onSelect={onSelect}
               selectedId={selectedId}
               level={level + 1}
+              onPackageSkill={onPackageSkill}
+              onDownloadFile={onDownloadFile}
             />
           ))}
         </div>
@@ -232,6 +266,8 @@ export function FileSidebar({
   selectedFile,
   sessionId,
   embedded = false,
+  onPackageSkill,
+  onDownloadFile,
 }: FileSidebarProps) {
   const { t } = useT("translation");
   const canDownloadArchive = Boolean(sessionId) && files.length > 0;
@@ -293,6 +329,8 @@ export function FileSidebar({
                 node={file}
                 onSelect={onFileSelect}
                 selectedId={selectedFile?.id}
+                onPackageSkill={onPackageSkill}
+                onDownloadFile={onDownloadFile}
               />
             ))
           )}

@@ -53,6 +53,8 @@ export const API_ENDPOINTS = {
     `/sessions/${sessionId}/workspace/files`,
   sessionWorkspaceArchive: (sessionId: string) =>
     `/sessions/${sessionId}/workspace/archive`,
+  sessionWorkspaceSubmitSkill: (sessionId: string) =>
+    `/sessions/${sessionId}/workspace/submit-skill`,
 
   // User Input Requests
   userInputRequests: "/user-input-requests",
