@@ -2,6 +2,7 @@ services:
   postgres:
     image: postgres:16-alpine
     restart: unless-stopped
+    mem_limit: ${POSTGRES_MEMORY_LIMIT:-512m}
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-poco}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
@@ -22,6 +23,7 @@ services:
     profiles: ["mem0"]
     image: ankane/pgvector:v0.5.1
     restart: on-failure
+    mem_limit: ${MEM0_POSTGRES_MEMORY_LIMIT:-1g}
     shm_size: "128mb"
     environment:
       POSTGRES_USER: ${MEM0_POSTGRES_USER:-postgres}
@@ -45,6 +47,7 @@ services:
     profiles: ["mem0"]
     image: neo4j:5.26.4
     restart: on-failure
+    mem_limit: ${MEM0_NEO4J_MEMORY_LIMIT:-1536m}
     healthcheck:
       test:
         ["CMD-SHELL", "wget -qO- http://localhost:7474 >/dev/null || exit 1"]
@@ -69,6 +72,7 @@ services:
   rustfs:
     image: ${RUSTFS_IMAGE:-rustfs/rustfs:latest}
     restart: unless-stopped
+    mem_limit: ${RUSTFS_MEMORY_LIMIT:-512m}
     environment:
       # Keep these generic; rustfs may read its own vars, but setting AWS-standard ones
       # keeps it compatible with most S3-compatible server configs.
@@ -85,6 +89,7 @@ services:
   rustfs-init:
     image: ${RUSTFS_INIT_IMAGE:-minio/mc:latest}
     profiles: ["init"]
+    mem_limit: ${RUSTFS_INIT_MEMORY_LIMIT:-256m}
     depends_on:
       - rustfs
     environment:
@@ -103,6 +108,7 @@ services:
     # Default to pulling from GHCR; override via BACKEND_IMAGE if needed.
     image: ${BACKEND_IMAGE:-ghcr.io/poco-ai/poco-backend:latest}
     restart: unless-stopped
+    mem_limit: ${BACKEND_MEMORY_LIMIT:-1g}
     depends_on:
       postgres:
         condition: service_healthy
@@ -129,6 +135,7 @@ services:
       S3_PRESIGN_EXPIRES: ${S3_PRESIGN_EXPIRES:-300}
 
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ANTHROPIC_AUTH_TOKEN: ${ANTHROPIC_AUTH_TOKEN:-}
       ANTHROPIC_BASE_URL: ${ANTHROPIC_BASE_URL:-https://api.anthropic.com}
       DEFAULT_MODEL: ${DEFAULT_MODEL:-claude-sonnet-4-20250514}
       MODEL_LIST: ${MODEL_LIST:-[]}
@@ -170,6 +177,7 @@ services:
     # Default to pulling from GHCR; override via EXECUTOR_MANAGER_IMAGE if needed.
     image: ${EXECUTOR_MANAGER_IMAGE:-ghcr.io/poco-ai/poco-executor-manager:latest}
     restart: unless-stopped
+    mem_limit: ${EXECUTOR_MANAGER_MEMORY_LIMIT:-768m}
     user: "${EXECUTOR_UID:-1000}:${EXECUTOR_GID:-1000}"
     depends_on:
       backend:
@@ -187,6 +195,7 @@ services:
       INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:-change-this-token-in-production}
 
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ANTHROPIC_AUTH_TOKEN: ${ANTHROPIC_AUTH_TOKEN:-}
       ANTHROPIC_BASE_URL: ${ANTHROPIC_BASE_URL:-https://api.anthropic.com}
       DEFAULT_MODEL: ${DEFAULT_MODEL:-claude-sonnet-4-20250514}
 
@@ -244,6 +253,7 @@ services:
     # Default to pulling from GHCR; override via FRONTEND_IMAGE if needed.
     image: ${FRONTEND_IMAGE:-ghcr.io/poco-ai/poco-frontend:latest}
     restart: unless-stopped
+    mem_limit: ${FRONTEND_MEMORY_LIMIT:-512m}
     depends_on:
       backend:
         condition: service_started
@@ -258,6 +268,7 @@ services:
     # Default to pulling from GHCR; override via IM_IMAGE if needed.
     image: ${IM_IMAGE:-ghcr.io/poco-ai/poco-im:latest}
     restart: unless-stopped
+    mem_limit: ${IM_MEMORY_LIMIT:-512m}
     depends_on:
       backend:
         condition: service_started

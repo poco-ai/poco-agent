@@ -23,7 +23,7 @@ USER root
 COPY --chown=ubuntu:ubuntu executor/app /app/app
 
 COPY --chown=ubuntu:ubuntu docker/executor/start.sh /app/start.sh
-RUN chmod +x /app/start.sh
+RUN sed -i 's/\r$//' /app/start.sh && chmod +x /app/start.sh
 
 EXPOSE 8000 8080
 

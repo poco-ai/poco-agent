@@ -86,6 +86,7 @@ class Settings(BaseSettings):
     )
 
     anthropic_api_key: str = Field(default="", alias="ANTHROPIC_API_KEY")
+    anthropic_auth_token: str = Field(default="", alias="ANTHROPIC_AUTH_TOKEN")
     anthropic_base_url: str = Field(
         default="https://api.anthropic.com", alias="ANTHROPIC_BASE_URL"
     )
@@ -95,6 +96,12 @@ class Settings(BaseSettings):
     max_executor_containers: int = Field(default=10, alias="MAX_EXECUTOR_CONTAINERS")
     executor_image: str = Field(
         default="ghcr.io/poco-ai/poco-executor:lite", alias="EXECUTOR_IMAGE"
+    )
+    executor_memory_limit: str | None = Field(
+        default="2g", alias="EXECUTOR_MEMORY_LIMIT"
+    )
+    executor_browser_memory_limit: str | None = Field(
+        default="4g", alias="EXECUTOR_BROWSER_MEMORY_LIMIT"
     )
     # Optional: dedicated executor image with desktop/browser stack enabled.
     # When set, tasks with browser_enabled=true will use this image instead of EXECUTOR_IMAGE.
@@ -153,13 +160,19 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",
+        populate_by_name=True,
     )
 
     @model_validator(mode="after")
     def validate_anthropic_credentials(self) -> "Settings":
-        """Ensure Anthropic API key is configured."""
-        if not (self.anthropic_api_key or "").strip():
-            raise ValueError("Missing Anthropic credential; set ANTHROPIC_API_KEY.")
+        """Ensure an Anthropic credential is configured."""
+        api_key = (self.anthropic_api_key or "").strip()
+        auth_token = (self.anthropic_auth_token or "").strip()
+        if not api_key and not auth_token:
+            raise ValueError(
+                "Missing Anthropic credential; set ANTHROPIC_API_KEY or "
+                "ANTHROPIC_AUTH_TOKEN."
+            )
         return self
 
 

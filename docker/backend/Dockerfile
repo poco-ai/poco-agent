@@ -22,7 +22,7 @@ COPY --chown=app:app backend/alembic /app/alembic
 COPY --chown=app:app backend/alembic.ini /app/alembic.ini
 
 COPY --chown=app:app docker/backend/start.sh /app/start.sh
-RUN chmod +x /app/start.sh
+RUN sed -i 's/\r$//' /app/start.sh && chmod +x /app/start.sh
 
 EXPOSE 8000
 

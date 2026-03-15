@@ -28,6 +28,56 @@ class ContainerPool:
         self.containers: dict[str, "Container"] = {}
         self.session_to_container: dict[str, str] = {}
 
+    @staticmethod
+    def _build_container_environment(
+        *,
+        settings,
+        session_id: str,
+        user_id: str,
+        browser_enabled: bool,
+    ) -> dict[str, str]:
+        environment = {
+            "ANTHROPIC_BASE_URL": settings.anthropic_base_url,
+            "DEFAULT_MODEL": settings.default_model,
+            "WORKSPACE_PATH": "/workspace",
+            "USER_ID": user_id,
+            "SESSION_ID": session_id,
+            "EXECUTOR_TIMEZONE": settings.executor_timezone,
+        }
+
+        anthropic_auth_token = (settings.anthropic_auth_token or "").strip()
+        if anthropic_auth_token:
+            environment["ANTHROPIC_AUTH_TOKEN"] = anthropic_auth_token
+
+        anthropic_api_key = (settings.anthropic_api_key or "").strip()
+        if anthropic_api_key:
+            environment["ANTHROPIC_API_KEY"] = anthropic_api_key
+
+        if browser_enabled:
+            environment["POCO_BROWSER_VIEWPORT_SIZE"] = (
+                settings.poco_browser_viewport_size
+            )
+            environment["PLAYWRIGHT_MCP_OUTPUT_MODE"] = (
+                settings.playwright_mcp_output_mode
+            )
+            environment["PLAYWRIGHT_MCP_IMAGE_RESPONSES"] = (
+                settings.playwright_mcp_image_responses
+            )
+
+        return environment
+
+    @staticmethod
+    def _resolve_container_memory_limit(
+        *, settings, browser_enabled: bool
+    ) -> str | None:
+        raw_value = (
+            settings.executor_browser_memory_limit
+            if browser_enabled
+            else settings.executor_memory_limit
+        )
+        value = (raw_value or "").strip()
+        return value or None
+
     async def get_or_create_container(
         self,
         session_id: str,
@@ -158,37 +208,31 @@ class ContainerPool:
         step_started = time.perf_counter()
         image = self._resolve_executor_image(browser_enabled=browser_enabled)
         ports = {"8000/tcp": None}
-        environment = {
-            "ANTHROPIC_BASE_URL": self.settings.anthropic_base_url,
-            "DEFAULT_MODEL": self.settings.default_model,
-            "WORKSPACE_PATH": "/workspace",
-            "USER_ID": user_id,
-            "SESSION_ID": session_id,
-            "EXECUTOR_TIMEZONE": self.settings.executor_timezone,
+        environment = self._build_container_environment(
+            settings=self.settings,
+            session_id=session_id,
+            user_id=user_id,
+            browser_enabled=browser_enabled,
+        )
+        memory_limit = self._resolve_container_memory_limit(
+            settings=self.settings,
+            browser_enabled=browser_enabled,
+        )
+        run_kwargs = {
+            "image": image,
+            "name": container_name,
+            "environment": environment,
+            "volumes": {workspace_volume: {"bind": "/workspace", "mode": "rw"}},
+            "ports": ports,
+            "detach": True,
+            "auto_remove": True,
+            "labels": labels,
+            "extra_hosts": {"host.docker.internal": "host-gateway"},
         }
-        anthropic_api_key = (self.settings.anthropic_api_key or "").strip()
-        if anthropic_api_key:
-            environment["ANTHROPIC_API_KEY"] = anthropic_api_key
-        if browser_enabled:
-            environment["POCO_BROWSER_VIEWPORT_SIZE"] = (
-                self.settings.poco_browser_viewport_size
-            )
-            environment["PLAYWRIGHT_MCP_OUTPUT_MODE"] = (
-                self.settings.playwright_mcp_output_mode
-            )
-            environment["PLAYWRIGHT_MCP_IMAGE_RESPONSES"] = (
-                self.settings.playwright_mcp_image_responses
-            )
+        if memory_limit is not None:
+            run_kwargs["mem_limit"] = memory_limit
         container = self.docker_client.containers.run(
-            image=image,
-            name=container_name,
-            environment=environment,
-            volumes={workspace_volume: {"bind": "/workspace", "mode": "rw"}},
-            ports=ports,
-            detach=True,
-            auto_remove=True,
-            labels=labels,
-            extra_hosts={"host.docker.internal": "host-gateway"},
+            **run_kwargs,
         )
         logger.info(
             "timing",
@@ -201,6 +245,7 @@ class ContainerPool:
                 "container_name": container_name,
                 "image": image,
                 "browser_enabled": bool(browser_enabled),
+                "memory_limit": memory_limit,
             },
         )
 

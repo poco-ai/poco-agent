@@ -20,7 +20,7 @@ USER root
 COPY --chown=app:app executor_manager/app /app/app
 
 COPY --chown=app:app docker/executor_manager/start.sh /app/start.sh
-RUN chmod +x /app/start.sh
+RUN sed -i 's/\r$//' /app/start.sh && chmod +x /app/start.sh
 
 EXPOSE 8001
 

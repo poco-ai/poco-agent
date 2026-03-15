@@ -49,6 +49,7 @@ class Settings(BaseSettings):
     s3_read_timeout_seconds: int = Field(default=60, alias="S3_READ_TIMEOUT_SECONDS")
     s3_max_attempts: int = Field(default=3, alias="S3_MAX_ATTEMPTS")
     anthropic_api_key: str = Field(default="", alias="ANTHROPIC_API_KEY")
+    anthropic_auth_token: str = Field(default="", alias="ANTHROPIC_AUTH_TOKEN")
     anthropic_base_url: str = Field(
         default="https://api.anthropic.com", alias="ANTHROPIC_BASE_URL"
     )

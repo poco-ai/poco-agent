@@ -1,6 +1,9 @@
 .venv
 
 .env
+.factory/
+oss_data/
+tmp_workspace/
 
 .DS_Store
 
