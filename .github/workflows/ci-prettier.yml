@@ -30,6 +30,4 @@ jobs:
         run: npm install -g prettier
 
       - name: Run Prettier Check
-        run: |
-          git ls-files -z -- . ":(exclude)backend/assets/**" \
-            | xargs -0 prettier --check --ignore-unknown
+        run: prettier --check . --ignore-unknown
