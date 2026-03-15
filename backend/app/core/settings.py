@@ -52,6 +52,62 @@ class Settings(BaseSettings):
     im_event_dispatch_lease_seconds: int = Field(
         default=30, alias="IM_EVENT_DISPATCH_LEASE_SECONDS"
     )
+
+    # Embedded IM integration (stage 1 migration compatibility)
+    backend_url: str = Field(default="http://localhost:8000", alias="BACKEND_URL")
+    backend_user_id: str = Field(default="default", alias="BACKEND_USER_ID")
+    frontend_public_url: str = Field(
+        default="http://localhost:3000", alias="FRONTEND_PUBLIC_URL"
+    )
+    frontend_default_language: str = Field(
+        default="zh", alias="FRONTEND_DEFAULT_LANG"
+    )
+    backend_event_token: str | None = Field(
+        default=None, alias="BACKEND_EVENT_TOKEN"
+    )
+
+    telegram_bot_token: str = Field(default="", alias="TELEGRAM_BOT_TOKEN")
+    telegram_webhook_secret_token: str | None = Field(
+        default=None, alias="TELEGRAM_WEBHOOK_SECRET_TOKEN"
+    )
+
+    dingtalk_enabled: bool = Field(default=True, alias="DINGTALK_ENABLED")
+    dingtalk_webhook_token: str | None = Field(
+        default=None, alias="DINGTALK_WEBHOOK_TOKEN"
+    )
+    dingtalk_stream_enabled: bool = Field(
+        default=True, alias="DINGTALK_STREAM_ENABLED"
+    )
+    dingtalk_stream_subscribe_events: bool = Field(
+        default=False, alias="DINGTALK_STREAM_SUBSCRIBE_EVENTS"
+    )
+    dingtalk_client_id: str | None = Field(default=None, alias="DINGTALK_CLIENT_ID")
+    dingtalk_client_secret: str | None = Field(
+        default=None, alias="DINGTALK_CLIENT_SECRET"
+    )
+    dingtalk_robot_code: str | None = Field(default=None, alias="DINGTALK_ROBOT_CODE")
+    dingtalk_open_base_url: str = Field(
+        default="https://api.dingtalk.com",
+        alias="DINGTALK_OPEN_BASE_URL",
+    )
+    dingtalk_webhook_url: str | None = Field(
+        default=None, alias="DINGTALK_WEBHOOK_URL"
+    )
+
+    feishu_enabled: bool = Field(default=False, alias="FEISHU_ENABLED")
+    feishu_stream_enabled: bool = Field(
+        default=True, alias="FEISHU_STREAM_ENABLED"
+    )
+    feishu_app_id: str | None = Field(default=None, alias="FEISHU_APP_ID")
+    feishu_app_secret: str | None = Field(default=None, alias="FEISHU_APP_SECRET")
+    feishu_verification_token: str | None = Field(
+        default=None, alias="FEISHU_VERIFICATION_TOKEN"
+    )
+    feishu_base_url: str = Field(
+        default="https://open.feishu.cn",
+        alias="FEISHU_BASE_URL",
+    )
+
     s3_endpoint: str | None = Field(default=None, alias="S3_ENDPOINT")
     s3_public_endpoint: str | None = Field(default=None, alias="S3_PUBLIC_ENDPOINT")
     s3_access_key: str | None = Field(default=None, alias="S3_ACCESS_KEY")
