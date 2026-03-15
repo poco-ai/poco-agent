@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Plug, Server, Sparkles } from "lucide-react";
+import { Plug, Server, Sparkles, X } from "lucide-react";
 import { mcpService } from "@/features/capabilities/mcp/api/mcp-api";
 import { skillsService } from "@/features/capabilities/skills/api/skills-api";
 import { pluginsService } from "@/features/capabilities/plugins/api/plugins-api";
