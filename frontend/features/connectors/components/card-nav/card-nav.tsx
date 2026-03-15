@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Plug, Server, Sparkles } from "lucide-react";
+import { Plug, Server, Sparkles, X } from "lucide-react";
 import { mcpService } from "@/features/capabilities/mcp/api/mcp-api";
 import { skillsService } from "@/features/capabilities/skills/api/skills-api";
 import { pluginsService } from "@/features/capabilities/plugins/api/plugins-api";
@@ -436,6 +436,7 @@ export function CardNav({
     onDismiss?.();
   }, [onDismiss]);
 
+  const canDismiss = showDismiss && typeof onDismiss === "function";
   const dialogCards: CapabilityCardConfig[] = useMemo(
     () => [
       {
@@ -545,6 +546,20 @@ export function CardNav({
               <span className="inline-flex h-7 min-w-7 items-center justify-center rounded-full border border-border/60 bg-muted/40 px-2 text-xs text-muted-foreground">
                 +{hiddenPreviewCount}
               </span>
+            ) : null}
+
+            {canDismiss ? (
+              <button
+                type="button"
+                aria-label={t("common.close")}
+                className="inline-flex size-7 items-center justify-center rounded-full border border-border/60 bg-muted/40 text-muted-foreground transition-colors hover:bg-muted/70 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/20"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  handleDismiss();
+                }}
+              >
+                <X className="size-3.5" />
+              </button>
             ) : null}
           </div>
         </div>

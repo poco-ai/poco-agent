@@ -1,11 +1,10 @@
-import logging
 from typing import Any
 
 import httpx
 
 from app.core.settings import get_settings
 
-logger = logging.getLogger(__name__)
+DEFAULT_BACKEND_TIMEOUT_SECONDS = 10.0
 
 
 class BackendClientError(RuntimeError):
@@ -14,14 +13,14 @@ class BackendClientError(RuntimeError):
 
 class BackendClient:
     def __init__(self) -> None:
-        self.settings = get_settings()
-        self.base_url = self.settings.backend_url.rstrip("/")
+        settings = get_settings()
+        self.base_url = settings.backend_url.rstrip("/")
         self.backend_user_id = (
-            self.settings.backend_user_id or "default"
+            settings.backend_user_id or "default"
         ).strip() or "default"
         self.timeout = httpx.Timeout(
-            self.settings.poll_http_timeout_seconds,
-            connect=min(10.0, self.settings.poll_http_timeout_seconds),
+            DEFAULT_BACKEND_TIMEOUT_SECONDS,
+            connect=min(10.0, DEFAULT_BACKEND_TIMEOUT_SECONDS),
         )
 
     async def _request(
@@ -95,27 +94,6 @@ class BackendClient:
     async def get_session_state(self, *, session_id: str) -> dict[str, Any]:
         data = await self._request("GET", f"/sessions/{session_id}/state")
         return data if isinstance(data, dict) else {}
-
-    async def list_runs_by_session(self, *, session_id: str) -> list[dict[str, Any]]:
-        data = await self._request("GET", f"/runs/session/{session_id}")
-        if not isinstance(data, list):
-            return []
-        return data
-
-    async def get_session_messages(self, *, session_id: str) -> list[dict[str, Any]]:
-        data = await self._request("GET", f"/sessions/{session_id}/messages")
-        if not isinstance(data, list):
-            return []
-        return data
-
-    async def list_user_input_requests(
-        self, *, session_id: str | None = None
-    ) -> list[dict[str, Any]]:
-        params = {"session_id": session_id} if session_id else None
-        data = await self._request("GET", "/user-input-requests", params=params)
-        if not isinstance(data, list):
-            return []
-        return data
 
     async def answer_user_input_request(
         self, *, request_id: str, answers: dict[str, str]

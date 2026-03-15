@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 
@@ -12,6 +13,9 @@ from app.services.backend_client import BackendClient, BackendClientError
 from app.services.message_formatter import MessageFormatter
 
 logger = logging.getLogger(__name__)
+
+_LEADING_AT_TAG_RE = re.compile(r"^(?:<at\s+[^>]*>.*?</at>\s*)+", re.IGNORECASE)
+_LEADING_MENTION_RE = re.compile(r"^(?:[@＠][^\s]+\s*)+")
 
 
 CommandHandler = Callable[[Session, Channel, str], Awaitable[list[str]]]
@@ -47,7 +51,7 @@ class CommandService:
     async def handle_text(
         self, *, db: Session, channel: Channel, text: str
     ) -> list[str]:
-        clean = (text or "").strip()
+        clean = _normalize_incoming_text(text)
         if not clean:
             return [self._help_text()]
 
@@ -406,3 +410,29 @@ def _status_emoji(status: str) -> str:
     if normalized in {"cancelled", "canceled", "aborted"}:
         return "🚫"
     return "❔"
+
+
+def _normalize_incoming_text(text: str) -> str:
+    clean = (text or "").strip()
+    if not clean:
+        return ""
+
+    clean = clean.replace("\u2005", " ").replace("\u2006", " ")
+    clean = clean.replace("\u200b", "").replace("\ufeff", "").strip()
+
+    while True:
+        matched = _LEADING_AT_TAG_RE.match(clean)
+        if not matched:
+            break
+        clean = clean[matched.end() :].strip()
+
+    while True:
+        matched = _LEADING_MENTION_RE.match(clean)
+        if not matched:
+            break
+        clean = clean[matched.end() :].strip()
+
+    if clean.startswith("／"):
+        clean = "/" + clean[1:]
+
+    return clean

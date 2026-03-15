@@ -22,23 +22,7 @@ class Settings(BaseSettings):
         default="http://localhost:3000", alias="FRONTEND_PUBLIC_URL"
     )
     frontend_default_language: str = Field(default="zh", alias="FRONTEND_DEFAULT_LANG")
-
-    # Polling intervals
-    poll_user_input_interval_seconds: float = Field(
-        default=2.0, alias="POLL_USER_INPUT_INTERVAL_SECONDS"
-    )
-    poll_session_messages_interval_seconds: float = Field(
-        default=2.0, alias="POLL_SESSION_MESSAGES_INTERVAL_SECONDS"
-    )
-    poll_sessions_recent_interval_seconds: float = Field(
-        default=5.0, alias="POLL_SESSIONS_RECENT_INTERVAL_SECONDS"
-    )
-    poll_sessions_full_interval_seconds: float = Field(
-        default=300.0, alias="POLL_SESSIONS_FULL_INTERVAL_SECONDS"
-    )
-    poll_http_timeout_seconds: float = Field(
-        default=10.0, alias="POLL_HTTP_TIMEOUT_SECONDS"
-    )
+    backend_event_token: str | None = Field(default=None, alias="BACKEND_EVENT_TOKEN")
 
     # Telegram bot integration
     telegram_bot_token: str = Field(default="", alias="TELEGRAM_BOT_TOKEN")
@@ -68,6 +52,19 @@ class Settings(BaseSettings):
 
     # Optional outbound-only webhook integrations (notifications only)
     dingtalk_webhook_url: str | None = Field(default=None, alias="DINGTALK_WEBHOOK_URL")
+
+    # Feishu bot integration
+    feishu_enabled: bool = Field(default=False, alias="FEISHU_ENABLED")
+    feishu_stream_enabled: bool = Field(default=True, alias="FEISHU_STREAM_ENABLED")
+    feishu_app_id: str | None = Field(default=None, alias="FEISHU_APP_ID")
+    feishu_app_secret: str | None = Field(default=None, alias="FEISHU_APP_SECRET")
+    feishu_verification_token: str | None = Field(
+        default=None, alias="FEISHU_VERIFICATION_TOKEN"
+    )
+    feishu_base_url: str = Field(
+        default="https://open.feishu.cn",
+        alias="FEISHU_BASE_URL",
+    )
 
     model_config = SettingsConfigDict(
         env_file=".env",

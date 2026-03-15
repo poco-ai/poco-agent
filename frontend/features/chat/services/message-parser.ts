@@ -34,6 +34,7 @@ interface MessageContentShape {
   subtype?: string;
   content?: MessageContentBlock[];
   text?: string;
+  result?: string;
   parent_tool_use_id?: string | null;
 }
 
@@ -67,6 +68,37 @@ function typeIncludes(typeValue: unknown, needle: string): boolean {
 function cleanText(text: string): string {
   if (!text) return text;
   return text.replace(/\uFFFD/g, "");
+}
+
+function appendAssistantTextBlock(
+  message: ChatMessage,
+  text: string,
+): ChatMessage {
+  const normalized = text.trim();
+  if (!normalized) return message;
+
+  if (!Array.isArray(message.content)) {
+    return {
+      ...message,
+      content: normalized,
+    };
+  }
+
+  const existingBlocks = message.content as MessageBlock[];
+  const lastTextBlock = [...existingBlocks]
+    .reverse()
+    .find((block) => block._type === "TextBlock");
+  if (lastTextBlock?._type === "TextBlock") {
+    const lastNormalized = cleanText(lastTextBlock.text).trim();
+    if (lastNormalized === normalized) {
+      return message;
+    }
+  }
+
+  return {
+    ...message,
+    content: [...existingBlocks, { _type: "TextBlock", text: normalized }],
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -291,6 +323,11 @@ export function parseMessages(
     let textContent = "";
     if (isNonEmptyString(contentObj.text)) {
       textContent = cleanText(contentObj.text);
+    } else if (
+      typeIncludes(contentObj._type, "ResultMessage") &&
+      isNonEmptyString(contentObj.result)
+    ) {
+      textContent = cleanText(contentObj.result);
     } else if (Array.isArray(contentObj.content)) {
       const textBlocks = contentObj.content
         .filter((b) => typeIncludes(b?._type, "TextBlock"))
@@ -320,9 +357,12 @@ export function parseMessages(
         });
       } else {
         if (currentAssistantMessage) {
-          const existingBlocks =
-            currentAssistantMessage.content as MessageBlock[];
-          existingBlocks.push({ _type: "TextBlock", text: textContent });
+          currentAssistantMessage = appendAssistantTextBlock(
+            currentAssistantMessage,
+            textContent,
+          );
+          processedMessages[processedMessages.length - 1] =
+            currentAssistantMessage;
         } else {
           processedMessages.push({
             id: msg.id.toString(),

@@ -2,8 +2,8 @@
 
 This service is used to:
 
-- Start tasks, continue conversations, and answer AskQuestion/Plan Approval requests through IM platforms (currently Telegram / DingTalk)
-- Send notifications by polling the Backend public API (completed / failed / input required)
+- Start tasks, continue conversations, and answer AskQuestion/Plan Approval requests through IM platforms (currently Telegram / DingTalk / Feishu)
+- Receive Backend push events and send IM notifications (completed / failed / input required)
 
 Design goals:
 
@@ -29,13 +29,7 @@ BACKEND_URL=http://localhost:8000
 BACKEND_USER_ID=default
 FRONTEND_PUBLIC_URL=http://localhost:3000
 FRONTEND_DEFAULT_LANG=zh
-
-# Polling
-POLL_USER_INPUT_INTERVAL_SECONDS=2
-POLL_SESSION_MESSAGES_INTERVAL_SECONDS=2
-POLL_SESSIONS_RECENT_INTERVAL_SECONDS=5
-POLL_SESSIONS_FULL_INTERVAL_SECONDS=300
-POLL_HTTP_TIMEOUT_SECONDS=10
+BACKEND_EVENT_TOKEN=change-this-token
 
 # Telegram
 TELEGRAM_BOT_TOKEN=123:abc
@@ -55,12 +49,34 @@ DINGTALK_ROBOT_CODE=
 DINGTALK_OPEN_BASE_URL=https://api.dingtalk.com
 # Optional: fixed outbound-only webhook (fallback / notification use, usually a group custom bot webhook)
 DINGTALK_WEBHOOK_URL=
+
+# Feishu
+FEISHU_ENABLED=false
+FEISHU_STREAM_ENABLED=true
+FEISHU_APP_ID=
+FEISHU_APP_SECRET=
+FEISHU_VERIFICATION_TOKEN=
+FEISHU_BASE_URL=https://open.feishu.cn
 ```
 
 ### Webhook
 
 - Telegram: `POST /api/v1/webhooks/telegram`
 - DingTalk (optional in Webhook mode): `POST /api/v1/webhooks/dingtalk` (no public callback is needed when using Stream mode)
+- Feishu (optional fallback in webhook mode): `POST /api/v1/webhooks/feishu`
+- Backend internal events: `POST /api/v1/internal/backend-events`
+
+To enable notifications, configure the Backend to dispatch IM events to this endpoint and
+use the same `BACKEND_EVENT_TOKEN`.
+
+Feishu notes:
+
+- Use a self-built Feishu app with bot capability enabled
+- Long connection is recommended and enabled by default with `FEISHU_STREAM_ENABLED=true`
+- With long connection enabled, no public Feishu callback URL is required for inbound messages
+- If you choose webhook mode instead, configure the event subscription callback URL to `POST /api/v1/webhooks/feishu`
+- `FEISHU_VERIFICATION_TOKEN` is only needed for webhook mode
+- Webhook mode currently supports plaintext callbacks only, so callback encryption must stay disabled
 
 ### IM Commands
 

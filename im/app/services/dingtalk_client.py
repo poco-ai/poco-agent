@@ -149,29 +149,28 @@ class DingTalkClient:
         )
         return False
 
-    async def send_text(self, *, destination: str, text: str) -> None:
+    async def send_text(self, *, destination: str, text: str) -> bool:
         if not self._enabled:
-            return
+            return False
 
         dest = (destination or "").strip()
         if not dest:
-            return
+            return False
 
         # 1) Session webhook / custom robot webhook.
         if dest.startswith("http"):
-            await self._send_via_webhook(url=dest, text=text)
-            return
+            return await self._send_via_webhook(url=dest, text=text)
 
         # 2) Proactive send via OpenAPI (stable, based on conversationId).
         if await self._send_via_openapi(conversation_id=dest, text=text):
-            return
+            return True
 
         # 3) Fallback: a fixed outbound-only webhook (notifications only).
         if self._fallback_webhook:
-            await self._send_via_webhook(url=self._fallback_webhook, text=text)
-            return
+            return await self._send_via_webhook(url=self._fallback_webhook, text=text)
 
         logger.warning(
             "dingtalk_send_skipped",
             extra={"reason": "no_route", "destination": dest},
         )
+        return False

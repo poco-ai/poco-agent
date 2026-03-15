@@ -13,11 +13,15 @@ from app.schemas.user_input_request import (
     UserInputRequestCreateRequest,
     UserInputRequestResponse,
 )
+from app.services.im_event_service import ImEventService
 
 DEFAULT_EXPIRES_SECONDS = 60
 
 
 class UserInputRequestService:
+    def __init__(self) -> None:
+        self._im_events = ImEventService()
+
     def create_request(
         self, db: Session, request: UserInputRequestCreateRequest
     ) -> UserInputRequestResponse:
@@ -40,6 +44,12 @@ class UserInputRequestService:
             expires_at=expires_at,
         )
         UserInputRequestRepository.create(db, entry)
+        db.flush()
+        self._im_events.enqueue_user_input_request_created(
+            db,
+            db_session=db_session,
+            request=entry,
+        )
         db.commit()
         db.refresh(entry)
         return UserInputRequestResponse.model_validate(entry)

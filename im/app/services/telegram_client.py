@@ -21,9 +21,9 @@ class TelegramClient:
     def enabled(self) -> bool:
         return self._enabled
 
-    async def send_text(self, *, destination: str, text: str) -> None:
+    async def send_text(self, *, destination: str, text: str) -> bool:
         if not self._enabled:
-            return
+            return False
         url = f"{self._base_url}/sendMessage"
         payload = {
             "chat_id": destination,
@@ -39,3 +39,5 @@ class TelegramClient:
                 "telegram_send_failed",
                 extra={"status_code": resp.status_code, "response": resp.text[:300]},
             )
+            return False
+        return True

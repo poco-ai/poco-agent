@@ -8,6 +8,7 @@ dependencies = [
     "dingtalk-stream>=0.24.3",
     "fastapi>=0.128.0",
     "httpx>=0.28.1",
+    "lark-oapi>=1.5.3",
     "pydantic-settings>=2.12.0",
     "python-socks>=2.8.0",
     "sqlalchemy>=2.0.45",

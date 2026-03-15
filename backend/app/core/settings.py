@@ -36,6 +36,22 @@ class Settings(BaseSettings):
     executor_manager_url: str = Field(
         default="http://localhost:8001", alias="EXECUTOR_MANAGER_URL"
     )
+    im_event_dispatch_enabled: bool = Field(
+        default=False, alias="IM_EVENT_DISPATCH_ENABLED"
+    )
+    im_event_callback_url: str | None = Field(
+        default=None, alias="IM_EVENT_CALLBACK_URL"
+    )
+    im_event_token: str | None = Field(default=None, alias="IM_EVENT_TOKEN")
+    im_event_dispatch_interval_seconds: float = Field(
+        default=0.5, alias="IM_EVENT_DISPATCH_INTERVAL_SECONDS"
+    )
+    im_event_dispatch_batch_size: int = Field(
+        default=20, alias="IM_EVENT_DISPATCH_BATCH_SIZE"
+    )
+    im_event_dispatch_lease_seconds: int = Field(
+        default=30, alias="IM_EVENT_DISPATCH_LEASE_SECONDS"
+    )
     s3_endpoint: str | None = Field(default=None, alias="S3_ENDPOINT")
     s3_public_endpoint: str | None = Field(default=None, alias="S3_PUBLIC_ENDPOINT")
     s3_access_key: str | None = Field(default=None, alias="S3_ACCESS_KEY")
