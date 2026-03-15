@@ -35,9 +35,7 @@ class Settings(BaseSettings):
     dingtalk_webhook_token: str | None = Field(
         default=None, alias="DINGTALK_WEBHOOK_TOKEN"
     )
-    dingtalk_stream_enabled: bool = Field(
-        default=True, alias="DINGTALK_STREAM_ENABLED"
-    )
+    dingtalk_stream_enabled: bool = Field(default=True, alias="DINGTALK_STREAM_ENABLED")
     dingtalk_stream_subscribe_events: bool = Field(
         default=False, alias="DINGTALK_STREAM_SUBSCRIBE_EVENTS"
     )
@@ -53,9 +51,7 @@ class Settings(BaseSettings):
     )
 
     # Optional outbound-only webhook integrations (notifications only)
-    dingtalk_webhook_url: str | None = Field(
-        default=None, alias="DINGTALK_WEBHOOK_URL"
-    )
+    dingtalk_webhook_url: str | None = Field(default=None, alias="DINGTALK_WEBHOOK_URL")
 
     # Feishu bot integration
     feishu_enabled: bool = Field(default=False, alias="FEISHU_ENABLED")

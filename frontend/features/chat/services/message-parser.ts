@@ -361,7 +361,8 @@ export function parseMessages(
             currentAssistantMessage,
             textContent,
           );
-          processedMessages[processedMessages.length - 1] = currentAssistantMessage;
+          processedMessages[processedMessages.length - 1] =
+            currentAssistantMessage;
         } else {
           processedMessages.push({
             id: msg.id.toString(),

@@ -30,7 +30,9 @@ def upgrade() -> None:
         ),
         sa.Column("event_key", sa.String(length=255), nullable=False),
         sa.Column("event_type", sa.String(length=100), nullable=False),
-        sa.Column("event_version", sa.Integer(), server_default=sa.text("1"), nullable=False),
+        sa.Column(
+            "event_version", sa.Integer(), server_default=sa.text("1"), nullable=False
+        ),
         sa.Column("user_id", sa.String(length=255), nullable=False),
         sa.Column("session_id", sa.Uuid(), nullable=True),
         sa.Column("run_id", sa.Uuid(), nullable=True),
@@ -43,7 +45,9 @@ def upgrade() -> None:
             server_default=sa.text("'pending'"),
             nullable=False,
         ),
-        sa.Column("attempt_count", sa.Integer(), server_default=sa.text("0"), nullable=False),
+        sa.Column(
+            "attempt_count", sa.Integer(), server_default=sa.text("0"), nullable=False
+        ),
         sa.Column(
             "next_attempt_at",
             sa.DateTime(timezone=True),

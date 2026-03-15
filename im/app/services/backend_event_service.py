@@ -133,7 +133,9 @@ class BackendEventService:
         for watch in WatchRepository.list_by_session(db, session_id=session_id):
             target.add(watch.channel_id)
 
-        for active in ActiveSessionRepository.list_by_session(db, session_id=session_id):
+        for active in ActiveSessionRepository.list_by_session(
+            db, session_id=session_id
+        ):
             target.add(active.channel_id)
 
         return target

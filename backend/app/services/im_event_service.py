@@ -84,7 +84,9 @@ class ImEventService:
     ) -> None:
         terminal_run = db_run
         if terminal_run is None:
-            terminal_run = RunRepository.get_latest_terminal_by_session(db, db_session.id)
+            terminal_run = RunRepository.get_latest_terminal_by_session(
+                db, db_session.id
+            )
 
         event_id = uuid.uuid4()
         run_status = (
@@ -183,7 +185,9 @@ def _build_run_snapshot(
         status=(db_run.status if db_run is not None else callback_status),
         progress=(db_run.progress if db_run is not None else None),
         error_message=(
-            db_run.last_error if db_run is not None and db_run.last_error else error_message
+            db_run.last_error
+            if db_run is not None and db_run.last_error
+            else error_message
         ),
     )
 
