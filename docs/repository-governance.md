@@ -62,6 +62,11 @@
   - merge 后自动删除分支
   - 禁用 merge commit
   - 禁用 rebase merge
+  - `main` 分支保护
+  - 通过 PR 合入 `main`
+  - 0 个必需审批
+  - 必须通过已配置 checks
+  - 必须解决 PR 对话
 
 ## 3. Pull Request 规范
 
@@ -284,7 +289,7 @@ PR 描述至少包含：
 | Labeler | `.github/labeler.yml`、`.github/workflows/labeler.yml` | 已落地 |
 | GitHub labels | repository labels | 已落地 |
 | Merge strategy | repository settings | 已落地 |
-| Branch protection | repository settings | 缺失 |
+| Branch protection | repository settings | 已落地 |
 
 ## 12. 下一步建议
 
