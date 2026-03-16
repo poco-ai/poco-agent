@@ -1204,7 +1204,11 @@
           "popular": "Популярное"
         },
         "aiSearchTooltip": "Включить AI Search и использовать семантический поиск SkillsMP",
-        "refresh": "Обновить рекомендации"
+        "refresh": "Обновить рекомендации",
+        "openInGithub": "Открыть в GitHub",
+        "checkInSkillsmp": "Открыть в SkillsMP",
+        "titleLabel": "Название",
+        "descriptionLabel": "Описание"
       }
     },
     "pluginsPage": {

@@ -1204,7 +1204,11 @@
           "popular": "人気"
         },
         "aiSearchTooltip": "AI Search を有効にして、SkillsMP のセマンティック検索 API を使います",
-        "refresh": "おすすめを更新"
+        "refresh": "おすすめを更新",
+        "openInGithub": "GitHub で開く",
+        "checkInSkillsmp": "SkillsMP で確認",
+        "titleLabel": "タイトル",
+        "descriptionLabel": "説明"
       }
     },
     "pluginsPage": {

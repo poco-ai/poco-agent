@@ -1204,7 +1204,11 @@
           "popular": "Populaire"
         },
         "aiSearchTooltip": "Utiliser AI Search avec le point d’accès de recherche sémantique de SkillsMP",
-        "refresh": "Actualiser les recommandations"
+        "refresh": "Actualiser les recommandations",
+        "openInGithub": "Ouvrir dans GitHub",
+        "checkInSkillsmp": "Voir dans SkillsMP",
+        "titleLabel": "Titre",
+        "descriptionLabel": "Description"
       }
     },
     "pluginsPage": {

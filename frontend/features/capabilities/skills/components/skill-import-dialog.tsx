@@ -2,7 +2,14 @@
 
 import * as React from "react";
 import { useMemo, useState } from "react";
-import { CheckCheck, ListChecks } from "lucide-react";
+import {
+  AlignLeft,
+  ArrowUpRight,
+  CheckCheck,
+  Github,
+  ListChecks,
+  Type,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -88,7 +95,8 @@ function buildSelectionsFromCandidates(
   const next: Record<string, CandidateSelectionState> = {};
   const requestedSkillRaw = options.requestedSkillRaw?.trim() || null;
   const requestedSkill = requestedSkillRaw?.toLowerCase() || null;
-  const preselectedRelativePath = options.preselectedRelativePath?.trim() || null;
+  const preselectedRelativePath =
+    options.preselectedRelativePath?.trim() || null;
   let hasRequestedSkillMatch = false;
   let matchedCandidatePage: number | null = null;
 
@@ -122,6 +130,17 @@ function buildSelectionsFromCandidates(
         (isPreselected || isRequested) && candidate.requires_name
           ? requestedSkillRaw || ""
           : "",
+    };
+  }
+
+  if (
+    candidates.length === 1 &&
+    !Object.values(next).some((selection) => selection.selected)
+  ) {
+    const onlyCandidate = candidates[0];
+    next[onlyCandidate.relative_path] = {
+      selected: true,
+      nameOverride: onlyCandidate.requires_name ? requestedSkillRaw || "" : "",
     };
   }
 
@@ -183,6 +202,8 @@ export function SkillImportDialog({
   const [marketplaceDownloadingId, setMarketplaceDownloadingId] = useState<
     string | null
   >(null);
+  const [resolvedMarketplaceItem, setResolvedMarketplaceItem] =
+    useState<SkillsMpSkillItem | null>(null);
 
   const [archiveKey, setArchiveKey] = useState<string | null>(null);
   const [candidates, setCandidates] = useState<SkillImportCandidate[]>([]);
@@ -218,6 +239,7 @@ export function SkillImportDialog({
     setMarketplaceError(null);
     setIsMarketplaceLoading(false);
     setMarketplaceDownloadingId(null);
+    setResolvedMarketplaceItem(null);
     setArchiveKey(null);
     setCandidates([]);
     setCandidatePage(1);
@@ -235,7 +257,9 @@ export function SkillImportDialog({
   }, [onClose, reset]);
 
   const selectedCandidates = useMemo(() => {
-    return candidates.filter((candidate) => selections[candidate.relative_path]?.selected);
+    return candidates.filter(
+      (candidate) => selections[candidate.relative_path]?.selected,
+    );
   }, [candidates, selections]);
 
   const totalCandidatePages = useMemo(() => {
@@ -257,16 +281,21 @@ export function SkillImportDialog({
 
   const isPageFullySelected = useMemo(() => {
     if (pagedCandidates.length === 0) return false;
-    return pagedCandidates.every((candidate) => selections[candidate.relative_path]?.selected);
+    return pagedCandidates.every(
+      (candidate) => selections[candidate.relative_path]?.selected,
+    );
   }, [pagedCandidates, selections]);
 
   const isAllSelected = useMemo(() => {
     if (candidates.length === 0) return false;
-    return candidates.every((candidate) => selections[candidate.relative_path]?.selected);
+    return candidates.every(
+      (candidate) => selections[candidate.relative_path]?.selected,
+    );
   }, [candidates, selections]);
 
   const overwriteCount = useMemo(() => {
-    return selectedCandidates.filter((candidate) => candidate.will_overwrite).length;
+    return selectedCandidates.filter((candidate) => candidate.will_overwrite)
+      .length;
   }, [selectedCandidates]);
 
   const canCommit = useMemo(() => {
@@ -274,7 +303,8 @@ export function SkillImportDialog({
     if (selectedCandidates.length === 0) return false;
     for (const candidate of selectedCandidates) {
       if (candidate.requires_name) {
-        const name = selections[candidate.relative_path]?.nameOverride?.trim() || "";
+        const name =
+          selections[candidate.relative_path]?.nameOverride?.trim() || "";
         if (!name) return false;
       }
     }
@@ -328,7 +358,10 @@ export function SkillImportDialog({
         setMarketplaceSearchItems([]);
         setMarketplaceHasActiveSearch(false);
       } catch (error) {
-        console.error("[SkillsImport] marketplace recommendations failed:", error);
+        console.error(
+          "[SkillsImport] marketplace recommendations failed:",
+          error,
+        );
         if (!isActiveRef.current) return;
         setMarketplaceError(
           error instanceof ApiError
@@ -344,82 +377,11 @@ export function SkillImportDialog({
     [t],
   );
 
-  const searchMarketplace = React.useCallback(async () => {
-    const query = marketplaceQuery.trim();
-    if (!query) {
-      setMarketplaceHasActiveSearch(false);
-      setMarketplaceSearchItems([]);
-      await loadMarketplaceRecommendations();
-      return;
-    }
-
-    setIsMarketplaceLoading(true);
-    setMarketplaceError(null);
-    try {
-      const response = await skillsService.searchMarketplaceSkills({
-        q: query,
-        page: 1,
-        page_size: 12,
-        semantic: isSemanticSearch,
-      });
-      if (!isActiveRef.current) return;
-      setMarketplaceSearchItems(response.items || []);
-      setMarketplaceHasActiveSearch(true);
-    } catch (error) {
-      console.error("[SkillsImport] marketplace search failed:", error);
-      if (!isActiveRef.current) return;
-      setMarketplaceError(
-        error instanceof ApiError
-          ? error.message
-          : t("library.skillsImport.toasts.marketplaceLoadError"),
-      );
-    } finally {
-      if (isActiveRef.current) {
-        setIsMarketplaceLoading(false);
-      }
-    }
-  }, [isSemanticSearch, loadMarketplaceRecommendations, marketplaceQuery, t]);
-
-  const resetMarketplaceSearch = React.useCallback(async () => {
-    setMarketplaceQuery("");
-    setMarketplaceSearchItems([]);
-    setMarketplaceHasActiveSearch(false);
-    await loadMarketplaceRecommendations();
-  }, [loadMarketplaceRecommendations]);
-
-  const refreshMarketplaceRecommendations = React.useCallback(async () => {
-    setMarketplaceQuery("");
-    setMarketplaceSearchItems([]);
-    setMarketplaceHasActiveSearch(false);
-    await loadMarketplaceRecommendations({ forceRefresh: true });
-  }, [loadMarketplaceRecommendations]);
-
-  React.useEffect(() => {
-    if (!open || tab !== "marketplace" || archiveKey) {
-      return;
-    }
-    if (
-      marketplaceRecommendations.length > 0 ||
-      marketplaceHasActiveSearch ||
-      isMarketplaceLoading
-    ) {
-      return;
-    }
-    void loadMarketplaceRecommendations();
-  }, [
-    archiveKey,
-    isMarketplaceLoading,
-    loadMarketplaceRecommendations,
-    marketplaceHasActiveSearch,
-    marketplaceRecommendations.length,
-    open,
-    tab,
-  ]);
-
   const onDiscover = async () => {
     setIsDiscovering(true);
     setCommitResult(null);
     setCommitError(null);
+    setResolvedMarketplaceItem(null);
     try {
       const formData = new FormData();
       const parsedGithubInput =
@@ -474,14 +436,20 @@ export function SkillImportDialog({
       setCommitResult(null);
       setCommitError(null);
       try {
-        const response = await skillsService.marketplaceImportDiscover({ item });
+        const response = await skillsService.marketplaceImportDiscover({
+          item,
+        });
         applyDiscoverResponse(response, {
           preselectedRelativePath: response.preselected_relative_path || null,
           selectAllByDefault: false,
         });
+        setResolvedMarketplaceItem(response.skillsmp_item ?? item);
         toast.success(t("library.skillsImport.toasts.discovered"));
       } catch (error) {
-        console.error("[SkillsImport] marketplace import discover failed:", error);
+        console.error(
+          "[SkillsImport] marketplace import discover failed:",
+          error,
+        );
         toast.error(t("library.skillsImport.toasts.marketplaceDiscoverError"));
       } finally {
         if (isActiveRef.current) {
@@ -491,6 +459,79 @@ export function SkillImportDialog({
     },
     [applyDiscoverResponse, t],
   );
+
+  const searchMarketplace = React.useCallback(async () => {
+    const query = marketplaceQuery.trim();
+    if (!query) {
+      setMarketplaceHasActiveSearch(false);
+      setMarketplaceSearchItems([]);
+      await loadMarketplaceRecommendations();
+      return;
+    }
+
+    setIsMarketplaceLoading(true);
+    setMarketplaceError(null);
+    try {
+      const response = await skillsService.searchMarketplaceSkills({
+        q: query,
+        page: 1,
+        page_size: 12,
+        semantic: isSemanticSearch,
+      });
+      if (!isActiveRef.current) return;
+      const items = response.items || [];
+      setMarketplaceSearchItems(items);
+      setMarketplaceHasActiveSearch(true);
+    } catch (error) {
+      console.error("[SkillsImport] marketplace search failed:", error);
+      if (!isActiveRef.current) return;
+      setMarketplaceError(
+        error instanceof ApiError
+          ? error.message
+          : t("library.skillsImport.toasts.marketplaceLoadError"),
+      );
+    } finally {
+      if (isActiveRef.current) {
+        setIsMarketplaceLoading(false);
+      }
+    }
+  }, [isSemanticSearch, loadMarketplaceRecommendations, marketplaceQuery, t]);
+
+  const resetMarketplaceSearch = React.useCallback(async () => {
+    setMarketplaceQuery("");
+    setMarketplaceSearchItems([]);
+    setMarketplaceHasActiveSearch(false);
+    await loadMarketplaceRecommendations();
+  }, [loadMarketplaceRecommendations]);
+
+  const refreshMarketplaceRecommendations = React.useCallback(async () => {
+    setMarketplaceQuery("");
+    setMarketplaceSearchItems([]);
+    setMarketplaceHasActiveSearch(false);
+    await loadMarketplaceRecommendations({ forceRefresh: true });
+  }, [loadMarketplaceRecommendations]);
+
+  React.useEffect(() => {
+    if (!open || tab !== "marketplace" || archiveKey) {
+      return;
+    }
+    if (
+      marketplaceRecommendations.length > 0 ||
+      marketplaceHasActiveSearch ||
+      isMarketplaceLoading
+    ) {
+      return;
+    }
+    void loadMarketplaceRecommendations();
+  }, [
+    archiveKey,
+    isMarketplaceLoading,
+    loadMarketplaceRecommendations,
+    marketplaceHasActiveSearch,
+    marketplaceRecommendations.length,
+    open,
+    tab,
+  ]);
 
   const onCommit = async () => {
     if (!archiveKey || !canCommit) return;
@@ -583,19 +624,36 @@ export function SkillImportDialog({
     ? t("library.skillsImport.preview.selection.clearAll")
     : t("library.skillsImport.preview.selection.selectAll");
   const showMarketplaceFooter = !hasPreview && tab === "marketplace";
+  const isSingleCandidatePreview = hasPreview && candidates.length === 1;
+  const singleCandidate = isSingleCandidatePreview ? candidates[0] : null;
+  const isSingleMarketplacePreview =
+    isSingleCandidatePreview && resolvedMarketplaceItem !== null;
+  const singleSelection = singleCandidate
+    ? (selections[singleCandidate.relative_path] ?? {
+        selected: false,
+        nameOverride: "",
+      })
+    : null;
 
   return (
     <>
-      <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && handleClose()}>
+      <Dialog
+        open={open}
+        onOpenChange={(nextOpen) => !nextOpen && handleClose()}
+      >
         <CapabilityDialogContent
           title={t("library.skillsImport.title")}
           maxWidth="56rem"
           maxHeight="72dvh"
-          desktopMaxHeight="78dvh"
+          desktopMaxHeight="90dvh"
           bodyClassName="space-y-6 bg-background px-6 pt-4 pb-6"
           footer={
             <DialogFooter
-              className={showMarketplaceFooter ? "grid grid-cols-1" : "grid grid-cols-2 gap-2"}
+              className={
+                showMarketplaceFooter
+                  ? "grid grid-cols-1"
+                  : "grid grid-cols-2 gap-2"
+              }
             >
               <Button
                 variant="outline"
@@ -626,18 +684,28 @@ export function SkillImportDialog({
                       : "w-full"
                   }
                   aria-busy={isCommitting}
-                  aria-valuenow={isCommitting ? (commitProgress ?? 0) : undefined}
+                  aria-valuenow={
+                    isCommitting ? (commitProgress ?? 0) : undefined
+                  }
                   aria-valuemin={isCommitting ? 0 : undefined}
                   aria-valuemax={isCommitting ? 100 : undefined}
                 >
                   {isCommitting ? (
                     <span
                       className="absolute inset-y-0 left-0 bg-primary transition-[width] duration-300 ease-out"
-                      style={{ width: `${typeof commitProgress === "number" ? commitProgress : 0}%` }}
+                      style={{
+                        width: `${typeof commitProgress === "number" ? commitProgress : 0}%`,
+                      }}
                       aria-hidden
                     />
                   ) : null}
-                  <span className={isCommitting ? "relative z-10 text-primary-foreground" : undefined}>
+                  <span
+                    className={
+                      isCommitting
+                        ? "relative z-10 text-primary-foreground"
+                        : undefined
+                    }
+                  >
                     {isCommitting
                       ? t("library.skillsImport.actions.committing")
                       : t("library.skillsImport.actions.commit")}
@@ -655,16 +723,28 @@ export function SkillImportDialog({
                 className="gap-4"
               >
                 <TabsList className="flex h-auto flex-wrap gap-1 p-1 transition-colors duration-200">
-                  <TabsTrigger value="marketplace" className="data-[state=inactive]:scale-[0.98]">
+                  <TabsTrigger
+                    value="marketplace"
+                    className="data-[state=inactive]:scale-[0.98]"
+                  >
                     {t("library.skillsImport.tabs.marketplace")}
                   </TabsTrigger>
-                  <TabsTrigger value="github" className="data-[state=inactive]:scale-[0.98]">
+                  <TabsTrigger
+                    value="github"
+                    className="data-[state=inactive]:scale-[0.98]"
+                  >
                     {t("library.skillsImport.tabs.github")}
                   </TabsTrigger>
-                  <TabsTrigger value="command" className="data-[state=inactive]:scale-[0.98]">
+                  <TabsTrigger
+                    value="command"
+                    className="data-[state=inactive]:scale-[0.98]"
+                  >
                     {t("library.skillsImport.tabs.command")}
                   </TabsTrigger>
-                  <TabsTrigger value="zip" className="data-[state=inactive]:scale-[0.98]">
+                  <TabsTrigger
+                    value="zip"
+                    className="data-[state=inactive]:scale-[0.98]"
+                  >
                     {t("library.skillsImport.tabs.zip")}
                   </TabsTrigger>
                 </TabsList>
@@ -700,7 +780,9 @@ export function SkillImportDialog({
                   <Input
                     type="file"
                     accept=".zip"
-                    onChange={(event) => setZipFile(event.target.files?.[0] || null)}
+                    onChange={(event) =>
+                      setZipFile(event.target.files?.[0] || null)
+                    }
                     className="text-muted-foreground/80 placeholder:text-muted-foreground/50 file:text-muted-foreground/80"
                   />
                   {zipFile ? (
@@ -714,7 +796,9 @@ export function SkillImportDialog({
                   <Input
                     value={githubUrl}
                     onChange={(event) => setGithubUrl(event.target.value)}
-                    placeholder={t("library.skillsImport.placeholders.githubUrl")}
+                    placeholder={t(
+                      "library.skillsImport.placeholders.githubUrl",
+                    )}
                     className="text-muted-foreground/80 placeholder:text-muted-foreground/50"
                   />
                   <div className="text-xs text-muted-foreground/60">
@@ -736,188 +820,384 @@ export function SkillImportDialog({
               </Tabs>
             ) : (
               <div className="space-y-4">
-                <div className="flex items-center justify-between gap-4">
-                  <div className="text-sm text-muted-foreground">
-                    {t("library.skillsImport.preview.found")} <span className="font-medium text-foreground">{candidates.length}</span>{" "}
-                    {t("library.skillsImport.preview.items")}
-                    {overwriteCount > 0 ? (
-                      <span className="ml-2">
-                        · {t("library.skillsImport.preview.overwrite")} <span className="font-medium text-foreground">{overwriteCount}</span>{" "}
-                        {t("library.skillsImport.preview.overwriteItems")}
-                      </span>
-                    ) : null}
-                  </div>
-                  <div className="flex shrink-0 items-center gap-1">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      disabled={selectionDisabled || pagedCandidates.length === 0}
-                      onClick={() => {
-                        const targetSelected = !isPageFullySelected;
-                        setSelections((prev) => {
-                          const next = { ...prev };
-                          for (const candidate of pagedCandidates) {
-                            const current = next[candidate.relative_path] || {
-                              selected: false,
-                              nameOverride: "",
-                            };
-                            next[candidate.relative_path] = {
-                              ...current,
-                              selected: targetSelected,
-                            };
-                          }
-                          return next;
-                        });
-                      }}
-                      title={pageSelectionTitle}
-                      aria-label={pageSelectionTitle}
-                      className={isPageFullySelected ? "text-foreground" : "text-muted-foreground"}
-                    >
-                      <ListChecks className="size-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      disabled={selectionDisabled || candidates.length === 0}
-                      onClick={() => {
-                        const targetSelected = !isAllSelected;
-                        setSelections((prev) => {
-                          const next = { ...prev };
-                          for (const candidate of candidates) {
-                            const current = next[candidate.relative_path] || {
-                              selected: false,
-                              nameOverride: "",
-                            };
-                            next[candidate.relative_path] = {
-                              ...current,
-                              selected: targetSelected,
-                            };
-                          }
-                          return next;
-                        });
-                      }}
-                      title={allSelectionTitle}
-                      aria-label={allSelectionTitle}
-                      className={isAllSelected ? "text-foreground" : "text-muted-foreground"}
-                    >
-                      <CheckCheck className="size-4" />
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  {pagedCandidates.map((candidate) => {
-                    const selection = selections[candidate.relative_path] || {
-                      selected: false,
-                      nameOverride: "",
-                    };
-                    const disabled = selectionDisabled;
-                    return (
-                      <div
-                        key={candidate.relative_path}
-                        role="button"
-                        tabIndex={0}
-                        className="cursor-pointer rounded-xl border border-border/50 bg-muted/10 px-4 py-3 transition-colors hover:bg-muted/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2"
-                        onClick={(event) => {
-                          if (disabled) return;
-                          if ((event.target as HTMLElement).closest("input")) return;
-                          setSelections((prev) => ({
-                            ...prev,
-                            [candidate.relative_path]: {
-                              ...selection,
-                              selected: !selection.selected,
-                            },
-                          }));
+                {!isSingleCandidatePreview ? (
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="text-sm text-muted-foreground">
+                      {t("library.skillsImport.preview.found")}{" "}
+                      <span className="font-medium text-foreground">
+                        {candidates.length}
+                      </span>{" "}
+                      {t("library.skillsImport.preview.items")}
+                      {overwriteCount > 0 ? (
+                        <span className="ml-2">
+                          · {t("library.skillsImport.preview.overwrite")}{" "}
+                          <span className="font-medium text-foreground">
+                            {overwriteCount}
+                          </span>{" "}
+                          {t("library.skillsImport.preview.overwriteItems")}
+                        </span>
+                      ) : null}
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        disabled={
+                          selectionDisabled || pagedCandidates.length === 0
+                        }
+                        onClick={() => {
+                          const targetSelected = !isPageFullySelected;
+                          setSelections((prev) => {
+                            const next = { ...prev };
+                            for (const candidate of pagedCandidates) {
+                              const current = next[candidate.relative_path] || {
+                                selected: false,
+                                nameOverride: "",
+                              };
+                              next[candidate.relative_path] = {
+                                ...current,
+                                selected: targetSelected,
+                              };
+                            }
+                            return next;
+                          });
                         }}
-                        onKeyDown={(event) => {
-                          if (event.key === "Enter" || event.key === " ") {
-                            event.preventDefault();
-                            if (!disabled) {
+                        title={pageSelectionTitle}
+                        aria-label={pageSelectionTitle}
+                        className={
+                          isPageFullySelected
+                            ? "text-foreground"
+                            : "text-muted-foreground"
+                        }
+                      >
+                        <ListChecks className="size-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        disabled={selectionDisabled || candidates.length === 0}
+                        onClick={() => {
+                          const targetSelected = !isAllSelected;
+                          setSelections((prev) => {
+                            const next = { ...prev };
+                            for (const candidate of candidates) {
+                              const current = next[candidate.relative_path] || {
+                                selected: false,
+                                nameOverride: "",
+                              };
+                              next[candidate.relative_path] = {
+                                ...current,
+                                selected: targetSelected,
+                              };
+                            }
+                            return next;
+                          });
+                        }}
+                        title={allSelectionTitle}
+                        aria-label={allSelectionTitle}
+                        className={
+                          isAllSelected
+                            ? "text-foreground"
+                            : "text-muted-foreground"
+                        }
+                      >
+                        <CheckCheck className="size-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ) : null}
+
+                {isSingleMarketplacePreview &&
+                singleCandidate &&
+                singleSelection &&
+                resolvedMarketplaceItem ? (
+                  <div className="overflow-hidden rounded-2xl border border-border/60 bg-background">
+                    <div className="space-y-4 bg-muted/40 px-5 py-4">
+                      <div className="grid gap-2 sm:grid-cols-[8rem_minmax(0,1fr)] sm:items-start">
+                        <div className="flex items-center gap-2 pt-0.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                          <Type className="size-3.5" />
+                          <span>
+                            {t("library.skillsImport.marketplace.titleLabel")}
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="select-text text-base font-semibold text-foreground">
+                            {resolvedMarketplaceItem.name}
+                          </span>
+                          {singleCandidate.will_overwrite ? (
+                            <Badge variant="outline" className="text-xs">
+                              {t("library.skillsImport.preview.willOverwrite")}
+                            </Badge>
+                          ) : null}
+                        </div>
+                      </div>
+
+                      <div className="grid gap-2 sm:grid-cols-[8rem_minmax(0,1fr)] sm:items-start">
+                        <div className="flex items-center gap-2 pt-0.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                          <AlignLeft className="size-3.5" />
+                          <span>
+                            {t(
+                              "library.skillsImport.marketplace.descriptionLabel",
+                            )}
+                          </span>
+                        </div>
+                        <p className="max-w-xl select-text text-sm leading-6 text-muted-foreground">
+                          {resolvedMarketplaceItem.description ||
+                            t("library.skillsImport.marketplace.noDescription")}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4 px-5 py-4">
+                      <div className="flex flex-wrap items-center justify-end gap-x-4 gap-y-2 text-xs text-muted-foreground">
+                        {resolvedMarketplaceItem.github_url ? (
+                          <a
+                            href={resolvedMarketplaceItem.github_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground"
+                          >
+                            <Github className="size-3.5" />
+                            <span>
+                              {t(
+                                "library.skillsImport.marketplace.openInGithub",
+                              )}
+                            </span>
+                          </a>
+                        ) : null}
+                        <a
+                          href={resolvedMarketplaceItem.skillsmp_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground"
+                        >
+                          <ArrowUpRight className="size-3.5" />
+                          <span>
+                            {t(
+                              "library.skillsImport.marketplace.checkInSkillsmp",
+                            )}
+                          </span>
+                        </a>
+                      </div>
+
+                      {singleCandidate.requires_name ? (
+                        <div className="space-y-1">
+                          <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                            {t("library.skillsImport.fields.nameOverride")}
+                          </Label>
+                          <Input
+                            value={singleSelection.nameOverride}
+                            disabled={selectionDisabled}
+                            onChange={(event) => {
+                              const value = event.target.value;
                               setSelections((prev) => ({
                                 ...prev,
-                                [candidate.relative_path]: {
-                                  ...selection,
-                                  selected: !selection.selected,
+                                [singleCandidate.relative_path]: {
+                                  ...singleSelection,
+                                  selected: true,
+                                  nameOverride: value,
                                 },
                               }));
-                            }
-                          }
-                        }}
-                      >
-                        <div className="flex items-start gap-3">
-                          <span onClick={(event) => event.stopPropagation()}>
-                            <Checkbox
-                              className="self-center"
-                              checked={selection.selected}
-                              disabled={disabled}
-                              onCheckedChange={(checked) => {
+                            }}
+                            placeholder={t(
+                              "library.skillsImport.placeholders.name",
+                            )}
+                            className="font-mono"
+                          />
+                          <div className="text-xs text-muted-foreground">
+                            {t("library.skillsImport.hints.nameRequired")}
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
+                ) : isSingleCandidatePreview &&
+                  singleCandidate &&
+                  singleSelection ? (
+                  <div className="rounded-2xl border border-border/60 bg-muted/10 px-5 py-4">
+                    <div className="space-y-3">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="truncate text-base font-medium text-foreground">
+                          {singleCandidate.skill_name ||
+                            t("library.skillsImport.preview.unnamed")}
+                        </span>
+                        {singleCandidate.will_overwrite ? (
+                          <Badge variant="outline" className="text-xs">
+                            {t("library.skillsImport.preview.willOverwrite")}
+                          </Badge>
+                        ) : null}
+                        {singleCandidate.relative_path === "." ? (
+                          <Badge variant="outline" className="text-xs">
+                            {t("library.skillsImport.preview.root")}
+                          </Badge>
+                        ) : null}
+                      </div>
+
+                      {singleCandidate.requires_name ? (
+                        <div className="space-y-1">
+                          <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                            {t("library.skillsImport.fields.nameOverride")}
+                          </Label>
+                          <Input
+                            value={singleSelection.nameOverride}
+                            disabled={selectionDisabled}
+                            onChange={(event) => {
+                              const value = event.target.value;
+                              setSelections((prev) => ({
+                                ...prev,
+                                [singleCandidate.relative_path]: {
+                                  ...singleSelection,
+                                  selected: true,
+                                  nameOverride: value,
+                                },
+                              }));
+                            }}
+                            placeholder={t(
+                              "library.skillsImport.placeholders.name",
+                            )}
+                            className="font-mono"
+                          />
+                          <div className="text-xs text-muted-foreground">
+                            {t("library.skillsImport.hints.nameRequired")}
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {pagedCandidates.map((candidate) => {
+                      const selection = selections[candidate.relative_path] || {
+                        selected: false,
+                        nameOverride: "",
+                      };
+                      const disabled = selectionDisabled;
+                      return (
+                        <div
+                          key={candidate.relative_path}
+                          role="button"
+                          tabIndex={0}
+                          className="cursor-pointer rounded-xl border border-border/50 bg-muted/10 px-4 py-3 transition-colors hover:bg-muted/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2"
+                          onClick={(event) => {
+                            if (disabled) return;
+                            if ((event.target as HTMLElement).closest("input"))
+                              return;
+                            setSelections((prev) => ({
+                              ...prev,
+                              [candidate.relative_path]: {
+                                ...selection,
+                                selected: !selection.selected,
+                              },
+                            }));
+                          }}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter" || event.key === " ") {
+                              event.preventDefault();
+                              if (!disabled) {
                                 setSelections((prev) => ({
                                   ...prev,
                                   [candidate.relative_path]: {
                                     ...selection,
-                                    selected: Boolean(checked),
+                                    selected: !selection.selected,
                                   },
                                 }));
-                              }}
-                            />
-                          </span>
-                          <div className="min-w-0 flex-1 space-y-2">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <span className="truncate font-medium">
-                                {candidate.skill_name || t("library.skillsImport.preview.unnamed")}
-                              </span>
-                              {candidate.will_overwrite ? (
-                                <Badge variant="outline" className="text-xs">
-                                  {t("library.skillsImport.preview.willOverwrite")}
-                                </Badge>
-                              ) : null}
-                              {candidate.relative_path === "." ? (
-                                <Badge variant="outline" className="text-xs">
-                                  {t("library.skillsImport.preview.root")}
-                                </Badge>
+                              }
+                            }
+                          }}
+                        >
+                          <div className="flex items-start gap-3">
+                            <span onClick={(event) => event.stopPropagation()}>
+                              <Checkbox
+                                className="self-center"
+                                checked={selection.selected}
+                                disabled={disabled}
+                                onCheckedChange={(checked) => {
+                                  setSelections((prev) => ({
+                                    ...prev,
+                                    [candidate.relative_path]: {
+                                      ...selection,
+                                      selected: Boolean(checked),
+                                    },
+                                  }));
+                                }}
+                              />
+                            </span>
+                            <div className="min-w-0 flex-1 space-y-2">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="truncate font-medium">
+                                  {candidate.skill_name ||
+                                    t("library.skillsImport.preview.unnamed")}
+                                </span>
+                                {candidate.will_overwrite ? (
+                                  <Badge variant="outline" className="text-xs">
+                                    {t(
+                                      "library.skillsImport.preview.willOverwrite",
+                                    )}
+                                  </Badge>
+                                ) : null}
+                                {candidate.relative_path === "." ? (
+                                  <Badge variant="outline" className="text-xs">
+                                    {t("library.skillsImport.preview.root")}
+                                  </Badge>
+                                ) : null}
+                              </div>
+
+                              {candidate.requires_name && selection.selected ? (
+                                <div
+                                  className="space-y-1"
+                                  onClick={(event) => event.stopPropagation()}
+                                >
+                                  <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                                    {t(
+                                      "library.skillsImport.fields.nameOverride",
+                                    )}
+                                  </Label>
+                                  <Input
+                                    value={selection.nameOverride}
+                                    disabled={disabled}
+                                    onChange={(event) => {
+                                      const value = event.target.value;
+                                      setSelections((prev) => ({
+                                        ...prev,
+                                        [candidate.relative_path]: {
+                                          ...selection,
+                                          nameOverride: value,
+                                        },
+                                      }));
+                                    }}
+                                    placeholder={t(
+                                      "library.skillsImport.placeholders.name",
+                                    )}
+                                    className="font-mono"
+                                  />
+                                  <div className="text-xs text-muted-foreground">
+                                    {t(
+                                      "library.skillsImport.hints.nameRequired",
+                                    )}
+                                  </div>
+                                </div>
                               ) : null}
                             </div>
-
-                            {candidate.requires_name && selection.selected ? (
-                              <div className="space-y-1" onClick={(event) => event.stopPropagation()}>
-                                <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                                  {t("library.skillsImport.fields.nameOverride")}
-                                </Label>
-                                <Input
-                                  value={selection.nameOverride}
-                                  disabled={disabled}
-                                  onChange={(event) => {
-                                    const value = event.target.value;
-                                    setSelections((prev) => ({
-                                      ...prev,
-                                      [candidate.relative_path]: {
-                                        ...selection,
-                                        nameOverride: value,
-                                      },
-                                    }));
-                                  }}
-                                  placeholder={t("library.skillsImport.placeholders.name")}
-                                  className="font-mono"
-                                />
-                                <div className="text-xs text-muted-foreground">
-                                  {t("library.skillsImport.hints.nameRequired")}
-                                </div>
-                              </div>
-                            ) : null}
                           </div>
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                      );
+                    })}
+                  </div>
+                )}
 
-                {totalCandidatePages > 1 ? (
+                {!isSingleCandidatePreview && totalCandidatePages > 1 ? (
                   <div className="flex items-center justify-center gap-2">
                     <Button
                       variant="outline"
                       size="sm"
-                      disabled={isCommitting || isDiscovering || candidatePageClamped <= 1}
-                      onClick={() => setCandidatePage((prev) => Math.max(1, prev - 1))}
+                      disabled={
+                        isCommitting ||
+                        isDiscovering ||
+                        candidatePageClamped <= 1
+                      }
+                      onClick={() =>
+                        setCandidatePage((prev) => Math.max(1, prev - 1))
+                      }
                     >
                       {t("library.skillsImport.preview.pagination.prev")}
                     </Button>
@@ -936,7 +1216,9 @@ export function SkillImportDialog({
                         candidatePageClamped >= totalCandidatePages
                       }
                       onClick={() =>
-                        setCandidatePage((prev) => Math.min(totalCandidatePages, prev + 1))
+                        setCandidatePage((prev) =>
+                          Math.min(totalCandidatePages, prev + 1),
+                        )
                       }
                     >
                       {t("library.skillsImport.preview.pagination.next")}
@@ -954,7 +1236,6 @@ export function SkillImportDialog({
           </div>
         </CapabilityDialogContent>
       </Dialog>
-
     </>
   );
 }

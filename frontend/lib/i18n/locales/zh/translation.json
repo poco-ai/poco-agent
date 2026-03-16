@@ -1218,7 +1218,11 @@
           "popular": "热门推荐"
         },
         "aiSearchTooltip": "启用 AI Search，使用 SkillsMP 的语义搜索接口",
-        "refresh": "刷新推荐"
+        "refresh": "刷新推荐",
+        "openInGithub": "Open in GitHub",
+        "checkInSkillsmp": "Check in SkillsMP",
+        "titleLabel": "标题",
+        "descriptionLabel": "描述"
       }
     },
     "pluginsManager": {
