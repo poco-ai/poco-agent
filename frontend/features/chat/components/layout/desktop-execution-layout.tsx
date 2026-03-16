@@ -18,6 +18,9 @@ interface DesktopExecutionLayoutProps {
   rightTab: string;
   onRightTabChange: (value: string) => void;
   isRightPanelCollapsed: boolean;
+  showRightPanel: boolean;
+  showArtifactsTab: boolean;
+  showComputerTab: boolean;
   chatPanel: React.ReactNode;
   tabsSwitch: React.ReactNode;
   browserEnabled: boolean;
@@ -29,6 +32,9 @@ export function DesktopExecutionLayout({
   rightTab,
   onRightTabChange,
   isRightPanelCollapsed,
+  showRightPanel,
+  showArtifactsTab,
+  showComputerTab,
   chatPanel,
   tabsSwitch,
   browserEnabled,
@@ -46,7 +52,7 @@ export function DesktopExecutionLayout({
           </div>
         </ResizablePanel>
 
-        {!isRightPanelCollapsed ? (
+        {showRightPanel && !isRightPanelCollapsed ? (
           <>
             <ResizableHandle withHandle />
             <ResizablePanel
@@ -68,30 +74,34 @@ export function DesktopExecutionLayout({
                     }
                   />
                   <div className="flex-1 min-h-0 overflow-hidden">
-                    <TabsContent
-                      value="computer"
-                      className="h-full min-h-0 data-[state=inactive]:hidden"
-                    >
-                      <ComputerPanel
-                        sessionId={sessionId}
-                        sessionStatus={session?.status}
-                        browserEnabled={browserEnabled}
-                        hideHeader
-                      />
-                    </TabsContent>
-                    <TabsContent
-                      value="artifacts"
-                      className="h-full min-h-0 data-[state=inactive]:hidden"
-                    >
-                      <ArtifactsPanel
-                        fileChanges={
-                          session?.state_patch.workspace_state?.file_changes
-                        }
-                        sessionId={sessionId}
-                        sessionStatus={session?.status}
-                        hideHeader
-                      />
-                    </TabsContent>
+                    {showComputerTab ? (
+                      <TabsContent
+                        value="computer"
+                        className="h-full min-h-0 data-[state=inactive]:hidden"
+                      >
+                        <ComputerPanel
+                          sessionId={sessionId}
+                          sessionStatus={session?.status}
+                          browserEnabled={browserEnabled}
+                          hideHeader
+                        />
+                      </TabsContent>
+                    ) : null}
+                    {showArtifactsTab ? (
+                      <TabsContent
+                        value="artifacts"
+                        className="h-full min-h-0 data-[state=inactive]:hidden"
+                      >
+                        <ArtifactsPanel
+                          fileChanges={
+                            session?.state_patch.workspace_state?.file_changes
+                          }
+                          sessionId={sessionId}
+                          sessionStatus={session?.status}
+                          hideHeader
+                        />
+                      </TabsContent>
+                    ) : null}
                   </div>
                 </Tabs>
               </div>

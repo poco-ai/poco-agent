@@ -75,6 +75,8 @@ interface ChatPanelProps {
   updateSession: (newSession: Partial<ExecutionSession>) => void;
   onIconClick?: () => void;
   onToggleRightPanel?: () => void;
+  showRightPanelToggle?: boolean;
+  isRightPanelToggleDisabled?: boolean;
   isRightPanelCollapsed?: boolean;
   hideHeader?: boolean;
 }
@@ -159,6 +161,8 @@ export function ChatPanel({
   updateSession,
   onIconClick,
   onToggleRightPanel,
+  showRightPanelToggle = false,
+  isRightPanelToggleDisabled = false,
   isRightPanelCollapsed = false,
   hideHeader = false,
 }: ChatPanelProps) {
@@ -1018,7 +1022,7 @@ export function ChatPanel({
           description={headerDescription}
           onIconClick={onIconClick}
           action={
-            session?.session_id || onToggleRightPanel ? (
+            session?.session_id || showRightPanelToggle ? (
               <div className="flex items-center gap-1">
                 {selectedModelId ? (
                   <ModelSelector
@@ -1067,9 +1071,10 @@ export function ChatPanel({
                     </DropdownMenuContent>
                   </DropdownMenu>
                 ) : null}
-                {onToggleRightPanel ? (
+                {showRightPanelToggle ? (
                   <PanelHeaderAction
                     onClick={onToggleRightPanel}
+                    disabled={isRightPanelToggleDisabled}
                     title={
                       isRightPanelCollapsed
                         ? t("chat.expandRightPanel")
