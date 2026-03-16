@@ -19,7 +19,7 @@ from app.schemas.callback import (
     CallbackStatus,
 )
 from app.services.run_lifecycle_service import RunLifecycleService
-from app.services.im_event_service import ImEventService
+from app.services.im import ImEventService
 from app.services.pending_skill_creation_service import PendingSkillCreationService
 from app.services.session_queue_service import SessionQueueService
 from app.services.session_service import SessionService

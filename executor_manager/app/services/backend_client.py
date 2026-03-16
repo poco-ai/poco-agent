@@ -265,18 +265,18 @@ class BackendClient:
     async def dispatch_due_scheduled_tasks(self, limit: int = 50) -> dict:
         """Trigger backend to dispatch due scheduled tasks into the run queue."""
         payload = {"limit": max(1, int(limit))}
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                f"{self.base_url}/api/v1/internal/scheduled-tasks/dispatch-due",
-                json=payload,
-                headers={
-                    "X-Internal-Token": self.settings.internal_api_token,
-                    **self._trace_headers(),
-                },
-            )
-            response.raise_for_status()
-            data = response.json()
-            return data.get("data", {}) or {}
+        response = await self._request(
+            "POST",
+            "/api/v1/internal/scheduled-tasks/dispatch-due",
+            json=payload,
+            headers={
+                "X-Internal-Token": self.settings.internal_api_token,
+                **self._trace_headers(),
+            },
+            retry_connect_errors=2,
+        )
+        data = response.json()
+        return data.get("data", {}) or {}
 
     async def create_user_input_request(self, payload: dict) -> dict:
         async with httpx.AsyncClient() as client:
