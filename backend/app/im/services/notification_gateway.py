@@ -23,13 +23,13 @@ class NotificationGateway:
         client = self.get_provider(provider)
         if not client:
             logger.warning("unknown_im_provider", extra={"provider": provider})
-            return True
+            return False
         if not client.enabled:
             logger.warning(
                 "im_provider_disabled",
                 extra={"provider": provider},
             )
-            return True
+            return False
 
         chunks = _split_text(text, max(1, client.max_text_length))
         all_sent = True
