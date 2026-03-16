@@ -15,7 +15,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CapabilityDialogContent } from "@/features/capabilities/components/capability-dialog-content";
 import { skillsService } from "@/features/capabilities/skills/api/skills-api";
 import { SkillMarketplaceBrowser } from "@/features/capabilities/skills/components/skill-marketplace-browser";
-import { SkillMarketplacePreviewDrawer } from "@/features/capabilities/skills/components/skill-marketplace-preview-drawer";
 import { markSlashCommandSuggestionsInvalidated } from "@/features/capabilities/slash-commands/api/suggestions-state";
 import type {
   SkillImportCandidate,
@@ -176,8 +175,6 @@ export function SkillImportDialog({
     useState(false);
   const [marketplaceError, setMarketplaceError] = useState<string | null>(null);
   const [isMarketplaceLoading, setIsMarketplaceLoading] = useState(false);
-  const [marketplacePreviewItem, setMarketplacePreviewItem] =
-    useState<SkillsMpSkillItem | null>(null);
   const [marketplaceDownloadingId, setMarketplaceDownloadingId] = useState<
     string | null
   >(null);
@@ -215,7 +212,6 @@ export function SkillImportDialog({
     setMarketplaceHasActiveSearch(false);
     setMarketplaceError(null);
     setIsMarketplaceLoading(false);
-    setMarketplacePreviewItem(null);
     setMarketplaceDownloadingId(null);
     setArchiveKey(null);
     setCandidates([]);
@@ -451,7 +447,6 @@ export function SkillImportDialog({
           preselectedRelativePath: response.preselected_relative_path || null,
           selectAllByDefault: false,
         });
-        setMarketplacePreviewItem(null);
         toast.success(t("library.skillsImport.toasts.discovered"));
       } catch (error) {
         console.error("[SkillsImport] marketplace import discover failed:", error);
@@ -659,7 +654,6 @@ export function SkillImportDialog({
                     sections={marketplaceRecommendations}
                     items={marketplaceSearchItems}
                     hasActiveSearch={marketplaceHasActiveSearch}
-                    onPreview={setMarketplacePreviewItem}
                     onDownload={(item) => {
                       void onMarketplaceDownload(item);
                     }}
@@ -926,19 +920,6 @@ export function SkillImportDialog({
         </CapabilityDialogContent>
       </Dialog>
 
-      <SkillMarketplacePreviewDrawer
-        item={marketplacePreviewItem}
-        open={marketplacePreviewItem !== null}
-        onOpenChange={(nextOpen) => {
-          if (!nextOpen) {
-            setMarketplacePreviewItem(null);
-          }
-        }}
-        onDownload={(item) => {
-          void onMarketplaceDownload(item);
-        }}
-        isDownloading={marketplaceDownloadingId === marketplacePreviewItem?.external_id}
-      />
     </>
   );
 }

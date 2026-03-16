@@ -4,15 +4,13 @@ import * as React from "react";
 import {
   ArrowUpRight,
   Download,
+  Github,
   Search,
   Sparkles,
   Star,
-  GitFork,
 } from "lucide-react";
 
 import { HeaderSearchInput } from "@/components/shared/header-search-input";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { StaggeredList } from "@/components/ui/staggered-entrance";
 import {
@@ -38,21 +36,18 @@ interface SkillMarketplaceBrowserProps {
   sections: SkillsMpRecommendationSection[];
   items: SkillsMpSkillItem[];
   hasActiveSearch: boolean;
-  onPreview: (item: SkillsMpSkillItem) => void;
   onDownload: (item: SkillsMpSkillItem) => void;
   downloadingExternalId?: string | null;
-}
-
-function getInitials(value: string | null): string {
-  const text = (value || "").trim();
-  if (!text) return "?";
-  return Array.from(text).slice(0, 2).join("").toUpperCase();
 }
 
 function formatUpdatedAt(value: string | null, locale: string): string | null {
   if (!value) return null;
 
-  const date = new Date(value);
+  const trimmed = value.trim();
+  const numericValue = Number(trimmed);
+  const date = Number.isFinite(numericValue)
+    ? new Date(numericValue > 1_000_000_000_000 ? numericValue : numericValue * 1000)
+    : new Date(trimmed);
   if (Number.isNaN(date.getTime())) return null;
 
   try {
@@ -60,6 +55,8 @@ function formatUpdatedAt(value: string | null, locale: string): string | null {
       year: "numeric",
       month: "short",
       day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     }).format(date);
   } catch {
     return date.toLocaleDateString();
@@ -84,12 +81,10 @@ function getRepoLabel(url: string | null): string | null {
 
 function SkillMarketplaceCard({
   item,
-  onPreview,
   onDownload,
   downloadingExternalId,
 }: {
   item: SkillsMpSkillItem;
-  onPreview: (item: SkillsMpSkillItem) => void;
   onDownload: (item: SkillsMpSkillItem) => void;
   downloadingExternalId?: string | null;
 }) {
@@ -101,74 +96,54 @@ function SkillMarketplaceCard({
   return (
     <article className="group overflow-hidden rounded-[1.35rem] border border-border/60 bg-gradient-to-b from-background via-background to-muted/20 shadow-[var(--shadow-sm)] transition-all duration-300 hover:-translate-y-0.5 hover:border-border hover:shadow-[var(--shadow-md)]">
       <div className="space-y-4 px-5 py-5">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0 space-y-1.5">
-            <div className="flex items-center gap-2">
-              <Badge
-                variant="outline"
-                className="rounded-full border-primary/20 bg-primary/5 text-primary"
-              >
-                <Sparkles className="size-3.5" />
-                SkillsMP
-              </Badge>
-              {updatedAt ? (
-                <span className="text-xs text-muted-foreground">{updatedAt}</span>
-              ) : null}
-            </div>
-            <h3 className="truncate text-base font-semibold tracking-tight text-foreground">
+        <div className="space-y-2">
+          <div className="flex items-start justify-between gap-3">
+            <h3
+              className="min-w-0 flex-1 truncate text-base font-bold tracking-tight text-foreground"
+              style={{
+                fontFamily: '"Maple Mono", "Maple Mono NF", var(--font-mono)',
+              }}
+            >
               {item.name}
             </h3>
+            <div className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-amber-500/10 px-2.5 py-1 text-xs font-medium text-amber-700 dark:text-amber-300">
+              <Star className="size-3.5 fill-current text-amber-500" />
+              {item.stars.toLocaleString()}
+            </div>
           </div>
-
-          <Avatar className="size-10 border border-border/60 bg-muted/30">
-            <AvatarImage src={item.author_avatar_url || undefined} alt={item.author || item.name} />
-            <AvatarFallback className="text-xs font-semibold text-muted-foreground">
-              {getInitials(item.author || item.name)}
-            </AvatarFallback>
-          </Avatar>
         </div>
 
         <p className="line-clamp-3 min-h-[4.5rem] text-sm leading-6 text-muted-foreground">
           {item.description || t("library.skillsImport.marketplace.noDescription")}
         </p>
 
-        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-          {item.author ? (
-            <span>{t("library.skillsImport.marketplace.byAuthor", { author: item.author })}</span>
-          ) : null}
-          {repoLabel ? (
-            <Badge
-              variant="secondary"
-              className="max-w-full truncate rounded-full px-2.5 py-1 font-normal"
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-xs text-muted-foreground">
+          {repoLabel && item.github_url ? (
+            <a
+              href={item.github_url}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex min-w-0 items-center gap-1.5 text-foreground/80 transition-colors hover:text-foreground"
             >
-              {repoLabel}
-            </Badge>
+              <Github className="size-3.5 shrink-0" />
+              <span className="truncate">{repoLabel}</span>
+              <ArrowUpRight className="size-3 shrink-0 text-muted-foreground" />
+            </a>
+          ) : (
+            <span />
+          )}
+          {updatedAt ? (
+            <div className="shrink-0">
+              {t("library.skillsImport.marketplace.updatedAt")} · {updatedAt}
+            </div>
           ) : null}
-        </div>
-
-        <div className="flex items-center gap-4 text-xs text-muted-foreground">
-          <span className="inline-flex items-center gap-1.5">
-            <Star className="size-3.5" />
-            {item.stars.toLocaleString()}
-          </span>
-          <span className="inline-flex items-center gap-1.5">
-            <GitFork className="size-3.5" />
-            {item.forks.toLocaleString()}
-          </span>
         </div>
       </div>
 
-      <div className="grid grid-cols-3 border-t border-border/60 bg-muted/10">
+      <div className="grid grid-cols-2 border-t border-border/60 bg-muted/10">
         <Button
           variant="ghost"
-          className="h-11 rounded-none"
-          onClick={() => onPreview(item)}
-        >
-          {t("library.skillsImport.marketplace.preview")}
-        </Button>
-        <Button
-          variant="ghost"
-          className="h-11 rounded-none border-x border-border/60"
+          className="h-11 rounded-none border-r border-border/60"
           onClick={() => onDownload(item)}
           disabled={isDownloading}
         >
@@ -200,7 +175,6 @@ export function SkillMarketplaceBrowser({
   sections,
   items,
   hasActiveSearch,
-  onPreview,
   onDownload,
   downloadingExternalId,
 }: SkillMarketplaceBrowserProps) {
@@ -298,7 +272,6 @@ export function SkillMarketplaceBrowser({
               renderItem={(item) => (
                 <SkillMarketplaceCard
                   item={item}
-                  onPreview={onPreview}
                   onDownload={onDownload}
                   downloadingExternalId={downloadingExternalId}
                 />
@@ -337,7 +310,6 @@ export function SkillMarketplaceBrowser({
                   renderItem={(item) => (
                     <SkillMarketplaceCard
                       item={item}
-                      onPreview={onPreview}
                       onDownload={onDownload}
                       downloadingExternalId={downloadingExternalId}
                     />
