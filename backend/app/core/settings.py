@@ -133,8 +133,12 @@ class Settings(BaseSettings):
     skillsmp_base_url: str = Field(
         default="https://skillsmp.com", alias="SKILLSMP_BASE_URL"
     )
+    skillsmp_api_key: str = Field(default="", alias="SKILLSMP_API_KEY")
     skillsmp_timeout_seconds: float = Field(
         default=10.0, alias="SKILLSMP_TIMEOUT_SECONDS"
+    )
+    skillsmp_recommendation_query: str = Field(
+        default="automation", alias="SKILLSMP_RECOMMENDATION_QUERY"
     )
 
     # Memory (Mem0)

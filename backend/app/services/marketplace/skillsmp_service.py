@@ -30,6 +30,15 @@ class SkillsMpService:
             )
         return base_url
 
+    def _resolve_api_key(self) -> str:
+        api_key = self.settings.skillsmp_api_key.strip()
+        if not api_key:
+            raise AppException(
+                error_code=ErrorCode.BAD_REQUEST,
+                message="SKILLSMP_API_KEY is required for SkillsMP marketplace",
+            )
+        return api_key
+
     @staticmethod
     def _clean_text(value: object) -> str | None:
         if not isinstance(value, str):
@@ -276,7 +285,9 @@ class SkillsMpService:
         page: int,
         page_size: int,
     ) -> SkillsMpSearchResponse:
-        raw_items = payload.get("skills")
+        payload_data = payload.get("data") if isinstance(payload.get("data"), dict) else {}
+
+        raw_items = payload_data.get("skills", payload.get("skills"))
         if not isinstance(raw_items, list):
             raise AppException(
                 error_code=ErrorCode.EXTERNAL_SERVICE_ERROR,
@@ -290,7 +301,7 @@ class SkillsMpService:
             if item is not None
         ]
 
-        pagination = payload.get("pagination")
+        pagination = payload_data.get("pagination", payload.get("pagination"))
         pagination_data = pagination if isinstance(pagination, dict) else {}
 
         resolved_page = self._coerce_int_from_keys(
@@ -333,22 +344,34 @@ class SkillsMpService:
         page: int,
         page_size: int,
         sort_by: str,
-        search: str | None = None,
+        query: str,
+        semantic: bool = False,
     ) -> SkillsMpSearchResponse:
+        clean_query = self._clean_text(query)
+        if not clean_query:
+            raise AppException(
+                error_code=ErrorCode.BAD_REQUEST,
+                message="SkillsMP query cannot be empty",
+            )
+
         params: dict[str, Any] = {
             "page": page,
             "limit": page_size,
             "sortBy": sort_by,
+            "q": clean_query,
         }
-        if search:
-            params["search"] = search
-
-        url = f"{self._resolve_base_url()}/api/skills"
+        endpoint = "/api/v1/skills/ai-search" if semantic else "/api/v1/skills/search"
+        url = f"{self._resolve_base_url()}{endpoint}"
         timeout = httpx.Timeout(self.settings.skillsmp_timeout_seconds, connect=5.0)
+        headers = {
+            "Authorization": f"Bearer {self._resolve_api_key()}",
+            "Accept": "application/json",
+            "User-Agent": "poco-agent-skillsmp/1.0",
+        }
 
         try:
             async with httpx.AsyncClient(timeout=timeout) as client:
-                response = await client.get(url, params=params)
+                response = await client.get(url, params=params, headers=headers)
         except httpx.TimeoutException as exc:
             raise AppException(
                 error_code=ErrorCode.EXTERNAL_SERVICE_ERROR,
@@ -412,7 +435,7 @@ class SkillsMpService:
             page=page,
             page_size=page_size,
             sort_by="stars",
-            search=clean_query,
+            query=clean_query,
         )
 
     async def list_recommendations(
@@ -420,10 +443,26 @@ class SkillsMpService:
         *,
         limit: int = 9,
     ) -> SkillsMpRecommendationsResponse:
+        recommendation_query = self._clean_text(
+            self.settings.skillsmp_recommendation_query
+        )
+        if not recommendation_query:
+            raise AppException(
+                error_code=ErrorCode.BAD_REQUEST,
+                message="SKILLSMP_RECOMMENDATION_QUERY cannot be empty",
+            )
+
         popular = await self._request_skills(
             page=1,
             page_size=limit,
             sort_by="stars",
+            query=recommendation_query,
+        )
+        recent = await self._request_skills(
+            page=1,
+            page_size=limit,
+            sort_by="recent",
+            query=recommendation_query,
         )
         return SkillsMpRecommendationsResponse(
             sections=[
@@ -431,6 +470,11 @@ class SkillsMpService:
                     key="popular",
                     title="Popular",
                     items=popular.items,
-                )
+                ),
+                SkillsMpRecommendationSection(
+                    key="recent",
+                    title="Recent",
+                    items=recent.items,
+                ),
             ]
         )

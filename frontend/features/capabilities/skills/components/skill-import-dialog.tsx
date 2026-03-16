@@ -24,6 +24,7 @@ import type {
   SkillsMpRecommendationSection,
   SkillsMpSkillItem,
 } from "@/features/capabilities/skills/types";
+import { ApiError } from "@/lib/errors";
 import { useT } from "@/lib/i18n/client";
 import { playInstallSound } from "@/lib/utils/sound";
 
@@ -308,7 +309,11 @@ export function SkillImportDialog({
     } catch (error) {
       console.error("[SkillsImport] marketplace recommendations failed:", error);
       if (!isActiveRef.current) return;
-      setMarketplaceError(t("library.skillsImport.toasts.marketplaceLoadError"));
+      setMarketplaceError(
+        error instanceof ApiError
+          ? error.message
+          : t("library.skillsImport.toasts.marketplaceLoadError"),
+      );
     } finally {
       if (isActiveRef.current) {
         setIsMarketplaceLoading(false);
@@ -339,7 +344,11 @@ export function SkillImportDialog({
     } catch (error) {
       console.error("[SkillsImport] marketplace search failed:", error);
       if (!isActiveRef.current) return;
-      setMarketplaceError(t("library.skillsImport.toasts.marketplaceLoadError"));
+      setMarketplaceError(
+        error instanceof ApiError
+          ? error.message
+          : t("library.skillsImport.toasts.marketplaceLoadError"),
+      );
     } finally {
       if (isActiveRef.current) {
         setIsMarketplaceLoading(false);
