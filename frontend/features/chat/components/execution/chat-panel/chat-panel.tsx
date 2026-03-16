@@ -209,7 +209,6 @@ export function ChatPanel({
   // Pending message queue hook
   const {
     pendingMessages,
-    isLoadingPendingMessages,
     addPendingMessage,
     refreshPendingMessages,
     sendPendingMessage,
@@ -1235,8 +1234,6 @@ export function ChatPanel({
         <PendingMessageList
           messages={pendingMessages}
           queuedCount={session?.queued_query_count}
-          nextPreview={session?.next_queued_query_preview}
-          isLoading={isLoadingPendingMessages}
           onSend={handleSendPendingMessage}
           onModify={handleModifyPendingMessage}
           onDelete={handleDeletePendingMessage}
