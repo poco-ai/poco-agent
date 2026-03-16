@@ -13,7 +13,7 @@ from app.schemas.user_input_request import (
     UserInputRequestCreateRequest,
     UserInputRequestResponse,
 )
-from app.services.im_event_service import ImEventService
+from app.services.im import ImEventService
 
 DEFAULT_EXPIRES_SECONDS = 60
 
