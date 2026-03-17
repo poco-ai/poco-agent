@@ -173,6 +173,7 @@ function ApiProviderSection({
   const hasChanges =
     config.keyInput.trim().length > 0 ||
     config.baseUrlInput.trim() !== storedBaseUrl ||
+    config.modelDraft.trim().length > 0 ||
     JSON.stringify(config.selectedModelIds) !== JSON.stringify(storedModelIds);
 
   return (

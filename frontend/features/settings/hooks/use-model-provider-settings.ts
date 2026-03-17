@@ -184,6 +184,10 @@ export function useModelProviderSettings(options?: { enabled?: boolean }) {
         (item) => item.providerId === providerId,
       );
       if (!provider) return;
+      const nextModelIds = normalizeModelIds([
+        ...provider.selectedModelIds,
+        provider.modelDraft,
+      ]);
 
       setSavingProviderId(providerId);
       setProviderPatch(providerId, { isSaving: true });
@@ -212,7 +216,7 @@ export function useModelProviderSettings(options?: { enabled?: boolean }) {
         }
 
         await modelConfigService.updateProviderModels(providerId, {
-          model_ids: normalizeModelIds(provider.selectedModelIds),
+          model_ids: nextModelIds,
         });
 
         const [nextModelConfig, nextEnvVars] = await Promise.all([
@@ -222,6 +226,7 @@ export function useModelProviderSettings(options?: { enabled?: boolean }) {
         setModelConfig(nextModelConfig);
         setEnvVars(nextEnvVars);
         rebuildProviderConfigs(nextModelConfig, nextEnvVars);
+        setProviderPatch(providerId, { modelDraft: "" });
         invalidateModelCatalog();
         toast.success(t("settings.providerSaveSuccess"));
       } catch (error) {
@@ -266,6 +271,7 @@ export function useModelProviderSettings(options?: { enabled?: boolean }) {
         setModelConfig(nextModelConfig);
         setEnvVars(nextEnvVars);
         rebuildProviderConfigs(nextModelConfig, nextEnvVars);
+        setProviderPatch(providerId, { modelDraft: "" });
         invalidateModelCatalog();
         toast.success(t("settings.providerClearSuccess"));
       } catch (error) {
