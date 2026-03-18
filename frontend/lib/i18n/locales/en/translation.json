@@ -1653,7 +1653,10 @@
     "providerModelRemove": "Remove model",
     "providerModelDocsPrefix": "View ",
     "providerModelDocsLinkLabel": "{{provider}} docs",
-    "providerModelDocsSuffix": " for more models"
+    "providerModelDocsSuffix": " for more models",
+    "providerModelsDialogTitle": "Add custom model",
+    "providerModelsDialogDescription": "Manually register the provider's model IDs.",
+    "providerModelsDialogPlaceholder": "Model ID (e.g. gpt-4o-mini)"
   },
   "validation": {
     "projectNameRequired": "Please enter a project name",

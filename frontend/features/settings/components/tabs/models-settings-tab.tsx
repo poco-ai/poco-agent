@@ -2,6 +2,15 @@
 
 import * as React from "react";
 import { Plus, Trash2, X } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -50,7 +59,6 @@ function splitModelDraft(value: string): string[] {
 
 interface ProviderModelFieldProps {
   config: ApiProviderConfig;
-  inputId: string;
   providerHelp?: ProviderHelpInfo;
   onChange: (patch: Partial<ApiProviderConfig>) => void;
   onModelChange?: () => void;
@@ -58,53 +66,11 @@ interface ProviderModelFieldProps {
 
 function ProviderModelField({
   config,
-  inputId,
   providerHelp,
   onChange,
   onModelChange,
 }: ProviderModelFieldProps) {
   const { t } = useT("translation");
-  const addModel = React.useCallback(
-    (modelId: string) => {
-      const nextModels = splitModelDraft(modelId);
-      if (nextModels.length === 0) {
-        return;
-      }
-
-      const nextSelectedModelIds = [...config.selectedModelIds];
-      const seenModelIds = new Set(nextSelectedModelIds);
-
-      nextModels.forEach((item) => {
-        if (seenModelIds.has(item)) {
-          return;
-        }
-        seenModelIds.add(item);
-        nextSelectedModelIds.push(item);
-      });
-      onChange({
-        selectedModelIds: nextSelectedModelIds,
-        modelDraft: "",
-      });
-      onModelChange?.();
-    },
-    [config.selectedModelIds, onChange, onModelChange],
-  );
-
-  const commitDraft = React.useCallback(() => {
-    addModel(config.modelDraft);
-  }, [addModel, config.modelDraft]);
-
-  const handleDraftKeyDown = React.useCallback(
-    (event: React.KeyboardEvent<HTMLInputElement>) => {
-      if (event.key !== "Enter") {
-        return;
-      }
-      event.preventDefault();
-      commitDraft();
-    },
-    [commitDraft],
-  );
-
   const removeModel = React.useCallback(
     (modelId: string) => {
       onChange({
@@ -118,20 +84,7 @@ function ProviderModelField({
   );
 
   return (
-    <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <Plus className="size-4 text-muted-foreground" aria-hidden="true" />
-        <span className="sr-only">{t("settings.providerModelsAdd")}</span>
-        <Input
-          id={inputId}
-          value={config.modelDraft}
-          onChange={(event) => onChange({ modelDraft: event.target.value })}
-          onKeyDown={handleDraftKeyDown}
-          placeholder={t("settings.providerModelsSearchPlaceholder")}
-          disabled={config.isSaving}
-          className="h-9 flex-1 min-w-[200px]"
-        />
-      </div>
+    <div className="space-y-2">
       {providerHelp ? (
         <p className="text-sm leading-relaxed text-muted-foreground">
           {t("settings.providerModelDocsPrefix")}
@@ -151,9 +104,12 @@ function ProviderModelField({
         <span />
       )}
       {config.selectedModelIds.length > 0 ? (
-        <div className="space-y-1 text-sm text-foreground">
+        <div className="space-y-2 text-sm text-foreground">
           {config.selectedModelIds.map((modelId) => (
-            <div key={modelId} className="flex items-center gap-2">
+            <div
+              key={modelId}
+              className="flex h-9 items-center gap-3 rounded-lg border border-border/60 bg-card px-3"
+            >
               <span className="min-w-0 flex-1 truncate font-medium">
                 {modelId}
               </span>
@@ -214,6 +170,7 @@ function ApiProviderSection({
 
   const isProviderActive =
     config.enabled && config.hasStoredUserKey && storedModelIds.length > 0;
+  const [isAddModelDialogOpen, setIsAddModelDialogOpen] = React.useState(false);
 
   const hasChanges =
     config.keyInput.trim().length > 0 ||
@@ -244,6 +201,34 @@ function ApiProviderSection({
     },
     [canActivate, onToggleEnabled],
   );
+
+  const handleDialogOpenChange = React.useCallback(
+    (open: boolean) => {
+      setIsAddModelDialogOpen(open);
+      if (!open) {
+        onChange({ modelDraft: "" });
+      }
+    },
+    [onChange],
+  );
+
+  const handleAddModel = React.useCallback(() => {
+    const rawValue = config.modelDraft;
+    const nextModels = splitModelDraft(rawValue);
+    if (nextModels.length === 0) {
+      return;
+    }
+    const nextSelected = [...config.selectedModelIds];
+    const seen = new Set(nextSelected);
+    nextModels.forEach((modelId) => {
+      if (seen.has(modelId)) return;
+      seen.add(modelId);
+      nextSelected.push(modelId);
+    });
+    onChange({ selectedModelIds: nextSelected, modelDraft: "" });
+    handleModelChange();
+    setIsAddModelDialogOpen(false);
+  }, [config.modelDraft, config.selectedModelIds, handleModelChange, onChange]);
 
   return (
     <section className="space-y-4 rounded-2xl border border-border/60 bg-card/80 p-4 shadow-sm md:p-6">
@@ -328,7 +313,7 @@ function ApiProviderSection({
         </div>
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-1">
         <div className="flex items-center gap-2">
           <Label
             htmlFor={modelInputId}
@@ -341,15 +326,74 @@ function ApiProviderSection({
               {storedModelIds.length}
             </span>
           )}
+          <button
+            type="button"
+            className="ml-auto inline-flex h-9 w-9 items-center justify-center rounded-xl border border-border text-muted-foreground transition-colors hover:text-foreground"
+            onClick={() => handleDialogOpenChange(true)}
+            aria-label={t("settings.providerModelsAdd")}
+          >
+            <Plus className="size-4" />
+          </button>
         </div>
         <ProviderModelField
           config={config}
-          inputId={modelInputId}
           providerHelp={providerHelp}
           onChange={onChange}
           onModelChange={handleModelChange}
         />
       </div>
+
+      <Dialog open={isAddModelDialogOpen} onOpenChange={handleDialogOpenChange}>
+        <DialogContent
+          className="sm:max-w-md"
+          showCloseButton={false}
+          ariaTitle={t("settings.providerModelsDialogTitle", {
+            provider: config.displayName,
+          })}
+        >
+          <DialogHeader>
+            <DialogTitle className="text-base font-semibold">
+              {t("settings.providerModelsDialogTitle", {
+                provider: config.displayName,
+              })}
+            </DialogTitle>
+            <p className="text-sm text-muted-foreground">
+              {t("settings.providerModelsDialogDescription")}
+            </p>
+          </DialogHeader>
+          <Input
+            id={modelInputId}
+            value={config.modelDraft}
+            onChange={(event) => onChange({ modelDraft: event.target.value })}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                handleAddModel();
+              }
+            }}
+            autoFocus
+            placeholder={t("settings.providerModelsDialogPlaceholder")}
+            disabled={config.isSaving}
+            className="h-11"
+          />
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => handleDialogOpenChange(false)}
+            >
+              {t("common.cancel")}
+            </Button>
+            <Button
+              type="button"
+              onClick={handleAddModel}
+              disabled={config.modelDraft.trim().length === 0}
+            >
+              {t("common.confirm")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }

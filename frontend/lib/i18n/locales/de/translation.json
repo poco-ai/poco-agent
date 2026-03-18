@@ -1553,7 +1553,10 @@
     "providerModelRemove": "Remove model",
     "providerModelDocsPrefix": "Sieh dir die ",
     "providerModelDocsLinkLabel": "{{provider}}-Doku",
-    "providerModelDocsSuffix": " für weitere Modelle an"
+    "providerModelDocsSuffix": " für weitere Modelle an",
+    "providerModelsDialogTitle": "Benutzerdefiniertes Modell hinzufügen",
+    "providerModelsDialogDescription": "Füge manuell die vom Anbieter unterstützten Modell-IDs hinzu.",
+    "providerModelsDialogPlaceholder": "Modell-ID (z. B. gpt-4o-mini)"
   },
   "validation": {
     "projectNameRequired": "Bitte gib einen Projektnamen ein",

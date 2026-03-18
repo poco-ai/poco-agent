@@ -1653,7 +1653,10 @@
     "providerModelRemove": "移除模型",
     "providerModelDocsPrefix": "查看 ",
     "providerModelDocsLinkLabel": "{{provider}} 文档",
-    "providerModelDocsSuffix": " 获取更多模型"
+    "providerModelDocsSuffix": " 获取更多模型",
+    "providerModelsDialogTitle": "添加自定义模型",
+    "providerModelsDialogDescription": "手动添加该提供方可用的模型 ID。",
+    "providerModelsDialogPlaceholder": "输入模型 ID（例如 gpt-4o-mini）"
   },
   "validation": {
     "projectNameRequired": "请输入项目名称",

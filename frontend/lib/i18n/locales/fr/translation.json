@@ -1549,7 +1549,10 @@
     "providerModelRemove": "Remove model",
     "providerModelDocsPrefix": "Consulter ",
     "providerModelDocsLinkLabel": "la documentation {{provider}}",
-    "providerModelDocsSuffix": " pour plus de modèles"
+    "providerModelDocsSuffix": " pour plus de modèles",
+    "providerModelsDialogTitle": "Ajouter un modèle personnalisé",
+    "providerModelsDialogDescription": "Ajoutez manuellement les ID de modèle fournis.",
+    "providerModelsDialogPlaceholder": "ID du modèle (ex. gpt-4o-mini)"
   },
   "validation": {
     "projectNameRequired": "Veuillez entrer un nom de projet",

@@ -1549,7 +1549,10 @@
     "providerModelRemove": "Remove model",
     "providerModelDocsPrefix": "こちらの ",
     "providerModelDocsLinkLabel": "{{provider}} ドキュメント",
-    "providerModelDocsSuffix": " でモデル一覧を見る"
+    "providerModelDocsSuffix": " でモデル一覧を見る",
+    "providerModelsDialogTitle": "カスタムモデルを追加",
+    "providerModelsDialogDescription": "プロバイダーのモデル ID を手動で登録します。",
+    "providerModelsDialogPlaceholder": "モデル ID（例: gpt-4o-mini）"
   },
   "validation": {
     "projectNameRequired": "プロジェクト名を入力してください",

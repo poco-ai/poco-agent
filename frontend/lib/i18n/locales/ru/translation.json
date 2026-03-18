@@ -1549,7 +1549,10 @@
     "providerModelRemove": "Remove model",
     "providerModelDocsPrefix": "Откройте ",
     "providerModelDocsLinkLabel": "документацию {{provider}}",
-    "providerModelDocsSuffix": ", чтобы увидеть больше моделей"
+    "providerModelDocsSuffix": ", чтобы увидеть больше моделей",
+    "providerModelsDialogTitle": "Добавить пользовательскую модель",
+    "providerModelsDialogDescription": "Вручную укажите поддерживаемый идентификатор модели поставщика.",
+    "providerModelsDialogPlaceholder": "ID модели (например, gpt-4o-mini)"
   },
   "validation": {
     "projectNameRequired": "Пожалуйста, введите имя проекта",
