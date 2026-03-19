@@ -140,6 +140,9 @@
       "disabledTooltipDescription": "有効にすると、Poco がブラウザで Web ページの閲覧や Web 関連タスクを実行できます。",
       "enabledHint": "有効"
     },
+    "memory": {
+      "toggle": "Memory"
+    },
     "runSchedule": {
       "toggle": "実行時間",
       "dialogTitle": "実行時間",

@@ -140,6 +140,9 @@
       "disabledTooltipDescription": "Activez-le pour permettre à Poco d'utiliser le navigateur pour consulter des pages web et effectuer des tâches liées au web.",
       "enabledHint": "Activé"
     },
+    "memory": {
+      "toggle": "Memory"
+    },
     "runSchedule": {
       "toggle": "Heure d'exécution",
       "dialogTitle": "Heure d'exécution",

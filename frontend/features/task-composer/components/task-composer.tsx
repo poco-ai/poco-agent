@@ -110,6 +110,7 @@ export function TaskComposer({
   const memoryFeatureEnabled = useMemoryFeatureEnabled();
   const capabilityToggle = useCapabilityToggle();
   const isComposing = React.useRef(false);
+  const memoryInitializedRef = React.useRef(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const latestValueRef = React.useRef(value);
   const trackedCapabilityItemsRef = React.useRef<TrackedCapabilityItem[]>([]);
@@ -152,7 +153,8 @@ export function TaskComposer({
 
   // ---- Browser toggle ----
   const [browserEnabled, setBrowserEnabled] = React.useState(true);
-  const [memoryEnabled, setMemoryEnabled] = React.useState(false);
+  const [memoryEnabled, setMemoryEnabled] =
+    React.useState(memoryFeatureEnabled);
   const [trackedCapabilityItems, setTrackedCapabilityItems] = React.useState<
     TrackedCapabilityItem[]
   >([]);
@@ -239,8 +241,15 @@ export function TaskComposer({
   }, []);
 
   React.useEffect(() => {
-    if (memoryFeatureEnabled) return;
-    setMemoryEnabled(false);
+    if (!memoryFeatureEnabled) {
+      setMemoryEnabled(false);
+      memoryInitializedRef.current = false;
+      return;
+    }
+
+    if (memoryInitializedRef.current) return;
+    setMemoryEnabled(true);
+    memoryInitializedRef.current = true;
   }, [memoryFeatureEnabled]);
 
   React.useEffect(() => {
@@ -596,8 +605,11 @@ export function TaskComposer({
               hasVoiceSupport={voiceInput.isSupported}
               voiceStatus={voiceInput.status}
               browserEnabled={browserEnabled}
+              memoryFeatureEnabled={memoryFeatureEnabled}
+              memoryEnabled={memoryEnabled}
               onOpenRepoDialog={() => setRepoDialogOpen(true)}
               onBrowserEnabledChange={setBrowserEnabled}
+              onMemoryEnabledChange={setMemoryEnabled}
               onOpenFileInput={() => fileInputRef.current?.click()}
               onToggleVoiceInput={() => {
                 void voiceInput.toggleRecording();

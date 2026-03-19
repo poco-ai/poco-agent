@@ -8,6 +8,7 @@ import {
   Settings2,
   Clock,
   Chrome,
+  Brain,
   Paperclip,
   Code2,
   SquareTerminal,
@@ -55,8 +56,11 @@ interface ComposerToolbarProps {
   hasVoiceSupport: boolean;
   voiceStatus: VoiceInputStatus;
   browserEnabled: boolean;
+  memoryFeatureEnabled: boolean;
+  memoryEnabled: boolean;
   onOpenRepoDialog: () => void;
   onBrowserEnabledChange: (enabled: boolean) => void;
+  onMemoryEnabledChange: (enabled: boolean) => void;
   onOpenFileInput: () => void;
   onToggleVoiceInput: () => void;
   onSubmit: () => void;
@@ -78,8 +82,11 @@ export function ComposerToolbar({
   hasVoiceSupport,
   voiceStatus,
   browserEnabled,
+  memoryFeatureEnabled,
+  memoryEnabled,
   onOpenRepoDialog,
   onBrowserEnabledChange,
+  onMemoryEnabledChange,
   onOpenFileInput,
   onToggleVoiceInput,
   onSubmit,
@@ -239,6 +246,17 @@ export function ComposerToolbar({
                 <Chrome className="size-4" />
                 <span>{t("hero.browser.toggle")}</span>
               </DropdownMenuCheckboxItem>
+              {memoryFeatureEnabled ? (
+                <DropdownMenuCheckboxItem
+                  checked={memoryEnabled}
+                  onCheckedChange={(next) => {
+                    onMemoryEnabledChange(Boolean(next));
+                  }}
+                >
+                  <Brain className="size-4" />
+                  <span>{t("hero.memory.toggle")}</span>
+                </DropdownMenuCheckboxItem>
+              ) : null}
             </DropdownMenuContent>
           </DropdownMenu>
           <TooltipContent side="top" sideOffset={8}>

@@ -142,6 +142,9 @@
       "disabledTooltipDescription": "开启后，Poco 可以通过浏览器查看网页并执行网页相关任务。",
       "enabledHint": "已开启"
     },
+    "memory": {
+      "toggle": "记忆"
+    },
     "runSchedule": {
       "toggle": "发送时间",
       "dialogTitle": "发送时间",

@@ -142,6 +142,9 @@
       "disabledTooltipDescription": "Turn it on to let Poco use the browser for web viewing and web-related tasks.",
       "enabledHint": "Enabled"
     },
+    "memory": {
+      "toggle": "Memory"
+    },
     "runSchedule": {
       "toggle": "Run time",
       "dialogTitle": "Run time",

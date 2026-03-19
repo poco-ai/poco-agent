@@ -127,6 +127,9 @@
       "disabledTooltipDescription": "Включите, чтобы Poco мог использовать браузер для просмотра веб-страниц и выполнения веб-задач.",
       "enabledHint": "Включен"
     },
+    "memory": {
+      "toggle": "Memory"
+    },
     "runSchedule": {
       "toggle": "Время выполнения",
       "dialogTitle": "Время выполнения",
