@@ -14,7 +14,7 @@ A safer, more beautiful, and easier-to-use OpenClaw alternative
 [![Docs](https://img.shields.io/badge/poco-docs-blueviolet)](https://docs.poco-ai.com/)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/poco-ai/poco-agent)
 
-[English](README.md) | [简体中文](README_zh.md)
+[English](README.md) | [简体中文](README_zh.md) | [日本語](README_ja.md)
 
 </div>
 
