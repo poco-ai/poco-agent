@@ -45,6 +45,12 @@ function buildTaskConfig(
   if (options.memory_enabled) {
     config.memory_enabled = true;
   }
+  if (options.mcp_config && Object.keys(options.mcp_config).length > 0) {
+    config.mcp_config = options.mcp_config;
+  }
+  if (options.skill_config && Object.keys(options.skill_config).length > 0) {
+    config.skill_config = options.skill_config;
+  }
 
   return Object.keys(config).length > 0 ? config : undefined;
 }

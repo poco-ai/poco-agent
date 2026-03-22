@@ -58,6 +58,16 @@ class Settings(BaseSettings):
     openai_audio_transcription_model: str = Field(
         default="whisper-1", alias="OPENAI_AUDIO_TRANSCRIPTION_MODEL"
     )
+    siliconflow_api_key: str | None = Field(default=None, alias="SILICONFLOW_API_KEY")
+    siliconflow_base_url: str = Field(
+        default="https://api.siliconflow.cn/v1", alias="SILICONFLOW_BASE_URL"
+    )
+    siliconflow_rerank_model: str = Field(
+        default="BAAI/bge-reranker-v2-m3", alias="SILICONFLOW_RERANK_MODEL"
+    )
+    siliconflow_timeout_seconds: float = Field(
+        default=15.0, alias="SILICONFLOW_TIMEOUT_SECONDS"
+    )
     default_model: str = Field(
         default="claude-sonnet-4-20250514", alias="DEFAULT_MODEL"
     )

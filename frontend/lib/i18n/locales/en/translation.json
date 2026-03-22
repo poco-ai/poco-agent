@@ -178,6 +178,19 @@
       "cancel": "Cancel",
       "confirm": "Confirm"
     },
+    "capabilityRecommendations": {
+      "title": "Suggested capabilities",
+      "selectedTitle": "Enabled for this task",
+      "loading": "Finding matches...",
+      "empty": "No matching MCPs or skills found for this prompt.",
+      "useForTask": "Use for this task",
+      "added": "Added",
+      "enabledByDefault": "Already enabled",
+      "noDescription": "No description provided",
+      "remove": "Remove {{name}}",
+      "mcpLabel": "MCP",
+      "skillLabel": "Skill"
+    },
     "warnings": {
       "tooManyMcps": "Too many MCP servers enabled ({{count}}). This may slow down system loading and reduce performance.",
       "tooManySkills": "Too many skills enabled ({{count}}). This may slow down system loading and reduce performance.",

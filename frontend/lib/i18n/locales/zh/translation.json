@@ -178,6 +178,19 @@
       "cancel": "取消",
       "confirm": "确认"
     },
+    "capabilityRecommendations": {
+      "title": "推荐能力",
+      "selectedTitle": "本次任务已启用",
+      "loading": "正在查找匹配项...",
+      "empty": "没有找到匹配当前输入的 MCP 或技能。",
+      "useForTask": "用于本次任务",
+      "added": "已添加",
+      "enabledByDefault": "默认已启用",
+      "noDescription": "暂无描述",
+      "remove": "移除 {{name}}",
+      "mcpLabel": "MCP",
+      "skillLabel": "技能"
+    },
     "warnings": {
       "tooManyMcps": "启用的 MCP 服务器过多（{{count}} 个），可能会导致系统加载变慢、性能下降。",
       "tooManySkills": "启用的技能过多（{{count}} 个），可能会导致系统加载变慢、性能下降。",

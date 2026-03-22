@@ -52,6 +52,9 @@ class SkillService:
 
         skill = Skill(
             name=name,
+            description=request.description.strip() or None
+            if request.description is not None
+            else None,
             scope=scope,
             owner_user_id=user_id,
             entry=request.entry or {},
@@ -102,6 +105,8 @@ class SkillService:
 
         if request.scope is not None and request.scope.strip():
             skill.scope = request.scope.strip()
+        if request.description is not None:
+            skill.description = request.description.strip() or None
         if request.entry is not None:
             skill.entry = request.entry
 

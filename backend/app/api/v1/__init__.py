@@ -4,6 +4,7 @@ from app.api.v1 import (
     attachments,
     audio,
     callback,
+    capability_recommendations,
     claude_md,
     env_vars,
     models,
@@ -58,6 +59,7 @@ api_v1_router.include_router(tool_executions.router)
 api_v1_router.include_router(usage.router)
 api_v1_router.include_router(attachments.router)
 api_v1_router.include_router(audio.router)
+api_v1_router.include_router(capability_recommendations.router)
 api_v1_router.include_router(env_vars.router)
 api_v1_router.include_router(claude_md.router)
 api_v1_router.include_router(models.router)

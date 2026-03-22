@@ -10,9 +10,11 @@ import {
 } from "@/features/scheduled-tasks/utils/schedule";
 import { RunScheduleDialog } from "@/features/task-composer/components/run-schedule-dialog";
 import { ComposerAttachments } from "@/features/task-composer/components/composer-attachments";
+import { CapabilityRecommendations } from "@/features/task-composer/components/capability-recommendations";
 import { ComposerToolbar } from "@/features/task-composer/components/composer-toolbar";
 import { RepoDialog } from "@/features/task-composer/components/repo-dialog";
 import { SlashAutocompleteDropdown } from "@/features/task-composer/components/slash-autocomplete-dropdown";
+import { useCapabilityRecommendations } from "@/features/task-composer/hooks/use-capability-recommendations";
 import { getNextComposerMode } from "@/features/task-composer/lib/mode-utils";
 import { useSlashCommandAutocomplete } from "@/features/chat/hooks/use-slash-command-autocomplete";
 import { useAppShell } from "@/components/shell/app-shell-context";
@@ -26,6 +28,7 @@ import type {
   RepoUsageMode,
   TaskSendOptions,
 } from "@/features/task-composer/types";
+import type { CapabilityRecommendation } from "@/features/task-composer/types/capability-recommendation";
 
 // ---------------------------------------------------------------------------
 // Props
@@ -124,6 +127,13 @@ export function TaskComposer({
   // ---- Browser toggle ----
   const [browserEnabled, setBrowserEnabled] = React.useState(true);
   const [memoryEnabled, setMemoryEnabled] = React.useState(false);
+  const [mcpConfig, setMcpConfig] = React.useState<Record<string, boolean>>({});
+  const [skillConfig, setSkillConfig] = React.useState<Record<string, boolean>>(
+    {},
+  );
+  const [selectedCapabilityItems, setSelectedCapabilityItems] = React.useState<
+    CapabilityRecommendation[]
+  >([]);
 
   // ---- Repo state ----
   const [repoDialogOpen, setRepoDialogOpen] = React.useState(false);
@@ -151,6 +161,11 @@ export function TaskComposer({
   const [scheduledEnabled, setScheduledEnabled] = React.useState(true);
   const [scheduledReuseSession, setScheduledReuseSession] =
     React.useState(true);
+
+  const capabilityRecommendations = useCapabilityRecommendations(value, {
+    enabled: !isSubmitting,
+    limit: 3,
+  });
 
   // ---- Derived values ----
   const firstLine =
@@ -254,6 +269,8 @@ export function TaskComposer({
           : null,
       browser_enabled: browserEnabled,
       memory_enabled: memoryFeatureEnabled ? memoryEnabled : false,
+      mcp_config: mcpConfig,
+      skill_config: skillConfig,
       run_schedule:
         mode === "scheduled"
           ? null
@@ -279,6 +296,9 @@ export function TaskComposer({
 
     onSend(payload);
     upload.clearAttachments();
+    setMcpConfig({});
+    setSkillConfig({});
+    setSelectedCapabilityItems([]);
     setRunScheduleMode("immediate");
     setRunScheduledAt(null);
   }, [
@@ -288,6 +308,7 @@ export function TaskComposer({
     gitBranch,
     gitTokenEnvKey,
     isSubmitting,
+    mcpConfig,
     memoryEnabled,
     memoryFeatureEnabled,
     mode,
@@ -303,10 +324,47 @@ export function TaskComposer({
     scheduledName,
     scheduledReuseSession,
     scheduledTimezone,
+    skillConfig,
     upload,
     value,
     voiceInput.isBusy,
   ]);
+
+  const handleApplyCapability = React.useCallback(
+    (item: CapabilityRecommendation) => {
+      const key = String(item.id);
+      if (item.type === "mcp") {
+        setMcpConfig((prev) => ({ ...prev, [key]: true }));
+      } else {
+        setSkillConfig((prev) => ({ ...prev, [key]: true }));
+      }
+      setSelectedCapabilityItems((prev) => {
+        const exists = prev.some(
+          (entry) => entry.type === item.type && entry.id === item.id,
+        );
+        if (exists) return prev;
+        return [...prev, item];
+      });
+    },
+    [],
+  );
+
+  const handleRemoveCapability = React.useCallback(
+    (item: CapabilityRecommendation) => {
+      const key = String(item.id);
+      if (item.type === "mcp") {
+        setMcpConfig((prev) => ({ ...prev, [key]: false }));
+      } else {
+        setSkillConfig((prev) => ({ ...prev, [key]: false }));
+      }
+      setSelectedCapabilityItems((prev) =>
+        prev.filter(
+          (entry) => !(entry.type === item.type && entry.id === item.id),
+        ),
+      );
+    },
+    [],
+  );
 
   // ---- Render ----
   return (
@@ -441,6 +499,18 @@ export function TaskComposer({
             rows={2}
           />
         </div>
+
+        <CapabilityRecommendations
+          recommendations={capabilityRecommendations.items}
+          selectedItems={selectedCapabilityItems}
+          isLoading={capabilityRecommendations.isLoading}
+          showEmptyState={
+            capabilityRecommendations.hasFetched &&
+            value.trim().length >= capabilityRecommendations.minQueryLength
+          }
+          onApply={handleApplyCapability}
+          onRemove={handleRemoveCapability}
+        />
 
         {/* Bottom toolbar */}
         <div className="flex flex-wrap items-center justify-between gap-3 px-4 pb-4">

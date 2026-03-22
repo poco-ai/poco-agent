@@ -15,6 +15,8 @@ export interface TaskSendOptions {
   project_name?: string | null;
   browser_enabled?: boolean | null;
   memory_enabled?: boolean | null;
+  mcp_config?: Record<string, boolean> | null;
+  skill_config?: Record<string, boolean> | null;
   run_schedule?: {
     schedule_mode: RunScheduleMode;
     timezone: string;
