@@ -1,0 +1,11 @@
+.git
+.worktrees
+oss_data
+tmp_workspace
+
+frontend/node_modules
+frontend/.next
+
+backend/.venv
+executor_manager/.venv
+executor/.venv

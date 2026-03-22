@@ -205,7 +205,7 @@ services:
       # Manager accesses executor containers through published host ports.
       EXECUTOR_PUBLISHED_HOST: ${EXECUTOR_PUBLISHED_HOST:-host.docker.internal}
 
-      WORKSPACE_ROOT: ${PWD}/tmp_workspace
+      WORKSPACE_ROOT: ${WORKSPACE_MOUNT_ROOT:-${PWD}}/tmp_workspace
 
       MAX_CONCURRENT_TASKS: ${MAX_CONCURRENT_TASKS:-5}
       TASK_PULL_ENABLED: ${TASK_PULL_ENABLED:-true}
@@ -235,7 +235,7 @@ services:
       - "${DOCKER_GID:-0}"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - ./tmp_workspace:${PWD}/tmp_workspace
+      - ${WORKSPACE_MOUNT_ROOT:-${PWD}}/tmp_workspace:${WORKSPACE_MOUNT_ROOT:-${PWD}}/tmp_workspace
     extra_hosts:
       - "host.docker.internal:host-gateway"
     ports:
