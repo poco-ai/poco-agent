@@ -4,6 +4,7 @@ import time
 from typing import Any
 from urllib.parse import urlparse
 
+from app.core.settings import get_settings
 from app.core.errors.error_codes import ErrorCode
 from app.core.errors.exceptions import AppException
 from app.services.backend_client import BackendClient
@@ -12,6 +13,43 @@ from app.services.backend_client import BackendClient
 _ENV_PATTERN = re.compile(r"\$\{([^}]+)\}")
 logger = logging.getLogger(__name__)
 _GITHUB_HOSTS = {"github.com", "www.github.com"}
+_PROVIDER_RUNTIME_SPECS = {
+    "anthropic": {
+        "api_key_env_key": "ANTHROPIC_API_KEY",
+        "base_url_env_key": "ANTHROPIC_BASE_URL",
+        "default_base_url": "https://api.anthropic.com",
+        "runtime_api_key_env_key": "ANTHROPIC_API_KEY",
+        "runtime_base_url_env_key": "ANTHROPIC_BASE_URL",
+    },
+    "openai": {
+        "api_key_env_key": "OPENAI_API_KEY",
+        "base_url_env_key": "OPENAI_BASE_URL",
+        "default_base_url": "https://api.openai.com/v1",
+        "runtime_api_key_env_key": "OPENAI_API_KEY",
+        "runtime_base_url_env_key": "OPENAI_BASE_URL",
+    },
+    "glm": {
+        "api_key_env_key": "GLM_API_KEY",
+        "base_url_env_key": "GLM_BASE_URL",
+        "default_base_url": "https://open.bigmodel.cn/api/paas/v4/",
+        "runtime_api_key_env_key": "OPENAI_API_KEY",
+        "runtime_base_url_env_key": "OPENAI_BASE_URL",
+    },
+    "minimax": {
+        "api_key_env_key": "MINIMAX_API_KEY",
+        "base_url_env_key": "MINIMAX_BASE_URL",
+        "default_base_url": "https://api.minimaxi.com/v1",
+        "runtime_api_key_env_key": "OPENAI_API_KEY",
+        "runtime_base_url_env_key": "OPENAI_BASE_URL",
+    },
+    "deepseek": {
+        "api_key_env_key": "DEEPSEEK_API_KEY",
+        "base_url_env_key": "DEEPSEEK_BASE_URL",
+        "default_base_url": "https://api.deepseek.com",
+        "runtime_api_key_env_key": "OPENAI_API_KEY",
+        "runtime_base_url_env_key": "OPENAI_BASE_URL",
+    },
+}
 
 
 def _resolve_env_value(value: Any, env_map: dict[str, str]) -> Any:
@@ -51,6 +89,7 @@ def _resolve_env_value(value: Any, env_map: dict[str, str]) -> Any:
 class ConfigResolver:
     def __init__(self, backend_client: BackendClient | None = None) -> None:
         self.backend_client = backend_client or BackendClient()
+        self.settings = get_settings()
 
     async def resolve(
         self,
@@ -183,6 +222,9 @@ class ConfigResolver:
         resolved_git = self._resolve_git_token(resolved, env_map)
         if resolved_git:
             resolved.update(resolved_git)
+        env_overrides = self._resolve_model_env_overrides(resolved, env_map)
+        if env_overrides:
+            resolved["env_overrides"] = env_overrides
 
         logger.info(
             "timing",
@@ -227,6 +269,71 @@ class ConfigResolver:
             )
 
         return {"git_token": token}
+
+    def _resolve_model_env_overrides(
+        self, config_snapshot: dict, env_map: dict[str, str]
+    ) -> dict[str, str]:
+        selected_model = str(
+            config_snapshot.get("model") or self.settings.default_model or ""
+        ).strip()
+        explicit_provider_id = str(config_snapshot.get("model_provider_id") or "").strip()
+        inferred_provider_id = self._infer_provider_id(selected_model)
+        provider_id = explicit_provider_id or inferred_provider_id
+        if not provider_id:
+            return {}
+
+        spec = _PROVIDER_RUNTIME_SPECS.get(provider_id)
+        if not spec and explicit_provider_id and inferred_provider_id:
+            provider_id = inferred_provider_id
+            spec = _PROVIDER_RUNTIME_SPECS.get(provider_id)
+        if not spec:
+            return {}
+
+        api_key = (
+            (env_map.get(spec["api_key_env_key"]) or "").strip()
+            or self._get_system_provider_value(provider_id, "api_key")
+        )
+        if not api_key:
+            raise AppException(
+                error_code=ErrorCode.ENV_VAR_NOT_FOUND,
+                message=f"Provider credential not configured for model: {selected_model}",
+            )
+
+        base_url = (
+            (env_map.get(spec["base_url_env_key"]) or "").strip()
+            or self._get_system_provider_value(provider_id, "base_url")
+            or spec["default_base_url"]
+        )
+        return {
+            spec["runtime_api_key_env_key"]: api_key,
+            spec["runtime_base_url_env_key"]: base_url,
+        }
+
+    @staticmethod
+    def _infer_provider_id(model_id: str) -> str | None:
+        value = (model_id or "").strip()
+        if not value:
+            return None
+
+        lowered = value.lower()
+        if lowered.startswith("claude-"):
+            return "anthropic"
+        if lowered.startswith(("gpt", "o1", "o3", "o4")):
+            return "openai"
+        if lowered.startswith("glm-") or value.startswith("GLM-"):
+            return "glm"
+        if lowered.startswith("minimax-") or value.startswith("MiniMax-"):
+            return "minimax"
+        if lowered.startswith("deepseek-"):
+            return "deepseek"
+        return None
+
+    def _get_system_provider_value(
+        self, provider_id: str, value_kind: str
+    ) -> str:
+        field_name = f"{provider_id}_{value_kind}"
+        value = getattr(self.settings, field_name, None)
+        return str(value or "").strip()
 
     async def _get_env_map(self, user_id: str) -> dict[str, str]:
         return await self.backend_client.get_env_map(user_id=user_id)

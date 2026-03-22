@@ -36,6 +36,8 @@ class TaskConfig(BaseModel):
     model: str | None = None
     # Resolved GitHub token (secret) injected by Executor Manager at runtime.
     git_token: str | None = None
+    # Runtime-only provider credentials injected by Executor Manager for this run.
+    env_overrides: dict[str, str] = Field(default_factory=dict)
     # Built-in browser capability toggle (Playwright MCP is injected internally by the executor).
     browser_enabled: bool = False
     # Built-in memory capability toggle (Memory MCP is injected internally by the executor).

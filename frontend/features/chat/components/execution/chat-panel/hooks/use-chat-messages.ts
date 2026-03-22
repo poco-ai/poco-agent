@@ -18,6 +18,7 @@ import {
   parseMessages,
   type RawApiMessage,
 } from "@/features/chat/services/message-parser";
+import type { ModelSelection } from "@/features/chat/lib/model-catalog";
 
 interface UseChatMessagesOptions {
   session: ExecutionSession | null;
@@ -33,6 +34,7 @@ interface UseChatMessagesReturn {
   sendMessage: (
     content: string,
     attachments?: InputFile[],
+    modelSelection?: ModelSelection | null,
   ) => Promise<TaskEnqueueActionResult | null>;
   beginOptimisticRegenerate: (assistantMessageId: number) => string;
   beginOptimisticEditMessage: (args: {
@@ -497,6 +499,7 @@ export function useChatMessages({
     async (
       content: string,
       attachments?: InputFile[],
+      modelSelection?: ModelSelection | null,
     ): Promise<TaskEnqueueActionResult | null> => {
       if (!session?.session_id) return null;
 
@@ -529,6 +532,8 @@ export function useChatMessages({
           sessionId,
           content: normalizedContent,
           attachments,
+          model: modelSelection?.modelId ?? null,
+          model_provider_id: modelSelection?.providerId ?? null,
         });
 
         if (result.acceptedType !== "run") {

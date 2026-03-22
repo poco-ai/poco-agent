@@ -1301,6 +1301,22 @@
     "anthropicBaseUrl": "Anthropic-Basis-URL",
     "anthropicBaseUrlHint": "Standard-Anthropic-Endpunkt überschreiben.",
     "anthropicBaseUrlPlaceholder": "https://api.anthropic.com",
+    "providerConfigDescription": "Anbieter-Zugangsdaten und die im Auswahlmenü sichtbare Modellliste verwalten.",
+    "providerListEmpty": "Noch keine Modellanbieter verfügbar.",
+    "providerStatusNone": "Nicht konfiguriert",
+    "providerStatusSystem": "Voreingestellter Dienst",
+    "providerStatusUser": "Benutzerdefiniert",
+    "providerModels": "Gilt für: {{models}}",
+    "providerApiKeyLabel": "{{provider}}-API-Schlüssel",
+    "providerApiKeyHint": "Leer lassen, um den vorhandenen benutzerdefinierten Schlüssel unverändert zu behalten.",
+    "providerApiKeyPlaceholder": "{{provider}}-API-Schlüssel eingeben",
+    "providerBaseUrlLabel": "Benutzerdefinierte Base-URL",
+    "providerBaseUrlHint": "Leer lassen, um den Standard-API-Endpunkt zu verwenden.",
+    "providerBaseUrlRequired": "Eine Base-URL ist erforderlich, wenn ein benutzerdefinierter Endpunkt aktiviert ist.",
+    "providerSaveSuccess": "Anbietereinstellungen gespeichert",
+    "providerSaveError": "Anbietereinstellungen konnten nicht gespeichert werden",
+    "providerClearSuccess": "Benutzerdefinierte Anbietereinstellungen entfernt",
+    "providerClearCustom": "Benutzerdefiniertes entfernen",
     "claudeCode": "Claude Code",
     "language": "Sprache",
     "english": "English",
@@ -1383,7 +1399,16 @@
           "hint": "Open the settings dialog."
         }
       }
-    }
+    },
+    "providerDiscoverError": "Modelle des Anbieters konnten nicht geladen werden",
+    "providerModelsPlaceholder": "Noch keine benutzerdefinierten Modelle hinzugefuegt",
+    "providerModelsSearchPlaceholder": "Modellnamen eingeben und Enter druecken",
+    "providerModelsAdd": "Modell hinzufuegen",
+    "providerModelsDiscovering": "Modelle werden geladen...",
+    "providerModelsManualHint": "Dieser Anbieter unterstützt keine automatische Erkennung. Gib die Modellnamen manuell ein.",
+    "providerModelsEmpty": "Keine Modelle gefunden",
+    "providerModelsUseCustom": "Benutzerdefiniertes Modell verwenden: {{model}}",
+    "providerFieldAnnotation": "API Key leer lassen, um den aktuellen Schluessel beizubehalten. Base URL leer lassen, um den Standard-Endpunkt zu verwenden. Modellnamen manuell eingeben und mit Enter oder dem Plus hinzufuegen."
   },
   "validation": {
     "projectNameRequired": "Bitte gib einen Projektnamen ein",
@@ -1604,7 +1629,17 @@
     },
     "gpt4Turbo": {
       "description": "Schnell und effizient"
-    }
+    },
+    "customBadge": "Benutzerdefiniert",
+    "customModelAction": "Benutzerdefiniertes Modell",
+    "customModelTitle": "Benutzerdefiniertes Modell verwenden",
+    "customModelDescription": "Füge einen beliebigen Modellnamen hinzu, der vom konfigurierten Anbieter unterstützt wird.",
+    "customModelPlaceholder": "z. B. gpt-5 oder claude-sonnet-4-5",
+    "customModelHint": "Unterstützte Präfixe: claude-, gpt, o1/o3/o4, glm-, MiniMax-, deepseek-.",
+    "customModelRequired": "Gib einen Modellnamen ein.",
+    "customModelUnsupported": "Dieser Modellname passt zu keinem unterstützten Anbieter.",
+    "customModelProviderUnavailable": "Konfiguriere zuerst die Anbieter-Zugangsdaten, bevor du dieses Modell verwendest.",
+    "customModelSaved": "Benutzerdefiniertes Modell hinzugefügt"
   },
   "creditsPopover": {
     "proPlan": "Pro-Plan",

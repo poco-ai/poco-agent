@@ -90,6 +90,14 @@ class Settings(BaseSettings):
     anthropic_base_url: str = Field(
         default="https://api.anthropic.com", alias="ANTHROPIC_BASE_URL"
     )
+    openai_api_key: str | None = Field(default=None, alias="OPENAI_API_KEY")
+    openai_base_url: str | None = Field(default=None, alias="OPENAI_BASE_URL")
+    glm_api_key: str | None = Field(default=None, alias="GLM_API_KEY")
+    glm_base_url: str | None = Field(default=None, alias="GLM_BASE_URL")
+    minimax_api_key: str | None = Field(default=None, alias="MINIMAX_API_KEY")
+    minimax_base_url: str | None = Field(default=None, alias="MINIMAX_BASE_URL")
+    deepseek_api_key: str | None = Field(default=None, alias="DEEPSEEK_API_KEY")
+    deepseek_base_url: str | None = Field(default=None, alias="DEEPSEEK_BASE_URL")
     default_model: str = Field(
         default="claude-sonnet-4-20250514", alias="DEFAULT_MODEL"
     )
@@ -174,8 +182,6 @@ class Settings(BaseSettings):
                 "ANTHROPIC_AUTH_TOKEN."
             )
         return self
-
-
 @lru_cache
 def get_settings() -> Settings:
     return Settings()

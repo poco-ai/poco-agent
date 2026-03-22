@@ -204,14 +204,33 @@ export const chatService = {
   sendMessage: async (
     sessionId: string,
     content: string,
+    model?: string | null,
+    modelProviderId?: string | null,
     attachments?: InputFile[],
     clientRequestId?: string,
   ): Promise<TaskEnqueueResponse> => {
+    const hasModelOverride = model !== undefined;
+    const normalizedModel =
+      model === null ? null : (model || "").trim() || null;
+    const normalizedModelProviderId =
+      modelProviderId === null ? null : (modelProviderId || "").trim() || null;
+    const hasAttachments = (attachments?.length ?? 0) > 0;
+    const config: TaskConfig | undefined =
+      hasModelOverride || hasAttachments
+        ? {
+            ...(hasModelOverride ? { model: normalizedModel } : {}),
+            ...(hasModelOverride
+              ? { model_provider_id: normalizedModelProviderId }
+              : {}),
+            ...(hasAttachments ? { input_files: attachments } : {}),
+          }
+        : undefined;
+
     return chatService.enqueueTask({
       prompt: content,
       session_id: sessionId,
       schedule_mode: "immediate",
-      config: attachments?.length ? { input_files: attachments } : undefined,
+      config,
       client_request_id: clientRequestId,
     });
   },

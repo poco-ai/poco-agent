@@ -1401,6 +1401,22 @@
     "anthropicBaseUrl": "Anthropic Base URL",
     "anthropicBaseUrlHint": "覆盖默认 Anthropic API 地址。",
     "anthropicBaseUrlPlaceholder": "https://api.anthropic.com",
+    "providerConfigDescription": "管理提供方凭据，以及暴露给模型选择器的模型列表。",
+    "providerListEmpty": "当前没有可用的模型提供方。",
+    "providerStatusNone": "未配置",
+    "providerStatusSystem": "预设服务",
+    "providerStatusUser": "自定义",
+    "providerModels": "适用模型：{{models}}",
+    "providerApiKeyLabel": "{{provider}} API Key",
+    "providerApiKeyHint": "留空表示保留当前自定义 Key，不会覆盖已有值。",
+    "providerApiKeyPlaceholder": "请输入 {{provider}} API Key",
+    "providerBaseUrlLabel": "自定义 Base URL",
+    "providerBaseUrlHint": "留空表示使用默认 API 地址。",
+    "providerBaseUrlRequired": "启用自定义地址后必须填写 Base URL。",
+    "providerSaveSuccess": "提供方配置已保存",
+    "providerSaveError": "保存提供方配置失败",
+    "providerClearSuccess": "已移除自定义提供方配置",
+    "providerClearCustom": "移除自定义配置",
     "claudeCode": "Claude Code",
     "language": "语言",
     "english": "English",
@@ -1483,7 +1499,16 @@
           "hint": "打开设置弹窗。"
         }
       }
-    }
+    },
+    "providerDiscoverError": "拉取提供方模型失败",
+    "providerModelsPlaceholder": "暂未添加自定义模型",
+    "providerModelsSearchPlaceholder": "输入模型名称后按回车",
+    "providerModelsAdd": "添加模型",
+    "providerModelsDiscovering": "正在加载模型...",
+    "providerModelsManualHint": "该提供方暂不支持自动发现，请手动输入模型名称。",
+    "providerModelsEmpty": "没有找到模型",
+    "providerModelsUseCustom": "使用自定义模型：{{model}}",
+    "providerFieldAnnotation": "API Key 留空表示保留当前值，Base URL 留空表示使用默认地址。模型名称请手动输入，按回车或点击添加。"
   },
   "validation": {
     "projectNameRequired": "请输入项目名称",
@@ -1713,7 +1738,17 @@
     },
     "gpt4Turbo": {
       "description": "快速高效"
-    }
+    },
+    "customBadge": "自定义",
+    "customModelAction": "自定义模型",
+    "customModelTitle": "使用自定义模型",
+    "customModelDescription": "输入当前提供方实际支持的模型名称。",
+    "customModelPlaceholder": "例如 gpt-5 或 claude-sonnet-4-5",
+    "customModelHint": "支持的前缀：claude-、gpt、o1/o3/o4、glm-、MiniMax-、deepseek-。",
+    "customModelRequired": "请输入模型名称。",
+    "customModelUnsupported": "该模型名称无法匹配到受支持的提供方。",
+    "customModelProviderUnavailable": "请先配置对应提供方的凭据。",
+    "customModelSaved": "已添加自定义模型"
   },
   "creditsPopover": {
     "proPlan": "专业版",

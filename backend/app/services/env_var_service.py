@@ -1,4 +1,5 @@
 import logging
+import os
 from typing import Literal
 
 from sqlalchemy.exc import IntegrityError
@@ -23,6 +24,18 @@ logger = logging.getLogger(__name__)
 
 SYSTEM_USER_ID = "__system__"
 EnvVarScope = Literal["system", "user"]
+PROCESS_ENV_KEYS = (
+    "ANTHROPIC_API_KEY",
+    "ANTHROPIC_BASE_URL",
+    "OPENAI_API_KEY",
+    "OPENAI_BASE_URL",
+    "GLM_API_KEY",
+    "GLM_BASE_URL",
+    "MINIMAX_API_KEY",
+    "MINIMAX_BASE_URL",
+    "DEEPSEEK_API_KEY",
+    "DEEPSEEK_BASE_URL",
+)
 
 
 def _require_scope(value: str) -> EnvVarScope:
@@ -195,7 +208,7 @@ class EnvVarService:
         Empty values are treated as "unset" and excluded from the map so that
         `${env:KEY}` fails loudly when not configured.
         """
-        env_map: dict[str, str] = {}
+        env_map = self._load_process_env_map()
 
         system_vars = EnvVarRepository.list_by_user_and_scope(
             db, user_id=SYSTEM_USER_ID, scope="system"
@@ -220,6 +233,14 @@ class EnvVarService:
                 continue
             if value.strip():
                 env_map[item.key] = value
+        return env_map
+
+    def _load_process_env_map(self) -> dict[str, str]:
+        env_map: dict[str, str] = {}
+        for key in PROCESS_ENV_KEYS:
+            value = (os.getenv(key) or "").strip()
+            if value:
+                env_map[key] = value
         return env_map
 
     def list_system_env_vars(self, db: Session) -> list[SystemEnvVarResponse]:
