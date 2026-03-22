@@ -35,6 +35,8 @@ class ContainerEnvironmentTests(unittest.TestCase):
             anthropic_base_url="https://api.example.com",
             anthropic_api_key="api-key",
             anthropic_auth_token="auth-token",
+            callback_base_url="http://localhost:8001",
+            callback_token="callback-token",
             default_model="claude-sonnet-4-20250514",
             executor_memory_limit="2g",
             executor_browser_memory_limit="4g",
