@@ -2,6 +2,7 @@
 
 .env
 .factory/
+.worktrees/
 oss_data/
 tmp_workspace/
 
