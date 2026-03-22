@@ -28,6 +28,7 @@ export type ApiProviderConfig = {
   displayName: string;
   apiKeyEnvKey: string;
   baseUrlEnvKey: string;
+  credentialKind: "apiKey" | "authToken";
   credentialState: CredentialState;
   defaultBaseUrl: string;
   effectiveBaseUrl: string;

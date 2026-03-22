@@ -6,6 +6,7 @@ from unittest.mock import patch
 from pydantic import ValidationError
 
 from app.core.settings import Settings
+from app.services.config_resolver import ConfigResolver
 from app.services.container_pool import ContainerPool
 
 
@@ -75,6 +76,46 @@ class ContainerEnvironmentTests(unittest.TestCase):
         )
 
         self.assertEqual(memory_limit, "2g")
+
+
+class ConfigResolverProviderOverrideTests(unittest.TestCase):
+    @staticmethod
+    def _make_settings() -> SimpleNamespace:
+        return SimpleNamespace(
+            anthropic_api_key="api-key",
+            anthropic_auth_token="auth-token",
+            anthropic_base_url="https://api.anthropic.com",
+            glm_api_key="",
+            glm_base_url="",
+            minimax_api_key="",
+            minimax_base_url="",
+            deepseek_api_key="",
+            deepseek_base_url="",
+            default_model="claude-sonnet-4-6",
+        )
+
+    def test_auth_token_provider_uses_auth_token_runtime_env(self) -> None:
+        resolver = object.__new__(ConfigResolver)
+        resolver.settings = self._make_settings()
+
+        overrides = resolver._resolve_model_env_overrides(
+            {
+                "model": "claude-sonnet-4-6",
+                "model_provider_id": "anthropic-authtoken",
+            },
+            {"ANTHROPIC_AUTH_TOKEN": "runtime-auth-token"},
+            user_id="user-123",
+        )
+
+        self.assertEqual(
+            overrides["ANTHROPIC_AUTH_TOKEN"],
+            "runtime-auth-token",
+        )
+        self.assertEqual(
+            overrides["ANTHROPIC_BASE_URL"],
+            "https://api.anthropic.com",
+        )
+        self.assertNotIn("ANTHROPIC_API_KEY", overrides)
 
 
 if __name__ == "__main__":

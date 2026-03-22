@@ -1531,8 +1531,10 @@
     "providerStatusUser": "Custom",
     "providerModels": "Applies to: {{models}}",
     "providerApiKeyLabel": "API Key",
+    "providerAuthTokenLabel": "Auth Token",
     "providerApiKeyHint": "Leave this blank to keep the existing custom key unchanged.",
     "providerApiKeyPlaceholder": "Enter your {{provider}} API key",
+    "providerAuthTokenPlaceholder": "Enter your {{provider}} auth token",
     "providerApiKeyConfigured": "Configured",
     "providerNeedConfig": "Configure API Key & models",
     "providerBaseUrlLabel": "API Endpoint",
@@ -1659,6 +1661,7 @@
       }
     },
     "providerApiKeyLinkText": "Get API key here",
+    "providerAuthTokenLinkText": "Auth Token documentation",
     "providerModelRemove": "Remove model",
     "providerModelDocsPrefix": "View ",
     "providerModelDocsLinkLabel": "{{provider}} docs",

@@ -18,7 +18,7 @@ import { useT } from "@/lib/i18n/client";
 import type { ApiProviderConfig } from "@/features/settings/types";
 
 type ProviderHelpInfo = {
-  apiKeyUrl: string;
+  credentialUrl?: string;
   modelDocsUrl: string;
   modelDocsName: string;
 };
@@ -27,28 +27,57 @@ const MASKED_API_KEY_VALUE = "*******************";
 
 const PROVIDER_HELP_INFO: Record<string, ProviderHelpInfo> = {
   minimax: {
-    apiKeyUrl:
+    credentialUrl:
       "https://platform.minimaxi.com/user-center/basic-information/interface-key",
     modelDocsUrl: "https://platform.minimaxi.com/docs/guides/models-intro",
     modelDocsName: "MiniMax",
   },
   deepseek: {
-    apiKeyUrl: "https://platform.deepseek.com/api_keys",
+    credentialUrl: "https://platform.deepseek.com/api_keys",
     modelDocsUrl: "https://api-docs.deepseek.com/zh-cn/",
     modelDocsName: "DeepSeek",
   },
   glm: {
-    apiKeyUrl: "https://open.bigmodel.cn/usercenter/proj-mgmt/apikeys",
+    credentialUrl: "https://open.bigmodel.cn/usercenter/proj-mgmt/apikeys",
     modelDocsUrl: "https://open.bigmodel.cn/dev/api/normal-model/glm-4",
     modelDocsName: "GLM",
   },
   anthropic: {
-    apiKeyUrl: "https://platform.claude.com/settings/keys",
+    credentialUrl: "https://platform.claude.com/settings/keys",
+    modelDocsUrl:
+      "https://platform.claude.com/docs/en/docs/about-claude/models",
+    modelDocsName: "Claude",
+  },
+  "anthropic-authtoken": {
     modelDocsUrl:
       "https://platform.claude.com/docs/en/docs/about-claude/models",
     modelDocsName: "Claude",
   },
 };
+
+function getCredentialLabel(
+  t: (key: string, options?: Record<string, unknown>) => string,
+  config: ApiProviderConfig,
+) {
+  return config.credentialKind === "authToken"
+    ? t("settings.providerAuthTokenLabel")
+    : t("settings.providerApiKeyLabel");
+}
+
+function getCredentialPlaceholder(
+  t: (key: string, options?: Record<string, unknown>) => string,
+  config: ApiProviderConfig,
+) {
+  const authTokenProviderName =
+    config.displayName.replace(/\s*AuthToken$/i, "").trim() || config.displayName;
+  return config.credentialKind === "authToken"
+    ? t("settings.providerAuthTokenPlaceholder", {
+        provider: authTokenProviderName,
+      })
+    : t("settings.providerApiKeyPlaceholder", {
+        provider: config.displayName,
+      });
+}
 
 function splitModelDraft(value: string): string[] {
   return value
@@ -259,9 +288,7 @@ function ApiProviderSection({
             htmlFor={apiKeyInputId}
             className="text-sm font-medium text-foreground"
           >
-            {t("settings.providerApiKeyLabel", {
-              provider: config.displayName,
-            })}
+            {getCredentialLabel(t, config)}
           </Label>
           <Input
             id={apiKeyInputId}
@@ -274,21 +301,21 @@ function ApiProviderSection({
             }}
             onChange={(event) => onChange({ keyInput: event.target.value })}
             onBlur={handleBlur}
-            placeholder={t("settings.providerApiKeyPlaceholder", {
-              provider: config.displayName,
-            })}
+            placeholder={getCredentialPlaceholder(t, config)}
             disabled={config.isSaving}
             className="h-9"
           />
-          {providerHelp ? (
+          {providerHelp?.credentialUrl ? (
             <p className="text-xs text-muted-foreground">
               <a
-                href={providerHelp.apiKeyUrl}
+                href={providerHelp.credentialUrl}
                 target="_blank"
                 rel="noreferrer"
                 className="text-primary transition-colors hover:text-primary/80 hover:underline"
               >
-                {t("settings.providerApiKeyLinkText")}
+                {config.credentialKind === "authToken"
+                  ? t("settings.providerAuthTokenLinkText")
+                  : t("settings.providerApiKeyLinkText")}
               </a>
             </p>
           ) : null}

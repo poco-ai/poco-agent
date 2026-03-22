@@ -35,6 +35,15 @@ _PROVIDER_RUNTIME_SPECS: dict[str, ProviderRuntimeSpec] = {
         "runtime_api_key_env_key": "ANTHROPIC_API_KEY",
         "runtime_base_url_env_key": "ANTHROPIC_BASE_URL",
     },
+    "anthropic-authtoken": {
+        "source_api_key_env_keys": ("ANTHROPIC_AUTH_TOKEN",),
+        "source_base_url_env_keys": ("ANTHROPIC_AUTH_TOKEN_BASE_URL",),
+        "source_api_key_settings_fields": ("anthropic_auth_token",),
+        "source_base_url_settings_fields": (),
+        "default_base_url": "https://api.anthropic.com",
+        "runtime_api_key_env_key": "ANTHROPIC_AUTH_TOKEN",
+        "runtime_base_url_env_key": "ANTHROPIC_BASE_URL",
+    },
     "glm": {
         "source_api_key_env_keys": ("GLM_API_KEY",),
         "source_base_url_env_keys": ("GLM_BASE_URL",),

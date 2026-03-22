@@ -35,6 +35,12 @@ class ProviderSpec:
     legacy_base_url_env_keys: tuple[str, ...] = ()
 
 
+CLAUDE_KNOWN_MODELS: tuple[tuple[str, str], ...] = (
+    ("claude-sonnet-4-6", "Claude Sonnet 4.6"),
+    ("claude-opus-4-6", "Claude Opus 4.6"),
+)
+
+
 PROVIDER_SPECS: tuple[ProviderSpec, ...] = (
     ProviderSpec(
         provider_id="anthropic",
@@ -42,10 +48,15 @@ PROVIDER_SPECS: tuple[ProviderSpec, ...] = (
         api_key_env_key="ANTHROPIC_API_KEY",
         base_url_env_key="ANTHROPIC_BASE_URL",
         default_base_url="https://api.anthropic.com",
-        known_models=(
-            ("claude-sonnet-4-6", "Claude Sonnet 4.6"),
-            ("claude-opus-4-6", "Claude Opus 4.6"),
-        ),
+        known_models=CLAUDE_KNOWN_MODELS,
+    ),
+    ProviderSpec(
+        provider_id="anthropic-authtoken",
+        display_name="Anthropic AuthToken",
+        api_key_env_key="ANTHROPIC_AUTH_TOKEN",
+        base_url_env_key="ANTHROPIC_AUTH_TOKEN_BASE_URL",
+        default_base_url="https://api.anthropic.com",
+        known_models=CLAUDE_KNOWN_MODELS,
     ),
     ProviderSpec(
         provider_id="glm",

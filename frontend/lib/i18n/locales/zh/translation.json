@@ -1531,8 +1531,10 @@
     "providerStatusUser": "自定义",
     "providerModels": "适用模型：{{models}}",
     "providerApiKeyLabel": "API 密钥",
+    "providerAuthTokenLabel": "Auth Token",
     "providerApiKeyHint": "留空表示保留当前自定义密钥，不会覆盖已有值。",
     "providerApiKeyPlaceholder": "请输入 {{provider}} API 密钥",
+    "providerAuthTokenPlaceholder": "请输入 {{provider}} Auth Token",
     "providerApiKeyConfigured": "已配置",
     "providerNeedConfig": "需配置密钥和模型",
     "providerBaseUrlLabel": "API 地址",
@@ -1659,6 +1661,7 @@
       }
     },
     "providerApiKeyLinkText": "点击这里获取密钥",
+    "providerAuthTokenLinkText": "Auth Token 说明文档",
     "providerModelRemove": "移除模型",
     "providerModelDocsPrefix": "查看 ",
     "providerModelDocsLinkLabel": "{{provider}} 文档",

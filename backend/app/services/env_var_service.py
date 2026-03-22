@@ -26,7 +26,9 @@ SYSTEM_USER_ID = "__system__"
 EnvVarScope = Literal["system", "user"]
 PROCESS_ENV_KEYS = (
     "ANTHROPIC_API_KEY",
+    "ANTHROPIC_AUTH_TOKEN",
     "ANTHROPIC_BASE_URL",
+    "ANTHROPIC_AUTH_TOKEN_BASE_URL",
     "OPENAI_API_KEY",
     "OPENAI_BASE_URL",
     "GLM_API_KEY",

@@ -53,6 +53,10 @@ function buildProviderConfig(
     displayName: provider.display_name,
     apiKeyEnvKey: provider.api_key_env_key,
     baseUrlEnvKey: provider.base_url_env_key,
+    credentialKind:
+      provider.api_key_env_key === "ANTHROPIC_AUTH_TOKEN"
+        ? "authToken"
+        : "apiKey",
     credentialState: provider.credential_state,
     defaultBaseUrl: provider.default_base_url,
     effectiveBaseUrl: provider.effective_base_url,
@@ -202,7 +206,10 @@ export function useModelProviderSettings(options?: { enabled?: boolean }) {
       try {
         const keyValue = provider.keyInput.trim();
         const baseUrlValue = provider.baseUrlInput.trim();
-        const keyDescription = `${provider.displayName} API key`;
+        const keyDescription =
+          provider.credentialKind === "authToken"
+            ? `${provider.displayName} auth token`
+            : `${provider.displayName} API key`;
         const baseUrlDescription = `${provider.displayName} base URL`;
 
         if (keyValue) {
