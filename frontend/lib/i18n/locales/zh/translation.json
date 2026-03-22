@@ -5,6 +5,7 @@
   "language": "语言",
   "sidebar": {
     "newTask": "新建任务",
+    "newTaskWithShortcut": "新建任务 ({{shortcut}})",
     "search": "搜索",
     "library": "能力",
     "openMain": "打开主侧边栏",
@@ -47,6 +48,15 @@
   },
   "hero": {
     "title": "我能为你做什么？",
+    "rotatingWords": [
+      "做 PPT",
+      "搜索资料",
+      "做思维导图",
+      "分析 Github 仓库",
+      "分析数据",
+      "旅行规划",
+      "编写程序"
+    ],
     "subtitle": "分配一个任务，或提出任何问题。",
     "uploadFile": "上传文件",
     "dragDrop": {
@@ -66,7 +76,7 @@
       "planDefault": "先规划计划，再执行任务，适合复杂任务",
       "shortcutHint": "/ 使用 Slash Command，shift+enter 换行，enter 发送"
     },
-    "tools": "将你的工具连接到 Poco",
+    "tools": "为 Poco 赋予更多能力",
     "importFigma": "从 Figma 导入 (即将推出)",
     "connect": "连接",
     "configure": "配置",
@@ -132,6 +142,9 @@
       "disabledTooltipDescription": "开启后，Poco 可以通过浏览器查看网页并执行网页相关任务。",
       "enabledHint": "已开启"
     },
+    "memory": {
+      "toggle": "记忆"
+    },
     "runSchedule": {
       "toggle": "发送时间",
       "dialogTitle": "发送时间",
@@ -189,7 +202,8 @@
       "noDescription": "暂无描述",
       "remove": "移除 {{name}}",
       "mcpLabel": "MCP",
-      "skillLabel": "技能"
+      "skillLabel": "技能",
+      "hint": "根据你的任务，Poco 为你推荐以上能力，点击加载"
     },
     "warnings": {
       "tooManyMcps": "启用的 MCP 服务器过多（{{count}} 个），可能会导致系统加载变慢、性能下降。",
@@ -262,6 +276,9 @@
     "planApprovalApprove": "批准执行",
     "planApprovalReject": "拒绝",
     "planApprovalEmpty": "未提供计划内容",
+    "enterPlanModeTitle": "进入规划模式",
+    "enterPlanModeHint": "Agent 将先规划执行步骤，等待你的确认后再开始执行。",
+    "enterPlanModeConfirm": "进入规划",
     "askUserTimeout": "剩余 {{seconds}} 秒",
     "askUserPrevious": "上一题",
     "askUserNext": "下一题",
@@ -496,6 +513,28 @@
         "structured": "结构化数据",
         "empty": "无数据"
       }
+    },
+    "skillCreationReview": {
+      "title": "审查已创建技能",
+      "subtitle": "本次会话中智能体创建了一个技能，请先确认再保存。",
+      "badge": "智能体创建",
+      "nameLabel": "技能名称",
+      "descriptionLabel": "描述",
+      "emptyDescription": "未生成描述。",
+      "pathLabel": "工作区路径",
+      "conflictWarning": "已存在同名技能。",
+      "overwriteLabel": "覆盖已有技能",
+      "filesTitle": "生成的文件",
+      "loadingFiles": "正在加载生成文件…",
+      "emptyFiles": "暂时没有可预览的文件。",
+      "selectFile": "选择一个文件进行预览。",
+      "cancel": "取消",
+      "confirm": "创建技能",
+      "confirmOverwrite": "覆盖并创建",
+      "createSuccess": "技能已创建",
+      "createFailed": "创建技能失败",
+      "cancelSuccess": "已忽略本次技能创建",
+      "cancelFailed": "忽略技能创建失败"
     }
   },
   "status": {
@@ -599,6 +638,7 @@
       "loadingDoc": "正在读取文档...",
       "parseError": "无法解析 Excalidraw 文件",
       "fetchError": "无法获取文档内容",
+      "frontMatter": "前言元数据",
       "retry": "重试",
       "selectFile": "请从右侧选择文件进行预览",
       "supportedFormats": "支持 PDF、Office 文档、常见图片格式、MP4 视频、XMind 文件、.excalidraw 文件和 .drawio 文件",
@@ -1063,7 +1103,11 @@
       },
       "scope": {
         "system": "系统",
-        "user": "个人"
+        "user": "个人",
+        "builtin": "内置"
+      },
+      "source": {
+        "skillCreator": "Agent 创建"
       },
       "fields": {
         "id": "id",
@@ -1083,14 +1127,19 @@
         "actionFailed": "操作失败，请稍后再试"
       },
       "empty": "暂无技能",
-      "unknownSkill": "未知技能"
+      "unknownSkill": "未知技能",
+      "sections": {
+        "system": "系统内置 Skills",
+        "custom": "自定义 Skills"
+      }
     },
     "skillsImport": {
       "title": "导入技能",
       "tabs": {
         "zip": "上传压缩包",
         "github": "GitHub 地址",
-        "command": "npx 命令导入"
+        "command": "npx 命令导入",
+        "marketplace": "技能市场"
       },
       "fields": {
         "zip": "Zip 文件",
@@ -1100,12 +1149,14 @@
       "placeholders": {
         "githubUrl": "https://github.com/owner/repo",
         "name": "例如：my-skill",
-        "command": "npx skills add https://github.com/owner/repo --skill my-skill"
+        "command": "npx skills add https://github.com/owner/repo --skill my-skill",
+        "marketplaceSearch": "搜索 SkillsMP 中的技能，例如 git automation"
       },
       "hints": {
         "github": "默认尝试 main/master 分支（仅支持 github.com 公共仓库）",
         "nameRequired": "检测到 SKILL.md 位于根目录，必须手动填写技能名称",
-        "command": "粘贴 add 命令后将自动解析 GitHub 地址和 --skill 参数。"
+        "command": "粘贴 add 命令后将自动解析 GitHub 地址和 --skill 参数。",
+        "marketplace": "通过推荐或搜索发现 SkillsMP 技能，并继续沿用 Poco 的导入安装流程。"
       },
       "actions": {
         "back": "返回",
@@ -1150,12 +1201,41 @@
         "commitError": "导入失败，请稍后重试",
         "partialFailed": "部分技能导入失败，请查看详情",
         "commitTimeout": "导入超时，请稍后重试",
-        "invalidCommand": "无法解析命令，请确保包含 github.com 地址。"
+        "invalidCommand": "无法解析命令，请确保包含 github.com 地址。",
+        "marketplaceLoadError": "加载 SkillsMP 数据失败，请稍后重试",
+        "marketplaceDiscoverError": "无法解析该 SkillsMP 技能，请稍后重试"
       },
       "progress": {
         "title": "导入进度",
         "value": "进度",
         "jobId": "任务 ID"
+      },
+      "marketplace": {
+        "search": "搜索",
+        "reset": "返回推荐",
+        "searchResults": "共 {{count}} 个结果",
+        "emptySearch": "没有找到匹配的 SkillsMP 技能。",
+        "emptyRecommendations": "当前暂无可展示的 SkillsMP 推荐。",
+        "download": "下载",
+        "downloading": "处理中...",
+        "jump": "跳转",
+        "noDescription": "暂时没有可展示的描述。",
+        "sections": {
+          "popular": "热门推荐"
+        },
+        "aiSearchTooltip": "启用 AI Search，使用 SkillsMP 的语义搜索接口",
+        "refresh": "刷新推荐",
+        "openInGithub": "在 GitHub 中打开",
+        "checkInSkillsmp": "在 SkillsMP 中查看",
+        "titleLabel": "标题",
+        "descriptionLabel": "描述",
+        "setupTitle": "连接 SkillsMP，发现更多技能",
+        "setupDescription": "SkillsMP 是一个技能市场，你可以按热门或搜索方式发现可复用的 agent skill。",
+        "setupHint": "请先前往 设置 > 其他 填写 SkillsMP API Key，然后再回到这里浏览市场结果。",
+        "openSettings": "前往设置",
+        "invalidKeyTitle": "当前 SkillsMP API Key 无效",
+        "invalidKeyDescription": "SkillsMP 拒绝了当前的 API Key，因此暂时无法加载技能市场的搜索和推荐结果。",
+        "invalidKeyHint": "请前往 设置 > 其他 更新 SkillsMP API Key，保存后再返回重试。"
       }
     },
     "pluginsManager": {
@@ -1312,7 +1392,10 @@
       "zip": "ZIP",
       "system": "系统",
       "manual": "手动",
-      "unknown": "未知"
+      "unknown": "未知",
+      "skillCreator": "Skill Creator",
+      "marketplace": "技能市场",
+      "skillsmp": "SkillsMP"
     },
     "presets": {
       "title": "预设",
@@ -1321,6 +1404,34 @@
     "presetsPage": {
       "header": {
         "title": "预设"
+      }
+    },
+    "skillSettings": {
+      "title": "Skill 配置",
+      "subtitle": "预览 Skill 文件，并修改可编辑的配置项。",
+      "previewHint": "从左侧选择文件即可预览完整内容。",
+      "loadingFiles": "正在加载 Skill 文件…",
+      "emptyFiles": "当前 Skill 没有可预览的文件。",
+      "nameLabel": "Skill 名称",
+      "namePlaceholder": "输入 Skill 名称",
+      "descriptionLabel": "描述",
+      "descriptionPlaceholder": "为这个 Skill 补充一段说明",
+      "storagePathLabel": "存储路径",
+      "storagePathUnavailable": "暂无可用的存储路径。",
+      "readonlyHint": "系统内置 Skill 为只读，这里可预览文件，但不可编辑。",
+      "nameConflict": "已存在同名 Skill。",
+      "toasts": {
+        "saved": "Skill 已更新",
+        "saveFailed": "更新 Skill 失败"
+      },
+      "source": {
+        "system": "系统内置",
+        "github": "GitHub",
+        "zip": "ZIP 包",
+        "manual": "手动创建",
+        "unknown": "未知来源",
+        "marketplace": "技能市场",
+        "skillsmp": "SkillsMP"
       }
     }
   },
@@ -1387,6 +1498,7 @@
       "account": "账户",
       "settings": "设置",
       "models": "模型",
+      "other": "其他",
       "usage": "使用情况",
       "shortcuts": "快捷键"
     },
@@ -1398,7 +1510,6 @@
     "generalSettings": "通用设置",
     "darkMode": "深色模式",
     "backend": "后端",
-    "modelConfigTitle": "模型配置",
     "modelGlm": "GLM-4.7",
     "modelGlmDescription": "启用 GLM 模型用于任务执行",
     "apiKeys": "API Key",
@@ -1414,17 +1525,18 @@
     "anthropicBaseUrl": "Anthropic Base URL",
     "anthropicBaseUrlHint": "覆盖默认 Anthropic API 地址。",
     "anthropicBaseUrlPlaceholder": "https://api.anthropic.com",
-    "providerConfigDescription": "管理提供方凭据，以及暴露给模型选择器的模型列表。",
     "providerListEmpty": "当前没有可用的模型提供方。",
     "providerStatusNone": "未配置",
     "providerStatusSystem": "预设服务",
     "providerStatusUser": "自定义",
     "providerModels": "适用模型：{{models}}",
-    "providerApiKeyLabel": "{{provider}} API Key",
-    "providerApiKeyHint": "留空表示保留当前自定义 Key，不会覆盖已有值。",
-    "providerApiKeyPlaceholder": "请输入 {{provider}} API Key",
-    "providerBaseUrlLabel": "自定义 Base URL",
-    "providerBaseUrlHint": "留空表示使用默认 API 地址。",
+    "providerApiKeyLabel": "API 密钥",
+    "providerApiKeyHint": "留空表示保留当前自定义密钥，不会覆盖已有值。",
+    "providerApiKeyPlaceholder": "请输入 {{provider}} API 密钥",
+    "providerApiKeyConfigured": "已配置",
+    "providerNeedConfig": "需配置密钥和模型",
+    "providerBaseUrlLabel": "API 地址",
+    "providerBaseUrlHint": "留空使用默认地址",
     "providerBaseUrlRequired": "启用自定义地址后必须填写 Base URL。",
     "providerSaveSuccess": "提供方配置已保存",
     "providerSaveError": "保存提供方配置失败",
@@ -1495,6 +1607,10 @@
           "action": "Slash Command",
           "hint": "输入 / 打开 slash command 提示。"
         },
+        "newTask": {
+          "action": "新建任务",
+          "hint": "创建新任务并跳转到首页。"
+        },
         "search": {
           "action": "全局搜索",
           "hint": "打开或关闭全局搜索面板。"
@@ -1515,13 +1631,41 @@
     },
     "providerDiscoverError": "拉取提供方模型失败",
     "providerModelsPlaceholder": "暂未添加自定义模型",
-    "providerModelsSearchPlaceholder": "输入模型名称后按回车",
+    "providerModelsSearchPlaceholder": "输入模型名称后按回车，多个模型可用逗号分隔",
     "providerModelsAdd": "添加模型",
     "providerModelsDiscovering": "正在加载模型...",
     "providerModelsManualHint": "该提供方暂不支持自动发现，请手动输入模型名称。",
     "providerModelsEmpty": "没有找到模型",
     "providerModelsUseCustom": "使用自定义模型：{{model}}",
-    "providerFieldAnnotation": "API Key 留空表示保留当前值，Base URL 留空表示使用默认地址。模型名称请手动输入，按回车或点击添加。"
+    "providerFieldAnnotation": "API Key 留空表示保留当前值，Base URL 留空表示使用默认地址。模型名称请手动输入，多个模型可用逗号分隔；输入完成后可直接点击保存，也可按回车或点击添加立即加入。",
+    "other": {
+      "title": "其他集成",
+      "description": "管理不属于模型提供方的额外服务凭据。",
+      "skillsmp": {
+        "title": "SkillsMP",
+        "subtitle": "开启技能市场搜索与推荐能力。",
+        "description": "SkillsMP API Key",
+        "statusChecking": "检测中...",
+        "statusReady": "已就绪",
+        "statusMissing": "未配置",
+        "keyLabel": "SkillsMP API Key",
+        "keyPlaceholder": "请输入你的 SkillsMP API Key",
+        "help": "用于在技能导入弹窗中启用 SkillsMP 市场搜索和推荐请求。",
+        "docsLink": "SkillsMP API 文档",
+        "customKeySaved": "当前账户已经保存了一个用户级自定义 key。",
+        "save": "保存 Key",
+        "clear": "移除自定义 Key",
+        "clearError": "刷新 SkillsMP 状态失败"
+      }
+    },
+    "providerApiKeyLinkText": "点击这里获取密钥",
+    "providerModelRemove": "移除模型",
+    "providerModelDocsPrefix": "查看 ",
+    "providerModelDocsLinkLabel": "{{provider}} 文档",
+    "providerModelDocsSuffix": " 获取更多模型",
+    "providerModelsDialogTitle": "添加自定义模型",
+    "providerModelsDialogDescription": "手动添加该提供方可用的模型 ID。",
+    "providerModelsDialogPlaceholder": "输入模型 ID（例如 gpt-4o-mini）"
   },
   "validation": {
     "projectNameRequired": "请输入项目名称",
@@ -1547,8 +1691,19 @@
   "fileSidebar": {
     "title": "文件列表",
     "fileList": "文件列表",
+    "actions": "操作",
     "downloadAll": "下载全部",
+    "download": "下载",
+    "downloadFile": "下载文件",
     "noFiles": "暂无文件",
+    "packageAsSkill": "打包为 Skill",
+    "packageSkillTitle": "将文件夹打包为 Skill",
+    "packageSkillDescription": "将这个工作区文件夹提交到 Skill 审核队列。",
+    "skillName": "Skill 名称",
+    "skillNamePlaceholder": "输入 Skill 名称",
+    "submitSkill": "提交审核",
+    "skillSubmitted": "已提交 Skill 审核",
+    "skillSubmitFailed": "提交 Skill 审核失败",
     "downloadStarted": "开始下载工作区归档",
     "downloadStart": "开始下载工作区归档",
     "archiveNotAvailable": "归档文件暂不可用",
@@ -1586,7 +1741,7 @@
     "apps": "应用",
     "comingSoon": "即将推出",
     "clickForDetails": "点击查看详情",
-    "connectTools": "将您的工具连接到 Poco",
+    "connectTools": "为 Poco 赋予更多能力",
     "turnOffAll": "一键关闭",
     "noMcpInstalled": "未安装 MCP",
     "noSkillsInstalled": "未安装技能"

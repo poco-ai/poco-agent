@@ -91,6 +91,7 @@ function DraggableTask({
 
   const statusMeta = TASK_STATUS_META[task.status];
   const isRunningTask = task.status === "running";
+  const shouldShowDragHandle = !isRunningTask;
 
   const handleClick = (e: React.MouseEvent) => {
     if (isSelectionMode) {
@@ -166,8 +167,9 @@ function DraggableTask({
                   statusMeta.dotClassName,
                   isRunningTask &&
                     "motion-safe:animate-[running-status-dot-blink_1.05s_ease-in-out_infinite] motion-reduce:animate-none",
-                  "group-hover/task-card:opacity-0",
-                  "group-data-[active=true]/task-card:opacity-0",
+                  shouldShowDragHandle && "group-hover/task-card:opacity-0",
+                  shouldShowDragHandle &&
+                    "group-data-[active=true]/task-card:opacity-0",
                 )}
                 aria-hidden="true"
               />
@@ -175,11 +177,17 @@ function DraggableTask({
 
               {/* Hover: drag handle (overlays the dot) */}
               <div
-                className="absolute inset-0 flex items-center justify-center text-muted-foreground opacity-0 group-hover/task-card:opacity-100 group-data-[active=true]/task-card:opacity-100 transition-opacity cursor-grab active:cursor-grabbing group-data-[collapsible=icon]:hidden"
-                {...listeners}
+                className={cn(
+                  "absolute inset-0 flex items-center justify-center text-muted-foreground opacity-0 transition-opacity cursor-grab active:cursor-grabbing group-data-[collapsible=icon]:hidden",
+                  shouldShowDragHandle &&
+                    "group-hover/task-card:opacity-100 group-data-[active=true]/task-card:opacity-100",
+                )}
+                {...(shouldShowDragHandle ? listeners : {})}
                 onClick={(e) => e.stopPropagation()}
               >
-                <GripVertical className="size-3" />
+                {shouldShowDragHandle ? (
+                  <GripVertical className="size-3" />
+                ) : null}
               </div>
             </div>
 

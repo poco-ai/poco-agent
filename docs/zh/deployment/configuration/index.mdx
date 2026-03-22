@@ -1,0 +1,21 @@
+---
+title: 环境变量配置
+description: 按服务查看 Poco 配置。
+---
+
+本项目包含 4 个服务：`backend` / `executor-manager` / `executor` / `frontend`。
+
+依赖项包括：
+
+- `postgres`
+- S3 兼容对象存储（可选本地 `rustfs`，也可使用 Cloudflare R2 等云服务）
+
+各服务常用环境变量（含含义与默认值）。在生产环境请务必替换所有 `change-this-*`、弱口令与默认密钥。
+
+## 按服务查看
+
+- [Backend](./backend)
+- [Executor Manager](./executor-manager)
+- [Executor](./executor)
+- [Frontend](./frontend)
+- [存储与数据库](./storage)

@@ -36,9 +36,6 @@ jobs:
           - name: frontend
             image: ghcr.io/${{ github.repository_owner }}/poco-frontend
             dockerfile: docker/frontend/Dockerfile
-          - name: im
-            image: ghcr.io/${{ github.repository_owner }}/poco-im
-            dockerfile: docker/im/Dockerfile
 
     steps:
       - name: Checkout

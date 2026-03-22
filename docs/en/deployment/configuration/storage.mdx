@@ -1,0 +1,25 @@
+---
+title: Storage and Database
+description: Supporting configuration for Postgres and optional RustFS object storage.
+---
+
+## Postgres (Docker image)
+
+- `POSTGRES_DB` (default `poco`)
+- `POSTGRES_USER` (default `postgres`)
+- `POSTGRES_PASSWORD` (default `postgres`)
+- `POSTGRES_PORT` (default `5432`, host-mapped port)
+
+## Local RustFS (optional S3-compatible object storage)
+
+`docker-compose.yml` uses `rustfs/rustfs:latest` as the default local S3-compatible implementation (service name `rustfs`). If you use Cloudflare R2 (or another external S3-compatible service), switch to `docker-compose.r2.yml` and you can ignore this section.
+
+If you replace it with another local S3-compatible implementation, adjust image parameters accordingly and ensure `S3_*` used by Backend/Executor Manager still work.
+
+- `RUSTFS_IMAGE`: object storage image (default `rustfs/rustfs:latest`)
+- `S3_PORT` (default `9000`)
+- `S3_CONSOLE_PORT` (default `9001`)
+- `RUSTFS_DATA_DIR`: data directory (default `./oss_data`, host path bind-mounted to container `/data`)
+- RustFS runs as non-root user `rustfs` (UID/GID=10001); host directory must be `10001:10001` or it may fail with `Permission denied (os error 13)`.
+- `S3_ACCESS_KEY` / `S3_SECRET_KEY`: credentials for S3 API access (must match rustfs config)
+- `S3_BUCKET`: bucket name (default `poco`, can be created by `rustfs-init` (profile: `init`) or manually in console)

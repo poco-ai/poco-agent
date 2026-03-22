@@ -79,6 +79,23 @@ class ToolExecutionRepository:
         )
 
     @staticmethod
+    def list_by_session_and_tool_name(
+        session_db: Session,
+        *,
+        session_id: uuid.UUID,
+        tool_name: str,
+    ) -> list[ToolExecution]:
+        return (
+            session_db.query(ToolExecution)
+            .filter(
+                ToolExecution.session_id == session_id,
+                ToolExecution.tool_name == tool_name,
+            )
+            .order_by(ToolExecution.created_at.asc())
+            .all()
+        )
+
+    @staticmethod
     def list_by_session_after_cursor(
         session_db: Session,
         session_id: uuid.UUID,

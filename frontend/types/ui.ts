@@ -11,7 +11,7 @@ export interface ModelInfo {
   name: string;
   descriptionKey: string;
   icon: string;
-  provider: "anthropic" | "openai" | "google";
+  provider: "anthropic" | "google";
 }
 
 /** Aggregated usage statistics for a session or account. */

@@ -8,24 +8,20 @@ license = { text = "MIT" }
 dependencies = []
 
 [tool.ruff]
-src = ["backend", "executor", "executor_manager", "im"]
-
-[[tool.uv.index]]
-url = "https://pypi.tuna.tsinghua.edu.cn/simple"
-default = true
+src = ["backend", "executor", "executor_manager"]
+extend-exclude = ["backend/assets"]
 
 [tool.pyrefly]
+exclude = ["backend/assets"]
 
 project-includes = [
     "backend",
     "executor",
-    "executor_manager",
-    "im"
+    "executor_manager"
 ]
 
 search_path = [
     "backend",
     "executor",
-    "executor_manager",
-    "im"
+    "executor_manager"
 ]

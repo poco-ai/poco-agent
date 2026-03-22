@@ -5,6 +5,7 @@
   "language": "Язык",
   "sidebar": {
     "newTask": "Новая задача",
+    "newTaskWithShortcut": "Новая задача ({{shortcut}})",
     "search": "Поиск",
     "library": "Возможности",
     "scheduledTasks": "Запланированные задачи",
@@ -45,6 +46,15 @@
   },
   "hero": {
     "title": "Чем я могу вам помочь?",
+    "rotatingWords": [
+      "Создать презентацию",
+      "Поиск информации",
+      "Создать ментальную карту",
+      "Анализ репозиториев GitHub",
+      "Анализ данных",
+      "Планирование путешествий",
+      "Написание кода"
+    ],
     "subtitle": "Назначьте задачу или задайте вопрос.",
     "uploadFile": "Загрузить файл",
     "dragDrop": {
@@ -117,6 +127,9 @@
       "disabledTooltipDescription": "Включите, чтобы Poco мог использовать браузер для просмотра веб-страниц и выполнения веб-задач.",
       "enabledHint": "Включен"
     },
+    "memory": {
+      "toggle": "Memory"
+    },
     "runSchedule": {
       "toggle": "Время выполнения",
       "dialogTitle": "Время выполнения",
@@ -162,6 +175,20 @@
       "toggleServer": "Переключить {{name}}",
       "cancel": "Отмена",
       "confirm": "Подтвердить"
+    },
+    "capabilityRecommendations": {
+      "title": "Рекомендуемые возможности",
+      "selectedTitle": "Включено для этой задачи",
+      "loading": "Поиск совпадений...",
+      "empty": "Не найдено подходящих MCP или навыков для этого запроса.",
+      "useForTask": "Использовать для этой задачи",
+      "added": "Добавлено",
+      "enabledByDefault": "Уже включено",
+      "noDescription": "Описание отсутствует",
+      "remove": "Удалить {{name}}",
+      "mcpLabel": "MCP",
+      "skillLabel": "Навык",
+      "hint": "В зависимости от вашей задачи Poco рекомендует вам указанные выше возможности. Нажмите для загрузки."
     },
     "warnings": {
       "tooManyMcps": "Включено слишком много MCP серверов ({{count}}). Это может замедлить загрузку системы и снизить производительность.",
@@ -480,6 +507,28 @@
         "structured": "Structured data",
         "empty": "No data"
       }
+    },
+    "skillCreationReview": {
+      "title": "Проверить созданный навык",
+      "subtitle": "Агент создал навык в этой сессии. Проверьте его перед сохранением.",
+      "badge": "Создано агентом",
+      "nameLabel": "Название навыка",
+      "descriptionLabel": "Описание",
+      "emptyDescription": "Описание не было создано.",
+      "pathLabel": "Путь в рабочем пространстве",
+      "conflictWarning": "Навык с таким именем уже существует.",
+      "overwriteLabel": "Перезаписать существующий навык",
+      "filesTitle": "Созданные файлы",
+      "loadingFiles": "Загрузка созданных файлов…",
+      "emptyFiles": "Файлы для предпросмотра пока недоступны.",
+      "selectFile": "Выберите файл для предпросмотра.",
+      "cancel": "Отмена",
+      "confirm": "Создать навык",
+      "confirmOverwrite": "Перезаписать и создать",
+      "createSuccess": "Навык создан",
+      "createFailed": "Не удалось создать навык",
+      "cancelSuccess": "Создание навыка отклонено",
+      "cancelFailed": "Не удалось отклонить создание навыка"
     }
   },
   "status": {
@@ -589,7 +638,8 @@
       "processing": "Обработка файла",
       "notSupported": "Предварительный просмотр не поддерживается для этого формата",
       "openInNewWindow": "Открыть в новом окне",
-      "downloadOriginal": "Скачать исходный файл"
+      "downloadOriginal": "Скачать исходный файл",
+      "frontMatter": "Front matter"
     },
     "summary": {
       "total": "Всего",
@@ -1036,7 +1086,11 @@
       },
       "scope": {
         "system": "Система",
-        "user": "Пользователь"
+        "user": "Пользователь",
+        "builtin": "Встроенный"
+      },
+      "source": {
+        "skillCreator": "Создано агентом"
       },
       "fields": {
         "id": "id",
@@ -1056,14 +1110,19 @@
         "actionFailed": "Не удалось выполнить операцию, попробуйте позже"
       },
       "empty": "Пока нет навыков",
-      "unknownSkill": "Неизвестный навык"
+      "unknownSkill": "Неизвестный навык",
+      "sections": {
+        "system": "Встроенные навыки",
+        "custom": "Пользовательские навыки"
+      }
     },
     "skillsImport": {
       "title": "Импорт навыков",
       "tabs": {
         "zip": "Загрузить Zip",
         "github": "GitHub URL",
-        "command": "Импорт через npx-команду"
+        "command": "Импорт через npx-команду",
+        "marketplace": "Маркетплейс навыков"
       },
       "fields": {
         "zip": "Zip-файл",
@@ -1073,12 +1132,14 @@
       "placeholders": {
         "githubUrl": "https://github.com/owner/repo",
         "name": "например, my-skill",
-        "command": "npx skills add https://github.com/owner/repo --skill my-skill"
+        "command": "npx skills add https://github.com/owner/repo --skill my-skill",
+        "marketplaceSearch": "Search SkillsMP skills, for example git automation"
       },
       "hints": {
         "github": "По умолчанию main/master (только публичные репозитории github.com)",
         "nameRequired": "SKILL.md находится в корне архива; требуется имя",
-        "command": "Вставьте команду add — мы автоматически извлечем GitHub URL и --skill."
+        "command": "Вставьте команду add — мы автоматически извлечем GitHub URL и --skill.",
+        "marketplace": "Discover SkillsMP skills through recommendations or search, then continue with Poco's existing import flow."
       },
       "actions": {
         "back": "Назад",
@@ -1123,12 +1184,41 @@
         "commitError": "Не удалось импортировать, попробуйте позже",
         "partialFailed": "Не удалось импортировать некоторые навыки. Пожалуйста, просмотрите детали.",
         "commitTimeout": "Истекло время ожидания импорта, попробуйте позже",
-        "invalidCommand": "Не удалось разобрать команду. Укажите URL с github.com."
+        "invalidCommand": "Не удалось разобрать команду. Укажите URL с github.com.",
+        "marketplaceLoadError": "Не удалось загрузить данные SkillsMP. Повторите попытку позже.",
+        "marketplaceDiscoverError": "Не удалось разрешить этот навык SkillsMP. Повторите попытку позже."
       },
       "progress": {
         "title": "Прогресс импорта",
         "value": "Прогресс",
         "jobId": "ID задания"
+      },
+      "marketplace": {
+        "search": "Поиск",
+        "reset": "Назад к рекомендациям",
+        "searchResults": "{{count}} результатов",
+        "emptySearch": "Подходящие навыки SkillsMP не найдены.",
+        "emptyRecommendations": "Сейчас нет доступных рекомендаций SkillsMP.",
+        "download": "Скачать",
+        "downloading": "Обработка...",
+        "jump": "Открыть",
+        "noDescription": "Описание пока недоступно.",
+        "sections": {
+          "popular": "Популярное"
+        },
+        "aiSearchTooltip": "Включить AI Search и использовать семантический поиск SkillsMP",
+        "refresh": "Обновить рекомендации",
+        "openInGithub": "Открыть в GitHub",
+        "checkInSkillsmp": "Открыть в SkillsMP",
+        "titleLabel": "Название",
+        "descriptionLabel": "Описание",
+        "setupTitle": "Подключите SkillsMP, чтобы находить больше skills",
+        "setupDescription": "SkillsMP — это marketplace skills, где можно находить переиспользуемые agent skills по популярности или через поиск.",
+        "setupHint": "Сначала добавьте ваш API-ключ SkillsMP в Настройки > Другое, затем вернитесь сюда.",
+        "openSettings": "Открыть настройки",
+        "invalidKeyTitle": "Текущий API-ключ SkillsMP недействителен",
+        "invalidKeyDescription": "SkillsMP отклонил текущий API-ключ, поэтому поиск и рекомендации marketplace сейчас недоступны.",
+        "invalidKeyHint": "Откройте Настройки > Другое, обновите API-ключ SkillsMP и затем вернитесь сюда, чтобы попробовать снова."
       }
     },
     "pluginsPage": {
@@ -1191,7 +1281,10 @@
       "zip": "ZIP",
       "system": "Система",
       "manual": "Вручную",
-      "unknown": "Неизвестно"
+      "unknown": "Неизвестно",
+      "skillCreator": "Skill Creator",
+      "marketplace": "Marketplace",
+      "skillsmp": "SkillsMP"
     },
     "pluginsManager": {
       "toasts": {
@@ -1205,6 +1298,34 @@
     "presetsPage": {
       "header": {
         "title": "Пресеты"
+      }
+    },
+    "skillSettings": {
+      "title": "Настройки навыка",
+      "subtitle": "Просмотрите файлы навыка и обновите редактируемую конфигурацию.",
+      "previewHint": "Выберите файл слева, чтобы просмотреть его полное содержимое.",
+      "loadingFiles": "Загрузка файлов навыка…",
+      "emptyFiles": "Для этого навыка нет файлов, доступных для предпросмотра.",
+      "nameLabel": "Название навыка",
+      "namePlaceholder": "Введите название навыка",
+      "descriptionLabel": "Описание",
+      "descriptionPlaceholder": "Добавьте краткое описание этого навыка",
+      "storagePathLabel": "Путь хранения",
+      "storagePathUnavailable": "Путь хранения недоступен.",
+      "readonlyHint": "Встроенные навыки доступны только для чтения. Здесь можно просматривать файлы, но нельзя их редактировать.",
+      "nameConflict": "Навык с таким именем уже существует.",
+      "toasts": {
+        "saved": "Навык обновлён",
+        "saveFailed": "Не удалось обновить навык"
+      },
+      "source": {
+        "system": "Система",
+        "github": "GitHub",
+        "zip": "ZIP-архив",
+        "manual": "Вручную",
+        "unknown": "Неизвестный источник",
+        "marketplace": "Marketplace",
+        "skillsmp": "SkillsMP"
       }
     }
   },
@@ -1270,6 +1391,7 @@
       "account": "Аккаунт",
       "settings": "Настройки",
       "models": "Модели",
+      "other": "Другое",
       "usage": "Использование",
       "shortcuts": "Shortcuts"
     },
@@ -1281,7 +1403,6 @@
     "generalSettings": "Общие настройки",
     "darkMode": "Тёмная тема",
     "backend": "Бэкенд",
-    "modelConfigTitle": "Конфигурация моделей",
     "modelGlm": "GLM-4.7",
     "modelGlmDescription": "Включить модель GLM для выполнения задач",
     "apiKeys": "API-ключи",
@@ -1297,15 +1418,16 @@
     "anthropicBaseUrl": "Anthropic Base URL",
     "anthropicBaseUrlHint": "Переопределить стандартный endpoint Anthropic.",
     "anthropicBaseUrlPlaceholder": "https://api.anthropic.com",
-    "providerConfigDescription": "Управляйте учетными данными провайдера и списком моделей, доступных в селекторе.",
     "providerListEmpty": "Пока нет доступных провайдеров моделей.",
     "providerStatusNone": "Не настроено",
     "providerStatusSystem": "Предустановленный сервис",
     "providerStatusUser": "Пользовательский",
     "providerModels": "Применяется к: {{models}}",
-    "providerApiKeyLabel": "API-ключ {{provider}}",
+    "providerApiKeyLabel": "API-ключ",
     "providerApiKeyHint": "Оставьте поле пустым, чтобы сохранить текущий пользовательский ключ без изменений.",
     "providerApiKeyPlaceholder": "Введите API-ключ {{provider}}",
+    "providerApiKeyConfigured": "Настроено",
+    "providerNeedConfig": "Настройте API-ключ и модели",
     "providerBaseUrlLabel": "Пользовательский Base URL",
     "providerBaseUrlHint": "Оставьте поле пустым, чтобы использовать API endpoint по умолчанию.",
     "providerBaseUrlRequired": "При включении пользовательского endpoint необходимо указать Base URL.",
@@ -1378,6 +1500,10 @@
           "action": "Slash command",
           "hint": "Type / to open slash command suggestions."
         },
+        "newTask": {
+          "action": "Новая задача",
+          "hint": "Создать новую задачу и перейти на главную."
+        },
         "search": {
           "action": "Global search",
           "hint": "Open or close global search dialog."
@@ -1398,13 +1524,41 @@
     },
     "providerDiscoverError": "Не удалось получить модели провайдера",
     "providerModelsPlaceholder": "Пользовательские модели пока не добавлены",
-    "providerModelsSearchPlaceholder": "Введите имя модели и нажмите Enter",
+    "providerModelsSearchPlaceholder": "Введите названия моделей, при необходимости разделяя их запятыми",
     "providerModelsAdd": "Добавить модель",
     "providerModelsDiscovering": "Загрузка моделей...",
     "providerModelsManualHint": "Для этого провайдера автоматическое обнаружение недоступно. Введите имена моделей вручную.",
     "providerModelsEmpty": "Модели не найдены",
     "providerModelsUseCustom": "Использовать пользовательскую модель: {{model}}",
-    "providerFieldAnnotation": "Оставьте API Key пустым, чтобы сохранить текущий ключ. Оставьте Base URL пустым, чтобы использовать endpoint по умолчанию. Имена моделей вводятся вручную, затем нажмите Enter или кнопку добавления."
+    "providerFieldAnnotation": "Оставьте API Key пустым, чтобы сохранить текущий ключ. Оставьте Base URL пустым, чтобы использовать endpoint по умолчанию. Введите названия моделей вручную, разделите несколько моделей запятыми, затем нажмите Сохранить или Enter / Добавить, чтобы применить их.",
+    "other": {
+      "title": "Другие интеграции",
+      "description": "Управление дополнительными учетными данными сервисов вне провайдеров моделей.",
+      "skillsmp": {
+        "title": "SkillsMP",
+        "subtitle": "Включает поиск и рекомендации marketplace для внешних skills.",
+        "description": "API-ключ SkillsMP",
+        "statusChecking": "Проверка...",
+        "statusReady": "Готово",
+        "statusMissing": "Не настроено",
+        "keyLabel": "API-ключ SkillsMP",
+        "keyPlaceholder": "Введите API-ключ SkillsMP",
+        "help": "Включает поиск и рекомендации SkillsMP в диалоге импорта skills.",
+        "docsLink": "Документация API SkillsMP",
+        "customKeySaved": "Для этого аккаунта уже сохранен пользовательский ключ.",
+        "save": "Сохранить ключ",
+        "clear": "Удалить пользовательский ключ",
+        "clearError": "Не удалось обновить статус SkillsMP"
+      }
+    },
+    "providerApiKeyLinkText": "Get API key here",
+    "providerModelRemove": "Remove model",
+    "providerModelDocsPrefix": "Откройте ",
+    "providerModelDocsLinkLabel": "документацию {{provider}}",
+    "providerModelDocsSuffix": ", чтобы увидеть больше моделей",
+    "providerModelsDialogTitle": "Добавить пользовательскую модель",
+    "providerModelsDialogDescription": "Вручную укажите поддерживаемый идентификатор модели поставщика.",
+    "providerModelsDialogPlaceholder": "ID модели (например, gpt-4o-mini)"
   },
   "validation": {
     "projectNameRequired": "Пожалуйста, введите имя проекта",
@@ -1430,8 +1584,19 @@
   "fileSidebar": {
     "title": "Список файлов",
     "fileList": "Список файлов",
+    "actions": "Действия",
     "downloadAll": "Скачать все",
+    "download": "Скачать",
+    "downloadFile": "Скачать файл",
     "noFiles": "Пока нет файлов",
+    "packageAsSkill": "Упаковать как Skill",
+    "packageSkillTitle": "Создать Skill из папки",
+    "packageSkillDescription": "Отправьте эту папку рабочего пространства на проверку Skill.",
+    "skillName": "Имя Skill",
+    "skillNamePlaceholder": "Введите имя Skill",
+    "submitSkill": "Отправить на проверку",
+    "skillSubmitted": "Skill отправлен на проверку",
+    "skillSubmitFailed": "Не удалось отправить Skill",
     "downloadStarted": "Начинается загрузка архива рабочего пространства",
     "downloadStart": "Начинается загрузка архива рабочего пространства",
     "archiveNotAvailable": "Файл архива пока недоступен",

@@ -1,0 +1,22 @@
+---
+title: Remote Access with Tailscale
+description: Expose Poco frontend securely with Tailscale.
+---
+
+If you need to access locally deployed services from external networks but do not want to expose them directly to the public internet, use Tailscale for secure access within your tailnet.
+
+Tailscale Serve provides an HTTPS URL in your tailnet for local ports (first use may guide you to enable HTTPS in tailnet).
+
+Install Tailscale (official docs): [Install Tailscale](https://tailscale.com/docs/install)
+
+Example: expose local frontend port 3000 to other devices in your tailnet:
+
+```bash
+# 1) Log in and join your tailnet
+sudo tailscale up
+
+# 2) Expose frontend port 3000 with Tailscale Serve
+tailscale serve --bg http://127.0.0.1:3000
+```
+
+After running, terminal outputs a URL like `https://<device>.<tailnet>.ts.net`, and other devices in your tailnet can access your frontend with it.

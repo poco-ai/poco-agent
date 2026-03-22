@@ -16,12 +16,18 @@ function normalizeModelIds(modelIds: string[]): string[] {
   const ordered: string[] = [];
 
   modelIds.forEach((modelId) => {
-    const clean = (modelId || "").trim();
-    if (!clean || seen.has(clean)) {
-      return;
-    }
-    seen.add(clean);
-    ordered.push(clean);
+    const segments = (modelId || "")
+      .split(/[,\n，]+/)
+      .map((item) => item.trim())
+      .filter(Boolean);
+
+    segments.forEach((segment) => {
+      if (seen.has(segment)) {
+        return;
+      }
+      seen.add(segment);
+      ordered.push(segment);
+    });
   });
 
   return ordered;
@@ -60,6 +66,7 @@ function buildProviderConfig(
     hasStoredUserKey,
     hasStoredUserBaseUrl,
     isSaving: status?.savingProviderId === provider.provider_id,
+    enabled: true,
   };
 }
 
@@ -102,6 +109,7 @@ export function useModelProviderSettings(options?: { enabled?: boolean }) {
           return {
             ...nextProvider,
             modelDraft: previous.modelDraft,
+            enabled: previous.enabled,
           };
         });
       });
@@ -184,6 +192,10 @@ export function useModelProviderSettings(options?: { enabled?: boolean }) {
         (item) => item.providerId === providerId,
       );
       if (!provider) return;
+      const nextModelIds = normalizeModelIds([
+        ...provider.selectedModelIds,
+        provider.modelDraft,
+      ]);
 
       setSavingProviderId(providerId);
       setProviderPatch(providerId, { isSaving: true });
@@ -212,7 +224,7 @@ export function useModelProviderSettings(options?: { enabled?: boolean }) {
         }
 
         await modelConfigService.updateProviderModels(providerId, {
-          model_ids: normalizeModelIds(provider.selectedModelIds),
+          model_ids: nextModelIds,
         });
 
         const [nextModelConfig, nextEnvVars] = await Promise.all([
@@ -222,6 +234,7 @@ export function useModelProviderSettings(options?: { enabled?: boolean }) {
         setModelConfig(nextModelConfig);
         setEnvVars(nextEnvVars);
         rebuildProviderConfigs(nextModelConfig, nextEnvVars);
+        setProviderPatch(providerId, { modelDraft: "" });
         invalidateModelCatalog();
         toast.success(t("settings.providerSaveSuccess"));
       } catch (error) {
@@ -266,6 +279,7 @@ export function useModelProviderSettings(options?: { enabled?: boolean }) {
         setModelConfig(nextModelConfig);
         setEnvVars(nextEnvVars);
         rebuildProviderConfigs(nextModelConfig, nextEnvVars);
+        setProviderPatch(providerId, { modelDraft: "" });
         invalidateModelCatalog();
         toast.success(t("settings.providerClearSuccess"));
       } catch (error) {

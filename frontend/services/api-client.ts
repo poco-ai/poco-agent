@@ -53,6 +53,10 @@ export const API_ENDPOINTS = {
     `/sessions/${sessionId}/workspace/files`,
   sessionWorkspaceArchive: (sessionId: string) =>
     `/sessions/${sessionId}/workspace/archive`,
+  sessionWorkspaceFolderArchive: (sessionId: string) =>
+    `/sessions/${sessionId}/workspace/folder-archive`,
+  sessionWorkspaceSubmitSkill: (sessionId: string) =>
+    `/sessions/${sessionId}/workspace/submit-skill`,
 
   // User Input Requests
   userInputRequests: "/user-input-requests",
@@ -105,9 +109,21 @@ export const API_ENDPOINTS = {
   // Skills
   skills: "/skills",
   skill: (skillId: number) => `/skills/${skillId}`,
+  skillFiles: (skillId: number) => `/skills/${skillId}/files`,
   skillImportDiscover: "/skills/import/discover",
   skillImportCommit: "/skills/import/commit",
   skillImportJob: (jobId: string) => `/skills/import/jobs/${jobId}`,
+  skillsMarketplaceStatus: "/skills/marketplace/status",
+  skillsMarketplaceSearch: "/skills/marketplace/search",
+  skillsMarketplaceRecommendations: "/skills/marketplace/recommendations",
+  skillsMarketplaceImportDiscover: "/skills/marketplace/import/discover",
+  pendingSkillCreations: "/pending-skill-creations",
+  pendingSkillCreation: (creationId: string) =>
+    `/pending-skill-creations/${creationId}`,
+  pendingSkillCreationConfirm: (creationId: string) =>
+    `/pending-skill-creations/${creationId}/confirm`,
+  pendingSkillCreationCancel: (creationId: string) =>
+    `/pending-skill-creations/${creationId}/cancel`,
 
   // Skill Installs
   skillInstalls: "/skill-installs",

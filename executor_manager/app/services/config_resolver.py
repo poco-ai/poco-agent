@@ -1,7 +1,7 @@
 import logging
 import re
 import time
-from typing import Any
+from typing import Any, TypedDict
 from urllib.parse import urlparse
 
 from app.core.settings import get_settings
@@ -13,41 +13,54 @@ from app.services.backend_client import BackendClient
 _ENV_PATTERN = re.compile(r"\$\{([^}]+)\}")
 logger = logging.getLogger(__name__)
 _GITHUB_HOSTS = {"github.com", "www.github.com"}
-_PROVIDER_RUNTIME_SPECS = {
+
+
+class ProviderRuntimeSpec(TypedDict):
+    source_api_key_env_keys: tuple[str, ...]
+    source_base_url_env_keys: tuple[str, ...]
+    source_api_key_settings_fields: tuple[str, ...]
+    source_base_url_settings_fields: tuple[str, ...]
+    default_base_url: str
+    runtime_api_key_env_key: str
+    runtime_base_url_env_key: str
+
+
+_PROVIDER_RUNTIME_SPECS: dict[str, ProviderRuntimeSpec] = {
     "anthropic": {
-        "api_key_env_key": "ANTHROPIC_API_KEY",
-        "base_url_env_key": "ANTHROPIC_BASE_URL",
+        "source_api_key_env_keys": ("ANTHROPIC_API_KEY",),
+        "source_base_url_env_keys": ("ANTHROPIC_BASE_URL",),
+        "source_api_key_settings_fields": ("anthropic_api_key",),
+        "source_base_url_settings_fields": ("anthropic_base_url",),
         "default_base_url": "https://api.anthropic.com",
         "runtime_api_key_env_key": "ANTHROPIC_API_KEY",
         "runtime_base_url_env_key": "ANTHROPIC_BASE_URL",
     },
-    "openai": {
-        "api_key_env_key": "OPENAI_API_KEY",
-        "base_url_env_key": "OPENAI_BASE_URL",
-        "default_base_url": "https://api.openai.com/v1",
-        "runtime_api_key_env_key": "OPENAI_API_KEY",
-        "runtime_base_url_env_key": "OPENAI_BASE_URL",
-    },
     "glm": {
-        "api_key_env_key": "GLM_API_KEY",
-        "base_url_env_key": "GLM_BASE_URL",
-        "default_base_url": "https://open.bigmodel.cn/api/paas/v4/",
-        "runtime_api_key_env_key": "OPENAI_API_KEY",
-        "runtime_base_url_env_key": "OPENAI_BASE_URL",
+        "source_api_key_env_keys": ("GLM_API_KEY",),
+        "source_base_url_env_keys": ("GLM_BASE_URL",),
+        "source_api_key_settings_fields": ("glm_api_key",),
+        "source_base_url_settings_fields": ("glm_base_url",),
+        "default_base_url": "https://open.bigmodel.cn/api/anthropic",
+        "runtime_api_key_env_key": "ANTHROPIC_API_KEY",
+        "runtime_base_url_env_key": "ANTHROPIC_BASE_URL",
     },
     "minimax": {
-        "api_key_env_key": "MINIMAX_API_KEY",
-        "base_url_env_key": "MINIMAX_BASE_URL",
-        "default_base_url": "https://api.minimaxi.com/v1",
-        "runtime_api_key_env_key": "OPENAI_API_KEY",
-        "runtime_base_url_env_key": "OPENAI_BASE_URL",
+        "source_api_key_env_keys": ("MINIMAX_API_KEY",),
+        "source_base_url_env_keys": ("MINIMAX_BASE_URL",),
+        "source_api_key_settings_fields": ("minimax_api_key",),
+        "source_base_url_settings_fields": ("minimax_base_url",),
+        "default_base_url": "https://api.minimaxi.com/anthropic",
+        "runtime_api_key_env_key": "ANTHROPIC_API_KEY",
+        "runtime_base_url_env_key": "ANTHROPIC_BASE_URL",
     },
     "deepseek": {
-        "api_key_env_key": "DEEPSEEK_API_KEY",
-        "base_url_env_key": "DEEPSEEK_BASE_URL",
-        "default_base_url": "https://api.deepseek.com",
-        "runtime_api_key_env_key": "OPENAI_API_KEY",
-        "runtime_base_url_env_key": "OPENAI_BASE_URL",
+        "source_api_key_env_keys": ("DEEPSEEK_API_KEY",),
+        "source_base_url_env_keys": ("DEEPSEEK_BASE_URL",),
+        "source_api_key_settings_fields": ("deepseek_api_key",),
+        "source_base_url_settings_fields": ("deepseek_base_url",),
+        "default_base_url": "https://api.deepseek.com/anthropic",
+        "runtime_api_key_env_key": "ANTHROPIC_API_KEY",
+        "runtime_base_url_env_key": "ANTHROPIC_BASE_URL",
     },
 }
 
@@ -222,7 +235,13 @@ class ConfigResolver:
         resolved_git = self._resolve_git_token(resolved, env_map)
         if resolved_git:
             resolved.update(resolved_git)
-        env_overrides = self._resolve_model_env_overrides(resolved, env_map)
+        env_overrides = self._resolve_model_env_overrides(
+            resolved,
+            env_map,
+            user_id=user_id,
+            session_id=session_id,
+            run_id=run_id,
+        )
         if env_overrides:
             resolved["env_overrides"] = env_overrides
 
@@ -271,12 +290,20 @@ class ConfigResolver:
         return {"git_token": token}
 
     def _resolve_model_env_overrides(
-        self, config_snapshot: dict, env_map: dict[str, str]
+        self,
+        config_snapshot: dict,
+        env_map: dict[str, str],
+        *,
+        user_id: str,
+        session_id: str | None = None,
+        run_id: str | None = None,
     ) -> dict[str, str]:
         selected_model = str(
             config_snapshot.get("model") or self.settings.default_model or ""
         ).strip()
-        explicit_provider_id = str(config_snapshot.get("model_provider_id") or "").strip()
+        explicit_provider_id = str(
+            config_snapshot.get("model_provider_id") or ""
+        ).strip()
         inferred_provider_id = self._infer_provider_id(selected_model)
         provider_id = explicit_provider_id or inferred_provider_id
         if not provider_id:
@@ -289,10 +316,9 @@ class ConfigResolver:
         if not spec:
             return {}
 
-        api_key = (
-            (env_map.get(spec["api_key_env_key"]) or "").strip()
-            or self._get_system_provider_value(provider_id, "api_key")
-        )
+        api_key = self._get_first_env_value(
+            env_map, spec["source_api_key_env_keys"]
+        ) or self._get_first_settings_value(spec["source_api_key_settings_fields"])
         if not api_key:
             raise AppException(
                 error_code=ErrorCode.ENV_VAR_NOT_FOUND,
@@ -300,8 +326,8 @@ class ConfigResolver:
             )
 
         base_url = (
-            (env_map.get(spec["base_url_env_key"]) or "").strip()
-            or self._get_system_provider_value(provider_id, "base_url")
+            self._get_first_env_value(env_map, spec["source_base_url_env_keys"])
+            or self._get_first_settings_value(spec["source_base_url_settings_fields"])
             or spec["default_base_url"]
         )
         return {
@@ -318,8 +344,6 @@ class ConfigResolver:
         lowered = value.lower()
         if lowered.startswith("claude-"):
             return "anthropic"
-        if lowered.startswith(("gpt", "o1", "o3", "o4")):
-            return "openai"
         if lowered.startswith("glm-") or value.startswith("GLM-"):
             return "glm"
         if lowered.startswith("minimax-") or value.startswith("MiniMax-"):
@@ -328,12 +352,21 @@ class ConfigResolver:
             return "deepseek"
         return None
 
-    def _get_system_provider_value(
-        self, provider_id: str, value_kind: str
-    ) -> str:
-        field_name = f"{provider_id}_{value_kind}"
-        value = getattr(self.settings, field_name, None)
-        return str(value or "").strip()
+    @staticmethod
+    def _get_first_env_value(env_map: dict[str, str], env_keys: tuple[str, ...]) -> str:
+        for key in env_keys:
+            value = (env_map.get(key) or "").strip()
+            if value:
+                return value
+        return ""
+
+    def _get_first_settings_value(self, field_names: tuple[str, ...]) -> str:
+        for field_name in field_names:
+            value = getattr(self.settings, field_name, None)
+            normalized = str(value or "").strip()
+            if normalized:
+                return normalized
+        return ""
 
     async def _get_env_map(self, user_id: str) -> dict[str, str]:
         return await self.backend_client.get_env_map(user_id=user_id)
@@ -372,8 +405,8 @@ class ConfigResolver:
         1) config_snapshot.skill_ids -> fetch entries via backend internal API
         2) legacy config_snapshot.skill_files already contains entry configs
         """
-        skill_ids = self._normalize_ids(config_snapshot.get("skill_ids"))
-        if skill_ids:
+        if "skill_ids" in config_snapshot:
+            skill_ids = self._normalize_ids(config_snapshot.get("skill_ids"))
             return await self.backend_client.resolve_skill_config(
                 user_id=user_id, skill_ids=skill_ids
             )

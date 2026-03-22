@@ -30,6 +30,38 @@ class SkillRepository:
         )
 
     @staticmethod
+    def get_by_name_and_scope(
+        session_db: Session, name: str, scope: str
+    ) -> Skill | None:
+        """Get a skill by name within a scope."""
+        return (
+            session_db.query(Skill)
+            .filter(
+                Skill.name == name,
+                Skill.scope == scope,
+            )
+            .first()
+        )
+
+    @staticmethod
+    def list_by_scope_and_owner(
+        session_db: Session,
+        *,
+        scope: str,
+        owner_user_id: str,
+    ) -> list[Skill]:
+        """List skills in a scope owned by the given user."""
+        return (
+            session_db.query(Skill)
+            .filter(
+                Skill.scope == scope,
+                Skill.owner_user_id == owner_user_id,
+            )
+            .order_by(Skill.created_at.desc())
+            .all()
+        )
+
+    @staticmethod
     def list_visible(session_db: Session, user_id: str) -> list[Skill]:
         """List skills visible to the user.
 

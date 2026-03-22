@@ -801,13 +801,8 @@ export function ComputerPanel({
       ) : null}
       <div className="flex-1 min-h-0 overflow-hidden p-3 sm:p-4">
         <div className="h-full min-h-0 flex flex-col gap-3">
-          <div className="relative flex-1 min-h-0 overflow-hidden rounded-xl border bg-card">
+          <div className="relative flex-1 min-h-0 overflow-hidden rounded-xl border bg-card shadow-sm">
             {viewer}
-            {isLiveSession ? (
-              <div className="absolute bottom-2 right-2 rounded-full border bg-card/90 px-2 py-0.5 text-[11px] font-medium text-primary shadow-sm">
-                {t("computer.replay.liveLabel")}
-              </div>
-            ) : null}
           </div>
 
           {!isLiveSession ? controls : null}

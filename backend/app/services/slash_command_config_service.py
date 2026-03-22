@@ -3,6 +3,7 @@ import re
 
 from sqlalchemy.orm import Session
 
+from app.models.skill import Skill
 from app.models.slash_command import SlashCommand
 from app.repositories.skill_repository import SkillRepository
 from app.repositories.slash_command_repository import SlashCommandRepository
@@ -42,7 +43,7 @@ class SlashCommandConfigService:
                 source="custom",
             )
 
-        for skill_name in self._resolve_skill_names(
+        for skill_name, skill_description in self._resolve_skill_aliases(
             db, user_id=user_id, skill_names=skill_names
         ):
             if skill_name in _RESERVED_COMMAND_NAMES:
@@ -51,7 +52,7 @@ class SlashCommandConfigService:
                 continue
             suggestions[skill_name] = SlashCommandSuggestionResponse(
                 name=skill_name,
-                description=f"Run skill: {skill_name}",
+                description=skill_description or f"Run skill: {skill_name}",
                 argument_hint="Describe the task for this skill",
                 source="skill",
             )
@@ -80,7 +81,7 @@ class SlashCommandConfigService:
                 continue
             rendered[name] = self._render_command(cmd)
 
-        for skill_name in self._resolve_skill_names(
+        for skill_name, _skill_description in self._resolve_skill_aliases(
             db, user_id=user_id, skill_names=skill_names
         ):
             if skill_name in _RESERVED_COMMAND_NAMES:
@@ -141,20 +142,23 @@ class SlashCommandConfigService:
             return None
         return value
 
-    def _resolve_skill_names(
+    def _resolve_skill_aliases(
         self,
         db: Session,
         *,
         user_id: str,
         skill_names: list[str] | None = None,
-    ) -> list[str]:
+    ) -> list[tuple[str, str | None]]:
         if skill_names is not None:
-            provided = {
-                name
-                for raw in skill_names
-                if (name := self._normalize_command_name(raw)) is not None
-            }
-            return sorted(provided)
+            provided: list[tuple[str, str | None]] = []
+            seen: set[str] = set()
+            for raw in skill_names:
+                name = self._normalize_command_name(raw)
+                if name is None or name in seen:
+                    continue
+                seen.add(name)
+                provided.append((name, None))
+            return sorted(provided, key=lambda item: item[0])
 
         installs = UserSkillInstallRepository.list_by_user(db, user_id=user_id)
         ordered_enabled_ids: list[int] = []
@@ -167,31 +171,45 @@ class SlashCommandConfigService:
             seen_ids.add(install.skill_id)
             ordered_enabled_ids.append(install.skill_id)
 
-        if not ordered_enabled_ids:
-            return []
-
         skills = SkillRepository.list_by_ids(db, ordered_enabled_ids)
         skill_by_id = {skill.id: skill for skill in skills}
 
-        selected: dict[str, str] = {}
+        selected: dict[str, tuple[str, str | None]] = {}
         for skill_id in ordered_enabled_ids:
             skill = skill_by_id.get(skill_id)
             if skill is None:
                 continue
             if skill.scope != "system" and skill.owner_user_id != user_id:
                 continue
-            name = self._normalize_command_name(skill.name)
-            if not name:
-                continue
+            self._merge_skill_alias(selected, skill)
 
-            existing_scope = selected.get(name)
-            if existing_scope is None:
-                selected[name] = skill.scope
+        for skill in SkillRepository.list_visible(db, user_id=user_id):
+            if skill.scope != "system":
                 continue
-            if existing_scope != "user" and skill.scope == "user":
-                selected[name] = skill.scope
+            self._merge_skill_alias(selected, skill)
 
-        return sorted(selected.keys())
+        return [
+            (name, description)
+            for name, (_scope, description) in sorted(selected.items())
+        ]
+
+    def _merge_skill_alias(
+        self,
+        selected: dict[str, tuple[str, str | None]],
+        skill: Skill,
+    ) -> None:
+        name = self._normalize_command_name(skill.name)
+        if not name:
+            return
+
+        existing = selected.get(name)
+        if existing is None:
+            selected[name] = (skill.scope, skill.description)
+            return
+
+        existing_scope, _existing_description = existing
+        if existing_scope != "user" and skill.scope == "user":
+            selected[name] = (skill.scope, skill.description)
 
     def _normalize_requested_name_set(
         self,

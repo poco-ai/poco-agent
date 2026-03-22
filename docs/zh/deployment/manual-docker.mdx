@@ -1,0 +1,33 @@
+---
+title: 手动 Docker Compose 启动
+description: 使用 Docker Compose 手动启动 Poco，并按需启用 IM 服务。
+---
+
+在仓库根目录执行：
+
+```bash
+docker compose up -d
+```
+
+如需启用 IM（默认关闭）：
+
+```bash
+docker compose --profile im up -d im
+```
+
+默认会从 GHCR（`ghcr.io`）拉取 `backend` / `executor-manager` / `frontend` 镜像，并拉取 Postgres/RustFS 镜像。执行任务时，`executor-manager` 会使用 `EXECUTOR_IMAGE` 动态拉起 executor 容器（本机缺镜像时会自动 pull）。
+
+> 注意：当前仓库的 `docker-compose.yml` 不包含单独的 `executor` 服务；executor 容器由 `executor-manager` 动态创建。
+
+如果你要固定版本（例如 `v0.1.0`），可通过环境变量覆盖镜像 tag（示例）：
+
+```bash
+export BACKEND_IMAGE=ghcr.io/poco-ai/poco-backend:v0.1.0
+export EXECUTOR_MANAGER_IMAGE=ghcr.io/poco-ai/poco-executor-manager:v0.1.0
+export EXECUTOR_IMAGE=ghcr.io/poco-ai/poco-executor:lite
+# 可选：启用可视化浏览器（noVNC + Chrome）的 executor 镜像（用于 browser_enabled=true）
+# export EXECUTOR_BROWSER_IMAGE=ghcr.io/poco-ai/poco-executor:full
+export FRONTEND_IMAGE=ghcr.io/poco-ai/poco-frontend:v0.1.0
+
+docker compose up -d
+```

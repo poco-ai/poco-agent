@@ -1,0 +1,33 @@
+---
+title: Manual Docker Compose Startup
+description: Start Poco manually with Docker Compose and enable IM when needed.
+---
+
+Run in repository root:
+
+```bash
+docker compose up -d
+```
+
+To enable IM (disabled by default):
+
+```bash
+docker compose --profile im up -d im
+```
+
+By default it pulls `backend` / `executor-manager` / `frontend` from GHCR (`ghcr.io`), plus Postgres/RustFS images. During task execution, `executor-manager` dynamically starts executor containers from `EXECUTOR_IMAGE` (auto-pulls if missing locally).
+
+> Note: current `docker-compose.yml` does not include a standalone `executor` service; executor containers are created dynamically by `executor-manager`.
+
+If you want to pin versions (for example `v0.1.0`), override image tags via environment variables (example):
+
+```bash
+export BACKEND_IMAGE=ghcr.io/poco-ai/poco-backend:v0.1.0
+export EXECUTOR_MANAGER_IMAGE=ghcr.io/poco-ai/poco-executor-manager:v0.1.0
+export EXECUTOR_IMAGE=ghcr.io/poco-ai/poco-executor:lite
+# Optional: executor image with visual browser support (noVNC + Chrome) for browser_enabled=true
+# export EXECUTOR_BROWSER_IMAGE=ghcr.io/poco-ai/poco-executor:full
+export FRONTEND_IMAGE=ghcr.io/poco-ai/poco-frontend:v0.1.0
+
+docker compose up -d
+```

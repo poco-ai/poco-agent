@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname, useRouter } from "next/navigation";
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import {
   listTaskHistoryAction,
@@ -19,6 +20,7 @@ import {
   getStartupPreloadValue,
   hasStartupPreloadValue,
 } from "@/lib/startup-preload";
+import { useLanguage } from "@/hooks/use-language";
 import { toast } from "sonner";
 
 interface UseTaskHistoryOptions {
@@ -30,6 +32,9 @@ export function useTaskHistory(options: UseTaskHistoryOptions = {}) {
   const hasPreloadedTasks = hasStartupPreloadValue("taskHistory");
   const { initialTasks = [] } = options;
   const seededTasks = hasPreloadedTasks ? (preloadTasks ?? []) : initialTasks;
+  const router = useRouter();
+  const pathname = usePathname();
+  const lng = useLanguage();
   const { t } = useT("translation");
   const hasConsumedStartupPreloadRef = useRef(hasPreloadedTasks);
   const [taskHistory, setTaskHistory] =
@@ -152,6 +157,9 @@ export function useTaskHistory(options: UseTaskHistoryOptions = {}) {
 
   const removeTask = useCallback(
     async (taskId: string) => {
+      const shouldRedirectAfterDelete = pathname?.endsWith(`/chat/${taskId}`);
+      const homePath = lng ? `/${lng}/home` : "/";
+
       // Optimistic update
       const previousTasks = taskHistory;
       setTaskHistory((prev) => prev.filter((task) => task.id !== taskId));
@@ -160,13 +168,16 @@ export function useTaskHistory(options: UseTaskHistoryOptions = {}) {
         const { deleteSessionAction } =
           await import("@/features/chat/actions/session-actions");
         await deleteSessionAction({ sessionId: taskId });
+        if (shouldRedirectAfterDelete) {
+          router.replace(homePath);
+        }
       } catch (error) {
         console.error("Failed to delete task", error);
         // Rollback on error
         setTaskHistory(previousTasks);
       }
     },
-    [taskHistory],
+    [lng, pathname, router, taskHistory],
   );
 
   const moveTask = useCallback(

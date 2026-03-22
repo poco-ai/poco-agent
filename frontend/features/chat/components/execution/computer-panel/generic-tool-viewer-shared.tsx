@@ -78,17 +78,33 @@ export function ContentCodeBlock({
       language={language}
       style={CODE_THEME}
       wrapLongLines
+      wrapLines
+      lineProps={{
+        style: {
+          whiteSpace: "pre-wrap",
+          overflowWrap: "anywhere",
+          wordBreak: "break-word",
+        },
+      }}
       customStyle={{
         margin: 0,
         padding: "0.75rem",
         background: "transparent",
         fontSize: "0.75rem",
         lineHeight: "1.5",
+        whiteSpace: "pre-wrap",
+        overflowWrap: "anywhere",
+        wordBreak: "break-word",
+        maxWidth: "100%",
       }}
       codeTagProps={{
         style: {
           background: "transparent",
           fontFamily: "inherit",
+          whiteSpace: "inherit",
+          overflowWrap: "inherit",
+          wordBreak: "inherit",
+          display: "block",
         },
       }}
     >

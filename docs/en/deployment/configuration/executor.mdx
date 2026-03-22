@@ -1,0 +1,18 @@
+---
+title: Executor Configuration
+description: Runtime settings for the execution engine and Claude Agent SDK integration.
+---
+
+## Required (for task execution)
+
+- `ANTHROPIC_API_KEY`: required (supports official Anthropic or Anthropic-compatible services)
+- `ANTHROPIC_BASE_URL`: optional (same as above; usually needed for compatible services)
+- `DEFAULT_MODEL`: required (`executor/app/core/engine.py` reads `os.environ["DEFAULT_MODEL"]`; must match endpoint compatibility)
+- `WORKSPACE_PATH`: workspace mount path (default `/workspace`)
+
+## Optional
+
+- `WORKSPACE_GIT_IGNORE`: extra ignore rules written to `.git/info/exclude` (comma/newline separated)
+- `POCO_BROWSER_VIEWPORT_SIZE`: optional browser viewport size (affects screenshots and responsive layout), format like `1366x768` / `1920x1080` (effective when `browser_enabled=true`)
+- `EXECUTOR_TIMEZONE`: optional timezone env var used during task execution (passed through by Executor Manager, default `Asia/Shanghai`)
+- Logging vars such as `DEBUG` / `LOG_LEVEL` / `LOG_TO_FILE` (same as above)

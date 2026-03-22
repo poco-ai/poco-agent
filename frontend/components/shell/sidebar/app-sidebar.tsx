@@ -4,6 +4,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { useLanguage } from "@/hooks/use-language";
 import { GlobalSearchDialog, useSearchDialog } from "@/features/search";
+import { useNewTaskShortcut } from "../hooks/use-new-task-shortcut";
 import {
   CreateProjectDialog,
   type ProjectItem,
@@ -81,6 +82,8 @@ export function AppSidebar({
   const openSearch = React.useCallback(() => {
     setIsSearchOpen(true);
   }, [setIsSearchOpen]);
+
+  useNewTaskShortcut(handleNewTask);
 
   return (
     <>

@@ -1,0 +1,21 @@
+---
+title: Environment Configuration
+description: Browse Poco configuration by service.
+---
+
+This project includes 4 services: `backend` / `executor-manager` / `executor` / `frontend`.
+
+Dependencies include:
+
+- `postgres`
+- S3-compatible object storage (optional local `rustfs`, or cloud services such as Cloudflare R2)
+
+Common environment variables by service (including meaning and defaults). In production, replace all `change-this-*`, weak passwords, and default secrets.
+
+## Services
+
+- [Backend](./backend)
+- [Executor Manager](./executor-manager)
+- [Executor](./executor)
+- [Frontend](./frontend)
+- [Storage and database](./storage)

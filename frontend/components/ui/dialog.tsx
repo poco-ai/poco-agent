@@ -50,9 +50,12 @@ function DialogContent({
   className,
   children,
   showCloseButton = true,
+  ariaTitle,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean;
+  /** Accessible title for screen readers. Renders a VisuallyHidden DialogTitle to satisfy Radix accessibility. Use when the visible title is in a nested structure. */
+  ariaTitle?: React.ReactNode;
 }) {
   return (
     <DialogPortal data-slot="dialog-portal">
@@ -65,6 +68,11 @@ function DialogContent({
         )}
         {...props}
       >
+        {ariaTitle != null ? (
+          <DialogPrimitive.Title className="sr-only">
+            {ariaTitle}
+          </DialogPrimitive.Title>
+        ) : null}
         {children}
         {showCloseButton && (
           <DialogPrimitive.Close

@@ -18,11 +18,10 @@ class SkillConfigService:
         Returns a dict compatible with executor_manager SkillStager:
         {skill_name: {"enabled": True, "entry": {...}}, ...}
         """
-        if not skill_ids:
-            return {}
-
         installs = UserSkillInstallRepository.list_by_user(db, user_id)
-        installed_ids = {i.skill_id for i in installs}
+        enabled_installs_by_skill_id = {
+            install.skill_id: install for install in installs if install.enabled
+        }
 
         # Preserve caller ordering but avoid duplicates.
         ordered_ids: list[int] = []
@@ -35,7 +34,7 @@ class SkillConfigService:
 
         selected: dict[str, tuple[str, dict]] = {}
         for skill_id in ordered_ids:
-            if skill_id not in installed_ids:
+            if skill_id not in enabled_installs_by_skill_id:
                 continue
             skill = SkillRepository.get_by_id(db, skill_id)
             if not skill or not isinstance(skill.entry, dict):
@@ -49,6 +48,11 @@ class SkillConfigService:
             existing_scope, _ = existing
             if existing_scope != "user" and skill.scope == "user":
                 selected[skill.name] = (skill.scope, skill.entry)
+
+        for skill in SkillRepository.list_visible(db, user_id=user_id):
+            if skill.scope != "system" or not isinstance(skill.entry, dict):
+                continue
+            selected.setdefault(skill.name, (skill.scope, skill.entry))
 
         return {
             name: {"enabled": True, "entry": entry}

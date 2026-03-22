@@ -15,11 +15,4 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
     icon: "🚀",
     provider: "anthropic",
   },
-  {
-    id: "gpt-4-turbo",
-    name: "GPT-4 Turbo",
-    descriptionKey: "models.gpt4Turbo.description",
-    icon: "🧠",
-    provider: "openai",
-  },
 ];

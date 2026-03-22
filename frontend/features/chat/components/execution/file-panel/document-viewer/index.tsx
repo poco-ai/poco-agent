@@ -112,6 +112,102 @@ declare global {
 const VIEW_CLASSNAME =
   "h-full w-full max-h-full animate-in fade-in duration-300 [--tw-enter-opacity:1] [--tw-enter-scale:1] [--tw-enter-translate-x:0] [--tw-enter-translate-y:0] overflow-hidden flex flex-col min-h-0";
 
+type MarkdownFrontMatterEntry = {
+  key: string;
+  value: string;
+};
+
+type ParsedMarkdownFrontMatter = {
+  entries: MarkdownFrontMatterEntry[];
+  raw: string;
+  body: string;
+};
+
+function parseMarkdownFrontMatter(
+  content: string,
+): ParsedMarkdownFrontMatter | null {
+  const match = content.match(/^---\s*\r?\n([\s\S]*?)\r?\n---\s*(?:\r?\n|$)/);
+  if (!match) {
+    return null;
+  }
+
+  const raw = match[1]?.trim() ?? "";
+  const body = content.slice(match[0].length);
+  const lines = raw.split(/\r?\n/);
+  const entries: MarkdownFrontMatterEntry[] = [];
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index] ?? "";
+    if (!line.trim()) {
+      continue;
+    }
+
+    const fieldMatch = line.match(/^([A-Za-z0-9_.-]+):(.*)$/);
+    if (!fieldMatch) {
+      continue;
+    }
+
+    const key = fieldMatch[1].trim();
+    const remainder = fieldMatch[2].trim();
+
+    if (!remainder) {
+      const blockLines: string[] = [];
+      let nextIndex = index + 1;
+      while (nextIndex < lines.length) {
+        const nextLine = lines[nextIndex] ?? "";
+        if (/^\s/.test(nextLine)) {
+          blockLines.push(nextLine.trim());
+          nextIndex += 1;
+          continue;
+        }
+        break;
+      }
+
+      entries.push({
+        key,
+        value: blockLines.join("\n").trim(),
+      });
+      index = nextIndex - 1;
+      continue;
+    }
+
+    if (remainder === ">" || remainder === "|") {
+      const blockLines: string[] = [];
+      let nextIndex = index + 1;
+      while (nextIndex < lines.length) {
+        const nextLine = lines[nextIndex] ?? "";
+        if (/^\s/.test(nextLine)) {
+          blockLines.push(nextLine.trim());
+          nextIndex += 1;
+          continue;
+        }
+        break;
+      }
+
+      entries.push({
+        key,
+        value:
+          remainder === ">"
+            ? blockLines.join(" ").trim()
+            : blockLines.join("\n").trim(),
+      });
+      index = nextIndex - 1;
+      continue;
+    }
+
+    entries.push({
+      key,
+      value: remainder.replace(/^['"]|['"]$/g, "").trim(),
+    });
+  }
+
+  return {
+    entries,
+    raw,
+    body,
+  };
+}
+
 function DocumentViewerSkeleton({ label }: { label: string }) {
   return (
     <div
@@ -487,6 +583,17 @@ const MarkdownDocumentViewer = ({
   });
   const [copyState, setCopyState] = React.useState<"idle" | "copied">("idle");
   const isLoading = state.status === "idle" || state.status === "loading";
+  const parsedFrontMatter = React.useMemo(
+    () =>
+      state.status === "success"
+        ? parseMarkdownFrontMatter(state.content)
+        : null,
+    [state],
+  );
+  const markdownBody =
+    state.status === "success"
+      ? (parsedFrontMatter?.body ?? state.content)
+      : "";
 
   const handleDownload = async () => {
     const refreshed = ensureFreshFile ? await ensureFreshFile(file) : file;
@@ -571,6 +678,35 @@ const MarkdownDocumentViewer = ({
       <div className="relative flex-1 min-h-0 overflow-auto bg-background">
         {state.status === "success" && (
           <div className="mx-auto w-full max-w-4xl px-6 py-8">
+            {parsedFrontMatter && (
+              <section className="mb-8 overflow-hidden rounded-xl border border-border bg-card/60">
+                <div className="border-b border-border bg-muted/30 px-4 py-3">
+                  <h2 className="text-sm font-semibold text-foreground">
+                    {t("artifacts.viewer.frontMatter")}
+                  </h2>
+                </div>
+                {parsedFrontMatter.entries.length > 0 ? (
+                  <dl className="grid gap-x-4 gap-y-4 px-4 py-4 sm:grid-cols-[minmax(120px,160px)_1fr]">
+                    {parsedFrontMatter.entries.map((entry) => (
+                      <React.Fragment key={entry.key}>
+                        <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                          {entry.key}
+                        </dt>
+                        <dd className="min-w-0 whitespace-pre-wrap break-words text-sm text-foreground">
+                          {entry.value || "—"}
+                        </dd>
+                      </React.Fragment>
+                    ))}
+                  </dl>
+                ) : (
+                  <div className="px-4 py-4">
+                    <pre className="overflow-x-auto whitespace-pre-wrap break-words rounded-lg bg-muted/40 p-3 text-sm text-foreground">
+                      {parsedFrontMatter.raw}
+                    </pre>
+                  </div>
+                )}
+              </section>
+            )}
             <AdaptiveMarkdown className="prose prose-sm dark:prose-invert max-w-none break-words [&_*]:break-words">
               <ReactMarkdown
                 remarkPlugins={[remarkGfm, remarkBreaks, remarkMath]}
@@ -633,7 +769,7 @@ const MarkdownDocumentViewer = ({
                   hr: () => <hr className="my-8 border-t border-border/60" />,
                 }}
               >
-                {state.content}
+                {markdownBody}
               </ReactMarkdown>
             </AdaptiveMarkdown>
           </div>

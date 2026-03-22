@@ -11,3 +11,4 @@ export * from "./computer";
 export * from "./file";
 export * from "./user-input-request";
 export * from "./models";
+export * from "./pending-skill-creation";

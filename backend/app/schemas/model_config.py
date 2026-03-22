@@ -28,6 +28,7 @@ class ModelProviderResponse(BaseModel):
     default_base_url: str
     effective_base_url: str
     base_url_source: BaseUrlSource = "default"
+    known_models: list[tuple[str, str]] = Field(default_factory=list)
     models: list[ModelDefinitionResponse] = Field(default_factory=list)
 
 

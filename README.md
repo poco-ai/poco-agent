@@ -38,7 +38,7 @@ A safer, more beautiful, and easier-to-use OpenClaw alternative
   - **Background execution & scheduled triggers** — your agent can keep running in the cloud even after you close the browser
 - **Interaction**
   - **Mobile support**: control your agent anytime, anywhere
-  - **IM integration**: messaging via DingTalk and Telegram, with push notifications and event subscriptions
+  - **IM integration**: embedded backend messaging via DingTalk, Feishu, and Telegram, with push notifications and event subscriptions
   - **Self-hosting**: one-click Docker deployment with a full runtime environment
   - **Cloud subscription**: coming soon
   - **Multilingual** support

@@ -1,0 +1,31 @@
+---
+title: 一键初始化脚本
+description: 适合首次使用本地 RustFS 存储进行部署。
+---
+
+如果是首次配置、并且你使用本地 `rustfs`（`docker-compose.yml`），推荐使用脚本自动完成 `.env`、目录、权限、镜像拉取与 bucket 创建：
+
+```bash
+./scripts/quickstart.sh
+```
+
+脚本默认会进入交互模式，按提示输入模型 API Key（环境变量是 `ANTHROPIC_API_KEY`，支持 Anthropic 兼容端点）并写入 `.env`。
+如果你需要在 CI 中运行，可使用 `--non-interactive` 配合 `--llm-api-key` / `--llm-base-url` / `--model`。
+
+脚本会：
+
+- 复制 `.env.example` -> `.env`（若不存在）
+- 自动检测并写入 `DOCKER_GID`；交互模式会写入 API Key/模型配置；其余仅在传参时写入（如 `--data-dir` / `--s3-*` / `--cors-origins`）
+- 创建 `oss_data/` 与 `tmp_workspace/`；默认尝试将 `oss_data/` chown 为 `10001:10001`（RustFS 用户）
+- 为 `oss_data/` 与 `tmp_workspace/` 写入 `.gitignore`（内容为 `*`）
+- 默认拉取 executor 镜像并启动服务
+- 通过 `rustfs-init` 创建 `S3_BUCKET`
+
+## 常用参数
+
+- `--no-pull-executor`：跳过拉取 executor 镜像
+- `--no-start`：只准备环境与目录，不启动服务
+- `--no-init-bucket`：跳过创建 bucket
+- `--no-chown-rustfs`：跳过将 `oss_data/` 改为 `10001:10001`
+
+执行脚本后请确认 `.env` 里已设置 `ANTHROPIC_API_KEY`（可使用任意 Anthropic 兼容服务的 key）。

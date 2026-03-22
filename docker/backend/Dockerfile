@@ -18,6 +18,7 @@ RUN uv sync --no-dev
 USER root
 
 COPY --chown=app:app backend/app /app/app
+COPY --chown=app:app backend/assets /app/assets
 COPY --chown=app:app backend/alembic /app/alembic
 COPY --chown=app:app backend/alembic.ini /app/alembic.ini
 

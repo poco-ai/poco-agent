@@ -11,7 +11,6 @@ import {
   Sparkles,
   Clock,
   Brain,
-  Command,
 } from "lucide-react";
 
 import { useT } from "@/lib/i18n/client";
@@ -20,7 +19,6 @@ import { useMemoryFeatureEnabled } from "@/hooks/use-memory-feature-enabled";
 import { useMobileSidebar } from "@/hooks/use-mobile-sidebar";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import {
   SidebarHeader,
   SidebarMenu,
@@ -152,11 +150,17 @@ export function SidebarHeaderSection({
             }}
             data-onboarding="sidebar-new-task"
             className="h-[36px] min-w-0 max-w-[calc(var(--sidebar-width)-16px)] w-full justify-start gap-3 rounded-[10px] px-3 py-[7.5px] text-muted-foreground transition-colors hover:bg-sidebar-accent focus-visible:ring-0 focus-visible:outline-none group-data-[collapsible=icon]:w-[var(--sidebar-width-icon)] group-data-[collapsible=icon]:max-w-[var(--sidebar-width-icon)] group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0 group/new-task"
-            tooltip={t("sidebar.newTask")}
+            tooltip={t("sidebar.newTaskWithShortcut", {
+              shortcut: isMacPlatform ? "⇧⌘O" : "Shift+Ctrl+O",
+              defaultValue: "New Task (⇧⌘O)",
+            })}
           >
             <PenSquare className="size-4 shrink-0 transition-transform duration-200 group-hover/new-task:rotate-12 group-hover/new-task:scale-110" />
             <span className="text-sm truncate group-data-[collapsible=icon]:hidden">
               {t("sidebar.newTask")}
+            </span>
+            <span className="ml-auto text-xs text-muted-foreground opacity-0 transition-opacity group-hover/new-task:opacity-70 group-data-[collapsible=icon]:hidden">
+              {isMacPlatform ? "⇧⌘O" : "⇧Ctrl+O"}
             </span>
           </SidebarMenuButton>
         </SidebarMenuItem>
@@ -199,16 +203,9 @@ export function SidebarHeaderSection({
                   {t(labelKey, defaultLabel)}
                 </span>
                 {id === "search" && (
-                  <KbdGroup className="ml-auto opacity-70 group-data-[collapsible=icon]:hidden">
-                    {isMacPlatform ? (
-                      <Kbd className="px-1.5">
-                        <Command className="size-3.5" />
-                      </Kbd>
-                    ) : (
-                      <Kbd>Ctrl</Kbd>
-                    )}
-                    <Kbd>K</Kbd>
-                  </KbdGroup>
+                  <span className="ml-auto text-xs text-muted-foreground opacity-0 transition-opacity group-hover/menu-item:opacity-70 group-data-[collapsible=icon]:hidden">
+                    {isMacPlatform ? "⌘K" : "Ctrl+K"}
+                  </span>
                 )}
               </SidebarMenuButton>
             </SidebarMenuItem>

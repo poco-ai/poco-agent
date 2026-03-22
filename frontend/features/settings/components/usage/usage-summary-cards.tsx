@@ -12,6 +12,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { CountUp } from "@/components/ui/count-up";
 import { useT } from "@/lib/i18n/client";
 import {
   formatCompactNumber,
@@ -47,17 +48,26 @@ function UsageMetricValue({
   locale: string;
   className?: string;
 }) {
-  const compactValue = formatCompactNumber(value, locale);
   const exactValue = formatNumber(value, locale);
+  const formatDisplay = (n: number) =>
+    Math.abs(n) < 1_000
+      ? formatNumber(Math.round(n), locale)
+      : formatCompactNumber(n, locale);
 
   if (Math.abs(value) < 1_000) {
-    return <span className={className}>{exactValue}</span>;
+    return (
+      <CountUp
+        value={value}
+        format={(n) => formatNumber(Math.round(n), locale)}
+        className={className}
+      />
+    );
   }
 
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <span className={className}>{compactValue}</span>
+        <CountUp value={value} format={formatDisplay} className={className} />
       </TooltipTrigger>
       <TooltipContent side="top" sideOffset={8}>
         {exactValue}
@@ -129,9 +139,11 @@ function UsageMetricCard({
           </div>
           <div className="mt-auto flex items-center justify-between gap-4 border-t border-dashed border-border/70 pt-3">
             <span>{t("settings.usageTab.cost")}</span>
-            <span className="text-base font-medium text-foreground tabular-nums">
-              {formatCurrency(metric.total_cost_usd, locale)}
-            </span>
+            <CountUp
+              value={metric.total_cost_usd}
+              format={(n) => formatCurrency(n, locale)}
+              className="text-base font-medium text-foreground tabular-nums"
+            />
           </div>
         </div>
       </CardContent>

@@ -14,6 +14,7 @@ import {
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
 import { Separator } from "@/components/ui/separator";
+import { CountUp } from "@/components/ui/count-up";
 import { useT } from "@/lib/i18n/client";
 
 interface CreditsPopoverProps {
@@ -72,7 +73,7 @@ export function CreditsPopover({ trigger, onViewUsage }: CreditsPopoverProps) {
           </div>
           <div className="flex items-center justify-between text-xs text-muted-foreground/60 pl-6">
             <span>{t("creditsPopover.freeCredits")}</span>
-            <span>9999</span>
+            <CountUp value={9999} className="tabular-nums" />
           </div>
         </div>
 
@@ -85,7 +86,10 @@ export function CreditsPopover({ trigger, onViewUsage }: CreditsPopoverProps) {
                 {t("creditsPopover.dailyRefresh")}
               </span>
             </div>
-            <span className="text-xl font-bold tracking-tight">9999</span>
+            <CountUp
+              value={9999}
+              className="text-xl font-bold tracking-tight tabular-nums"
+            />
           </div>
           <div className="text-xs text-muted-foreground/60 pl-6">
             {t("creditsPopover.dailyRefreshHint")}

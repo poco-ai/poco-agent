@@ -1,7 +1,12 @@
 import * as React from "react";
 import { AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -99,7 +104,11 @@ export function McpSettingsDialog({
   if (!item && !isNew) {
     return (
       <Dialog open={false} onOpenChange={onClose}>
-        <DialogContent />
+        <DialogContent>
+          <DialogTitle className="sr-only">
+            {t("mcpSettings.configureServer")}
+          </DialogTitle>
+        </DialogContent>
       </Dialog>
     );
   }

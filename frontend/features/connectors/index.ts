@@ -8,3 +8,7 @@ export {
   type Connector,
   type ConnectorType,
 } from "@/features/connectors/constants/connectors";
+export {
+  CapabilityToggleProvider,
+  useCapabilityToggle,
+} from "@/features/connectors/context/capability-toggle-context";

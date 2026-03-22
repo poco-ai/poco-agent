@@ -22,3 +22,18 @@ class WorkspaceArchiveResponse(BaseModel):
 
     url: str | None = None
     filename: str
+
+
+class SubmitSkillRequest(BaseModel):
+    """Submit a workspace folder for skill creation review."""
+
+    folder_path: str
+    skill_name: str | None = None
+    workspace_files_prefix: str | None = None
+
+
+class SubmitSkillResponse(BaseModel):
+    """Pending skill submission result."""
+
+    pending_id: str
+    status: str

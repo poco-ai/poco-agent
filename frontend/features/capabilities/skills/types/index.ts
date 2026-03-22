@@ -63,6 +63,8 @@ export interface SkillImportCandidate {
 export interface SkillImportDiscoverResponse {
   archive_key: string;
   candidates: SkillImportCandidate[];
+  preselected_relative_path?: string | null;
+  skillsmp_item?: SkillsMpSkillItem | null;
 }
 
 export interface SkillImportSelection {
@@ -103,4 +105,47 @@ export interface SkillImportJobStatusResponse {
   updated_at: string | null;
   started_at: string | null;
   finished_at: string | null;
+}
+
+export interface SkillsMpSkillItem {
+  external_id: string;
+  name: string;
+  description: string | null;
+  author: string | null;
+  author_avatar_url: string | null;
+  github_url: string | null;
+  branch: string | null;
+  relative_skill_path: string | null;
+  stars: number;
+  forks: number;
+  updated_at: string | null;
+  skillsmp_url: string;
+  tags: string[];
+}
+
+export interface SkillsMpSearchResponse {
+  items: SkillsMpSkillItem[];
+  page: number;
+  page_size: number;
+  total: number;
+  total_pages: number;
+  has_next: boolean;
+}
+
+export interface SkillsMpRecommendationSection {
+  key: string;
+  title: string;
+  items: SkillsMpSkillItem[];
+}
+
+export interface SkillsMpRecommendationsResponse {
+  sections: SkillsMpRecommendationSection[];
+}
+
+export interface SkillsMpMarketplaceStatusResponse {
+  configured: boolean;
+}
+
+export interface SkillsMpImportDiscoverInput {
+  item: SkillsMpSkillItem;
 }

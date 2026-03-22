@@ -78,6 +78,12 @@ export function ShortcutsSettingsTab() {
         keys: [["/"]],
       },
       {
+        id: "new-task",
+        action: t("settings.shortcuts.items.newTask.action"),
+        hint: t("settings.shortcuts.items.newTask.hint"),
+        keys: [["Shift", "Ctrl", "O"]],
+      },
+      {
         id: "global-search",
         action: t("settings.shortcuts.items.search.action"),
         hint: t("settings.shortcuts.items.search.hint"),

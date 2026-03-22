@@ -3,6 +3,8 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
+from app.schemas.skill_marketplace import SkillsMpSkillItem
+
 
 class SkillImportCandidate(BaseModel):
     """A discovered SKILL.md candidate inside an uploaded archive."""
@@ -18,6 +20,8 @@ class SkillImportDiscoverResponse(BaseModel):
 
     archive_key: str
     candidates: list[SkillImportCandidate] = Field(default_factory=list)
+    preselected_relative_path: str | None = None
+    skillsmp_item: SkillsMpSkillItem | None = None
 
 
 class SkillImportSelection(BaseModel):

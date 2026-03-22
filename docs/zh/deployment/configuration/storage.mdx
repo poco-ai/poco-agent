@@ -1,0 +1,25 @@
+---
+title: 存储与数据库
+description: Postgres 与可选 RustFS 对象存储的配套配置说明。
+---
+
+## Postgres（Docker 镜像）
+
+- `POSTGRES_DB`（默认 `poco`）
+- `POSTGRES_USER`（默认 `postgres`）
+- `POSTGRES_PASSWORD`（默认 `postgres`）
+- `POSTGRES_PORT`（默认 `5432`，对宿主机映射端口）
+
+## 本地 RustFS（S3 兼容对象存储，可选）
+
+`docker-compose.yml` 默认使用 `rustfs/rustfs:latest` 作为本地 S3 兼容实现（服务名为 `rustfs`）。如果你使用 Cloudflare R2（或其他外部 S3 兼容服务），可以改用 `docker-compose.r2.yml`，此节可忽略。
+
+如需替换为其他本地 S3 兼容实现，请按镜像参数调整，并保证 Backend/Executor Manager 使用的 `S3_*` 可用。
+
+- `RUSTFS_IMAGE`：对象存储镜像（默认 `rustfs/rustfs:latest`）
+- `S3_PORT`（默认 `9000`）
+- `S3_CONSOLE_PORT`（默认 `9001`）
+- `RUSTFS_DATA_DIR`：数据目录（默认 `./oss_data`，宿主机路径，会 bind mount 到容器的 `/data`）
+- RustFS 以非 root 用户 `rustfs`（UID/GID=10001）运行；宿主机目录需为 `10001:10001`，否则可能导致 `Permission denied (os error 13)`。
+- `S3_ACCESS_KEY` / `S3_SECRET_KEY`：用于访问 S3 API 的凭证（需与 rustfs 配置一致）
+- `S3_BUCKET`：bucket 名称（默认 `poco`，可通过 `rustfs-init`（profile: `init`）创建或在控制台手动创建）

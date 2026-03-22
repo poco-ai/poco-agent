@@ -4,7 +4,12 @@ from sqlalchemy.orm import Session
 
 from app.core.deps import get_current_user_id, get_db
 from app.schemas.response import Response, ResponseSchema
-from app.schemas.skill import SkillCreateRequest, SkillResponse, SkillUpdateRequest
+from app.schemas.skill import (
+    SkillCreateRequest,
+    SkillResponse,
+    SkillUpdateRequest,
+)
+from app.schemas.workspace import FileNode
 from app.services.skill_service import SkillService
 
 router = APIRouter(prefix="/skills", tags=["skills"])
@@ -29,6 +34,16 @@ async def get_skill(
 ) -> JSONResponse:
     result = service.get_skill(db, user_id, skill_id)
     return Response.success(data=result, message="Skill retrieved")
+
+
+@router.get("/{skill_id}/files", response_model=ResponseSchema[list[FileNode]])
+async def list_skill_files(
+    skill_id: int,
+    user_id: str = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+) -> JSONResponse:
+    result = service.list_skill_files(db, user_id, skill_id)
+    return Response.success(data=result, message="Skill files retrieved")
 
 
 @router.post("", response_model=ResponseSchema[SkillResponse])

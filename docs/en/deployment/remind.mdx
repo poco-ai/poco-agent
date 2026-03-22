@@ -1,0 +1,56 @@
+---
+title: Reminders and Notes
+description: Important notes and reminders, default URLs, config entry points, and post-deploy operations.
+---
+
+## Important notes
+
+1. `executor-manager` needs access to Docker daemon:
+   - Compose mounts this by default: `/var/run/docker.sock:/var/run/docker.sock`
+   - This is why `executor-manager` can create executor containers dynamically
+2. Callback endpoint (Executor -> Executor Manager):
+   - `CALLBACK_BASE_URL` defaults to `http://host.docker.internal:8001`
+   - Dynamic executor containers are not in the compose network by default, so callback goes through host port mapping
+   - `executor-manager` injects `host.docker.internal:host-gateway` when creating executor containers; Compose also sets this mapping on `executor-manager` (works on Linux too)
+3. Workspace directory:
+   - Compose uses `${PWD}/tmp_workspace` as `WORKSPACE_ROOT`
+   - This path is bind-mounted to `/workspace` in executor containers created by Executor Manager
+   - `tmp_workspace/` already exists in repo and is ignored by `tmp_workspace/.gitignore`, so it will not pollute git
+4. RustFS data directory permissions (common Linux pitfall, `docker-compose.yml` only):
+   - `rustfs` bind-mounts `${RUSTFS_DATA_DIR}` to container `/data`
+   - Default `RUSTFS_DATA_DIR=./oss_data` (repository root)
+   - RustFS runs as non-root user `rustfs` (UID/GID=10001); if host dir is not `10001:10001`, it may fail with:
+     `Io error: Permission denied (os error 13)`
+   - Fix by creating/changing permissions on host (example for repo-root `oss_data/`):
+
+   ```bash
+   mkdir -p oss_data
+   sudo chown -R 10001:10001 oss_data
+   ```
+
+5. Browser-facing presigned URL endpoint:
+
+- Backend uses `S3_PUBLIC_ENDPOINT` to generate browser-accessible presigned URLs:
+  - local rustfs (`docker-compose.yml`) default is `http://localhost:9000`
+  - Cloudflare R2 (`docker-compose.r2.yml`) usually matches `S3_ENDPOINT`, or use your custom domain
+
+## Access URLs (default ports)
+
+- Frontend: `http://localhost:3000`
+- Backend: `http://localhost:8000` (OpenAPI: `/docs`)
+- Executor Manager: `http://localhost:8001` (OpenAPI: `/docs`)
+- RustFS(S3) (`docker-compose.yml` only): `http://localhost:9000` (Console: `http://localhost:9001`)
+
+## Configuration entry
+
+Most settings are configured through env vars (for example `ANTHROPIC_API_KEY`, `S3_*`, `INTERNAL_API_TOKEN`, etc.).
+
+See [configuration.md](configuration.md).
+
+## Optional: auto-create bucket (`docker-compose.yml` only)
+
+Default startup does not run `rustfs-init` (to avoid startup blocking due to OSS image/permission differences). If you want to auto-create `S3_BUCKET`:
+
+```bash
+docker compose --profile init up -d rustfs-init
+```

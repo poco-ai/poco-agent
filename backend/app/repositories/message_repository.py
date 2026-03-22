@@ -35,6 +35,18 @@ class MessageRepository:
         )
 
     @staticmethod
+    def get_latest_by_session(
+        session_db: Session, session_id: uuid.UUID
+    ) -> AgentMessage | None:
+        """Gets the latest message for a session."""
+        return (
+            session_db.query(AgentMessage)
+            .filter(AgentMessage.session_id == session_id)
+            .order_by(AgentMessage.id.desc())
+            .first()
+        )
+
+    @staticmethod
     def list_by_session(
         session_db: Session, session_id: uuid.UUID, limit: int = 100, offset: int = 0
     ) -> list[AgentMessage]:

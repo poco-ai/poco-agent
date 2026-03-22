@@ -6,7 +6,6 @@ import {
   Image as ImageIcon,
   Loader2,
   MessageSquare,
-  MoreHorizontal,
   PanelRightClose,
   PanelRightOpen,
   Quote,
@@ -18,6 +17,8 @@ import { PendingMessageList } from "./pending-message-list";
 import { ChatInput, type ChatInputRef } from "./chat-input";
 import { UserInputRequestCard } from "./user-input-request-card";
 import { PlanApprovalCard } from "./plan-approval-card";
+import { EnterPlanModeCard } from "./enter-plan-mode-card";
+import { SkillCreationReviewCard } from "./skill-creation-review-card";
 import {
   PanelHeader,
   PanelHeaderAction,
@@ -25,14 +26,13 @@ import {
 import { useChatMessages } from "./hooks/use-chat-messages";
 import { usePendingMessages } from "./hooks/use-pending-messages";
 import { useUserInputRequests } from "./hooks/use-user-input-requests";
+import { usePendingSkillCreations } from "./hooks/use-pending-skill-creations";
 import {
   branchSessionAction,
   cancelSessionAction,
   editMessageAndRegenerateAction,
   regenerateMessageAction,
-  renameSessionTitleAction,
 } from "@/features/chat/actions/session-actions";
-import { RenameTaskDialog, TaskActionsDropdown } from "@/features/projects";
 import type {
   ExecutionSession,
   InputFile,
@@ -54,8 +54,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useLanguage } from "@/hooks/use-language";
-import { useAppShell } from "@/components/shell/app-shell-context";
 import { ModelSelector } from "@/features/chat/components/chat/model-selector";
 import { useModelCatalog } from "@/features/chat/hooks/use-model-catalog";
 import {
@@ -71,6 +76,8 @@ interface ChatPanelProps {
   updateSession: (newSession: Partial<ExecutionSession>) => void;
   onIconClick?: () => void;
   onToggleRightPanel?: () => void;
+  showRightPanelToggle?: boolean;
+  isRightPanelToggleDisabled?: boolean;
   isRightPanelCollapsed?: boolean;
   hideHeader?: boolean;
 }
@@ -155,6 +162,8 @@ export function ChatPanel({
   updateSession,
   onIconClick,
   onToggleRightPanel,
+  showRightPanelToggle = false,
+  isRightPanelToggleDisabled = false,
   isRightPanelCollapsed = false,
   hideHeader = false,
 }: ChatPanelProps) {
@@ -162,8 +171,6 @@ export function ChatPanel({
   const lng = useLanguage();
   const { t } = useT("translation");
   const { refreshTasks, touchTask } = useTaskHistoryContext();
-  const { projects, pinnedTaskIds, toggleTaskPin, moveTask, removeTask } =
-    useAppShell();
   const {
     modelConfig,
     modelOptions,
@@ -173,7 +180,6 @@ export function ChatPanel({
   });
   const [isCancelling, setIsCancelling] = React.useState(false);
   const [isExportingImage, setIsExportingImage] = React.useState(false);
-  const [isRenameDialogOpen, setIsRenameDialogOpen] = React.useState(false);
   const [branchingMessageId, setBranchingMessageId] = React.useState<
     string | null
   >(null);
@@ -197,13 +203,13 @@ export function ChatPanel({
     beginOptimisticEditMessage,
     commitOptimisticHistoryMutation,
     rollbackOptimisticHistoryMutation,
+    reloadMessagesSnapshot,
     runUsageByUserMessageId,
   } = useChatMessages({ session });
 
   // Pending message queue hook
   const {
     pendingMessages,
-    isLoadingPendingMessages,
     addPendingMessage,
     refreshPendingMessages,
     sendPendingMessage,
@@ -223,6 +229,15 @@ export function ChatPanel({
   } = useUserInputRequests(
     session?.session_id,
     Boolean(session?.session_id) && isSessionActive,
+  );
+  const {
+    activeCreation: pendingSkillCreation,
+    isSubmitting: isSubmittingPendingSkillCreation,
+    confirmCreation: confirmPendingSkillCreation,
+    cancelCreation: cancelPendingSkillCreation,
+  } = usePendingSkillCreations(
+    session?.session_id,
+    Boolean(session?.session_id) && session?.status === "completed",
   );
 
   const activeUserInput = userInputRequests[0];
@@ -508,45 +523,6 @@ export function ChatPanel({
     [submitUserInputAnswer],
   );
 
-  const handleRename = React.useCallback(
-    async (newTitle: string) => {
-      if (!session?.session_id) return;
-      try {
-        await renameSessionTitleAction({
-          sessionId: session.session_id,
-          title: newTitle,
-        });
-        updateSession({ title: newTitle });
-        toast.success(t("task.toasts.renamed"));
-        await refreshTasks();
-      } catch (error) {
-        console.error("[ChatPanel] Failed to rename session title:", error);
-        toast.error(t("task.toasts.renameFailed"));
-      }
-    },
-    [refreshTasks, session?.session_id, t, updateSession],
-  );
-
-  const isCurrentSessionPinned = React.useMemo(() => {
-    if (!session?.session_id) return false;
-    return pinnedTaskIds.includes(session.session_id);
-  }, [pinnedTaskIds, session?.session_id]);
-
-  const handleMoveTaskToProject = React.useCallback(
-    async (taskId: string, projectId: string | null) => {
-      await moveTask(taskId, projectId);
-    },
-    [moveTask],
-  );
-
-  const handleDeleteTask = React.useCallback(
-    async (taskId: string) => {
-      await removeTask(taskId);
-      router.push(lng ? `/${lng}/home` : "/home");
-    },
-    [lng, removeTask, router],
-  );
-
   const userPromptHistory = React.useMemo(
     () =>
       messages
@@ -599,7 +575,10 @@ export function ChatPanel({
             sessionId: session.session_id,
             userMessageId,
             content: trimmedContent,
+            model: selectedModelSelection.modelId ?? undefined,
+            model_provider_id: selectedModelSelection.providerId ?? undefined,
           });
+          await reloadMessagesSnapshot();
           commitOptimisticHistoryMutation(mutationToken);
           void refreshTasks();
         } catch (error) {
@@ -617,7 +596,9 @@ export function ChatPanel({
       beginOptimisticEditMessage,
       commitOptimisticHistoryMutation,
       refreshTasks,
+      reloadMessagesSnapshot,
       rollbackOptimisticHistoryMutation,
+      selectedModelSelection,
       session?.session_id,
       session?.status,
       t,
@@ -643,10 +624,6 @@ export function ChatPanel({
       if (hasActiveUserInput) {
         return;
       }
-
-      const pendingModelOverride = draftModelSelection?.modelId
-        ? draftModelSelection
-        : undefined;
 
       const previousStatus = session.status;
       const shouldMarkSessionPending =
@@ -674,7 +651,7 @@ export function ChatPanel({
       const result = await sendMessage(
         content,
         attachments,
-        pendingModelOverride,
+        selectedModelSelection,
       );
 
       if (!result) {
@@ -709,12 +686,12 @@ export function ChatPanel({
     },
     [
       addPendingMessage,
-      draftModelSelection,
       hasActiveUserInput,
       pendingMessages,
       refreshPendingMessages,
       refreshTasks,
       sendMessage,
+      selectedModelSelection,
       session?.next_queued_query_preview,
       session?.session_id,
       session?.status,
@@ -886,7 +863,10 @@ export function ChatPanel({
             sessionId: session.session_id,
             userMessageId: userMessageIdNumber,
             assistantMessageId: assistantMessageIdNumber,
+            model: selectedModelSelection.modelId ?? undefined,
+            model_provider_id: selectedModelSelection.providerId ?? undefined,
           });
+          await reloadMessagesSnapshot();
           commitOptimisticHistoryMutation(mutationToken);
           void refreshTasks();
         } catch (error) {
@@ -902,7 +882,9 @@ export function ChatPanel({
       beginOptimisticRegenerate,
       commitOptimisticHistoryMutation,
       refreshTasks,
+      reloadMessagesSnapshot,
       rollbackOptimisticHistoryMutation,
+      selectedModelSelection,
       session?.session_id,
       session?.status,
       t,
@@ -1040,7 +1022,7 @@ export function ChatPanel({
           description={headerDescription}
           onIconClick={onIconClick}
           action={
-            session?.session_id || onToggleRightPanel ? (
+            session?.session_id || showRightPanelToggle ? (
               <div className="flex items-center gap-1">
                 {selectedModelId ? (
                   <ModelSelector
@@ -1089,27 +1071,10 @@ export function ChatPanel({
                     </DropdownMenuContent>
                   </DropdownMenu>
                 ) : null}
-                {session?.session_id ? (
-                  <TaskActionsDropdown
-                    taskId={session.session_id}
-                    isPinned={isCurrentSessionPinned}
-                    projects={projects}
-                    onTogglePin={toggleTaskPin}
-                    onRename={() => setIsRenameDialogOpen(true)}
-                    onMoveToProject={handleMoveTaskToProject}
-                    onDelete={handleDeleteTask}
-                  >
-                    <PanelHeaderAction
-                      title={t("sidebar.settings")}
-                      className="focus-visible:ring-0 data-[state=open]:bg-accent data-[state=open]:text-accent-foreground"
-                    >
-                      <MoreHorizontal className="size-4" />
-                    </PanelHeaderAction>
-                  </TaskActionsDropdown>
-                ) : null}
-                {onToggleRightPanel ? (
+                {showRightPanelToggle ? (
                   <PanelHeaderAction
                     onClick={onToggleRightPanel}
+                    disabled={isRightPanelToggleDisabled}
                     title={
                       isRightPanelCollapsed
                         ? t("chat.expandRightPanel")
@@ -1208,6 +1173,14 @@ export function ChatPanel({
                 submitUserInputAnswer(activeUserInput.id, { approved: "false" })
               }
             />
+          ) : activeUserInput?.tool_name === "EnterPlanMode" ? (
+            <EnterPlanModeCard
+              request={activeUserInput}
+              isSubmitting={isSubmittingUserInput}
+              onConfirm={() =>
+                submitUserInputAnswer(activeUserInput.id, { confirmed: "true" })
+              }
+            />
           ) : activeUserInput || stickyUserInput ? (
             <UserInputRequestCard
               request={activeUserInput ?? stickyUserInput!}
@@ -1222,6 +1195,37 @@ export function ChatPanel({
           ) : null}
         </div>
       ) : null}
+
+      <Dialog
+        open={Boolean(pendingSkillCreation)}
+        onOpenChange={() => undefined}
+      >
+        <DialogContent
+          className="max-h-[90vh]   w-[calc(100vw-2rem)] sm:max-w-[90vw]
+ lg:max-w-[960px] xl:max-w-[1000px overflow-hidden p-0"
+          showCloseButton={false}
+        >
+          <DialogTitle className="sr-only">
+            {t("chat.skillCreationReview.title")}
+          </DialogTitle>
+          <DialogDescription className="sr-only">
+            {t("chat.skillCreationReview.subtitle")}
+          </DialogDescription>
+          {pendingSkillCreation ? (
+            <SkillCreationReviewCard
+              creation={pendingSkillCreation}
+              isSubmitting={isSubmittingPendingSkillCreation}
+              className="border-0 bg-transparent p-6 shadow-none"
+              onConfirm={(payload) =>
+                confirmPendingSkillCreation(pendingSkillCreation.id, payload)
+              }
+              onCancel={() =>
+                cancelPendingSkillCreation(pendingSkillCreation.id)
+              }
+            />
+          ) : null}
+        </DialogContent>
+      </Dialog>
 
       {/* Status Bar - Skills and MCP */}
       {(hasConfigSnapshot || hasSkills || hasMcp || hasBrowser) && (
@@ -1239,8 +1243,6 @@ export function ChatPanel({
         <PendingMessageList
           messages={pendingMessages}
           queuedCount={session?.queued_query_count}
-          nextPreview={session?.next_queued_query_preview}
-          isLoading={isLoadingPendingMessages}
           onSend={handleSendPendingMessage}
           onModify={handleModifyPendingMessage}
           onDelete={handleDeletePendingMessage}
@@ -1258,13 +1260,6 @@ export function ChatPanel({
         disabled={!session?.session_id || hasActiveUserInput || isCancelling}
         history={userPromptHistory}
         className={isRightPanelCollapsed ? "px-[20%]" : undefined}
-      />
-
-      <RenameTaskDialog
-        open={isRenameDialogOpen}
-        onOpenChange={setIsRenameDialogOpen}
-        taskName={session?.title || ""}
-        onRename={handleRename}
       />
     </div>
   );

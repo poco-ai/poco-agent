@@ -49,6 +49,7 @@ class AgentSessionQueueItem(Base, TimestampMixin):
     session_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("agent_sessions.id", ondelete="CASCADE"),
         nullable=False,
+        index=True,
     )
     sequence_no: Mapped[int] = mapped_column(BigInteger, nullable=False)
     status: Mapped[str] = mapped_column(
@@ -56,6 +57,7 @@ class AgentSessionQueueItem(Base, TimestampMixin):
         default="queued",
         server_default=text("'queued'"),
         nullable=False,
+        index=True,
     )
     prompt: Mapped[str] = mapped_column(Text, nullable=False)
     permission_mode: Mapped[str] = mapped_column(
@@ -75,11 +77,13 @@ class AgentSessionQueueItem(Base, TimestampMixin):
     linked_run_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("agent_runs.id", ondelete="SET NULL"),
         nullable=True,
+        index=True,
     )
     linked_user_message_id: Mapped[int | None] = mapped_column(
         BigInteger,
         ForeignKey("agent_messages.id", ondelete="SET NULL"),
         nullable=True,
+        index=True,
     )
 
     session: Mapped["AgentSession"] = relationship(back_populates="queue_items")

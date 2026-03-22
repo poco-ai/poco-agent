@@ -5,6 +5,7 @@
   "language": "Sprache",
   "sidebar": {
     "newTask": "Neue Aufgabe",
+    "newTaskWithShortcut": "Neue Aufgabe ({{shortcut}})",
     "search": "Suche",
     "library": "Funktionen",
     "openMain": "Hauptseitenleiste öffnen",
@@ -46,6 +47,15 @@
   },
   "hero": {
     "title": "Was kann ich für dich tun?",
+    "rotatingWords": [
+      "Präsentationen erstellen",
+      "Recherchieren",
+      "Mindmaps erstellen",
+      "GitHub-Repos analysieren",
+      "Daten analysieren",
+      "Reisen planen",
+      "Code schreiben"
+    ],
     "subtitle": "Weise eine Aufgabe zu oder stelle eine Frage.",
     "uploadFile": "Datei hochladen",
     "dragDrop": {
@@ -131,6 +141,9 @@
       "disabledTooltipDescription": "Aktiviere ihn, damit Poco den Browser für Webseiten und webbezogene Aufgaben nutzen kann.",
       "enabledHint": "Aktiviert"
     },
+    "memory": {
+      "toggle": "Memory"
+    },
     "runSchedule": {
       "toggle": "Ausführungszeit",
       "dialogTitle": "Ausführungszeit",
@@ -176,6 +189,20 @@
       "toggleServer": "{{name}} umschalten",
       "cancel": "Abbrechen",
       "confirm": "Bestätigen"
+    },
+    "capabilityRecommendations": {
+      "title": "Empfohlene Fähigkeiten",
+      "selectedTitle": "Für diese Aufgabe aktiviert",
+      "loading": "Suche nach Übereinstimmungen...",
+      "empty": "Keine passenden MCPs oder Skills für diese Eingabe gefunden.",
+      "useForTask": "Für diese Aufgabe verwenden",
+      "added": "Hinzugefügt",
+      "enabledByDefault": "Bereits aktiviert",
+      "noDescription": "Keine Beschreibung vorhanden",
+      "remove": "{{name}} entfernen",
+      "mcpLabel": "MCP",
+      "skillLabel": "Skill",
+      "hint": "Basierend auf deiner Aufgabe empfiehlt Poco dir die oben genannten Fähigkeiten. Klicke zum Laden."
     },
     "warnings": {
       "tooManyMcps": "Zu viele MCP-Server aktiviert ({{count}}). Dies kann das Systemladen verlangsamen und die Leistung beeinträchtigen.",
@@ -481,6 +508,28 @@
         "structured": "Structured data",
         "empty": "No data"
       }
+    },
+    "skillCreationReview": {
+      "title": "Erstellten Skill prüfen",
+      "subtitle": "Der Agent hat in dieser Sitzung einen Skill erstellt. Bitte vor dem Speichern prüfen.",
+      "badge": "Vom Agent erstellt",
+      "nameLabel": "Skill-Name",
+      "descriptionLabel": "Beschreibung",
+      "emptyDescription": "Es wurde keine Beschreibung erzeugt.",
+      "pathLabel": "Workspace-Pfad",
+      "conflictWarning": "Ein Skill mit diesem Namen existiert bereits.",
+      "overwriteLabel": "Vorhandenen Skill überschreiben",
+      "filesTitle": "Erzeugte Dateien",
+      "loadingFiles": "Erzeugte Dateien werden geladen…",
+      "emptyFiles": "Noch keine Vorschaudateien verfügbar.",
+      "selectFile": "Wähle eine Datei zur Vorschau aus.",
+      "cancel": "Abbrechen",
+      "confirm": "Skill erstellen",
+      "confirmOverwrite": "Überschreiben und erstellen",
+      "createSuccess": "Skill erstellt",
+      "createFailed": "Skill konnte nicht erstellt werden",
+      "cancelSuccess": "Skill-Erstellung verworfen",
+      "cancelFailed": "Skill-Erstellung konnte nicht verworfen werden"
     }
   },
   "status": {
@@ -590,7 +639,8 @@
       "processing": "Dateiverarbeitung",
       "notSupported": "Vorschau für dieses Format nicht unterstützt",
       "openInNewWindow": "In neuem Fenster öffnen",
-      "downloadOriginal": "Originaldatei herunterladen"
+      "downloadOriginal": "Originaldatei herunterladen",
+      "frontMatter": "Frontmatter"
     },
     "summary": {
       "total": "Gesamt",
@@ -1040,7 +1090,11 @@
       },
       "scope": {
         "system": "System",
-        "user": "Benutzer"
+        "user": "Benutzer",
+        "builtin": "Integriert"
+      },
+      "source": {
+        "skillCreator": "Vom Agent erstellt"
       },
       "fields": {
         "id": "id",
@@ -1060,14 +1114,19 @@
         "actionFailed": "Operation fehlgeschlagen, bitte später erneut versuchen"
       },
       "empty": "Noch keine Skills",
-      "unknownSkill": "Unbekannter Skill"
+      "unknownSkill": "Unbekannter Skill",
+      "sections": {
+        "system": "Integrierte Skills",
+        "custom": "Benutzerdefinierte Skills"
+      }
     },
     "skillsImport": {
       "title": "Skills importieren",
       "tabs": {
         "zip": "Zip hochladen",
         "github": "GitHub-URL",
-        "command": "Import per npx-Befehl"
+        "command": "Import per npx-Befehl",
+        "marketplace": "Skill-Marktplatz"
       },
       "fields": {
         "zip": "Zip-Datei",
@@ -1077,12 +1136,14 @@
       "placeholders": {
         "githubUrl": "https://github.com/owner/repo",
         "name": "z.B. my-skill",
-        "command": "npx skills add https://github.com/owner/repo --skill my-skill"
+        "command": "npx skills add https://github.com/owner/repo --skill my-skill",
+        "marketplaceSearch": "Search SkillsMP skills, for example git automation"
       },
       "hints": {
         "github": "Standardmäßig main/master (nur öffentliche github.com-Repos)",
         "nameRequired": "SKILL.md befindet sich im Archiv-Stammverzeichnis; ein Name ist erforderlich",
-        "command": "Fuge einen add-Befehl ein, wir erkennen GitHub-URL und --skill automatisch."
+        "command": "Fuge einen add-Befehl ein, wir erkennen GitHub-URL und --skill automatisch.",
+        "marketplace": "Discover SkillsMP skills through recommendations or search, then continue with Poco's existing import flow."
       },
       "actions": {
         "back": "Zurück",
@@ -1127,12 +1188,41 @@
         "commitError": "Import fehlgeschlagen, bitte später erneut versuchen",
         "partialFailed": "Einige Skills konnten nicht importiert werden. Bitte Details überprüfen.",
         "commitTimeout": "Import zeitüberschritten, bitte später erneut versuchen",
-        "invalidCommand": "Befehl konnte nicht gelesen werden. Bitte eine github.com-URL angeben."
+        "invalidCommand": "Befehl konnte nicht gelesen werden. Bitte eine github.com-URL angeben.",
+        "marketplaceLoadError": "SkillsMP-Daten konnten nicht geladen werden. Bitte versuche es später erneut.",
+        "marketplaceDiscoverError": "Dieser SkillsMP-Skill konnte nicht aufgelöst werden. Bitte versuche es später erneut."
       },
       "progress": {
         "title": "Import-Fortschritt",
         "value": "Fortschritt",
         "jobId": "Job-ID"
+      },
+      "marketplace": {
+        "search": "Suchen",
+        "reset": "Zur Auswahl zurück",
+        "searchResults": "{{count}} Ergebnisse",
+        "emptySearch": "Keine passenden SkillsMP-Skills gefunden.",
+        "emptyRecommendations": "Derzeit sind keine SkillsMP-Empfehlungen verfügbar.",
+        "download": "Herunterladen",
+        "downloading": "Wird verarbeitet...",
+        "jump": "Öffnen",
+        "noDescription": "Derzeit ist keine Beschreibung verfügbar.",
+        "sections": {
+          "popular": "Beliebt"
+        },
+        "aiSearchTooltip": "AI Search verwenden und den semantischen Such-Endpunkt von SkillsMP nutzen",
+        "refresh": "Empfehlungen aktualisieren",
+        "openInGithub": "In GitHub öffnen",
+        "checkInSkillsmp": "In SkillsMP ansehen",
+        "titleLabel": "Titel",
+        "descriptionLabel": "Beschreibung",
+        "setupTitle": "SkillsMP verbinden und mehr Skills entdecken",
+        "setupDescription": "SkillsMP ist ein Skill-Marketplace, in dem du wiederverwendbare Agent-Skills per Suche oder Popularitaet entdecken kannst.",
+        "setupHint": "Fuege zuerst deinen SkillsMP API-Schluessel unter Einstellungen > Sonstiges hinzu und kehre dann hierher zurueck.",
+        "openSettings": "Einstellungen oeffnen",
+        "invalidKeyTitle": "Dein SkillsMP API-Schluessel ist ungueltig",
+        "invalidKeyDescription": "SkillsMP hat den aktuellen API-Schluessel abgelehnt. Deshalb sind Suche und Empfehlungen im Marketplace derzeit nicht verfuegbar.",
+        "invalidKeyHint": "Oeffne Einstellungen > Sonstiges, aktualisiere den SkillsMP API-Schluessel und versuche es danach hier erneut."
       }
     },
     "pluginsPage": {
@@ -1195,7 +1285,10 @@
       "zip": "ZIP",
       "system": "System",
       "manual": "Manuell",
-      "unknown": "Unbekannt"
+      "unknown": "Unbekannt",
+      "skillCreator": "Skill Creator",
+      "marketplace": "Marketplace",
+      "skillsmp": "SkillsMP"
     },
     "pluginsManager": {
       "toasts": {
@@ -1209,6 +1302,34 @@
     "presetsPage": {
       "header": {
         "title": "Vorlagen"
+      }
+    },
+    "skillSettings": {
+      "title": "Skill-Einstellungen",
+      "subtitle": "Prüfe die Skill-Dateien und aktualisiere die bearbeitbare Konfiguration.",
+      "previewHint": "Wähle links eine Datei aus, um den vollständigen Inhalt anzuzeigen.",
+      "loadingFiles": "Skill-Dateien werden geladen…",
+      "emptyFiles": "Für diesen Skill sind keine Vorschaudateien verfügbar.",
+      "nameLabel": "Skill-Name",
+      "namePlaceholder": "Skill-Namen eingeben",
+      "descriptionLabel": "Beschreibung",
+      "descriptionPlaceholder": "Füge eine kurze Beschreibung für diesen Skill hinzu",
+      "storagePathLabel": "Speicherpfad",
+      "storagePathUnavailable": "Kein Speicherpfad verfügbar.",
+      "readonlyHint": "Integrierte Skills sind schreibgeschützt. Du kannst Dateien hier ansehen, aber nicht bearbeiten.",
+      "nameConflict": "Ein Skill mit diesem Namen existiert bereits.",
+      "toasts": {
+        "saved": "Skill aktualisiert",
+        "saveFailed": "Skill konnte nicht aktualisiert werden"
+      },
+      "source": {
+        "system": "System",
+        "github": "GitHub",
+        "zip": "ZIP-Paket",
+        "manual": "Manuell",
+        "unknown": "Unbekannte Quelle",
+        "marketplace": "Marketplace",
+        "skillsmp": "SkillsMP"
       }
     }
   },
@@ -1274,6 +1395,7 @@
       "account": "Konto",
       "settings": "Einstellungen",
       "models": "Modelle",
+      "other": "Sonstiges",
       "usage": "Nutzung",
       "shortcuts": "Shortcuts"
     },
@@ -1285,7 +1407,6 @@
     "generalSettings": "Allgemeine Einstellungen",
     "darkMode": "Dunkelmodus",
     "backend": "Backend",
-    "modelConfigTitle": "Modellkonfiguration",
     "modelGlm": "GLM-4.7",
     "modelGlmDescription": "GLM-Modell für Aufgabenausführung aktivieren",
     "apiKeys": "API-Schlüssel",
@@ -1301,15 +1422,16 @@
     "anthropicBaseUrl": "Anthropic-Basis-URL",
     "anthropicBaseUrlHint": "Standard-Anthropic-Endpunkt überschreiben.",
     "anthropicBaseUrlPlaceholder": "https://api.anthropic.com",
-    "providerConfigDescription": "Anbieter-Zugangsdaten und die im Auswahlmenü sichtbare Modellliste verwalten.",
     "providerListEmpty": "Noch keine Modellanbieter verfügbar.",
     "providerStatusNone": "Nicht konfiguriert",
     "providerStatusSystem": "Voreingestellter Dienst",
     "providerStatusUser": "Benutzerdefiniert",
     "providerModels": "Gilt für: {{models}}",
-    "providerApiKeyLabel": "{{provider}}-API-Schlüssel",
+    "providerApiKeyLabel": "API-Schlüssel",
     "providerApiKeyHint": "Leer lassen, um den vorhandenen benutzerdefinierten Schlüssel unverändert zu behalten.",
     "providerApiKeyPlaceholder": "{{provider}}-API-Schlüssel eingeben",
+    "providerApiKeyConfigured": "Konfiguriert",
+    "providerNeedConfig": "API-Schlüssel & Modelle konfigurieren",
     "providerBaseUrlLabel": "Benutzerdefinierte Base-URL",
     "providerBaseUrlHint": "Leer lassen, um den Standard-API-Endpunkt zu verwenden.",
     "providerBaseUrlRequired": "Eine Base-URL ist erforderlich, wenn ein benutzerdefinierter Endpunkt aktiviert ist.",
@@ -1382,6 +1504,10 @@
           "action": "Slash command",
           "hint": "Type / to open slash command suggestions."
         },
+        "newTask": {
+          "action": "Neue Aufgabe",
+          "hint": "Neue Aufgabe erstellen und zur Startseite wechseln."
+        },
         "search": {
           "action": "Global search",
           "hint": "Open or close global search dialog."
@@ -1402,13 +1528,41 @@
     },
     "providerDiscoverError": "Modelle des Anbieters konnten nicht geladen werden",
     "providerModelsPlaceholder": "Noch keine benutzerdefinierten Modelle hinzugefuegt",
-    "providerModelsSearchPlaceholder": "Modellnamen eingeben und Enter druecken",
+    "providerModelsSearchPlaceholder": "Modellnamen eingeben, bei mehreren mit Kommas trennen",
     "providerModelsAdd": "Modell hinzufuegen",
     "providerModelsDiscovering": "Modelle werden geladen...",
     "providerModelsManualHint": "Dieser Anbieter unterstützt keine automatische Erkennung. Gib die Modellnamen manuell ein.",
     "providerModelsEmpty": "Keine Modelle gefunden",
     "providerModelsUseCustom": "Benutzerdefiniertes Modell verwenden: {{model}}",
-    "providerFieldAnnotation": "API Key leer lassen, um den aktuellen Schluessel beizubehalten. Base URL leer lassen, um den Standard-Endpunkt zu verwenden. Modellnamen manuell eingeben und mit Enter oder dem Plus hinzufuegen."
+    "providerFieldAnnotation": "API Key leer lassen, um den aktuellen Schluessel beizubehalten. Base URL leer lassen, um den Standard-Endpunkt zu verwenden. Modellnamen manuell eingeben, mehrere mit Kommas trennen und dann auf Speichern klicken oder mit Enter / Hinzufuegen direkt uebernehmen.",
+    "other": {
+      "title": "Weitere Integrationen",
+      "description": "Verwalte zusaetzliche Dienst-Zugangsdaten ausserhalb der Modellanbieter.",
+      "skillsmp": {
+        "title": "SkillsMP",
+        "subtitle": "Aktiviert Marketplace-Suche und Empfehlungen fuer externe Skills.",
+        "description": "SkillsMP API-Schluessel",
+        "statusChecking": "Wird geprueft...",
+        "statusReady": "Bereit",
+        "statusMissing": "Nicht konfiguriert",
+        "keyLabel": "SkillsMP API-Schluessel",
+        "keyPlaceholder": "Gib deinen SkillsMP API-Schluessel ein",
+        "help": "Aktiviert SkillsMP-Suche und Empfehlungen im Skill-Import-Dialog.",
+        "docsLink": "SkillsMP API-Dokumentation",
+        "customKeySaved": "Fuer dieses Konto ist bereits ein benutzerdefinierter Schluessel gespeichert.",
+        "save": "Schluessel speichern",
+        "clear": "Benutzerdefinierten Schluessel entfernen",
+        "clearError": "SkillsMP-Status konnte nicht aktualisiert werden"
+      }
+    },
+    "providerApiKeyLinkText": "Get API key here",
+    "providerModelRemove": "Remove model",
+    "providerModelDocsPrefix": "Sieh dir die ",
+    "providerModelDocsLinkLabel": "{{provider}}-Doku",
+    "providerModelDocsSuffix": " für weitere Modelle an",
+    "providerModelsDialogTitle": "Benutzerdefiniertes Modell hinzufügen",
+    "providerModelsDialogDescription": "Füge manuell die vom Anbieter unterstützten Modell-IDs hinzu.",
+    "providerModelsDialogPlaceholder": "Modell-ID (z. B. gpt-4o-mini)"
   },
   "validation": {
     "projectNameRequired": "Bitte gib einen Projektnamen ein",
@@ -1434,8 +1588,19 @@
   "fileSidebar": {
     "title": "Dateiliste",
     "fileList": "Dateiliste",
+    "actions": "Aktionen",
     "downloadAll": "Alle herunterladen",
+    "download": "Herunterladen",
+    "downloadFile": "Datei herunterladen",
     "noFiles": "Noch keine Dateien",
+    "packageAsSkill": "Als Skill erstellen",
+    "packageSkillTitle": "Ordner als Skill erstellen",
+    "packageSkillDescription": "Diesen Workspace-Ordner zur Skill-Prüfung einreichen.",
+    "skillName": "Skill-Name",
+    "skillNamePlaceholder": "Skill-Namen eingeben",
+    "submitSkill": "Zur Prüfung einreichen",
+    "skillSubmitted": "Skill zur Prüfung eingereicht",
+    "skillSubmitFailed": "Skill konnte nicht eingereicht werden",
     "downloadStarted": "Herunterladen des Arbeitsbereichs-Archivs gestartet",
     "downloadStart": "Herunterladen des Arbeitsbereichs-Archivs gestartet",
     "archiveNotAvailable": "Archivdatei noch nicht verfügbar",

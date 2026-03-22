@@ -4,14 +4,17 @@ repos:
     hooks:
       - id: ruff-check
         name: backend · lint
+        exclude: ^backend/assets/
       - id: ruff-format
         name: backend · format
+        exclude: ^backend/assets/
 
   - repo: https://github.com/facebook/pyrefly-pre-commit
     rev: 0.47.0
     hooks:
       - id: pyrefly-check
         name: backend · typecheck
+        exclude: ^backend/assets/
         pass_filenames: true
         language: system
 
@@ -20,15 +23,18 @@ repos:
     hooks:
       - id: eslint
         name: frontend · lint
+        exclude: ^backend/assets/
         args: ["--config", "frontend/eslint.config.mjs"]
         files: ^frontend/.*\.[jt]sx?$
         types: [file]
         additional_dependencies:
-          - eslint
-          - eslint-config-next
+          - eslint@9.39.1
+          - eslint-config-next@16.1.1
+          - eslint-config-prettier@10.1.8
 
   - repo: https://github.com/rbubley/mirrors-prettier
     rev: v3.7.4
     hooks:
       - id: prettier
         name: frontend · format
+        exclude: ^backend/assets/

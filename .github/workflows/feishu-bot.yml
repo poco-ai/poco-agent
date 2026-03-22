@@ -26,10 +26,8 @@ on:
   project_column:
     types: [created, deleted]
   pull_request:
-    branches: ["main"]
+    branches: ["main", "dev"]
     types: [opened, reopened]
-  pull_request_target:
-    types: [assigned, opened, synchronize, reopened]
   registry_package:
     types: [published]
   release:

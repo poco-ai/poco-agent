@@ -1,0 +1,31 @@
+---
+title: 常用操作
+description: 默认访问地址、配置入口与部署后的日常操作。
+---
+
+> 如果你使用的是 `docker-compose.r2.yml`，请在下列命令中追加 `-f docker-compose.r2.yml`。
+
+查看日志：
+
+```bash
+docker compose logs -f backend executor-manager
+```
+
+更新到最新镜像（或拉取你指定的 tag）：
+
+```bash
+docker compose pull
+docker compose up -d
+```
+
+停止：
+
+```bash
+docker compose down
+```
+
+停止并清理数据（会删除 Postgres/对象存储 volume）：
+
+```bash
+docker compose down -v
+```

@@ -51,6 +51,7 @@ export function TaskActionsDropdown({
   children,
 }: TaskActionsDropdownProps) {
   const { t } = useT("translation");
+  const canMoveToProject = Boolean(onMoveToProject) && projects.length > 0;
 
   return (
     <DropdownMenu open={open} onOpenChange={onOpenChange}>
@@ -84,7 +85,7 @@ export function TaskActionsDropdown({
           </DropdownMenuItem>
         )}
 
-        {onMoveToProject ? (
+        {canMoveToProject ? (
           <DropdownMenuSub>
             <DropdownMenuSubTrigger className="focus:bg-muted focus:text-foreground data-[state=open]:bg-muted data-[state=open]:text-foreground">
               <FolderPlus className="size-4" />
@@ -97,7 +98,7 @@ export function TaskActionsDropdown({
                   className="focus:bg-muted focus:text-foreground"
                   onClick={(event) => {
                     event.stopPropagation();
-                    void onMoveToProject(taskId, project.id);
+                    void onMoveToProject?.(taskId, project.id);
                   }}
                 >
                   <span className="truncate">{project.name}</span>
@@ -105,12 +106,7 @@ export function TaskActionsDropdown({
               ))}
             </DropdownMenuSubContent>
           </DropdownMenuSub>
-        ) : (
-          <DropdownMenuItem disabled>
-            <FolderPlus className="size-4" />
-            <span>{t("sidebar.moveToProject")}</span>
-          </DropdownMenuItem>
-        )}
+        ) : null}
 
         <DropdownMenuItem
           variant="destructive"

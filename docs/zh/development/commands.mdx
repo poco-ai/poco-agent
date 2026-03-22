@@ -1,0 +1,45 @@
+---
+title: 开发命令
+description: 前端、Python 服务、数据库迁移与 pre-commit 的常用命令。
+---
+
+## Frontend
+
+```bash
+cd frontend
+pnpm install
+pnpm dev
+pnpm build
+pnpm start
+pnpm lint
+pnpm format
+```
+
+## Python 服务
+
+每个 Python 服务目录下都有独立的 `pyproject.toml`。
+
+```bash
+cd <service>
+uv sync
+uv run python -m app.main
+uvicorn app.main:app --reload
+```
+
+## 数据库迁移
+
+```bash
+cd backend
+uv run -m alembic revision --autogenerate -m "description"
+uv run -m alembic upgrade head
+uv run -m alembic downgrade -1
+```
+
+建议始终先自动生成迁移，再执行升级，并在合并前人工复核生成的 revision 文件。
+
+## Pre-commit
+
+```bash
+pre-commit install
+pre-commit run --all-files
+```

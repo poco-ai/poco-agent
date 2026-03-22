@@ -17,6 +17,12 @@ from app.schemas.session import TaskConfig
 from app.schemas.task import TaskEnqueueRequest, TaskEnqueueResponse
 from app.services.session_queue_service import SessionQueueService
 from app.services.model_config_service import get_allowed_model_ids, infer_provider_id
+from app.services.model_config_service import (
+    PROVIDER_SPEC_MAP,
+    get_allowed_model_ids,
+    infer_provider_id,
+)
+from app.services.session_queue_service import SessionQueueService
 
 
 class TaskService:
@@ -29,7 +35,7 @@ class TaskService:
         Rules:
         - `model` unset/empty -> removed and clear `model_provider_id`
         - `model` equals settings.default_model -> removed and clear `model_provider_id`
-        - explicit `model_provider_id` wins over provider inference
+        - explicit `model_provider_id` must be a known provider and match the inferred provider when available
         - otherwise `model` must be in the backend model catalog or belong to a known provider
         """
         if not isinstance(config, dict):
@@ -65,18 +71,33 @@ class TaskService:
             return
 
         raw_provider_id = config.get("model_provider_id")
-        provider_id = (
-            raw_provider_id.strip()
-            if isinstance(raw_provider_id, str) and raw_provider_id.strip()
-            else None
-        )
+        if raw_provider_id is None:
+            provider_id = None
+        elif isinstance(raw_provider_id, str):
+            provider_id = raw_provider_id.strip() or None
+        else:
+            raise AppException(
+                error_code=ErrorCode.BAD_REQUEST,
+                message="model_provider_id must be a string or null",
+            )
+
         inferred_provider_id = infer_provider_id(value)
+        if provider_id and provider_id not in PROVIDER_SPEC_MAP:
+            raise AppException(
+                error_code=ErrorCode.BAD_REQUEST,
+                message=f"Invalid model provider: {provider_id}",
+            )
 
         allowed = set(get_allowed_model_ids(settings))
         if value not in allowed and not provider_id and inferred_provider_id is None:
             raise AppException(
                 error_code=ErrorCode.BAD_REQUEST,
                 message=f"Invalid model: {value}",
+            )
+        if provider_id and inferred_provider_id and provider_id != inferred_provider_id:
+            raise AppException(
+                error_code=ErrorCode.BAD_REQUEST,
+                message=f"Invalid model/provider pair: {provider_id}/{value}",
             )
 
         config["model"] = value

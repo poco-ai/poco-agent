@@ -124,6 +124,33 @@ services:
       SECRET_KEY: ${BACKEND_SECRET_KEY:-change-this-secret-key-in-production}
       INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:-change-this-token-in-production}
       EXECUTOR_MANAGER_URL: http://executor-manager:8001
+      BACKEND_USER_ID: ${BACKEND_USER_ID:-default}
+      FRONTEND_PUBLIC_URL: ${FRONTEND_PUBLIC_URL:-http://localhost:3000}
+      FRONTEND_DEFAULT_LANG: ${FRONTEND_DEFAULT_LANG:-zh}
+      IM_EVENT_DISPATCH_ENABLED: ${IM_EVENT_DISPATCH_ENABLED:-false}
+      IM_EVENT_DISPATCH_INTERVAL_SECONDS: ${IM_EVENT_DISPATCH_INTERVAL_SECONDS:-0.5}
+      IM_EVENT_DISPATCH_BATCH_SIZE: ${IM_EVENT_DISPATCH_BATCH_SIZE:-20}
+      IM_EVENT_DISPATCH_LEASE_SECONDS: ${IM_EVENT_DISPATCH_LEASE_SECONDS:-30}
+
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_WEBHOOK_SECRET_TOKEN: ${TELEGRAM_WEBHOOK_SECRET_TOKEN:-}
+
+      DINGTALK_ENABLED: ${DINGTALK_ENABLED:-true}
+      DINGTALK_WEBHOOK_TOKEN: ${DINGTALK_WEBHOOK_TOKEN:-}
+      DINGTALK_STREAM_ENABLED: ${DINGTALK_STREAM_ENABLED:-true}
+      DINGTALK_STREAM_SUBSCRIBE_EVENTS: ${DINGTALK_STREAM_SUBSCRIBE_EVENTS:-false}
+      DINGTALK_CLIENT_ID: ${DINGTALK_CLIENT_ID:-}
+      DINGTALK_CLIENT_SECRET: ${DINGTALK_CLIENT_SECRET:-}
+      DINGTALK_ROBOT_CODE: ${DINGTALK_ROBOT_CODE:-}
+      DINGTALK_OPEN_BASE_URL: ${DINGTALK_OPEN_BASE_URL:-https://api.dingtalk.com}
+      DINGTALK_WEBHOOK_URL: ${DINGTALK_WEBHOOK_URL:-}
+
+      FEISHU_ENABLED: ${FEISHU_ENABLED:-false}
+      FEISHU_STREAM_ENABLED: ${FEISHU_STREAM_ENABLED:-true}
+      FEISHU_APP_ID: ${FEISHU_APP_ID:-}
+      FEISHU_APP_SECRET: ${FEISHU_APP_SECRET:-}
+      FEISHU_VERIFICATION_TOKEN: ${FEISHU_VERIFICATION_TOKEN:-}
+      FEISHU_BASE_URL: ${FEISHU_BASE_URL:-https://open.feishu.cn}
 
       S3_ENDPOINT: ${S3_ENDPOINT:-http://rustfs:9000}
       S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT:-http://localhost:9000}
@@ -201,8 +228,12 @@ services:
 
       # Image used by the manager to spawn executor containers via docker.sock.
       EXECUTOR_IMAGE: ${EXECUTOR_IMAGE:-ghcr.io/poco-ai/poco-executor:lite}
+      # Prefer local images first when enabled; fall back to the remote image settings below.
+      EXECUTOR_PREFER_LOCAL_IMAGE: ${EXECUTOR_PREFER_LOCAL_IMAGE:-false}
+      EXECUTOR_LOCAL_IMAGE: ${EXECUTOR_LOCAL_IMAGE:-}
       # Optional: executor image with desktop/browser stack (used when browser_enabled=true).
       EXECUTOR_BROWSER_IMAGE: ${EXECUTOR_BROWSER_IMAGE:-ghcr.io/poco-ai/poco-executor:full}
+      EXECUTOR_LOCAL_BROWSER_IMAGE: ${EXECUTOR_LOCAL_BROWSER_IMAGE:-}
       # Default desktop viewport for browser-enabled runs (Playwright MCP).
       POCO_BROWSER_VIEWPORT_SIZE: ${POCO_BROWSER_VIEWPORT_SIZE:-1366x768}
       # Default Playwright MCP output handling for browser-enabled runs.
@@ -299,7 +330,6 @@ services:
 
     ports:
       - "8002:8002"
-
 volumes:
   postgres_data:
   mem0_postgres_data:

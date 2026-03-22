@@ -53,6 +53,11 @@ def build_nodes_from_manifest(manifest: Any) -> list[dict[str, Any]]:
             return nodes
 
     files = extract_manifest_files(manifest)
+    return build_nodes_from_file_entries(files)
+
+
+def build_nodes_from_file_entries(files: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Build a hierarchical node tree from flat file entry records."""
     return _build_tree_from_files(files)
 
 

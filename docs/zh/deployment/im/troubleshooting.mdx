@@ -1,0 +1,31 @@
+---
+title: IM 故障排查
+description: 排查 Telegram 与钉钉接入中的常见问题。
+---
+
+## Telegram 能 setWebhook 成功但机器人不回消息
+
+按顺序检查：
+
+1. IM 是否真的在运行，`GET /api/v1/health` 是否正常
+2. 环境变量是否写在正确文件（根 `.env` vs `im/.env`）
+3. `TELEGRAM_BOT_TOKEN` 是否生效
+4. 若配置了 `TELEGRAM_WEBHOOK_SECRET_TOKEN`，`setWebhook` 是否传了同值 `secret_token`
+5. 查看 IM 日志是否有：
+   - `Invalid webhook token`
+   - `im_provider_disabled`
+   - `telegram_send_failed`
+
+## 钉钉消息收不到
+
+1. `DINGTALK_ENABLED=true` 是否生效
+2. Stream 模式下 `DINGTALK_CLIENT_ID/SECRET/ROBOT_CODE` 是否正确
+3. Webhook 模式下 token 校验是否一致
+4. 群聊中是否 `@机器人`
+
+## `/help` 可以，但普通文本不触发任务
+
+这通常是未连接会话导致：
+
+- 先执行 `/new <任务>` 或 `/connect <session_id>`
+- 再发送普通文本续聊

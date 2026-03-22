@@ -5,6 +5,7 @@
   "language": "Language",
   "sidebar": {
     "newTask": "New Task",
+    "newTaskWithShortcut": "New Task ({{shortcut}})",
     "search": "Search",
     "library": "Capabilities",
     "openMain": "Open main sidebar",
@@ -47,6 +48,15 @@
   },
   "hero": {
     "title": "What can I do for you?",
+    "rotatingWords": [
+      "Create slides",
+      "Search for information",
+      "Make mind maps",
+      "Analyze GitHub repos",
+      "Analyze data",
+      "Plan trips",
+      "Write code"
+    ],
     "subtitle": "Assign a task, or ask any question.",
     "uploadFile": "Upload file",
     "dragDrop": {
@@ -66,7 +76,7 @@
       "planDefault": "Plan first, then execute. Best for complex tasks.",
       "shortcutHint": "/ for Slash Command, Shift+Enter for new line, Enter to send"
     },
-    "tools": "Connect your tools to Poco",
+    "tools": "Give Poco more capabilities",
     "importFigma": "Import from Figma (coming soon)",
     "connect": "Connect",
     "configure": "Configure",
@@ -132,6 +142,9 @@
       "disabledTooltipDescription": "Turn it on to let Poco use the browser for web viewing and web-related tasks.",
       "enabledHint": "Enabled"
     },
+    "memory": {
+      "toggle": "Memory"
+    },
     "runSchedule": {
       "toggle": "Run time",
       "dialogTitle": "Run time",
@@ -189,7 +202,8 @@
       "noDescription": "No description provided",
       "remove": "Remove {{name}}",
       "mcpLabel": "MCP",
-      "skillLabel": "Skill"
+      "skillLabel": "Skill",
+      "hint": "Based on your task, Poco recommends the above capabilities for you. Click to load."
     },
     "warnings": {
       "tooManyMcps": "Too many MCP servers enabled ({{count}}). This may slow down system loading and reduce performance.",
@@ -262,6 +276,9 @@
     "planApprovalApprove": "Approve & run",
     "planApprovalReject": "Reject",
     "planApprovalEmpty": "No plan provided",
+    "enterPlanModeTitle": "Enter Planning Mode",
+    "enterPlanModeHint": "Agent will plan execution steps first and wait for your approval before starting.",
+    "enterPlanModeConfirm": "Enter Planning",
     "askUserTimeout": "Time left {{seconds}}s",
     "askUserPrevious": "Previous",
     "askUserNext": "Next",
@@ -496,6 +513,28 @@
         "structured": "Structured data",
         "empty": "No data"
       }
+    },
+    "skillCreationReview": {
+      "title": "Review created skill",
+      "subtitle": "The agent created a skill in this session. Review it before saving.",
+      "badge": "Created by agent",
+      "nameLabel": "Skill name",
+      "descriptionLabel": "Description",
+      "emptyDescription": "No description was generated.",
+      "pathLabel": "Workspace path",
+      "conflictWarning": "A skill with this name already exists.",
+      "overwriteLabel": "Overwrite the existing skill",
+      "filesTitle": "Generated files",
+      "loadingFiles": "Loading generated files…",
+      "emptyFiles": "No preview files are available yet.",
+      "selectFile": "Select a file to preview it.",
+      "cancel": "Cancel",
+      "confirm": "Create skill",
+      "confirmOverwrite": "Overwrite & create",
+      "createSuccess": "Skill created",
+      "createFailed": "Failed to create skill",
+      "cancelSuccess": "Skill creation dismissed",
+      "cancelFailed": "Failed to dismiss skill creation"
     }
   },
   "status": {
@@ -599,6 +638,7 @@
       "loadingDoc": "Reading document...",
       "parseError": "Failed to parse Excalidraw file",
       "fetchError": "Failed to fetch document content",
+      "frontMatter": "Front matter",
       "retry": "Retry",
       "selectFile": "Please select a file from the right to preview",
       "supportedFormats": "Supports PDF, Office documents, common image formats, MP4 videos, XMind files, .excalidraw files, and .drawio files",
@@ -1063,7 +1103,11 @@
       },
       "scope": {
         "system": "System",
-        "user": "User"
+        "user": "User",
+        "builtin": "Built-in"
+      },
+      "source": {
+        "skillCreator": "Created by agent"
       },
       "fields": {
         "id": "id",
@@ -1083,14 +1127,19 @@
         "actionFailed": "Operation failed, please try again later"
       },
       "empty": "No skills yet",
-      "unknownSkill": "Unknown skill"
+      "unknownSkill": "Unknown skill",
+      "sections": {
+        "system": "Built-in skills",
+        "custom": "Custom skills"
+      }
     },
     "skillsImport": {
       "title": "Import Skills",
       "tabs": {
         "zip": "Upload Zip",
         "github": "GitHub URL",
-        "command": "Import via npx command"
+        "command": "Import via npx command",
+        "marketplace": "Marketplace"
       },
       "fields": {
         "zip": "Zip file",
@@ -1100,12 +1149,14 @@
       "placeholders": {
         "githubUrl": "https://github.com/owner/repo",
         "name": "e.g. my-skill",
-        "command": "npx skills add https://github.com/owner/repo --skill my-skill"
+        "command": "npx skills add https://github.com/owner/repo --skill my-skill",
+        "marketplaceSearch": "Search SkillsMP skills, for example git automation"
       },
       "hints": {
         "github": "Defaults to main/master (public github.com repos only)",
         "nameRequired": "SKILL.md is at archive root; a name is required",
-        "command": "Paste an add command, and we will parse the GitHub URL and --skill automatically."
+        "command": "Paste an add command, and we will parse the GitHub URL and --skill automatically.",
+        "marketplace": "Discover SkillsMP skills through recommendations or search, then continue with Poco's existing import flow."
       },
       "actions": {
         "back": "Back",
@@ -1150,12 +1201,41 @@
         "commitError": "Import failed, please try again later",
         "partialFailed": "Some skills failed to import. Please review the details.",
         "commitTimeout": "Import timed out, please try again later",
-        "invalidCommand": "Unable to parse command. Please include a github.com URL."
+        "invalidCommand": "Unable to parse command. Please include a github.com URL.",
+        "marketplaceLoadError": "Failed to load SkillsMP data. Please try again later.",
+        "marketplaceDiscoverError": "Failed to resolve this SkillsMP skill. Please try again later."
       },
       "progress": {
         "title": "Import progress",
         "value": "Progress",
         "jobId": "Job ID"
+      },
+      "marketplace": {
+        "search": "Search",
+        "reset": "Back to picks",
+        "searchResults": "{{count}} results",
+        "emptySearch": "No SkillsMP skills matched your search.",
+        "emptyRecommendations": "No SkillsMP recommendations are available right now.",
+        "download": "Download",
+        "downloading": "Working...",
+        "jump": "Open",
+        "noDescription": "No description is available yet.",
+        "sections": {
+          "popular": "Popular"
+        },
+        "aiSearchTooltip": "Use AI Search with the SkillsMP semantic search endpoint",
+        "refresh": "Refresh recommendations",
+        "openInGithub": "Open in GitHub",
+        "checkInSkillsmp": "Check in SkillsMP",
+        "titleLabel": "Title",
+        "descriptionLabel": "Description",
+        "setupTitle": "Connect SkillsMP to explore more skills",
+        "setupDescription": "SkillsMP is a skill marketplace where you can discover reusable agent skills by popularity or search.",
+        "setupHint": "Add your SkillsMP API key in Settings > Other, then return here to browse marketplace results.",
+        "openSettings": "Open Settings",
+        "invalidKeyTitle": "Your SkillsMP API key is invalid",
+        "invalidKeyDescription": "SkillsMP rejected the current API key, so marketplace search and recommendations are unavailable.",
+        "invalidKeyHint": "Open Settings > Other, update the SkillsMP API key, then come back here to try again."
       }
     },
     "pluginsManager": {
@@ -1312,7 +1392,10 @@
       "zip": "ZIP",
       "system": "System",
       "manual": "Manual",
-      "unknown": "Unknown"
+      "unknown": "Unknown",
+      "skillCreator": "Skill Creator",
+      "marketplace": "Marketplace",
+      "skillsmp": "SkillsMP"
     },
     "presets": {
       "title": "Presets",
@@ -1321,6 +1404,34 @@
     "presetsPage": {
       "header": {
         "title": "Presets"
+      }
+    },
+    "skillSettings": {
+      "title": "Skill settings",
+      "subtitle": "Review the skill files and update the editable configuration.",
+      "previewHint": "Select a file on the left to preview the complete content.",
+      "loadingFiles": "Loading skill files…",
+      "emptyFiles": "No preview files are available for this skill.",
+      "nameLabel": "Skill name",
+      "namePlaceholder": "Enter a skill name",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "Add a brief summary for this skill",
+      "storagePathLabel": "Storage path",
+      "storagePathUnavailable": "No storage path available.",
+      "readonlyHint": "Built-in skills are read-only. You can preview files here, but editing is disabled.",
+      "nameConflict": "A skill with this name already exists.",
+      "toasts": {
+        "saved": "Skill updated",
+        "saveFailed": "Failed to update skill"
+      },
+      "source": {
+        "system": "System",
+        "github": "GitHub",
+        "zip": "ZIP package",
+        "manual": "Manual",
+        "unknown": "Unknown source",
+        "marketplace": "Marketplace",
+        "skillsmp": "SkillsMP"
       }
     }
   },
@@ -1387,6 +1498,7 @@
       "account": "Account",
       "settings": "Settings",
       "models": "Models",
+      "other": "Other",
       "usage": "Usage",
       "shortcuts": "Shortcuts"
     },
@@ -1398,7 +1510,6 @@
     "generalSettings": "General Settings",
     "darkMode": "Dark mode",
     "backend": "Backend",
-    "modelConfigTitle": "Model Configuration",
     "modelGlm": "GLM-4.7",
     "modelGlmDescription": "Enable GLM model for task execution",
     "apiKeys": "API Keys",
@@ -1414,17 +1525,18 @@
     "anthropicBaseUrl": "Anthropic Base URL",
     "anthropicBaseUrlHint": "Override the default Anthropic API endpoint.",
     "anthropicBaseUrlPlaceholder": "https://api.anthropic.com",
-    "providerConfigDescription": "Manage provider credentials and the model list exposed to the selector.",
     "providerListEmpty": "No model providers available yet.",
     "providerStatusNone": "Unconfigured",
     "providerStatusSystem": "Preset Service",
     "providerStatusUser": "Custom",
     "providerModels": "Applies to: {{models}}",
-    "providerApiKeyLabel": "{{provider}} API Key",
+    "providerApiKeyLabel": "API Key",
     "providerApiKeyHint": "Leave this blank to keep the existing custom key unchanged.",
     "providerApiKeyPlaceholder": "Enter your {{provider}} API key",
-    "providerBaseUrlLabel": "Custom Base URL",
-    "providerBaseUrlHint": "Leave this blank to use the default API endpoint.",
+    "providerApiKeyConfigured": "Configured",
+    "providerNeedConfig": "Configure API Key & models",
+    "providerBaseUrlLabel": "API Endpoint",
+    "providerBaseUrlHint": "Leave blank for default",
     "providerBaseUrlRequired": "Base URL is required when custom endpoint is enabled.",
     "providerSaveSuccess": "Provider settings saved",
     "providerSaveError": "Failed to save provider settings",
@@ -1495,6 +1607,10 @@
           "action": "Slash command",
           "hint": "Type / to open slash command suggestions."
         },
+        "newTask": {
+          "action": "New task",
+          "hint": "Create a new task and go to home."
+        },
         "search": {
           "action": "Global search",
           "hint": "Open or close global search dialog."
@@ -1515,13 +1631,41 @@
     },
     "providerDiscoverError": "Failed to discover provider models",
     "providerModelsPlaceholder": "No custom models added yet",
-    "providerModelsSearchPlaceholder": "Enter a model name, then press Enter",
+    "providerModelsSearchPlaceholder": "Enter model names, separated by commas if needed",
     "providerModelsAdd": "Add model",
     "providerModelsDiscovering": "Loading models...",
     "providerModelsManualHint": "Discovery is unavailable for this provider. Enter the model names manually.",
     "providerModelsEmpty": "No models found",
     "providerModelsUseCustom": "Use custom model: {{model}}",
-    "providerFieldAnnotation": "Leave API Key blank to keep the current key. Leave Base URL blank to use the default endpoint. Enter model names manually and press Enter or click add."
+    "providerFieldAnnotation": "Leave API Key blank to keep the current key. Leave Base URL blank to use the default endpoint. Enter model names manually, separate multiple models with commas, then click Save or press Enter / Add to apply them.",
+    "other": {
+      "title": "Other Integrations",
+      "description": "Manage extra service credentials that do not belong to model providers.",
+      "skillsmp": {
+        "title": "SkillsMP",
+        "subtitle": "Enable marketplace search and recommendations for external skills.",
+        "description": "SkillsMP API key",
+        "statusChecking": "Checking...",
+        "statusReady": "Ready",
+        "statusMissing": "Not configured",
+        "keyLabel": "SkillsMP API Key",
+        "keyPlaceholder": "Enter your SkillsMP API key",
+        "help": "Use it to enable SkillsMP marketplace search and recommendation requests inside the skill import dialog.",
+        "docsLink": "SkillsMP API docs",
+        "customKeySaved": "A custom user-level key is already stored for this account.",
+        "save": "Save key",
+        "clear": "Remove custom key",
+        "clearError": "Failed to refresh SkillsMP status"
+      }
+    },
+    "providerApiKeyLinkText": "Get API key here",
+    "providerModelRemove": "Remove model",
+    "providerModelDocsPrefix": "View ",
+    "providerModelDocsLinkLabel": "{{provider}} docs",
+    "providerModelDocsSuffix": " for more models",
+    "providerModelsDialogTitle": "Add custom model",
+    "providerModelsDialogDescription": "Manually register the provider's model IDs.",
+    "providerModelsDialogPlaceholder": "Model ID (e.g. gpt-4o-mini)"
   },
   "validation": {
     "projectNameRequired": "Please enter a project name",
@@ -1547,8 +1691,19 @@
   "fileSidebar": {
     "title": "File List",
     "fileList": "File List",
+    "actions": "Actions",
     "downloadAll": "Download all",
+    "download": "Download",
+    "downloadFile": "Download file",
     "noFiles": "No files yet",
+    "packageAsSkill": "Package as Skill",
+    "packageSkillTitle": "Package folder as skill",
+    "packageSkillDescription": "Submit this workspace folder for skill review.",
+    "skillName": "Skill name",
+    "skillNamePlaceholder": "Enter a skill name",
+    "submitSkill": "Submit for review",
+    "skillSubmitted": "Skill submitted for review",
+    "skillSubmitFailed": "Failed to submit skill for review",
     "downloadStarted": "Starting workspace archive download",
     "downloadStart": "Starting workspace archive download",
     "archiveNotAvailable": "Archive file not available yet",
@@ -1589,7 +1744,7 @@
     "apps": "Apps",
     "comingSoon": "Coming soon",
     "clickForDetails": "Click for details",
-    "connectTools": "Connect your tools to Poco"
+    "connectTools": "Give Poco more capabilities"
   },
   "fileChange": {
     "previewDisabled": "Executing, preview not available",

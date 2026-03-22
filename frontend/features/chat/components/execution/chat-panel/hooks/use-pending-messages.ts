@@ -6,6 +6,7 @@ import {
 } from "@/features/chat/actions/session-actions";
 import { getQueuedQueriesAction } from "@/features/chat/actions/query-actions";
 import type { ExecutionSession, InputFile } from "@/features/chat/types";
+import type { ModelSelection } from "@/features/chat/lib/model-catalog";
 
 const PENDING_MESSAGE_POLLING_INTERVAL = 3000;
 
@@ -17,6 +18,7 @@ export interface PendingMessage {
   id: string;
   content: string;
   attachments?: InputFile[];
+  modelSelection?: ModelSelection | null;
   status: "queued" | "paused";
   sequenceNo: number;
 }
@@ -94,7 +96,26 @@ export function usePendingMessages({
       const items = await getQueuedQueriesAction({ sessionId });
       if (requestIdRef.current !== requestId) return;
       lastLoadedSessionIdRef.current = sessionId;
-      setPendingMessages(sortPendingMessages(items.map(toPendingMessage)));
+
+      // Check for duplicate/undefined IDs
+      const ids = items.map((item) => item?.queue_item_id);
+      const uniqueIds = new Set(ids);
+      if (ids.length !== uniqueIds.size) {
+        console.error("[PendingMessages] Duplicate IDs detected!", {
+          ids,
+          items,
+        });
+      }
+      const undefinedIds = items.filter((item) => !item?.queue_item_id);
+      if (undefinedIds.length > 0) {
+        console.error(
+          "[PendingMessages] Items with undefined IDs:",
+          undefinedIds,
+        );
+      }
+
+      const messages = items.map(toPendingMessage);
+      setPendingMessages(sortPendingMessages(messages));
     } catch (error) {
       console.error("[PendingMessages] Failed to load queued queries:", error);
       if (requestIdRef.current !== requestId) return;
@@ -205,8 +226,9 @@ export function usePendingMessages({
         await refreshPendingMessages();
         return result;
       } catch (error) {
+        console.error("[PendingMessages] Failed to send queued query:", error);
         void refreshPendingMessages();
-        throw error;
+        return null;
       }
     },
     [refreshPendingMessages, sessionId],

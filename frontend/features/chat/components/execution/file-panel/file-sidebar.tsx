@@ -11,6 +11,8 @@ import {
   ChevronRight,
   ChevronDown,
   Download,
+  PackagePlus,
+  Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { FileNode } from "@/features/chat/types";
@@ -19,6 +21,12 @@ import { toast } from "sonner";
 import { PanelHeaderAction } from "@/components/shared/panel-header";
 import { useT } from "@/lib/i18n/client";
 import { useIsMobile } from "@/hooks/use-mobile";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface FileSidebarProps {
   files: FileNode[];
@@ -26,6 +34,36 @@ interface FileSidebarProps {
   selectedFile?: FileNode;
   sessionId?: string;
   embedded?: boolean;
+  onPackageSkill?: (node: FileNode) => void;
+  onDownloadNode?: (node: FileNode) => void;
+}
+
+function collectSkillFolderPaths(nodes: FileNode[]): Set<string> {
+  const skillFolderPaths = new Set<string>();
+
+  const visit = (items: FileNode[]) => {
+    for (const item of items) {
+      if (item.type !== "folder") {
+        continue;
+      }
+
+      const children = item.children ?? [];
+      if (
+        children.some(
+          (child) => child.type === "file" && child.name === "SKILL.md",
+        )
+      ) {
+        skillFolderPaths.add(item.path);
+      }
+
+      if (children.length > 0) {
+        visit(children);
+      }
+    }
+  };
+
+  visit(nodes);
+  return skillFolderPaths;
 }
 
 const isSameOriginUrl = (url: string) => {
@@ -47,7 +85,7 @@ const triggerDownload = (url: string, filename: string) => {
   document.body.removeChild(link);
 };
 
-const downloadFileFromUrl = async (url: string, filename: string) => {
+export const downloadFileFromUrl = async (url: string, filename: string) => {
   const absoluteUrl = new URL(url, window.location.origin).toString();
   try {
     const response = await fetch(absoluteUrl, {
@@ -75,14 +113,33 @@ function FileTreeItem({
   onSelect,
   selectedId,
   level = 0,
+  onPackageSkill,
+  onDownloadNode,
+  canDownloadFolder,
+  skillFolderPaths,
 }: {
   node: FileNode;
   onSelect: (file: FileNode) => void;
   selectedId?: string;
   level?: number;
+  onPackageSkill?: (node: FileNode) => void;
+  onDownloadNode?: (node: FileNode) => void;
+  canDownloadFolder: boolean;
+  skillFolderPaths: ReadonlySet<string>;
 }) {
   const [isExpanded, setIsExpanded] = React.useState(level === 0);
+  const [isActionsOpen, setIsActionsOpen] = React.useState(false);
   const isMobile = useIsMobile();
+  const { t } = useT("translation");
+  const canDownloadNode =
+    Boolean(onDownloadNode) &&
+    ((node.type === "file" && Boolean(node.url)) ||
+      (node.type === "folder" && canDownloadFolder));
+  const canPackageAsSkill =
+    node.type === "folder" &&
+    skillFolderPaths.has(node.path) &&
+    Boolean(onPackageSkill);
+  const hasActions = canDownloadNode || canPackageAsSkill;
 
   // Check if this node or any of its children is the selected one
   const containsSelected = React.useMemo(() => {
@@ -208,6 +265,52 @@ function FileTreeItem({
         >
           {node.name}
         </span>
+        {hasActions ? (
+          <DropdownMenu open={isActionsOpen} onOpenChange={setIsActionsOpen}>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className={cn(
+                  "flex size-6 shrink-0 items-center justify-center rounded-md text-sidebar-foreground/60 transition-opacity hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:opacity-100 focus-visible:pointer-events-auto",
+                  isActionsOpen
+                    ? "opacity-100 pointer-events-auto"
+                    : "opacity-0 pointer-events-none group-hover/item:opacity-100 group-hover/item:pointer-events-auto group-focus-within/item:opacity-100 group-focus-within/item:pointer-events-auto",
+                )}
+                aria-label={t("fileSidebar.actions")}
+                title={t("fileSidebar.actions")}
+                onClick={(event) => {
+                  event.stopPropagation();
+                }}
+              >
+                <Settings className="size-3.5" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" sideOffset={4}>
+              {canDownloadNode ? (
+                <DropdownMenuItem
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onDownloadNode?.(node);
+                  }}
+                >
+                  <Download className="mr-2 size-4" />
+                  {t("fileSidebar.download")}
+                </DropdownMenuItem>
+              ) : null}
+              {canPackageAsSkill ? (
+                <DropdownMenuItem
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onPackageSkill?.(node);
+                  }}
+                >
+                  <PackagePlus className="mr-2 size-4" />
+                  {t("fileSidebar.packageAsSkill")}
+                </DropdownMenuItem>
+              ) : null}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : null}
       </div>
       {node.type === "folder" && isExpanded && node.children && (
         <div className="w-full min-w-0 max-w-full basis-full overflow-hidden">
@@ -218,6 +321,10 @@ function FileTreeItem({
               onSelect={onSelect}
               selectedId={selectedId}
               level={level + 1}
+              onPackageSkill={onPackageSkill}
+              onDownloadNode={onDownloadNode}
+              canDownloadFolder={canDownloadFolder}
+              skillFolderPaths={skillFolderPaths}
             />
           ))}
         </div>
@@ -232,9 +339,25 @@ export function FileSidebar({
   selectedFile,
   sessionId,
   embedded = false,
+  onPackageSkill,
+  onDownloadNode,
 }: FileSidebarProps) {
   const { t } = useT("translation");
   const canDownloadArchive = Boolean(sessionId) && files.length > 0;
+  const canDownloadFolder = Boolean(sessionId);
+  const [skillFolderPaths, setSkillFolderPaths] = React.useState<Set<string>>(
+    () => new Set(),
+  );
+
+  React.useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setSkillFolderPaths(collectSkillFolderPaths(files));
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [files]);
 
   const handleDownload = async () => {
     if (!sessionId || !canDownloadArchive) return;
@@ -293,6 +416,10 @@ export function FileSidebar({
                 node={file}
                 onSelect={onFileSelect}
                 selectedId={selectedFile?.id}
+                onPackageSkill={onPackageSkill}
+                onDownloadNode={onDownloadNode}
+                canDownloadFolder={canDownloadFolder}
+                skillFolderPaths={skillFolderPaths}
               />
             ))
           )}

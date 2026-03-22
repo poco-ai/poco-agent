@@ -1,0 +1,38 @@
+---
+title: Backend 配置
+description: FastAPI Backend 服务的核心环境变量说明。负责 API、持久化和会话管理。
+---
+
+## 必需（否则无法启动或关键功能不可用）
+
+- `DATABASE_URL`：数据库连接串（PostgreSQL），示例：`postgresql://postgres:postgres@postgres:5432/poco`
+- `SECRET_KEY`：后端密钥（用于安全相关逻辑）
+- `INTERNAL_API_TOKEN`：内部调用鉴权 token（Executor Manager 调用 Backend 内部接口会用到）
+- `S3_ENDPOINT`：S3 兼容服务地址
+  - 本地 rustfs：`http://rustfs:9000`
+  - Cloudflare R2：`https://<accountid>.r2.cloudflarestorage.com`
+- `S3_ACCESS_KEY` / `S3_SECRET_KEY`：S3 访问凭证
+- `S3_BUCKET`：S3 bucket 名称（需存在；本地 rustfs 可用 `rustfs-init` 创建；R2 请在控制台提前创建）
+
+## 常用
+
+- `HOST`（默认 `0.0.0.0`）、`PORT`（默认 `8000`）
+- `CORS_ORIGINS`：允许来源列表（JSON 数组），示例：`["http://localhost:3000","http://127.0.0.1:3000"]`
+- `EXECUTOR_MANAGER_URL`：Executor Manager 地址，示例：`http://executor-manager:8001`
+- `S3_PUBLIC_ENDPOINT`：对外可访问的 S3 地址，用于生成给浏览器的预签名 URL（本地可用 `http://localhost:9000`）。未设置则使用 `S3_ENDPOINT`。若使用 Cloudflare R2 bucket 级自定义域，生成 URL 里可能带有 `/<S3_BUCKET>/` 前缀；访问时通常需要去掉该段（建议在网关/Worker/CDN 层统一改写）。
+- `S3_REGION`（默认 `us-east-1`；Cloudflare R2 通常建议设为 `auto`）
+- `S3_FORCE_PATH_STYLE`（默认 `true`，对 MinIO/RustFS 一般需要；Cloudflare R2 通常建议设为 `false`）
+- `S3_PRESIGN_EXPIRES`：预签名 URL 过期秒数（默认 `300`）
+- `ANTHROPIC_API_KEY`：可选（用于会话标题自动生成；未设置则禁用标题生成）
+- `ANTHROPIC_BASE_URL`：可选（自定义 Anthropic API 端点/代理；默认 `https://api.anthropic.com`）
+- `DEFAULT_MODEL`（默认 `claude-sonnet-4-20250514`；会话标题生成也会使用该模型）
+- `MAX_UPLOAD_SIZE_MB`（默认 `100`）
+
+## 日志（3 个 Python 服务通用）
+
+- `DEBUG`（默认 `false`）
+- `LOG_LEVEL`（默认随 DEBUG/非 DEBUG 变化；建议显式设为 `INFO`）
+- `UVICORN_ACCESS_LOG`（默认 `false`）
+- `LOG_TO_FILE`（默认 `false`）：是否写本地文件日志
+- `LOG_DIR`（默认 `./logs`）、`LOG_BACKUP_COUNT`（默认 `14`）
+- `LOG_SQL`（默认 `false`）：是否打印 SQLAlchemy SQL（注意敏感信息）

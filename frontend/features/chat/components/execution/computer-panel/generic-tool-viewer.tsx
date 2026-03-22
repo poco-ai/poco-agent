@@ -105,7 +105,7 @@ function WriteToolViewer({
                 : "border-border bg-background",
             )}
           >
-            <pre className="whitespace-pre-wrap break-words [overflow-wrap:anywhere] [word-break:break-word] text-xs">
+            <pre className="whitespace-pre-wrap break-all [overflow-wrap:anywhere] text-xs">
               {outputText.trim() ? outputText : t("chat.toolCards.text.empty")}
             </pre>
           </div>
@@ -319,7 +319,7 @@ function EditToolViewer({
                 : "border-border bg-background",
             )}
           >
-            <pre className="whitespace-pre-wrap break-words [overflow-wrap:anywhere] [word-break:break-word] text-xs">
+            <pre className="whitespace-pre-wrap break-all [overflow-wrap:anywhere] text-xs">
               {outputText.trim() ? outputText : t("chat.toolCards.text.empty")}
             </pre>
           </div>
@@ -400,7 +400,7 @@ function GlobToolViewer({
               ))}
             </ul>
           ) : (
-            <pre className="text-xs whitespace-pre-wrap break-words [overflow-wrap:anywhere] [word-break:break-word]">
+            <pre className="text-xs whitespace-pre-wrap break-all [overflow-wrap:anywhere]">
               {stringifyForDisplay(outputPayload).trim() ||
                 t("chat.toolCards.text.empty")}
             </pre>
@@ -519,7 +519,7 @@ function GrepToolViewer({
               ))}
             </ul>
           ) : (
-            <pre className="text-xs whitespace-pre-wrap break-words [overflow-wrap:anywhere] [word-break:break-word]">
+            <pre className="text-xs whitespace-pre-wrap break-all [overflow-wrap:anywhere]">
               {stringifyForDisplay(outputPayload).trim() ||
                 t("chat.toolCards.text.empty")}
             </pre>
@@ -558,7 +558,7 @@ function DefaultToolViewer({
           {t("chat.input")}
         </div>
         <div className="rounded-md border bg-background p-3">
-          <pre className="text-xs whitespace-pre-wrap break-words [overflow-wrap:anywhere] [word-break:break-word]">
+          <pre className="text-xs whitespace-pre-wrap break-all [overflow-wrap:anywhere]">
             {inputText}
           </pre>
         </div>
@@ -576,7 +576,7 @@ function DefaultToolViewer({
                 : "border-border bg-background",
             )}
           >
-            <pre className="text-xs whitespace-pre-wrap break-words [overflow-wrap:anywhere] [word-break:break-word]">
+            <pre className="text-xs whitespace-pre-wrap break-all [overflow-wrap:anywhere]">
               {outputText.trim() ? outputText : t("chat.toolCards.text.empty")}
             </pre>
           </div>

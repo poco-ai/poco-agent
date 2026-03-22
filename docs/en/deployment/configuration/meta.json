@@ -1,0 +1,11 @@
+{
+  "title": "Environment Configuration",
+  "pages": [
+    "!index",
+    "backend",
+    "executor-manager",
+    "executor",
+    "frontend",
+    "storage"
+  ]
+}

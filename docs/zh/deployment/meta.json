@@ -1,0 +1,14 @@
+{
+  "title": "本地部署",
+  "pages": [
+    "index",
+    "bootstrap-script",
+    "manual-docker",
+    "r2-storage",
+    "configuration",
+    "im",
+    "remind",
+    "operations",
+    "remote-access"
+  ]
+}

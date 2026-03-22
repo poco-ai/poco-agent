@@ -5,6 +5,7 @@ import { toast } from "sonner";
 
 import { SkillsGrid } from "@/features/capabilities/skills/components/skills-grid";
 import { SkillImportDialog } from "@/features/capabilities/skills/components/skill-import-dialog";
+import { SkillSettingsDialog } from "@/features/capabilities/skills/components/skill-settings-dialog";
 import { useSkillCatalog } from "@/features/capabilities/skills/hooks/use-skill-catalog";
 import { PullToRefresh } from "@/components/ui/pull-to-refresh";
 import { PaginatedGrid } from "@/components/ui/paginated-grid";
@@ -29,12 +30,20 @@ export function SkillsPageClient() {
     refresh,
   } = useSkillCatalog();
   const [importOpen, setImportOpen] = useState(false);
+  const [selectedSkillId, setSelectedSkillId] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
   const filteredSkills = useMemo(() => {
-    if (!searchQuery) return skills;
+    const normalizedSkills = [...skills].sort((left, right) => {
+      if (left.scope === right.scope) {
+        return left.name.localeCompare(right.name);
+      }
+      return left.scope === "system" ? -1 : 1;
+    });
+
+    if (!searchQuery) return normalizedSkills;
     const lowerQuery = searchQuery.toLowerCase();
-    return skills.filter((skill) => {
+    return normalizedSkills.filter((skill) => {
       const repo =
         typeof skill.source?.repo === "string" ? skill.source.repo : "";
       const filename =
@@ -46,6 +55,11 @@ export function SkillsPageClient() {
       );
     });
   }, [skills, searchQuery]);
+
+  const selectedSkill = useMemo(
+    () => skills.find((skill) => skill.id === selectedSkillId) ?? null,
+    [selectedSkillId, skills],
+  );
 
   const pagination = usePagination(filteredSkills, { pageSize: PAGE_SIZE });
 
@@ -97,6 +111,7 @@ export function SkillsPageClient() {
                 isLoading={isLoading}
                 onInstall={installSkill}
                 onDeleteSkill={deleteSkill}
+                onOpenSkillSettings={(skill) => setSelectedSkillId(skill.id)}
                 onToggleEnabled={setEnabled}
                 onBatchToggle={handleBatchToggle}
                 createCardLabel={t("library.skillsPage.addCard")}
@@ -112,6 +127,13 @@ export function SkillsPageClient() {
         open={importOpen}
         onClose={() => setImportOpen(false)}
         onImported={refresh}
+      />
+      <SkillSettingsDialog
+        skill={selectedSkill}
+        skills={skills}
+        open={selectedSkill !== null}
+        onClose={() => setSelectedSkillId(null)}
+        onSaved={refresh}
       />
     </>
   );

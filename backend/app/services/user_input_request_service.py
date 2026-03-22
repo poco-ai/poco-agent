@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.core.errors.error_codes import ErrorCode
 from app.core.errors.exceptions import AppException
+from app.models.agent_session import AgentSession
 from app.models.user_input_request import UserInputRequest
 from app.repositories.session_repository import SessionRepository
 from app.repositories.user_input_request_repository import UserInputRequestRepository
@@ -18,14 +19,30 @@ DEFAULT_EXPIRES_SECONDS = 60
 
 
 class UserInputRequestService:
+    @staticmethod
+    def _enqueue_created_event(
+        db: Session,
+        *,
+        db_session: AgentSession,
+        request: UserInputRequest,
+    ) -> None:
+        from app.services.im import ImEventService
+
+        ImEventService().enqueue_user_input_request_created(
+            db,
+            db_session=db_session,
+            request=request,
+        )
+
     def create_request(
         self, db: Session, request: UserInputRequestCreateRequest
     ) -> UserInputRequestResponse:
-        db_session = SessionRepository.get_by_id(db, request.session_id)
+        session_id = request.session_id
+        db_session = SessionRepository.get_by_id(db, session_id)
         if not db_session:
             raise AppException(
                 error_code=ErrorCode.NOT_FOUND,
-                message=f"Session not found: {request.session_id}",
+                message=f"Session not found: {session_id}",
             )
 
         expires_at = request.expires_at or (
@@ -40,6 +57,8 @@ class UserInputRequestService:
             expires_at=expires_at,
         )
         UserInputRequestRepository.create(db, entry)
+        db.flush()
+        self._enqueue_created_event(db, db_session=db_session, request=entry)
         db.commit()
         db.refresh(entry)
         return UserInputRequestResponse.model_validate(entry)

@@ -111,10 +111,29 @@ class Settings(BaseSettings):
     executor_browser_memory_limit: str | None = Field(
         default="4g", alias="EXECUTOR_BROWSER_MEMORY_LIMIT"
     )
+    executor_prefer_local_image: bool = Field(
+        default=False, alias="EXECUTOR_PREFER_LOCAL_IMAGE"
+    )
+    executor_local_image: str | None = Field(default=None, alias="EXECUTOR_LOCAL_IMAGE")
+    executor_memory_limit: str | None = Field(
+        default="2g", alias="EXECUTOR_MEMORY_LIMIT"
+    )
+    executor_browser_memory_limit: str | None = Field(
+        default="4g", alias="EXECUTOR_BROWSER_MEMORY_LIMIT"
+    )
+    executor_prefer_local_image: bool = Field(
+        default=False, alias="EXECUTOR_PREFER_LOCAL_IMAGE"
+    )
+    executor_local_image: str | None = Field(
+        default=None, alias="EXECUTOR_LOCAL_IMAGE"
+    )
     # Optional: dedicated executor image with desktop/browser stack enabled.
     # When set, tasks with browser_enabled=true will use this image instead of EXECUTOR_IMAGE.
     executor_browser_image: str | None = Field(
         default="ghcr.io/poco-ai/poco-executor:full", alias="EXECUTOR_BROWSER_IMAGE"
+    )
+    executor_local_browser_image: str | None = Field(
+        default=None, alias="EXECUTOR_LOCAL_BROWSER_IMAGE"
     )
     # Default desktop viewport used by the Playwright MCP inside executor containers.
     poco_browser_viewport_size: str = Field(

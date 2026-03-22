@@ -1,0 +1,41 @@
+---
+title: 通用准备
+description: IM 集成共用的前置条件、配置位置与环境变量。
+---
+
+## 先决条件
+
+- Backend 已可用（例如 `http://localhost:8000` 或线上地址）。
+- 你准备启动 IM 服务（`im`）并可查看日志。
+- 如果使用 Telegram webhook 或钉钉 webhook 模式，IM 需要可被公网 HTTPS 访问。
+
+## 配置文件位置（非常重要）
+
+根据你的启动方式，环境变量来源不同：
+
+- `docker compose --profile im up ...`：读取仓库根目录 `.env`
+- 在 `im/` 目录本地运行 `uvicorn`：读取 `im/.env`
+
+建议先确认你当前是 Docker 方式还是本地方式，再编辑对应文件。
+
+注意：Compose 中 IM 服务默认不启动，必须显式带 `--profile im`。
+
+## 通用变量
+
+```bash
+# IM service
+IM_DATABASE_URL=sqlite:///./im.db
+BACKEND_URL=http://localhost:8000
+BACKEND_USER_ID=default
+FRONTEND_PUBLIC_URL=http://localhost:3000
+FRONTEND_DEFAULT_LANG=zh
+
+# Polling
+POLL_USER_INPUT_INTERVAL_SECONDS=2
+POLL_SESSION_MESSAGES_INTERVAL_SECONDS=2
+POLL_SESSIONS_RECENT_INTERVAL_SECONDS=5
+POLL_SESSIONS_FULL_INTERVAL_SECONDS=300
+POLL_HTTP_TIMEOUT_SECONDS=10
+```
+
+> Docker Compose 中 IM 端口固定映射为 `8002:8002`。

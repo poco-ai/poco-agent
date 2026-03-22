@@ -1,0 +1,10 @@
+---
+title: Engineering Conventions
+description: Core backend and frontend conventions used in Poco.
+---
+
+- Use the repository pattern for data access and keep business logic in the service layer
+- Inject database sessions through FastAPI dependencies at the API boundary
+- Prefer explicit Pydantic schemas instead of loose dictionaries in API contracts
+- Keep frontend code feature-first and default to Server Components in App Router
+- Reuse shared UI primitives and avoid hardcoded user-facing strings where i18n exists

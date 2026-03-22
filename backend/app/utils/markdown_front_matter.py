@@ -142,3 +142,51 @@ def remove_model_from_yaml_front_matter(markdown: str) -> str:
 
     rebuilt = [_FRONT_MATTER_DELIM, *filtered_front, _FRONT_MATTER_DELIM, *body]
     return "\n".join(rebuilt).rstrip() + "\n"
+
+
+def update_yaml_front_matter(
+    markdown: str,
+    updates: dict[str, Any],
+) -> str:
+    """Update or create YAML front matter fields in a Markdown document."""
+    text = markdown[1:] if markdown.startswith("\ufeff") else markdown
+    lines = text.splitlines()
+    has_front_matter = bool(lines) and lines[0].strip() == _FRONT_MATTER_DELIM
+
+    body_lines: list[str]
+    front_matter = parse_yaml_front_matter(text)
+    if has_front_matter:
+        end_idx: int | None = None
+        for i in range(1, len(lines)):
+            if lines[i].strip() == _FRONT_MATTER_DELIM:
+                end_idx = i
+                break
+        body_lines = lines[end_idx + 1 :] if end_idx is not None else []
+    else:
+        body_lines = lines
+
+    for key, value in updates.items():
+        if value is None:
+            front_matter.pop(key, None)
+            continue
+        front_matter[key] = value
+
+    rendered_front_matter = [
+        f"{key}: {_render_yaml_scalar(value)}" for key, value in front_matter.items()
+    ]
+    rebuilt = [
+        _FRONT_MATTER_DELIM,
+        *rendered_front_matter,
+        _FRONT_MATTER_DELIM,
+        *body_lines,
+    ]
+    return "\n".join(rebuilt).rstrip() + "\n"
+
+
+def _render_yaml_scalar(value: Any) -> str:
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, int | float):
+        return str(value)
+    escaped = str(value).replace("\\", "\\\\").replace('"', '\\"')
+    return f'"{escaped}"'

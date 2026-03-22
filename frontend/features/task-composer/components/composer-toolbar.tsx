@@ -5,10 +5,10 @@ import {
   Loader2,
   ArrowUp,
   Plus,
-  Github,
   Settings2,
   Clock,
   Chrome,
+  Brain,
   Paperclip,
   Code2,
   SquareTerminal,
@@ -55,11 +55,12 @@ interface ComposerToolbarProps {
   canSubmit: boolean;
   hasVoiceSupport: boolean;
   voiceStatus: VoiceInputStatus;
-  repoUrl: string;
-  repoDialogOpen: boolean;
   browserEnabled: boolean;
+  memoryFeatureEnabled: boolean;
+  memoryEnabled: boolean;
   onOpenRepoDialog: () => void;
   onBrowserEnabledChange: (enabled: boolean) => void;
+  onMemoryEnabledChange: (enabled: boolean) => void;
   onOpenFileInput: () => void;
   onToggleVoiceInput: () => void;
   onSubmit: () => void;
@@ -80,11 +81,12 @@ export function ComposerToolbar({
   canSubmit,
   hasVoiceSupport,
   voiceStatus,
-  repoUrl,
-  repoDialogOpen,
   browserEnabled,
+  memoryFeatureEnabled,
+  memoryEnabled,
   onOpenRepoDialog,
   onBrowserEnabledChange,
+  onMemoryEnabledChange,
   onOpenFileInput,
   onToggleVoiceInput,
   onSubmit,
@@ -136,26 +138,6 @@ export function ComposerToolbar({
           </DropdownMenu>
           <TooltipContent side="top" sideOffset={8}>
             {t("hero.uploadFile")}
-          </TooltipContent>
-        </Tooltip>
-
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              type="button"
-              variant={repoDialogOpen || repoUrl.trim() ? "secondary" : "ghost"}
-              size="icon"
-              disabled={disabled}
-              className="size-9 rounded-xl hover:bg-accent"
-              aria-label={t("hero.importCode")}
-              title={t("hero.importCode")}
-              onClick={onOpenRepoDialog}
-            >
-              <Github className="size-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="top" sideOffset={8}>
-            {t("hero.importCode")}
           </TooltipContent>
         </Tooltip>
 
@@ -264,6 +246,17 @@ export function ComposerToolbar({
                 <Chrome className="size-4" />
                 <span>{t("hero.browser.toggle")}</span>
               </DropdownMenuCheckboxItem>
+              {memoryFeatureEnabled ? (
+                <DropdownMenuCheckboxItem
+                  checked={memoryEnabled}
+                  onCheckedChange={(next) => {
+                    onMemoryEnabledChange(Boolean(next));
+                  }}
+                >
+                  <Brain className="size-4" />
+                  <span>{t("hero.memory.toggle")}</span>
+                </DropdownMenuCheckboxItem>
+              ) : null}
             </DropdownMenuContent>
           </DropdownMenu>
           <TooltipContent side="top" sideOffset={8}>

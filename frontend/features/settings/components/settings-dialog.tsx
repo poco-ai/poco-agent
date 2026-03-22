@@ -7,6 +7,7 @@ import {
   ChevronRight,
   HelpCircle,
   Keyboard,
+  KeyRound,
   Languages,
   LogOut,
   Palette,
@@ -46,6 +47,7 @@ import { useThemeMode, type ThemeMode } from "@/hooks/use-theme-mode";
 import { SettingsSidebar } from "@/features/settings/components/settings-sidebar";
 import { AccountSettingsTab } from "@/features/settings/components/tabs/account-settings-tab";
 import { ModelsSettingsTab } from "@/features/settings/components/tabs/models-settings-tab";
+import { OtherSettingsTab } from "@/features/settings/components/tabs/other-settings-tab";
 import { ShortcutsSettingsTab } from "@/features/settings/components/tabs/shortcuts-settings-tab";
 import {
   UsageSettingsTab,
@@ -101,6 +103,7 @@ export function SettingsDialog({
     tabRequest?.tab ?? "account",
   );
   const [mobileView, setMobileView] = React.useState<MobileView>("overview");
+
   const {
     providerConfigs,
     isLoading: isLoadingProviders,
@@ -210,6 +213,7 @@ export function SettingsDialog({
     () => [
       { icon: User, label: t("settings.sidebar.account"), id: "account" },
       { icon: Server, label: t("settings.sidebar.models"), id: "models" },
+      { icon: KeyRound, label: t("settings.sidebar.other"), id: "other" },
       { icon: Activity, label: t("settings.sidebar.usage"), id: "usage" },
       {
         icon: Keyboard,
@@ -314,6 +318,7 @@ export function SettingsDialog({
     if (
       view === "account" ||
       view === "models" ||
+      view === "other" ||
       view === "usage" ||
       view === "shortcuts"
     ) {
@@ -364,6 +369,10 @@ export function SettingsDialog({
           showInlineToolbar={isMobile}
         />
       );
+    }
+
+    if (activeTab === "other") {
+      return <OtherSettingsTab />;
     }
 
     return <ShortcutsSettingsTab />;
@@ -541,7 +550,8 @@ function MobileSettingsOverview({
     (item) => item.id === "account" || item.id === "usage",
   );
   const generalItems = sidebarItems.filter(
-    (item) => item.id === "models" || item.id === "shortcuts",
+    (item) =>
+      item.id === "models" || item.id === "other" || item.id === "shortcuts",
   );
 
   return (

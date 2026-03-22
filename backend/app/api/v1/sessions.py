@@ -39,11 +39,14 @@ from app.schemas.computer import ComputerBrowserScreenshotResponse
 from app.schemas.tool_execution import ToolExecutionDeltaResponse, ToolExecutionResponse
 from app.schemas.usage import UsageResponse
 from app.schemas.workspace import FileNode, WorkspaceArchiveResponse
+from app.schemas.workspace import SubmitSkillRequest, SubmitSkillResponse
 from app.services.message_service import MessageService
+from app.services.pending_skill_creation_service import PendingSkillCreationService
 from app.services.session_service import SessionService
 from app.services.storage_service import S3StorageService
 from app.services.tool_execution_service import ToolExecutionService
 from app.services.usage_service import UsageService
+from app.services.workspace_archive_service import WorkspaceArchiveService
 from app.utils.computer import build_browser_screenshot_key
 from app.utils.workspace import build_workspace_file_nodes
 from app.utils.workspace_manifest import (
@@ -59,6 +62,8 @@ message_service = MessageService()
 tool_execution_service = ToolExecutionService()
 usage_service = UsageService()
 storage_service = S3StorageService()
+pending_skill_creation_service = PendingSkillCreationService()
+workspace_archive_service = WorkspaceArchiveService()
 
 
 def _cancel_executor_manager(session_id: uuid.UUID, reason: str | None) -> bool:
@@ -275,6 +280,8 @@ async def regenerate_message(
         user_id=user_id,
         user_message_id=request.user_message_id,
         assistant_message_id=request.assistant_message_id,
+        model=request.model,
+        model_provider_id=request.model_provider_id,
     )
     return Response.success(data=result, message="Message regenerated successfully")
 
@@ -295,6 +302,8 @@ async def edit_message_and_regenerate(
         user_id=user_id,
         user_message_id=request.user_message_id,
         content=request.content,
+        model=request.model,
+        model_provider_id=request.model_provider_id,
     )
     return Response.success(data=result, message="Message edited and regenerated")
 
@@ -705,4 +714,82 @@ async def get_session_workspace_archive(
     return Response.success(
         data=WorkspaceArchiveResponse(url=url, filename=filename),
         message="Workspace archive URL generated",
+    )
+
+
+@router.get(
+    "/{session_id}/workspace/folder-archive",
+    response_model=ResponseSchema[WorkspaceArchiveResponse],
+)
+async def get_session_workspace_folder_archive(
+    session_id: uuid.UUID,
+    path: str = Query(..., description="Folder path within the workspace"),
+    user_id: str = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+) -> JSONResponse:
+    """Get a presigned download URL for a workspace folder archive."""
+    db_session = session_service.get_session(db, session_id)
+    if db_session.user_id != user_id:
+        raise AppException(
+            error_code=ErrorCode.FORBIDDEN,
+            message="Session does not belong to the user",
+        )
+
+    normalized_path = normalize_manifest_path(path)
+    folder_name = (
+        normalized_path.strip("/").split("/")[-1]
+        if normalized_path
+        else f"workspace-{session_id}"
+    )
+    filename = f"{folder_name or f'workspace-{session_id}'}.zip"
+
+    if db_session.workspace_export_status != "ready":
+        return Response.success(
+            data=WorkspaceArchiveResponse(url=None, filename=filename),
+            message="Workspace export not ready",
+        )
+
+    archive = workspace_archive_service.get_folder_archive(
+        session=db_session,
+        folder_path=path,
+    )
+    return Response.success(
+        data=archive,
+        message="Workspace folder archive URL generated",
+    )
+
+
+@router.post(
+    "/{session_id}/workspace/submit-skill",
+    response_model=ResponseSchema[SubmitSkillResponse],
+)
+async def submit_session_workspace_skill(
+    session_id: uuid.UUID,
+    request: SubmitSkillRequest,
+    user_id: str = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+) -> JSONResponse:
+    """Submit a workspace folder for skill creation review."""
+    db_session = session_service.get_session(db, session_id)
+    if db_session.user_id != user_id:
+        raise AppException(
+            error_code=ErrorCode.FORBIDDEN,
+            message="Session does not belong to the user",
+        )
+
+    pending = pending_skill_creation_service.submit_from_workspace(
+        db,
+        user_id=user_id,
+        session=db_session,
+        folder_path=request.folder_path,
+        skill_name=request.skill_name,
+    )
+    db.commit()
+    db.refresh(pending)
+    return Response.success(
+        data=SubmitSkillResponse(
+            pending_id=str(pending.id),
+            status=pending.status,
+        ),
+        message="Skill submission queued successfully",
     )

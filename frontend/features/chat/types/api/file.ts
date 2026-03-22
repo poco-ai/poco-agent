@@ -13,3 +13,13 @@ export interface FileNode {
   oss_status?: string | null;
   oss_meta?: Record<string, unknown> | null;
 }
+
+export interface WorkspaceArchiveResponse {
+  url?: string | null;
+  filename: string;
+}
+
+export interface SubmitSkillResponse {
+  pending_id: string;
+  status: string;
+}

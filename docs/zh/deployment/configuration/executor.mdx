@@ -1,0 +1,18 @@
+---
+title: Executor 配置
+description: 执行引擎与 Claude Agent SDK 集成相关的运行时设置。
+---
+
+## 必需（跑任务时）
+
+- `ANTHROPIC_API_KEY`：必需（支持 Anthropic 官方或 Anthropic 兼容服务）
+- `ANTHROPIC_BASE_URL`：可选（同上；兼容服务通常需要）
+- `DEFAULT_MODEL`：必需（`executor/app/core/engine.py` 会读取 `os.environ["DEFAULT_MODEL"]`，需与端点兼容）
+- `WORKSPACE_PATH`：工作目录挂载点（默认 `/workspace`）
+
+## 可选
+
+- `WORKSPACE_GIT_IGNORE`：额外写入到 `.git/info/exclude` 的忽略规则（逗号/换行分隔）
+- `POCO_BROWSER_VIEWPORT_SIZE`：可选，浏览器视口大小（影响截图与响应式布局），格式如 `1366x768` / `1920x1080`（`browser_enabled=true` 时生效）
+- `EXECUTOR_TIMEZONE`：可选，任务执行时使用的时区环境变量（由 Executor Manager 透传，默认 `Asia/Shanghai`）
+- `DEBUG` / `LOG_LEVEL` / `LOG_TO_FILE` 等日志变量（同上）œ

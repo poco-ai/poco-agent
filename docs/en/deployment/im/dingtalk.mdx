@@ -1,0 +1,76 @@
+---
+title: DingTalk Integration
+description: Configure Stream mode or webhook mode for DingTalk.
+---
+
+DingTalk supports two inbound modes:
+
+- Stream mode (recommended)
+- Webhook mode (optional)
+
+## Stream mode
+
+Benefits: no public webhook dependency, good for stable message/event callbacks.
+
+### Environment variables (Stream)
+
+```bash
+DINGTALK_ENABLED=true
+DINGTALK_STREAM_ENABLED=true
+DINGTALK_STREAM_SUBSCRIBE_EVENTS=false
+
+DINGTALK_CLIENT_ID=<app appKey>
+DINGTALK_CLIENT_SECRET=<app appSecret>
+DINGTALK_ROBOT_CODE=<bot robotCode>
+DINGTALK_OPEN_BASE_URL=https://api.dingtalk.com
+```
+
+### Platform-side setup (DingTalk Open Platform)
+
+1. Create an internal enterprise app (bot)
+2. Get `appKey/appSecret`
+3. Get `robotCode`
+4. Enable Stream event receiving capability (message-related)
+
+> Button names may vary across DingTalk console versions, but the core setup is "app + bot + Stream receiving".
+
+### Message flow
+
+- Inbound: received through Stream long connection
+- Outbound: OpenAPI is preferred (depends on `DINGTALK_CLIENT_ID/SECRET/ROBOT_CODE`)
+
+## Webhook mode (optional)
+
+Enable webhook callbacks when not using Stream.
+
+### Environment variables (Webhook)
+
+```bash
+DINGTALK_ENABLED=true
+DINGTALK_STREAM_ENABLED=false
+# Optional, recommended
+DINGTALK_WEBHOOK_TOKEN=<custom validation token>
+```
+
+### Callback endpoint
+
+- `POST /api/v1/webhooks/dingtalk`
+- Example: `https://your-domain.example.com/api/v1/webhooks/dingtalk`
+
+If `DINGTALK_WEBHOOK_TOKEN` is enabled, include the same value in requests (supported in query `token`, header `X-DingTalk-Token`, or payload field `token`).
+
+### DingTalk outbound fallback webhook (optional)
+
+```bash
+DINGTALK_WEBHOOK_URL=<group custom bot webhook>
+```
+
+This is only a fallback outbound notification channel. OpenAPI is still recommended as primary.
+
+### Integration test
+
+1. Mention the bot in DM or group and send `/help`
+2. Send `/new <task description>`
+3. Verify task notifications are pushed back to DingTalk
+
+Note: In group chats, DingTalk usually requires `@bot` mention for handling.

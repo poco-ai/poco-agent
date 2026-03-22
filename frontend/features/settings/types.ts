@@ -5,7 +5,12 @@ import type {
   ModelProvider,
 } from "@/features/chat/types/api/models";
 
-export type SettingsTabId = "account" | "models" | "usage" | "shortcuts";
+export type SettingsTabId =
+  | "account"
+  | "models"
+  | "usage"
+  | "shortcuts"
+  | "other";
 
 export type SettingsTabRequest = {
   tab: SettingsTabId;
@@ -35,7 +40,9 @@ export type ApiProviderConfig = {
   hasStoredUserKey: boolean;
   hasStoredUserBaseUrl: boolean;
   isSaving: boolean;
+  enabled: boolean;
 };
+
 export interface UsageAnalyticsMetricSummary {
   input_tokens: number;
   output_tokens: number;

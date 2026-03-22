@@ -1,0 +1,11 @@
+{
+  "title": "交互重构：多端与消息驱动",
+  "pages": [
+    "!index",
+    "mobile",
+    "im",
+    "self-hosted",
+    "cloud-subscription",
+    "multilingual"
+  ]
+}

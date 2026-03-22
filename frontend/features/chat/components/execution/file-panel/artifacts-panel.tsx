@@ -1,16 +1,19 @@
 "use client";
 
 import * as React from "react";
-import { FileSidebar } from "./file-sidebar";
+import { FileSidebar, downloadFileFromUrl } from "./file-sidebar";
 import { DocumentViewer } from "./document-viewer";
 import { ArtifactsHeader } from "./artifacts-header";
 import { FileChangesList } from "./file-changes-list";
 import { ArtifactsEmpty } from "./artifacts-empty";
 import { useArtifacts } from "./hooks/use-artifacts";
+import { PackageSkillDialog } from "./package-skill-dialog";
 import type { FileChange, FileNode } from "@/features/chat/types";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n/client";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { toast } from "sonner";
+import { chatService } from "@/features/chat/api/chat-api";
 
 interface ArtifactsPanelProps {
   fileChanges?: FileChange[];
@@ -50,6 +53,10 @@ export function ArtifactsPanel({
   const [isSidebarCollapsed, setIsSidebarCollapsed] = React.useState(false);
   const [isExpandedPreviewOpen, setIsExpandedPreviewOpen] =
     React.useState(false);
+  const [packageTarget, setPackageTarget] = React.useState<FileNode | null>(
+    null,
+  );
+  const [isSubmittingSkill, setIsSubmittingSkill] = React.useState(false);
   const {
     files,
     selectedFile,
@@ -143,6 +150,52 @@ export function ArtifactsPanel({
     }
   }, [isSidebarCollapsed, viewMode, closeViewer]);
 
+  const handleDownloadNode = React.useCallback(
+    async (node: FileNode) => {
+      try {
+        if (node.type === "file") {
+          if (!node.url) return;
+          await downloadFileFromUrl(node.url, node.name);
+          return;
+        }
+
+        if (!sessionId) return;
+        const response = await chatService.getFolderArchive(
+          sessionId,
+          node.path,
+        );
+        if (!response.url) {
+          toast.error(t("fileSidebar.archiveNotAvailable"));
+          return;
+        }
+
+        await downloadFileFromUrl(response.url, response.filename);
+      } catch (error) {
+        console.error("[Artifacts] Failed to download workspace node", error);
+        toast.error(t("fileSidebar.downloadFailed"));
+      }
+    },
+    [sessionId, t],
+  );
+
+  const handleSubmitSkill = React.useCallback(
+    async (payload: { folder_path: string; skill_name?: string }) => {
+      if (!sessionId) return;
+      setIsSubmittingSkill(true);
+      try {
+        await chatService.submitSkill(sessionId, payload);
+        toast.success(t("fileSidebar.skillSubmitted"));
+        setPackageTarget(null);
+      } catch (error) {
+        console.error("[Artifacts] Failed to submit skill", error);
+        toast.error(t("fileSidebar.skillSubmitFailed"));
+      } finally {
+        setIsSubmittingSkill(false);
+      }
+    },
+    [sessionId, t],
+  );
+
   return (
     <div className="flex h-full min-h-0 flex-col min-w-0 overflow-hidden">
       {!hideHeader ? (
@@ -199,10 +252,25 @@ export function ArtifactsPanel({
               }}
               selectedFile={selectedFile}
               sessionId={sessionId}
+              onPackageSkill={
+                sessionId ? (node) => setPackageTarget(node) : undefined
+              }
+              onDownloadNode={handleDownloadNode}
             />
           </div>
         )}
       </div>
+      <PackageSkillDialog
+        open={Boolean(packageTarget)}
+        folder={packageTarget}
+        submitting={isSubmittingSkill}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPackageTarget(null);
+          }
+        }}
+        onConfirm={handleSubmitSkill}
+      />
       <Dialog
         open={isExpandedPreviewOpen && Boolean(selectedFile)}
         onOpenChange={setIsExpandedPreviewOpen}

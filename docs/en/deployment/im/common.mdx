@@ -1,0 +1,41 @@
+---
+title: Common Preparation
+description: Shared prerequisites, config locations, and environment variables for IM integration.
+---
+
+## Prerequisites
+
+- Backend is already available (for example `http://localhost:8000` or your online URL).
+- You are ready to start the IM service (`im`) and inspect logs.
+- If you use Telegram webhook or DingTalk webhook mode, IM must be reachable over public HTTPS.
+
+## Config file location (very important)
+
+Environment variable source depends on how you start it:
+
+- `docker compose --profile im up ...`: reads repository root `.env`
+- Running `uvicorn` locally inside `im/`: reads `im/.env`
+
+Confirm whether you are using Docker or local mode before editing files.
+
+Note: IM is disabled by default in Compose. You must explicitly add `--profile im`.
+
+## Common variables
+
+```bash
+# IM service
+IM_DATABASE_URL=sqlite:///./im.db
+BACKEND_URL=http://localhost:8000
+BACKEND_USER_ID=default
+FRONTEND_PUBLIC_URL=http://localhost:3000
+FRONTEND_DEFAULT_LANG=zh
+
+# Polling
+POLL_USER_INPUT_INTERVAL_SECONDS=2
+POLL_SESSION_MESSAGES_INTERVAL_SECONDS=2
+POLL_SESSIONS_RECENT_INTERVAL_SECONDS=5
+POLL_SESSIONS_FULL_INTERVAL_SECONDS=300
+POLL_HTTP_TIMEOUT_SECONDS=10
+```
+
+> IM port is fixed to `8002:8002` in Docker Compose.

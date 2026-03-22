@@ -1,0 +1,56 @@
+---
+title: 提醒与提示
+description: 重要操作和提醒，默认访问地址、配置入口与部署后的日常操作。
+---
+
+## 重要说明
+
+1. `executor-manager` 需要访问 Docker daemon：
+   - Compose 已默认挂载：`/var/run/docker.sock:/var/run/docker.sock`
+   - 因此 `executor-manager` 才能动态创建 executor 容器
+2. 回调地址（Executor -> Executor Manager）：
+   - `CALLBACK_BASE_URL` 默认是 `http://host.docker.internal:8001`
+   - 这是因为动态创建的 executor 容器默认不在 compose 网络里，需要通过“宿主机端口映射”回调到 manager
+   - `executor-manager` 会在创建 executor 容器时注入 `host.docker.internal:host-gateway`；Compose 也为 `executor-manager` 容器配置了该映射（Linux 下也可用）
+3. 工作区目录（Workspace）：
+   - Compose 固定使用 `${PWD}/tmp_workspace` 作为 `WORKSPACE_ROOT`
+   - 该目录会被 Executor Manager 创建的 executor 容器以 bind mount 方式挂载到 `/workspace`
+   - `tmp_workspace/` 在仓库里已存在，并且通过 `tmp_workspace/.gitignore` 忽略内容，不会污染 git
+4. RustFS 数据目录权限（Linux 常见坑，仅 `docker-compose.yml`）：
+   - `rustfs` 会把 `${RUSTFS_DATA_DIR}` bind mount 到容器的 `/data`
+   - 默认 `RUSTFS_DATA_DIR=./oss_data`（仓库根目录）
+   - RustFS 容器以非 root 用户 `rustfs`（UID/GID=10001）运行；如果宿主机目录不是 `10001:10001`，可能会报：
+     `Io error: Permission denied (os error 13)`
+   - 解决：先在宿主机创建/修正权限（示例以仓库根目录 `oss_data/` 为例）：
+
+   ```bash
+   mkdir -p oss_data
+   sudo chown -R 10001:10001 oss_data
+   ```
+
+5. 预签名 URL 对外地址：
+
+- Backend 会用 `S3_PUBLIC_ENDPOINT` 生成给浏览器访问的预签名 URL：
+  - 本地 rustfs（`docker-compose.yml`）默认是 `http://localhost:9000`
+  - Cloudflare R2（`docker-compose.r2.yml`）通常保持与 `S3_ENDPOINT` 一致，或填你的自定义域名
+
+## 访问地址（默认端口）
+
+- Frontend: `http://localhost:3000`
+- Backend: `http://localhost:8000`（OpenAPI: `/docs`）
+- Executor Manager: `http://localhost:8001`（OpenAPI: `/docs`）
+- RustFS(S3)（仅 `docker-compose.yml`）：`http://localhost:9000`（Console: `http://localhost:9001`）
+
+## 配置入口
+
+大多数配置都通过环境变量完成（例如 `ANTHROPIC_API_KEY`、`S3_*`、`INTERNAL_API_TOKEN` 等）。
+
+详见 [configuration.md](configuration.md)。
+
+## 可选：自动创建 bucket（仅 `docker-compose.yml`）
+
+默认启动不会运行 `rustfs-init`（避免不同 OSS 镜像/权限差异导致阻塞启动）。如需自动创建 `S3_BUCKET`：
+
+```bash
+docker compose --profile init up -d rustfs-init
+```

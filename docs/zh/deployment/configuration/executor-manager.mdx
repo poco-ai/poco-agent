@@ -1,0 +1,41 @@
+---
+title: Executor Manager 配置
+description: 调度、分发与回调协调相关的环境变量。负责调度任务，并协调 Backend 与 Executor 服务。
+---
+
+## 必需（否则无法启动或无法调度执行）：
+
+- `BACKEND_URL`：Backend 地址，示例：`http://backend:8000`
+- `INTERNAL_API_TOKEN`：必须与 Backend 的 `INTERNAL_API_TOKEN` 一致
+- `CALLBACK_BASE_URL`：**必须能被 Executor 容器访问到**，Docker Compose 默认 `http://host.docker.internal:8001`
+- `EXECUTOR_IMAGE`：Executor 镜像名（Executor Manager 会通过 Docker API 拉起该镜像）。默认建议：`ghcr.io/poco-ai/poco-executor:lite`
+- `EXECUTOR_BROWSER_IMAGE`：可选，启用浏览器/桌面能力时使用的 Executor 镜像（用于 `browser_enabled=true`）。默认建议：`ghcr.io/poco-ai/poco-executor:full`
+- `POCO_BROWSER_VIEWPORT_SIZE`：可选，浏览器视口大小（影响截图与响应式布局），格式如 `1366x768` / `1920x1080`。该值由 Executor Manager 透传给 Executor 容器（仅 `browser_enabled=true` 时）。
+- `EXECUTOR_TIMEZONE`：可选，透传给 Executor 容器的时区（IANA 时区名，如 `Asia/Shanghai`、`UTC`）。默认 `Asia/Shanghai`。
+- `EXECUTOR_PUBLISHED_HOST`：Executor Manager 访问“已映射到宿主机端口”的 Executor 容器时使用的 host（本地裸跑一般是 `localhost`；Compose 内推荐 `host.docker.internal`）
+- `WORKSPACE_ROOT`：工作区根目录（**必须是宿主机路径**，因为会被 bind mount 到 Executor 容器）
+- `S3_ENDPOINT` / `S3_ACCESS_KEY` / `S3_SECRET_KEY` / `S3_BUCKET`：用于导出 workspace 到对象存储（否则相关接口会失败）
+  - Cloudflare R2 通常建议：`S3_REGION=auto`，`S3_FORCE_PATH_STYLE=false`
+
+## 执行模型（跑任务时必需）：
+
+- `ANTHROPIC_API_KEY`：必需（支持 Anthropic 官方或 Anthropic 兼容服务）
+- `ANTHROPIC_BASE_URL`（默认 `https://api.anthropic.com`；使用兼容服务时建议显式配置）
+- `DEFAULT_MODEL`（默认 `claude-sonnet-4-20250514`；需与所用端点兼容）
+
+## 调度与拉取：
+
+- `TASK_PULL_ENABLED`（默认 `true`）：是否从 Backend run queue 拉取任务
+- `MAX_CONCURRENT_TASKS`（默认 `5`）
+- `TASK_PULL_INTERVAL_SECONDS`（默认 `2`）
+- `TASK_CLAIM_LEASE_SECONDS`（默认 `900`）：claim 的租约时间。需要覆盖 Manager 侧从 claim 到成功 start_run 的耗时（可能包含技能/附件 staging、拉起 Executor 容器等），否则 run 可能在租约过期后被重新 claim，导致重复调度/重复启动容器。
+- `SCHEDULE_CONFIG_PATH`：可选，提供 TOML/JSON schedule 配置时会作为 source of truth
+
+## 工作区清理（可选）：
+
+- `WORKSPACE_CLEANUP_ENABLED`（默认 `false`）
+- `WORKSPACE_CLEANUP_INTERVAL_HOURS`（默认 `24`）
+- `WORKSPACE_MAX_AGE_HOURS`（默认 `24`）
+- `WORKSPACE_ARCHIVE_ENABLED`（默认 `true`）
+- `WORKSPACE_ARCHIVE_DAYS`（默认 `7`）
+- `WORKSPACE_IGNORE_DOT_FILES`（默认 `true`）

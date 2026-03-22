@@ -1,0 +1,10 @@
+{
+  "title": "开发",
+  "pages": [
+    "!index",
+    "commands",
+    "tech-stack",
+    "repository-structure",
+    "conventions"
+  ]
+}

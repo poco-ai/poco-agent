@@ -1,0 +1,11 @@
+{
+  "title": "Agentic 体验",
+  "pages": [
+    "!index",
+    "claude-code",
+    "mcp-skills",
+    "browser",
+    "github",
+    "background-jobs"
+  ]
+}

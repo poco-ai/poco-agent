@@ -2,10 +2,10 @@ from fastapi import FastAPI
 
 from app.api import setup_routers
 from app.core.errors.exception_handlers import setup_exception_handlers
-from app.core.lifespan import lifespan
 from app.core.middleware import setup_middleware
 from app.core.observability.logging import configure_logging
 from app.core.settings import get_settings
+from app.lifecycle.lifespan import lifespan
 
 
 def create_app() -> FastAPI:

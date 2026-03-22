@@ -1,0 +1,45 @@
+---
+title: Development Commands
+description: Common commands for frontend, Python services, migrations, and pre-commit.
+---
+
+## Frontend
+
+```bash
+cd frontend
+pnpm install
+pnpm dev
+pnpm build
+pnpm start
+pnpm lint
+pnpm format
+```
+
+## Python services
+
+Each Python service has its own `pyproject.toml`.
+
+```bash
+cd <service>
+uv sync
+uv run python -m app.main
+uvicorn app.main:app --reload
+```
+
+## Database migrations
+
+```bash
+cd backend
+uv run -m alembic revision --autogenerate -m "description"
+uv run -m alembic upgrade head
+uv run -m alembic downgrade -1
+```
+
+Always start with autogeneration, apply the migration, and then review the generated revision before merging.
+
+## Pre-commit
+
+```bash
+pre-commit install
+pre-commit run --all-files
+```

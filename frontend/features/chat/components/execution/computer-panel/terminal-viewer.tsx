@@ -154,7 +154,7 @@ export function TerminalViewer({ execution }: TerminalViewerProps) {
             <div
               className={cn(
                 "rounded-md border bg-background p-3 text-foreground/85",
-                "w-full min-w-0 max-w-full whitespace-pre-wrap break-words [overflow-wrap:anywhere] [word-break:break-word]",
+                "w-full min-w-0 max-w-full whitespace-pre-wrap break-all [overflow-wrap:anywhere]",
               )}
             >
               {result.output || (

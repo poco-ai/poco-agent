@@ -1,0 +1,38 @@
+---
+title: Backend Configuration
+description: Core environment variables for the FastAPI backend service. Handles APIs, persistence, and session management.
+---
+
+## Required (service may fail to start or key features will break)
+
+- `DATABASE_URL`: PostgreSQL connection string, example: `postgresql://postgres:postgres@postgres:5432/poco`
+- `SECRET_KEY`: backend secret key (used by security-related logic)
+- `INTERNAL_API_TOKEN`: internal auth token (used when Executor Manager calls backend internal endpoints)
+- `S3_ENDPOINT`: S3-compatible endpoint
+  - local rustfs: `http://rustfs:9000`
+  - Cloudflare R2: `https://<accountid>.r2.cloudflarestorage.com`
+- `S3_ACCESS_KEY` / `S3_SECRET_KEY`: S3 credentials
+- `S3_BUCKET`: S3 bucket name (must exist; local rustfs can create it via `rustfs-init`; create in R2 console in advance)
+
+## Common
+
+- `HOST` (default `0.0.0.0`), `PORT` (default `8000`)
+- `CORS_ORIGINS`: allowed origins (JSON array), example: `["http://localhost:3000","http://127.0.0.1:3000"]`
+- `EXECUTOR_MANAGER_URL`: Executor Manager URL, example: `http://executor-manager:8001`
+- `S3_PUBLIC_ENDPOINT`: browser-facing S3 endpoint for presigned URLs (local can use `http://localhost:9000`). If not set, `S3_ENDPOINT` is used. With Cloudflare R2 bucket-level custom domains, generated URLs may include a `/<S3_BUCKET>/` prefix that usually needs to be removed at access time (recommended to rewrite in gateway/Worker/CDN layer).
+- `S3_REGION` (default `us-east-1`; Cloudflare R2 usually recommends `auto`)
+- `S3_FORCE_PATH_STYLE` (default `true`, commonly needed for MinIO/RustFS; Cloudflare R2 usually recommends `false`)
+- `S3_PRESIGN_EXPIRES`: presigned URL expiry in seconds (default `300`)
+- `ANTHROPIC_API_KEY`: optional (used to auto-generate session titles; disabled when unset)
+- `ANTHROPIC_BASE_URL`: optional (custom Anthropic API endpoint/proxy; default `https://api.anthropic.com`)
+- `DEFAULT_MODEL` (default `claude-sonnet-4-20250514`; also used for session title generation)
+- `MAX_UPLOAD_SIZE_MB` (default `100`)
+
+## Logging (shared by all 3 Python services)
+
+- `DEBUG` (default `false`)
+- `LOG_LEVEL` (default follows DEBUG/non-DEBUG; explicit `INFO` is recommended)
+- `UVICORN_ACCESS_LOG` (default `false`)
+- `LOG_TO_FILE` (default `false`): whether to write local file logs
+- `LOG_DIR` (default `./logs`), `LOG_BACKUP_COUNT` (default `14`)
+- `LOG_SQL` (default `false`): whether to print SQLAlchemy SQL (watch for sensitive data)

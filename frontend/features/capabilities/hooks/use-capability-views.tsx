@@ -4,6 +4,7 @@ import * as React from "react";
 import type { LucideIcon } from "lucide-react";
 import {
   Sparkles,
+  Store,
   Puzzle,
   Server,
   KeySquare,
@@ -13,6 +14,7 @@ import {
 } from "lucide-react";
 
 import { useT } from "@/lib/i18n/client";
+import { SkillsMarketplacePageClient } from "@/features/capabilities/marketplace/components/skills-marketplace-page-client";
 import { PresetsPageClient } from "@/features/capabilities/presets/components/presets-page-client";
 import { SkillsPageClient } from "@/features/capabilities/skills/components/skills-page-client";
 import { McpPageClient } from "@/features/capabilities/mcp/components/mcp-page-client";
@@ -35,6 +37,17 @@ export function useCapabilityViews(): CapabilityView[] {
 
   return React.useMemo(
     () => [
+      {
+        id: "marketplace",
+        label: t("library.skillsImport.tabs.marketplace", "Marketplace"),
+        description: t(
+          "library.skillsImport.hints.marketplace",
+          "Discover SkillsMP skills through recommendations or search, then continue with Poco's existing import flow.",
+        ),
+        group: "featured",
+        icon: Store,
+        component: SkillsMarketplacePageClient,
+      },
       {
         id: "presets",
         label: t("library.presets.title"),

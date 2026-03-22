@@ -4,10 +4,12 @@ import mimetypes
 import os
 import re
 import tempfile
+import urllib.error
 import urllib.parse
 import urllib.request
 import uuid
 import zipfile
+import base64
 from collections.abc import Callable
 from pathlib import Path, PurePosixPath
 from typing import Any, IO, Iterable
@@ -109,6 +111,7 @@ class SkillImportService:
         user_id: str,
         file: UploadFile | None,
         github_url: str | None,
+        archive_source_override: dict[str, Any] | None = None,
     ) -> SkillImportDiscoverResponse:
         if bool(file) == bool(github_url):
             raise AppException(
@@ -154,6 +157,10 @@ class SkillImportService:
                     github_url=github_url, destination=source_path
                 )
                 source_name = "github.zip"
+                if isinstance(archive_source_override, dict) and isinstance(
+                    archive_source_override.get("kind"), str
+                ):
+                    archive_source = archive_source_override
 
             candidates = self._scan_candidates(
                 zip_source_path=source_path, zip_source_bytes=source_bytes
@@ -456,6 +463,277 @@ class SkillImportService:
             return results
 
     @staticmethod
+    def _build_github_api_headers() -> dict[str, str]:
+        return {
+            "Accept": "application/vnd.github+json",
+            "User-Agent": "poco-agent-skill-import/1.0",
+        }
+
+    @classmethod
+    def _github_contents_api_url(
+        cls,
+        *,
+        owner: str,
+        repo: str,
+        ref: str,
+        path: str | None,
+    ) -> str:
+        base_url = f"https://api.github.com/repos/{owner}/{repo}/contents"
+        if path:
+            encoded_path = "/".join(
+                urllib.parse.quote(part, safe="") for part in PurePosixPath(path).parts
+            )
+            base_url = f"{base_url}/{encoded_path}"
+        query = urllib.parse.urlencode({"ref": ref})
+        return f"{base_url}?{query}"
+
+    @classmethod
+    def _fetch_json_request(
+        cls,
+        *,
+        url: str,
+        allow_not_found: bool = False,
+    ) -> Any | None:
+        req = urllib.request.Request(url, headers=cls._build_github_api_headers())
+        try:
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                return json.loads(resp.read().decode("utf-8"))
+        except urllib.error.HTTPError as exc:
+            if allow_not_found and exc.code == 404:
+                return None
+            try:
+                body = exc.read().decode("utf-8", errors="ignore")
+            except Exception:
+                body = ""
+            raise AppException(
+                error_code=ErrorCode.BAD_REQUEST,
+                message=f"Failed to query GitHub contents API: {exc.code} {body or exc.reason}",
+            ) from exc
+        except Exception as exc:
+            raise AppException(
+                error_code=ErrorCode.BAD_REQUEST,
+                message=f"Failed to query GitHub contents API: {exc}",
+            ) from exc
+
+    @classmethod
+    def _resolve_github_content_target(
+        cls,
+        *,
+        owner: str,
+        repo: str,
+        trailing_segments: list[str],
+    ) -> dict[str, Any] | None:
+        if not trailing_segments:
+            return None
+
+        for split_index in range(len(trailing_segments), 0, -1):
+            ref = "/".join(trailing_segments[:split_index]).strip("/")
+            target_path = "/".join(trailing_segments[split_index:]).strip("/") or None
+            if not ref:
+                continue
+            payload = cls._fetch_json_request(
+                url=cls._github_contents_api_url(
+                    owner=owner,
+                    repo=repo,
+                    ref=ref,
+                    path=target_path,
+                ),
+                allow_not_found=True,
+            )
+            if payload is None:
+                continue
+            return {
+                "ref": ref,
+                "path": target_path,
+                "payload": payload,
+            }
+        return None
+
+    @staticmethod
+    def _github_export_root_label(*, target_path: str | None, repo: str) -> str:
+        if target_path:
+            target_name = PurePosixPath(target_path).name.strip()
+            if target_name:
+                return target_name
+        return repo
+
+    @classmethod
+    def _download_bytes_with_limit(cls, url: str) -> bytes:
+        max_size_bytes = get_settings().max_upload_size_mb * 1024 * 1024
+        req = urllib.request.Request(
+            url,
+            headers={
+                **cls._build_github_api_headers(),
+                "User-Agent": "poco-agent-skill-import/1.0",
+            },
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                chunks: list[bytes] = []
+                written = 0
+                while True:
+                    chunk = resp.read(1024 * 1024)
+                    if not chunk:
+                        break
+                    written += len(chunk)
+                    if written > max_size_bytes:
+                        raise AppException(
+                            error_code=ErrorCode.BAD_REQUEST,
+                            message=f"GitHub archive too large. Max {get_settings().max_upload_size_mb}MB.",
+                            details={
+                                "max_bytes": max_size_bytes,
+                                "downloaded_bytes": written,
+                            },
+                        )
+                    chunks.append(chunk)
+                return b"".join(chunks)
+        except AppException:
+            raise
+        except Exception as exc:
+            raise AppException(
+                error_code=ErrorCode.BAD_REQUEST,
+                message=f"Failed to download GitHub file: {exc}",
+            ) from exc
+
+    @classmethod
+    def _download_github_file_bytes(cls, metadata: dict[str, Any]) -> bytes:
+        download_url = metadata.get("download_url")
+        if isinstance(download_url, str) and download_url.strip():
+            return cls._download_bytes_with_limit(download_url.strip())
+
+        api_url = metadata.get("url")
+        if isinstance(api_url, str) and api_url.strip():
+            payload = cls._fetch_json_request(url=api_url.strip())
+            if isinstance(payload, dict):
+                content = payload.get("content")
+                encoding = payload.get("encoding")
+                if (
+                    isinstance(content, str)
+                    and content
+                    and isinstance(encoding, str)
+                    and encoding == "base64"
+                ):
+                    return base64.b64decode(content.encode("utf-8"))
+
+        raise AppException(
+            error_code=ErrorCode.BAD_REQUEST,
+            message="Failed to download GitHub file contents",
+        )
+
+    @classmethod
+    def _materialize_github_contents(
+        cls,
+        *,
+        owner: str,
+        repo: str,
+        ref: str,
+        payload: Any,
+        target_root: Path,
+    ) -> None:
+        if isinstance(payload, list):
+            for item in payload:
+                if not isinstance(item, dict):
+                    continue
+                item_type = item.get("type")
+                item_name = item.get("name")
+                item_path = item.get("path")
+                if not isinstance(item_name, str) or not item_name.strip():
+                    continue
+
+                if item_type == "dir" and isinstance(item_path, str):
+                    nested_payload = cls._fetch_json_request(
+                        url=cls._github_contents_api_url(
+                            owner=owner,
+                            repo=repo,
+                            ref=ref,
+                            path=item_path,
+                        )
+                    )
+                    cls._materialize_github_contents(
+                        owner=owner,
+                        repo=repo,
+                        ref=ref,
+                        payload=nested_payload,
+                        target_root=target_root / item_name,
+                    )
+                    continue
+
+                if item_type != "file":
+                    continue
+
+                file_bytes = cls._download_github_file_bytes(item)
+                target_root.mkdir(parents=True, exist_ok=True)
+                (target_root / item_name).write_bytes(file_bytes)
+            return
+
+        if isinstance(payload, dict) and payload.get("type") == "file":
+            file_name = payload.get("name")
+            if not isinstance(file_name, str) or not file_name.strip():
+                raise AppException(
+                    error_code=ErrorCode.BAD_REQUEST,
+                    message="GitHub file payload is missing a filename",
+                )
+            target_root.mkdir(parents=True, exist_ok=True)
+            (target_root / file_name).write_bytes(
+                cls._download_github_file_bytes(payload)
+            )
+            return
+
+        raise AppException(
+            error_code=ErrorCode.BAD_REQUEST,
+            message="Unsupported GitHub contents payload",
+        )
+
+    @staticmethod
+    def _zip_directory(*, source_dir: Path, destination: Path) -> None:
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        with zipfile.ZipFile(
+            destination, "w", compression=zipfile.ZIP_DEFLATED
+        ) as zipf:
+            for file_path in sorted(source_dir.rglob("*")):
+                if not file_path.is_file():
+                    continue
+                zipf.write(file_path, file_path.relative_to(source_dir))
+
+    @classmethod
+    def _download_github_contents_zip(
+        cls,
+        *,
+        owner: str,
+        repo: str,
+        ref: str,
+        target_path: str | None,
+        payload: Any,
+        destination: Path,
+    ) -> dict[str, Any]:
+        root_label = cls._github_export_root_label(target_path=target_path, repo=repo)
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            export_base = Path(tmp_dir) / "export" / "__poco_export__"
+            export_root = (
+                export_base / root_label if isinstance(payload, list) else export_base
+            )
+            cls._materialize_github_contents(
+                owner=owner,
+                repo=repo,
+                ref=ref,
+                payload=payload,
+                target_root=export_root,
+            )
+            cls._zip_directory(
+                source_dir=Path(tmp_dir) / "export", destination=destination
+            )
+
+        archive_source: dict[str, Any] = {
+            "kind": "github",
+            "repo": f"{owner}/{repo}",
+            "url": f"https://github.com/{owner}/{repo}",
+            "ref": ref,
+        }
+        if target_path:
+            archive_source["path"] = target_path
+        return archive_source
+
+    @staticmethod
     def _download_github_zip(*, github_url: str, destination: Path) -> dict[str, Any]:
         parsed = urllib.parse.urlparse(github_url)
         if parsed.scheme not in {"http", "https"}:
@@ -486,9 +764,53 @@ class SkillImportService:
             SkillImportService._download_with_limit(download_url, destination)
             return {"kind": "github", "repo": f"{owner}/{repo}", "url": canonical}
 
+        if len(segments) >= 4 and segments[2] in {"tree", "blob"}:
+            resolved_target = SkillImportService._resolve_github_content_target(
+                owner=owner,
+                repo=repo,
+                trailing_segments=segments[3:],
+            )
+            if resolved_target is not None:
+                target_path = resolved_target["path"]
+                payload = resolved_target["payload"]
+                if (
+                    segments[2] == "blob"
+                    and isinstance(target_path, str)
+                    and target_path
+                    and PurePosixPath(target_path).parent != PurePosixPath(".")
+                ):
+                    parent_path = PurePosixPath(target_path).parent.as_posix()
+                    parent_payload = SkillImportService._fetch_json_request(
+                        url=SkillImportService._github_contents_api_url(
+                            owner=owner,
+                            repo=repo,
+                            ref=resolved_target["ref"],
+                            path=parent_path,
+                        ),
+                        allow_not_found=True,
+                    )
+                    if parent_payload is not None:
+                        return SkillImportService._download_github_contents_zip(
+                            owner=owner,
+                            repo=repo,
+                            ref=resolved_target["ref"],
+                            target_path=parent_path,
+                            payload=parent_payload,
+                            destination=destination,
+                        )
+
+                return SkillImportService._download_github_contents_zip(
+                    owner=owner,
+                    repo=repo,
+                    ref=resolved_target["ref"],
+                    target_path=target_path,
+                    payload=payload,
+                    destination=destination,
+                )
+
         branch: str | None = None
         if len(segments) >= 4 and segments[2] in {"tree", "blob"}:
-            # NOTE: This only supports branches without slashes.
+            # Fallback only supports refs without slashes.
             branch = segments[3]
 
         candidates = [branch] if branch else ["main", "master"]

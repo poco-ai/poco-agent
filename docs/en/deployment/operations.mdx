@@ -1,0 +1,31 @@
+---
+title: Common Operations
+description: Default URLs, configuration entry points, and routine deployment operations.
+---
+
+> If you use `docker-compose.r2.yml`, add `-f docker-compose.r2.yml` to commands below.
+
+View logs:
+
+```bash
+docker compose logs -f backend executor-manager
+```
+
+Update to latest images (or pull the tags you pinned):
+
+```bash
+docker compose pull
+docker compose up -d
+```
+
+Stop:
+
+```bash
+docker compose down
+```
+
+Stop and remove data (deletes Postgres/object storage volumes):
+
+```bash
+docker compose down -v
+```

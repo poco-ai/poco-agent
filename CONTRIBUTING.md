@@ -1,6 +1,6 @@
-# Poco 贡献指南（PR 与开发规范）
+# Poco Contribution Guide (PR & Development Standards)
 
-本文档说明 Poco 仓库的贡献流程，以及提交代码时需要遵循的开发规范。
+This document describes the contribution process for the Poco repository and the development standards that must be followed when submitting code.
 
 与仓库治理、发布、Docker、CI/CD、分支策略相关的正式规则，请同时参考：
 
@@ -16,9 +16,9 @@
 6. 维护者进行 Review，提出修改意见。
 7. 修改后继续 push 到同一分支，直到 Review 通过并由维护者合并。
 
-## 2. 分支与提交规范
+## 2. Branch and Commit Standards
 
-建议使用语义化分支名：
+It is recommended to use semantic branch names:
 
 - `feat/<short-description>`
 - `fix/<short-description>`
@@ -36,10 +36,10 @@
 - `docs: ...`
 - `chore: ...`
 
-建议：
+Recommendations:
 
-- 单次 commit 尽量聚焦一个逻辑点。
-- 避免在同一个 commit 中混入重构、格式化、功能改动三类内容。
+- Each commit should focus on one logical point.
+- Avoid mixing refactoring, formatting, and feature changes in the same commit.
 
 ## 3. PR 标题与合并建议
 
@@ -86,13 +86,13 @@
 
 ## 5. 提交前检查
 
-在仓库根目录执行：
+Run in the repository root:
 
 ```bash
 pre-commit run --all-files
 ```
 
-如果修改了前端，至少补充执行：
+If you modified the frontend, also run:
 
 ```bash
 cd frontend
@@ -100,7 +100,7 @@ pnpm lint
 pnpm build
 ```
 
-如果修改了 Python 服务（`backend`/`executor`/`executor_manager`/`im`），请先安装依赖并验证服务可启动：
+If you modified Python services (`backend`/`executor`/`executor_manager`), please install dependencies and verify the service can start:
 
 ```bash
 cd <service>
@@ -108,26 +108,26 @@ uv sync
 uv run python -m app.main
 ```
 
-如果修改了数据库模型，请按以下流程处理迁移（在 `backend` 目录）：
+If you modified database models, handle migrations as follows (in the `backend` directory):
 
 ```bash
 uv run -m alembic revision --autogenerate -m "description"
 uv run -m alembic upgrade head
 ```
 
-然后人工检查自动生成的 migration 是否符合预期。
+Then manually verify the auto-generated migration meets expectations.
 
 ## 6. PR 描述建议模板
 
-建议在 PR 描述中至少包含以下信息：
+It is recommended to include at least the following in your PR description:
 
-- 变更背景和目标
-- 主要改动点
-- 影响范围（frontend/backend/executor/executor_manager/im）
-- 本地验证命令与结果
-- 如涉及 UI：提供截图或录屏
-- 如涉及数据库：提供 migration 和回滚说明
-- 如涉及破坏性变更：明确写出升级注意事项
+- Background and goals of the changes
+- Main changes
+- Affected areas (frontend/backend/executor/executor_manager)
+- Local verification commands and results
+- If UI changes: provide screenshots or recordings
+- If database changes: provide migration and rollback instructions
+- If breaking changes: clearly state upgrade considerations
 
 仓库现在提供了默认 PR 模板：
 
@@ -135,51 +135,51 @@ uv run -m alembic upgrade head
 
 ## 7. 开发规范
 
-### 5.1 通用规范
+### 5.1 General Standards
 
 - 不提交密钥、令牌、私有配置或任何敏感信息。
 - 新增功能时，同步更新相关文档（README、docs 或 API 文档）。
 - 保持改动最小化，优先修复根因，不做无关重构。
 - 修改仓库治理、发布、Docker、CI/CD、版本策略时，必须同步更新相关文档。
 
-### 5.2 Python（后端相关服务）
+### 5.2 Python (Backend Services)
 
-- Python 版本：`3.12+`。
-- 必须写完整类型标注，优先使用内建泛型：`list[T]`、`dict[str, Any]`、`X | None`。
-- 代码注释必须使用英文，Docstring 遵循 Google 风格。
+- Python version: `3.12+`
+- Must write complete type annotations, prefer built-in generics: `list[T]`, `dict[str, Any]`, `X | None`.
+- Code comments must be in English; Docstrings follow Google style.
 
-后端分层规范（`backend`）：
+Backend layering standards (`backend`):
 
-- `repositories/` 只做数据库 CRUD，不放业务逻辑。
-- `services/` 负责业务编排和事务管理。
-- `services/` 返回 SQLAlchemy Model 或 Pydantic Schema，不返回裸 `dict[str, Any]`。
-- 数据库 session 通过 FastAPI 依赖注入在 API 层创建，再传入 service/repository。
+- `repositories/` - Database CRUD only, no business logic.
+- `services/` - Business orchestration and transaction management.
+- `services/` returns SQLAlchemy Model or Pydantic Schema, not raw `dict[str, Any]`.
+- Database sessions are created via FastAPI dependency injection at the API layer, then passed to services/repositories.
 
-异常处理规范（`backend`）：
+Exception handling standards (`backend`):
 
-- 业务错误使用 `AppException`。
-- HTTP 语义错误使用 `HTTPException`。
-- 不要捕获通用 `Exception` 后再包装成 `HTTPException(500, ...)`。
+- Business errors use `AppException`.
+- HTTP semantic errors use `HTTPException`.
+- Do not catch generic `Exception` and wrap it as `HTTPException(500, ...)`.
 
-### 5.3 前端（Next.js）
+### 5.3 Frontend (Next.js)
 
-- 使用 Tailwind CSS v4 与设计变量（`frontend/app/globals.css`）。
-- 不要硬编码颜色、阴影、圆角，优先使用 design token（如 `var(--primary)`、`var(--shadow-md)`、`var(--radius)`）。
-- 所有面向用户的文案必须走 i18n，不写硬编码字符串。
-- i18n 相关路径：
+- Use Tailwind CSS v4 with design variables (`frontend/app/globals.css`).
+- Do not hardcode colors, shadows, or border-radius; prefer design tokens (e.g., `var(--primary)`, `var(--shadow-md)`, `var(--radius)`).
+- All user-facing text must go through i18n; do not write hardcoded strings.
+- i18n related paths:
   - `frontend/lib/i18n/client.ts`
   - `frontend/lib/i18n/settings.ts`
   - `frontend/lib/i18n/locales/*/translation.json`
 
 ## 8. Review 与合并标准
 
-通常满足以下条件后可进入合并流程：
+Usually ready to merge when:
 
-- 改动目标清晰，PR 说明完整。
-- 本地检查通过，且验证步骤可复现。
-- 代码符合分层与风格规范。
-- 必要文档已更新。
-- Review 意见已处理或达成一致。
+- Change goals are clear, PR description is complete.
+- Local checks pass, and verification steps are reproducible.
+- Code follows layering and style standards.
+- Necessary documentation is updated.
+- Review comments are addressed or consensus is reached.
 
 最终合并由仓库维护者执行。
 

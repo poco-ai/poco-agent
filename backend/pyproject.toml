@@ -10,26 +10,28 @@ dependencies = [
     "boto3>=1.42.28",
     "croniter>=6.0.0",
     "cryptography>=46.0.3",
+    "dingtalk-stream>=0.24.3",
     "fastapi>=0.128.0",
     "httpx>=0.28.1",
     "langchain-neo4j>=0.8.0",
+    "lark-oapi>=1.5.3",
     "mem0ai>=0.1.116",
     "psycopg2-binary>=2.9.9",
     "pydantic-settings>=2.12.0",
     "python-multipart>=0.0.21",
+    "python-socks>=2.8.0",
     "rank-bm25>=0.2.2",
     "sqlalchemy>=2.0.45",
     "uvicorn>=0.40.0",
+    "websockets>=16.0",
 ]
 
 [tool.pyrefly]
+project-excludes = ["assets/**"]
 project-includes = [
-    "**/*.py*",
+    "**/*.py",
+    "**/*.pyi",
     "**/*.ipynb",
 ]
 
 search_path = ["."]
-
-[[tool.uv.index]]
-url = "https://pypi.tuna.tsinghua.edu.cn/simple"
-default = true

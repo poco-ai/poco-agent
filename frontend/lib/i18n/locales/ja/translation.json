@@ -5,6 +5,7 @@
   "language": "言語",
   "sidebar": {
     "newTask": "新しいタスク",
+    "newTaskWithShortcut": "新しいタスク ({{shortcut}})",
     "search": "検索",
     "library": "機能",
     "scheduledTasks": "スケジュールタスク",
@@ -45,6 +46,15 @@
   },
   "hero": {
     "title": "何かお手伝いできることはありますか？",
+    "rotatingWords": [
+      "スライド作成",
+      "資料検索",
+      "マインドマップ作成",
+      "GitHub リポジトリ分析",
+      "データ分析",
+      "旅行計画",
+      "コード作成"
+    ],
     "subtitle": "タスクを割り当てるか、質問してください。",
     "uploadFile": "ファイルをアップロード",
     "dragDrop": {
@@ -130,6 +140,9 @@
       "disabledTooltipDescription": "有効にすると、Poco がブラウザで Web ページの閲覧や Web 関連タスクを実行できます。",
       "enabledHint": "有効"
     },
+    "memory": {
+      "toggle": "Memory"
+    },
     "runSchedule": {
       "toggle": "実行時間",
       "dialogTitle": "実行時間",
@@ -175,6 +188,20 @@
       "toggleServer": "{{name}} を切り替え",
       "cancel": "キャンセル",
       "confirm": "確認"
+    },
+    "capabilityRecommendations": {
+      "title": "おすすめの機能",
+      "selectedTitle": "このタスクで有効",
+      "loading": "一致する項目を検索中...",
+      "empty": "この入力に一致するMCPまたはスキルが見つかりませんでした。",
+      "useForTask": "このタスクで使用",
+      "added": "追加済み",
+      "enabledByDefault": "デフォルトで有効",
+      "noDescription": "説明がありません",
+      "remove": "{{name}}を削除",
+      "mcpLabel": "MCP",
+      "skillLabel": "スキル",
+      "hint": "タスクに基づいて、Pocoが上記の機能をおすすめします。クリックして読み込み。"
     },
     "warnings": {
       "tooManyMcps": "有効なMCPサーバーが多すぎます（{{count}}個）。システムの読み込みが遅くなり、パフォーマンスが低下する可能性があります。",
@@ -480,6 +507,28 @@
         "structured": "Structured data",
         "empty": "No data"
       }
+    },
+    "skillCreationReview": {
+      "title": "作成されたスキルを確認",
+      "subtitle": "このセッションでエージェントがスキルを作成しました。保存前に確認してください。",
+      "badge": "エージェント作成",
+      "nameLabel": "スキル名",
+      "descriptionLabel": "説明",
+      "emptyDescription": "説明は生成されませんでした。",
+      "pathLabel": "ワークスペースのパス",
+      "conflictWarning": "同じ名前のスキルが既に存在します。",
+      "overwriteLabel": "既存のスキルを上書きする",
+      "filesTitle": "生成されたファイル",
+      "loadingFiles": "生成されたファイルを読み込み中…",
+      "emptyFiles": "まだプレビューできるファイルはありません。",
+      "selectFile": "プレビューするファイルを選択してください。",
+      "cancel": "キャンセル",
+      "confirm": "スキルを作成",
+      "confirmOverwrite": "上書きして作成",
+      "createSuccess": "スキルを作成しました",
+      "createFailed": "スキルの作成に失敗しました",
+      "cancelSuccess": "スキル作成を取り消しました",
+      "cancelFailed": "スキル作成の取り消しに失敗しました"
     }
   },
   "status": {
@@ -589,7 +638,8 @@
       "processing": "ファイル処理",
       "notSupported": "この形式はプレビューをサポートしていません",
       "openInNewWindow": "新しいウィンドウで開く",
-      "downloadOriginal": "元のファイルをダウンロード"
+      "downloadOriginal": "元のファイルをダウンロード",
+      "frontMatter": "フロントマター"
     },
     "summary": {
       "total": "合計",
@@ -1036,7 +1086,11 @@
       },
       "scope": {
         "system": "システム",
-        "user": "ユーザー"
+        "user": "ユーザー",
+        "builtin": "組み込み"
+      },
+      "source": {
+        "skillCreator": "Agent 作成"
       },
       "fields": {
         "id": "ID",
@@ -1056,14 +1110,19 @@
         "actionFailed": "操作に失敗しました。後でもう一度お試しください"
       },
       "empty": "まだスキルはありません",
-      "unknownSkill": "不明なスキル"
+      "unknownSkill": "不明なスキル",
+      "sections": {
+        "system": "組み込みスキル",
+        "custom": "カスタムスキル"
+      }
     },
     "skillsImport": {
       "title": "スキルをインポート",
       "tabs": {
         "zip": "Zipをアップロード",
         "github": "GitHub URL",
-        "command": "npx コマンド導入"
+        "command": "npx コマンド導入",
+        "marketplace": "スキルマーケット"
       },
       "fields": {
         "zip": "Zipファイル",
@@ -1073,12 +1132,14 @@
       "placeholders": {
         "githubUrl": "https://github.com/owner/repo",
         "name": "例：my-skill",
-        "command": "npx skills add https://github.com/owner/repo --skill my-skill"
+        "command": "npx skills add https://github.com/owner/repo --skill my-skill",
+        "marketplaceSearch": "Search SkillsMP skills, for example git automation"
       },
       "hints": {
         "github": "デフォルトはmain/master（パブリックgithub.comリポジトリのみ）",
         "nameRequired": "SKILL.mdはアーカイブのルートにあります。名前が必要です",
-        "command": "add コマンドを貼り付けると、GitHub URL と --skill を自動解析します。"
+        "command": "add コマンドを貼り付けると、GitHub URL と --skill を自動解析します。",
+        "marketplace": "Discover SkillsMP skills through recommendations or search, then continue with Poco's existing import flow."
       },
       "actions": {
         "back": "戻る",
@@ -1123,12 +1184,41 @@
         "commitError": "インポートに失敗しました。後でもう一度お試しください",
         "partialFailed": "一部のスキルのインポートに失敗しました。詳細を確認してください。",
         "commitTimeout": "インポートがタイムアウトしました。後でもう一度お試しください",
-        "invalidCommand": "コマンドを解析できません。github.com の URL を含めてください。"
+        "invalidCommand": "コマンドを解析できません。github.com の URL を含めてください。",
+        "marketplaceLoadError": "SkillsMP のデータを読み込めませんでした。しばらくしてからもう一度お試しください。",
+        "marketplaceDiscoverError": "この SkillsMP スキルを解決できませんでした。しばらくしてからもう一度お試しください。"
       },
       "progress": {
         "title": "インポートの進行状況",
         "value": "進行状況",
         "jobId": "ジョブID"
+      },
+      "marketplace": {
+        "search": "検索",
+        "reset": "おすすめに戻る",
+        "searchResults": "{{count}} 件の結果",
+        "emptySearch": "検索条件に一致する SkillsMP スキルは見つかりませんでした。",
+        "emptyRecommendations": "現在表示できる SkillsMP のおすすめはありません。",
+        "download": "ダウンロード",
+        "downloading": "処理中...",
+        "jump": "開く",
+        "noDescription": "表示できる説明はまだありません。",
+        "sections": {
+          "popular": "人気"
+        },
+        "aiSearchTooltip": "AI Search を有効にして、SkillsMP のセマンティック検索 API を使います",
+        "refresh": "おすすめを更新",
+        "openInGithub": "GitHub で開く",
+        "checkInSkillsmp": "SkillsMP で確認",
+        "titleLabel": "タイトル",
+        "descriptionLabel": "説明",
+        "setupTitle": "SkillsMP を接続して、さらに多くの skills を見つける",
+        "setupDescription": "SkillsMP は、人気順や検索で再利用可能な agent skills を見つけられる skill marketplace です。",
+        "setupHint": "まず 設定 > その他 で SkillsMP API キーを追加してから、ここに戻って marketplace を利用してください。",
+        "openSettings": "設定を開く",
+        "invalidKeyTitle": "現在の SkillsMP API キーは無効です",
+        "invalidKeyDescription": "現在の API キーは SkillsMP に拒否されたため、marketplace の検索とおすすめを読み込めません。",
+        "invalidKeyHint": "設定 > その他 で SkillsMP API キーを更新し、保存後にここへ戻ってもう一度お試しください。"
       }
     },
     "pluginsPage": {
@@ -1191,7 +1281,10 @@
       "zip": "ZIP",
       "system": "システム",
       "manual": "手動",
-      "unknown": "不明"
+      "unknown": "不明",
+      "skillCreator": "Skill Creator",
+      "marketplace": "Marketplace",
+      "skillsmp": "SkillsMP"
     },
     "pluginsManager": {
       "toasts": {
@@ -1205,6 +1298,34 @@
     "presetsPage": {
       "header": {
         "title": "プリセット"
+      }
+    },
+    "skillSettings": {
+      "title": "スキル設定",
+      "subtitle": "スキルファイルを確認し、編集可能な設定を更新します。",
+      "previewHint": "左側のファイルを選択すると、完全な内容をプレビューできます。",
+      "loadingFiles": "スキルファイルを読み込み中…",
+      "emptyFiles": "このスキルでプレビュー可能なファイルはありません。",
+      "nameLabel": "スキル名",
+      "namePlaceholder": "スキル名を入力",
+      "descriptionLabel": "説明",
+      "descriptionPlaceholder": "このスキルの概要を入力してください",
+      "storagePathLabel": "保存パス",
+      "storagePathUnavailable": "利用可能な保存パスがありません。",
+      "readonlyHint": "組み込みスキルは読み取り専用です。ここでファイルをプレビューできますが、編集はできません。",
+      "nameConflict": "同じ名前のスキルがすでに存在します。",
+      "toasts": {
+        "saved": "スキルを更新しました",
+        "saveFailed": "スキルの更新に失敗しました"
+      },
+      "source": {
+        "system": "システム",
+        "github": "GitHub",
+        "zip": "ZIP パッケージ",
+        "manual": "手動作成",
+        "unknown": "不明なソース",
+        "marketplace": "Marketplace",
+        "skillsmp": "SkillsMP"
       }
     }
   },
@@ -1270,6 +1391,7 @@
       "account": "アカウント",
       "settings": "設定",
       "models": "モデル",
+      "other": "その他",
       "usage": "使用状況",
       "shortcuts": "Shortcuts"
     },
@@ -1281,7 +1403,6 @@
     "generalSettings": "一般設定",
     "darkMode": "ダークモード",
     "backend": "バックエンド",
-    "modelConfigTitle": "モデル設定",
     "modelGlm": "GLM-4.7",
     "modelGlmDescription": "タスク実行のためにGLMモデルを有効にする",
     "apiKeys": "APIキー",
@@ -1297,15 +1418,16 @@
     "anthropicBaseUrl": "Anthropic Base URL",
     "anthropicBaseUrlHint": "デフォルトのAnthropic APIエンドポイントを上書きします。",
     "anthropicBaseUrlPlaceholder": "https://api.anthropic.com",
-    "providerConfigDescription": "プロバイダーの認証情報と、セレクターに表示するモデル一覧を管理します。",
     "providerListEmpty": "利用可能なモデルプロバイダーはまだありません。",
     "providerStatusNone": "未設定",
     "providerStatusSystem": "プリセットサービス",
     "providerStatusUser": "カスタム",
     "providerModels": "対象モデル: {{models}}",
-    "providerApiKeyLabel": "{{provider}} APIキー",
+    "providerApiKeyLabel": "APIキー",
     "providerApiKeyHint": "既存のカスタムキーを保持する場合は空欄のままにしてください。",
     "providerApiKeyPlaceholder": "{{provider}} APIキーを入力",
+    "providerApiKeyConfigured": "設定済み",
+    "providerNeedConfig": "APIキーとモデルの設定が必要",
     "providerBaseUrlLabel": "カスタム Base URL",
     "providerBaseUrlHint": "デフォルトの API エンドポイントを使用するには空欄のままにしてください。",
     "providerBaseUrlRequired": "カスタムエンドポイントを有効にする場合は Base URL が必要です。",
@@ -1378,6 +1500,10 @@
           "action": "Slash command",
           "hint": "Type / to open slash command suggestions."
         },
+        "newTask": {
+          "action": "新しいタスク",
+          "hint": "新しいタスクを作成してホームに移動します。"
+        },
         "search": {
           "action": "Global search",
           "hint": "Open or close global search dialog."
@@ -1398,13 +1524,41 @@
     },
     "providerDiscoverError": "プロバイダーのモデル取得に失敗しました",
     "providerModelsPlaceholder": "カスタムモデルはまだ追加されていません",
-    "providerModelsSearchPlaceholder": "モデル名を入力して Enter を押してください",
+    "providerModelsSearchPlaceholder": "モデル名を入力してください。複数ある場合はカンマで区切れます",
     "providerModelsAdd": "モデルを追加",
     "providerModelsDiscovering": "モデルを読み込み中...",
     "providerModelsManualHint": "このプロバイダーは自動検出に対応していません。モデル名を手動で入力してください。",
     "providerModelsEmpty": "モデルが見つかりません",
     "providerModelsUseCustom": "カスタムモデルを使用: {{model}}",
-    "providerFieldAnnotation": "API Key を空欄のままにすると現在のキーを保持します。Base URL を空欄のままにするとデフォルトのエンドポイントを使用します。モデル名は手動で入力し、Enter または追加ボタンで登録してください。"
+    "providerFieldAnnotation": "API Key を空欄のままにすると現在のキーを保持します。Base URL を空欄のままにするとデフォルトのエンドポイントを使用します。モデル名は手動で入力し、複数ある場合はカンマで区切ってください。保存を押すか、Enter / 追加ボタンですぐに反映できます。",
+    "other": {
+      "title": "その他の連携",
+      "description": "モデルプロバイダー以外の追加サービス認証情報を管理します。",
+      "skillsmp": {
+        "title": "SkillsMP",
+        "subtitle": "外部 skills 向けの marketplace 検索とおすすめを有効にします。",
+        "description": "SkillsMP API キー",
+        "statusChecking": "確認中...",
+        "statusReady": "準備完了",
+        "statusMissing": "未設定",
+        "keyLabel": "SkillsMP API キー",
+        "keyPlaceholder": "SkillsMP API キーを入力",
+        "help": "skill import ダイアログで SkillsMP の検索とおすすめを利用できます。",
+        "docsLink": "SkillsMP API ドキュメント",
+        "customKeySaved": "このアカウントには既にユーザー専用のカスタムキーが保存されています。",
+        "save": "キーを保存",
+        "clear": "カスタムキーを削除",
+        "clearError": "SkillsMP 状態の更新に失敗しました"
+      }
+    },
+    "providerApiKeyLinkText": "Get API key here",
+    "providerModelRemove": "Remove model",
+    "providerModelDocsPrefix": "こちらの ",
+    "providerModelDocsLinkLabel": "{{provider}} ドキュメント",
+    "providerModelDocsSuffix": " でモデル一覧を見る",
+    "providerModelsDialogTitle": "カスタムモデルを追加",
+    "providerModelsDialogDescription": "プロバイダーのモデル ID を手動で登録します。",
+    "providerModelsDialogPlaceholder": "モデル ID（例: gpt-4o-mini）"
   },
   "validation": {
     "projectNameRequired": "プロジェクト名を入力してください",
@@ -1430,8 +1584,19 @@
   "fileSidebar": {
     "title": "ファイルリスト",
     "fileList": "ファイルリスト",
+    "actions": "操作",
     "downloadAll": "すべてをダウンロード",
+    "download": "ダウンロード",
+    "downloadFile": "ファイルをダウンロード",
     "noFiles": "まだファイルはありません",
+    "packageAsSkill": "Skillとしてパッケージ",
+    "packageSkillTitle": "フォルダーをSkillとして登録",
+    "packageSkillDescription": "このワークスペースフォルダーを Skill レビューに送信します。",
+    "skillName": "Skill 名",
+    "skillNamePlaceholder": "Skill 名を入力",
+    "submitSkill": "レビューに送信",
+    "skillSubmitted": "Skill をレビューに送信しました",
+    "skillSubmitFailed": "Skill の送信に失敗しました",
     "downloadStarted": "ワークスペースアーカイブのダウンロードを開始しています",
     "downloadStart": "ワークスペースアーカイブのダウンロードを開始しています",
     "archiveNotAvailable": "アーカイブファイルがまだ利用できません",

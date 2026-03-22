@@ -1,0 +1,31 @@
+---
+title: Bootstrap Script
+description: Recommended first-run setup for local RustFS-based deployment.
+---
+
+If this is your first setup and you are using local `rustfs` (`docker-compose.yml`), run the script to prepare `.env`, directories, permissions, image pulls, and bucket creation automatically:
+
+```bash
+./scripts/quickstart.sh
+```
+
+The script runs in interactive mode by default. It prompts for your model API key (saved as `ANTHROPIC_API_KEY`, supports Anthropic-compatible endpoints) and writes it to `.env`.
+If you need CI mode, use `--non-interactive` with `--llm-api-key` / `--llm-base-url` / `--model`.
+
+The script will:
+
+- Copy `.env.example` -> `.env` (when missing)
+- Detect and write `DOCKER_GID`; interactive mode writes API key/model settings; other values are only written when passed as args (such as `--data-dir` / `--s3-*` / `--cors-origins`)
+- Create `oss_data/` and `tmp_workspace/`; by default tries to `chown` `oss_data/` to `10001:10001` (RustFS user)
+- Write `.gitignore` files for `oss_data/` and `tmp_workspace/` (content: `*`)
+- Pull executor image and start services by default
+- Create `S3_BUCKET` via `rustfs-init`
+
+## Common flags
+
+- `--no-pull-executor`: skip pulling executor image
+- `--no-start`: only prepare env and directories, do not start services
+- `--no-init-bucket`: skip bucket creation
+- `--no-chown-rustfs`: skip changing `oss_data/` to `10001:10001`
+
+After the script finishes, confirm `ANTHROPIC_API_KEY` is set in `.env` (you can use any Anthropic-compatible service key).

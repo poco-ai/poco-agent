@@ -22,6 +22,8 @@ import { useMemoryFeatureEnabled } from "@/hooks/use-memory-feature-enabled";
 import { useFileDropUpload } from "@/features/task-composer/hooks/use-file-drop-upload";
 import { useFileUpload } from "@/features/task-composer/hooks/use-file-upload";
 import { appendTranscribedText, useVoiceInput } from "@/features/voice";
+import { playInstallSound } from "@/lib/utils/sound";
+import { useCapabilityToggle } from "@/features/connectors";
 import type { RunScheduleMode } from "@/features/task-composer/model/run-schedule";
 import type {
   ComposerMode,
@@ -29,6 +31,28 @@ import type {
   TaskSendOptions,
 } from "@/features/task-composer/types";
 import type { CapabilityRecommendation } from "@/features/task-composer/types/capability-recommendation";
+
+interface TrackedCapabilityItem {
+  item: CapabilityRecommendation;
+  restoreEnabled: boolean;
+}
+
+function toCapabilityToggleConfig(
+  toggles: Record<string, boolean> | Record<number, boolean> | null | undefined,
+): Record<string, boolean> {
+  const result: Record<string, boolean> = {};
+  if (!toggles) {
+    return result;
+  }
+
+  for (const [key, value] of Object.entries(toggles)) {
+    if (typeof value === "boolean") {
+      result[key] = value;
+    }
+  }
+
+  return result;
+}
 
 // ---------------------------------------------------------------------------
 // Props
@@ -84,9 +108,12 @@ export function TaskComposer({
   const { t } = useT("translation");
   const { lng } = useAppShell();
   const memoryFeatureEnabled = useMemoryFeatureEnabled();
+  const capabilityToggle = useCapabilityToggle();
   const isComposing = React.useRef(false);
+  const memoryInitializedRef = React.useRef(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const latestValueRef = React.useRef(value);
+  const trackedCapabilityItemsRef = React.useRef<TrackedCapabilityItem[]>([]);
 
   React.useEffect(() => {
     latestValueRef.current = value;
@@ -126,14 +153,21 @@ export function TaskComposer({
 
   // ---- Browser toggle ----
   const [browserEnabled, setBrowserEnabled] = React.useState(true);
-  const [memoryEnabled, setMemoryEnabled] = React.useState(false);
-  const [mcpConfig, setMcpConfig] = React.useState<Record<string, boolean>>({});
-  const [skillConfig, setSkillConfig] = React.useState<Record<string, boolean>>(
-    {},
-  );
-  const [selectedCapabilityItems, setSelectedCapabilityItems] = React.useState<
-    CapabilityRecommendation[]
+  const [memoryEnabled, setMemoryEnabled] =
+    React.useState(memoryFeatureEnabled);
+  const [trackedCapabilityItems, setTrackedCapabilityItems] = React.useState<
+    TrackedCapabilityItem[]
   >([]);
+
+  const effectiveMcpConfig = React.useMemo(
+    () => toCapabilityToggleConfig(capabilityToggle?.mcpEnabledMap),
+    [capabilityToggle],
+  );
+
+  const effectiveSkillConfig = React.useMemo(
+    () => toCapabilityToggleConfig(capabilityToggle?.skillEnabledMap),
+    [capabilityToggle],
+  );
 
   // ---- Repo state ----
   const [repoDialogOpen, setRepoDialogOpen] = React.useState(false);
@@ -166,6 +200,16 @@ export function TaskComposer({
     enabled: !isSubmitting,
     limit: 3,
   });
+  const showRecommendationEmptyState =
+    capabilityRecommendations.hasFetched &&
+    value.trim().length >= capabilityRecommendations.minQueryLength;
+  const hasInput = value.trim().length > 0;
+  const showRecommendationsInFooter =
+    hasInput &&
+    (capabilityRecommendations.isLoading ||
+      capabilityRecommendations.items.length > 0 ||
+      trackedCapabilityItems.length > 0 ||
+      showRecommendationEmptyState);
 
   // ---- Derived values ----
   const firstLine =
@@ -197,9 +241,34 @@ export function TaskComposer({
   }, []);
 
   React.useEffect(() => {
-    if (memoryFeatureEnabled) return;
-    setMemoryEnabled(false);
+    if (!memoryFeatureEnabled) {
+      setMemoryEnabled(false);
+      memoryInitializedRef.current = false;
+      return;
+    }
+
+    if (memoryInitializedRef.current) return;
+    setMemoryEnabled(true);
+    memoryInitializedRef.current = true;
   }, [memoryFeatureEnabled]);
+
+  React.useEffect(() => {
+    trackedCapabilityItemsRef.current = trackedCapabilityItems;
+  }, [trackedCapabilityItems]);
+
+  // Reset capability recommendation state when input is cleared
+  React.useEffect(() => {
+    if (value.trim().length > 0) return;
+    const prev = trackedCapabilityItemsRef.current;
+    for (const entry of prev) {
+      if (entry.item.type === "mcp") {
+        capabilityToggle?.toggleMcp(entry.item.id, entry.restoreEnabled);
+      } else {
+        capabilityToggle?.toggleSkill(entry.item.id, entry.restoreEnabled);
+      }
+    }
+    setTrackedCapabilityItems([]);
+  }, [value, capabilityToggle]);
 
   // Default scheduled name from input
   React.useEffect(() => {
@@ -269,8 +338,12 @@ export function TaskComposer({
           : null,
       browser_enabled: browserEnabled,
       memory_enabled: memoryFeatureEnabled ? memoryEnabled : false,
-      mcp_config: mcpConfig,
-      skill_config: skillConfig,
+      mcp_config:
+        Object.keys(effectiveMcpConfig).length > 0 ? effectiveMcpConfig : null,
+      skill_config:
+        Object.keys(effectiveSkillConfig).length > 0
+          ? effectiveSkillConfig
+          : null,
       run_schedule:
         mode === "scheduled"
           ? null
@@ -296,19 +369,17 @@ export function TaskComposer({
 
     onSend(payload);
     upload.clearAttachments();
-    setMcpConfig({});
-    setSkillConfig({});
-    setSelectedCapabilityItems([]);
     setRunScheduleMode("immediate");
     setRunScheduledAt(null);
   }, [
     allowProjectize,
     browserEnabled,
+    effectiveMcpConfig,
+    effectiveSkillConfig,
     canSubmit,
     gitBranch,
     gitTokenEnvKey,
     isSubmitting,
-    mcpConfig,
     memoryEnabled,
     memoryFeatureEnabled,
     mode,
@@ -324,46 +395,68 @@ export function TaskComposer({
     scheduledName,
     scheduledReuseSession,
     scheduledTimezone,
-    skillConfig,
     upload,
     value,
     voiceInput.isBusy,
   ]);
 
-  const handleApplyCapability = React.useCallback(
+  const isCapabilityEnabled = React.useCallback(
     (item: CapabilityRecommendation) => {
       const key = String(item.id);
-      if (item.type === "mcp") {
-        setMcpConfig((prev) => ({ ...prev, [key]: true }));
-      } else {
-        setSkillConfig((prev) => ({ ...prev, [key]: true }));
-      }
-      setSelectedCapabilityItems((prev) => {
-        const exists = prev.some(
-          (entry) => entry.type === item.type && entry.id === item.id,
-        );
-        if (exists) return prev;
-        return [...prev, item];
-      });
+      const override =
+        item.type === "mcp"
+          ? effectiveMcpConfig[key]
+          : effectiveSkillConfig[key];
+      return typeof override === "boolean" ? override : item.default_enabled;
     },
-    [],
+    [effectiveMcpConfig, effectiveSkillConfig],
   );
 
-  const handleRemoveCapability = React.useCallback(
-    (item: CapabilityRecommendation) => {
+  const handleToggleCapability = React.useCallback(
+    (item: CapabilityRecommendation, enabled: boolean) => {
       const key = String(item.id);
+      const currentEnabled =
+        item.type === "mcp"
+          ? effectiveMcpConfig[key]
+          : effectiveSkillConfig[key];
+      const restoreEnabled =
+        typeof currentEnabled === "boolean"
+          ? currentEnabled
+          : item.default_enabled;
+
       if (item.type === "mcp") {
-        setMcpConfig((prev) => ({ ...prev, [key]: false }));
+        capabilityToggle?.toggleMcp(item.id, enabled);
       } else {
-        setSkillConfig((prev) => ({ ...prev, [key]: false }));
+        capabilityToggle?.toggleSkill(item.id, enabled);
       }
-      setSelectedCapabilityItems((prev) =>
-        prev.filter(
-          (entry) => !(entry.type === item.type && entry.id === item.id),
-        ),
-      );
+
+      if (enabled) {
+        playInstallSound();
+      }
+
+      setTrackedCapabilityItems((prev) => {
+        const existingIndex = prev.findIndex(
+          (entry) => entry.item.type === item.type && entry.item.id === item.id,
+        );
+
+        if (existingIndex !== -1) {
+          const existing = prev[existingIndex];
+          if (enabled === existing.restoreEnabled) {
+            return prev.filter((_, index) => index !== existingIndex);
+          }
+          return prev.map((entry, index) =>
+            index === existingIndex ? { ...entry, item } : entry,
+          );
+        }
+
+        if (enabled === restoreEnabled) {
+          return prev;
+        }
+
+        return [...prev, { item, restoreEnabled }];
+      });
     },
-    [],
+    [capabilityToggle, effectiveMcpConfig, effectiveSkillConfig],
   );
 
   // ---- Render ----
@@ -500,18 +593,6 @@ export function TaskComposer({
           />
         </div>
 
-        <CapabilityRecommendations
-          recommendations={capabilityRecommendations.items}
-          selectedItems={selectedCapabilityItems}
-          isLoading={capabilityRecommendations.isLoading}
-          showEmptyState={
-            capabilityRecommendations.hasFetched &&
-            value.trim().length >= capabilityRecommendations.minQueryLength
-          }
-          onApply={handleApplyCapability}
-          onRemove={handleRemoveCapability}
-        />
-
         {/* Bottom toolbar */}
         <div className="flex flex-wrap items-center justify-between gap-3 px-4 pb-4">
           <div className="flex-1 min-w-0">
@@ -523,11 +604,12 @@ export function TaskComposer({
               canSubmit={canSubmit}
               hasVoiceSupport={voiceInput.isSupported}
               voiceStatus={voiceInput.status}
-              repoUrl={repoUrl}
-              repoDialogOpen={repoDialogOpen}
               browserEnabled={browserEnabled}
+              memoryFeatureEnabled={memoryFeatureEnabled}
+              memoryEnabled={memoryEnabled}
               onOpenRepoDialog={() => setRepoDialogOpen(true)}
               onBrowserEnabledChange={setBrowserEnabled}
+              onMemoryEnabledChange={setMemoryEnabled}
               onOpenFileInput={() => fileInputRef.current?.click()}
               onToggleVoiceInput={() => {
                 void voiceInput.toggleRecording();
@@ -549,6 +631,20 @@ export function TaskComposer({
           <div className="border-t border-border/60">{bottomAddon}</div>
         ) : null}
       </div>
+
+      {showRecommendationsInFooter ? (
+        <div className="mt-3">
+          <CapabilityRecommendations
+            recommendations={capabilityRecommendations.items}
+            trackedItems={trackedCapabilityItems.map((entry) => entry.item)}
+            isLoading={capabilityRecommendations.isLoading}
+            showEmptyState={showRecommendationEmptyState}
+            isEnabled={isCapabilityEnabled}
+            onToggle={handleToggleCapability}
+            footerMode
+          />
+        </div>
+      ) : null}
 
       {fileDrop.isDragActive ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/70 backdrop-blur-sm">

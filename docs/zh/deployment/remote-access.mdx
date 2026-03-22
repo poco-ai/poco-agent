@@ -1,0 +1,22 @@
+---
+title: 使用 Tailscale 远程访问
+description: 通过 Tailscale 安全地暴露 Poco 前端。
+---
+
+如果你需要在外网访问本机部署的服务、但不希望直接暴露到公网，可以用 Tailscale 在 tailnet 内穿透访问。
+
+Tailscale Serve 会为本机端口提供一个 tailnet 内可访问的 HTTPS 地址（首次使用会引导你在 tailnet 启用 HTTPS）。
+
+安装 Tailscale（官方文档）：[Install Tailscale](https://tailscale.com/docs/install)
+
+示例：将本机 Frontend 的 3000 端口通过 Tailscale 暴露给 tailnet 内其他设备访问：
+
+```bash
+# 1) 登录并加入 tailnet
+sudo tailscale up
+
+# 2) 使用 Tailscale Serve 暴露 3000 端口（Frontend）
+tailscale serve --bg http://127.0.0.1:3000
+```
+
+执行后终端会输出一个类似 `https://<device>.<tailnet>.ts.net` 的地址，tailnet 内设备即可通过该地址访问你的 Frontend。

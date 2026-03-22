@@ -6,6 +6,7 @@ import {
 import {
   getMessageAttachmentsDeltaRawAction,
   getMessagesBaseDeltaRawAction,
+  getMessagesRawAction,
   getRunsBySessionAction,
 } from "@/features/chat/actions/query-actions";
 import type {
@@ -33,6 +34,7 @@ interface UseChatMessagesReturn {
   showTypingIndicator: boolean;
   sendMessage: (
     content: string,
+
     attachments?: InputFile[],
     modelSelection?: ModelSelection | null,
   ) => Promise<TaskEnqueueActionResult | null>;
@@ -43,6 +45,7 @@ interface UseChatMessagesReturn {
   }) => string;
   commitOptimisticHistoryMutation: (mutationToken: string) => void;
   rollbackOptimisticHistoryMutation: (mutationToken: string) => void;
+  reloadMessagesSnapshot: () => Promise<void>;
   runUsageByUserMessageId: Record<string, UsageResponse | null>;
 }
 
@@ -532,24 +535,11 @@ export function useChatMessages({
           sessionId,
           content: normalizedContent,
           attachments,
-          model: modelSelection?.modelId ?? null,
-          model_provider_id: modelSelection?.providerId ?? null,
+          model: modelSelection?.modelId,
+          model_provider_id: modelSelection?.providerId,
         });
 
-        if (result.acceptedType !== "run") {
-          if (optimisticMessageId) {
-            setMessages((prev) =>
-              prev.filter((message) => message.id !== optimisticMessageId),
-            );
-            setIsTyping(false);
-          }
-          return result;
-        }
-
-        if (!shouldOptimisticallyRender) {
-          setIsTyping(true);
-        }
-
+        // Refresh runs so multi-turn conversations only show real user inputs.
         await refreshRealUserMessageIds();
 
         const messageDelta = await fetchMessagesDelta(sessionId, {
@@ -586,6 +576,40 @@ export function useChatMessages({
       syncMessagesFromServerState,
     ],
   );
+
+  const reloadMessagesSnapshot = useCallback(async (): Promise<void> => {
+    const sessionId = session?.session_id;
+    if (!sessionId) return;
+
+    try {
+      await refreshRealUserMessageIds();
+
+      const rawMessages = await getMessagesRawAction({ sessionId });
+      if (lastLoadedSessionIdRef.current !== sessionId) {
+        return;
+      }
+
+      rawMessagesRef.current = rawMessages;
+      messageCursorRef.current = rawMessages.at(-1)?.id ?? 0;
+      attachmentCursorRef.current = rawMessages.at(-1)?.id ?? 0;
+      attachmentsByMessageIdRef.current = rawMessages.reduce<
+        Record<number, InputFile[]>
+      >((acc, message) => {
+        if ((message.attachments?.length ?? 0) > 0) {
+          acc[message.id] = message.attachments ?? [];
+        }
+        return acc;
+      }, {});
+
+      syncMessagesFromServerState();
+    } catch (error) {
+      console.error("[Chat] Failed to reload message snapshot:", error);
+    }
+  }, [
+    refreshRealUserMessageIds,
+    session?.session_id,
+    syncMessagesFromServerState,
+  ]);
 
   // Load and poll for messages
   useEffect(() => {
@@ -801,6 +825,7 @@ export function useChatMessages({
     beginOptimisticEditMessage,
     commitOptimisticHistoryMutation,
     rollbackOptimisticHistoryMutation,
+    reloadMessagesSnapshot,
     runUsageByUserMessageId,
   };
 }

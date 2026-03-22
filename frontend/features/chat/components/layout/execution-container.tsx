@@ -6,19 +6,11 @@ import { MobileExecutionView } from "./mobile-execution-view";
 import { useExecutionSession } from "@/features/chat/hooks/use-execution-session";
 import { useTaskHistoryContext } from "@/features/projects/contexts/task-history-context";
 import { useIsMobile } from "@/hooks/use-mobile";
-
-import {
-  ResizableHandle,
-  ResizablePanel,
-  ResizablePanelGroup,
-} from "@/components/ui/resizable";
 import { useT } from "@/lib/i18n/client";
-import {
-  ChatPanelSkeleton,
-  RightPanelSkeleton,
-} from "@/features/chat/components/layout/execution-container-skeletons";
+import { ChatPanelSkeleton } from "@/features/chat/components/layout/execution-container-skeletons";
 import { ExecutionTabsSwitch } from "@/features/chat/components/layout/execution-tabs-switch";
 import { DesktopExecutionLayout } from "@/features/chat/components/layout/desktop-execution-layout";
+import { useToolExecutions } from "@/features/chat/components/execution/computer-panel/hooks/use-tool-executions";
 
 interface ExecutionContainerProps {
   sessionId: string;
@@ -38,11 +30,33 @@ export function ExecutionContainer({ sessionId }: ExecutionContainerProps) {
     session?.config_snapshot?.browser_enabled ||
     session?.state_patch?.browser?.enabled,
   );
+  const fileChanges = session?.state_patch.workspace_state?.file_changes ?? [];
+  const hasArtifacts = fileChanges.length > 0;
+  const { executions, isLoading: isLoadingToolExecutions } = useToolExecutions({
+    sessionId,
+    isActive: isSessionActive,
+    pollingIntervalMs: 2000,
+    limit: 1,
+  });
+  const hasComputerRecords = executions.length > 0;
+  const isRightPanelReady = !isLoadingToolExecutions;
+  const showArtifactsTab = isRightPanelReady && hasArtifacts;
+  const showComputerTab = isRightPanelReady && hasComputerRecords;
+  const showFilePanel = showArtifactsTab || showComputerTab;
 
-  const defaultRightTab = isSessionActive ? "computer" : "artifacts";
+  const defaultRightTab = React.useMemo(() => {
+    if (showComputerTab) {
+      return "computer";
+    }
+    if (showArtifactsTab) {
+      return "artifacts";
+    }
+    return "computer";
+  }, [showArtifactsTab, showComputerTab]);
   const [rightTab, setRightTab] = React.useState<string>(defaultRightTab);
   const [isRightPanelCollapsed, setIsRightPanelCollapsed] =
     React.useState(false);
+  const effectiveRightPanelCollapsed = isRightPanelCollapsed || !showFilePanel;
   const didManualSwitchRef = React.useRef(false);
   const prevDefaultRef = React.useRef<string>(defaultRightTab);
   const lastSessionIdRef = React.useRef<string | null>(null);
@@ -68,6 +82,7 @@ export function ExecutionContainer({ sessionId }: ExecutionContainerProps) {
 
   React.useEffect(() => {
     if (isMobile) return;
+    if (!showFilePanel) return;
 
     const handleToggleRightPanel = (event: KeyboardEvent) => {
       if (!event.ctrlKey) return;
@@ -81,31 +96,15 @@ export function ExecutionContainer({ sessionId }: ExecutionContainerProps) {
     return () => {
       window.removeEventListener("keydown", handleToggleRightPanel, true);
     };
-  }, [isMobile]);
+  }, [isMobile, showFilePanel]);
 
   // Loading state
   if (isLoading) {
     return (
       <div className="flex h-dvh min-h-0 min-w-0 overflow-hidden bg-background select-text">
-        <ResizablePanelGroup direction="horizontal" className="min-h-0 min-w-0">
-          <ResizablePanel
-            defaultSize={45}
-            minSize={30}
-            className="min-h-0 min-w-0 overflow-hidden"
-          >
-            <ChatPanelSkeleton />
-          </ResizablePanel>
-
-          <ResizableHandle withHandle />
-
-          <ResizablePanel
-            defaultSize={55}
-            minSize={30}
-            className="min-h-0 min-w-0 overflow-hidden"
-          >
-            <RightPanelSkeleton />
-          </ResizablePanel>
-        </ResizablePanelGroup>
+        <div className="h-full w-full min-h-0 min-w-0 overflow-hidden">
+          <ChatPanelSkeleton />
+        </div>
       </div>
     );
   }
@@ -133,6 +132,8 @@ export function ExecutionContainer({ sessionId }: ExecutionContainerProps) {
         session={session}
         sessionId={sessionId}
         updateSession={updateSession}
+        showArtifactsTab={showArtifactsTab}
+        showComputerTab={showComputerTab}
       />
     );
   }
@@ -140,9 +141,9 @@ export function ExecutionContainer({ sessionId }: ExecutionContainerProps) {
   const tabsSwitch = (
     <ExecutionTabsSwitch
       rightTab={rightTab}
-      isSessionActive={isSessionActive}
-      sessionStatus={session?.status}
       highlightId={executionTabsHighlightId}
+      showArtifactsTab={showArtifactsTab}
+      showComputerTab={showComputerTab}
     />
   );
 
@@ -153,9 +154,13 @@ export function ExecutionContainer({ sessionId }: ExecutionContainerProps) {
       progress={session?.progress}
       currentStep={session?.state_patch.current_step ?? undefined}
       updateSession={updateSession}
-      isRightPanelCollapsed={isRightPanelCollapsed}
-      onToggleRightPanel={() =>
-        setIsRightPanelCollapsed((collapsed) => !collapsed)
+      showRightPanelToggle
+      isRightPanelToggleDisabled={!showFilePanel}
+      isRightPanelCollapsed={effectiveRightPanelCollapsed}
+      onToggleRightPanel={
+        showFilePanel
+          ? () => setIsRightPanelCollapsed((collapsed) => !collapsed)
+          : undefined
       }
     />
   );
@@ -169,7 +174,10 @@ export function ExecutionContainer({ sessionId }: ExecutionContainerProps) {
         didManualSwitchRef.current = true;
         setRightTab(value);
       }}
-      isRightPanelCollapsed={isRightPanelCollapsed}
+      isRightPanelCollapsed={effectiveRightPanelCollapsed}
+      showRightPanel={showFilePanel}
+      showArtifactsTab={showArtifactsTab}
+      showComputerTab={showComputerTab}
       chatPanel={chatPanel}
       tabsSwitch={tabsSwitch}
       browserEnabled={browserEnabled}

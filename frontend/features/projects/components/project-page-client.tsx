@@ -16,7 +16,7 @@ import {
 import type { ProjectItem, TaskHistoryItem } from "@/features/projects/types";
 
 import { ProjectHeader } from "@/features/projects/components/project-header";
-import { ConnectorsBar } from "@/features/connectors";
+import { CapabilityToggleProvider, ConnectorsBar } from "@/features/connectors";
 import { useAppShell } from "@/components/shell/app-shell-context";
 import { toast } from "sonner";
 
@@ -155,30 +155,32 @@ export function ProjectPageClient({ projectId }: ProjectPageClientProps) {
   );
 
   return (
-    <div className="flex flex-1 flex-col min-h-0">
-      <ProjectHeader
-        project={currentProject}
-        onRenameProject={handleRenameProject}
-        onDeleteProject={handleDeleteProject}
-      />
+    <CapabilityToggleProvider>
+      <div className="flex flex-1 flex-col min-h-0">
+        <ProjectHeader
+          project={currentProject}
+          onRenameProject={handleRenameProject}
+          onDeleteProject={handleDeleteProject}
+        />
 
-      <TaskEntrySection
-        title={projectTitle}
-        mode={mode}
-        onModeChange={setMode}
-        footer={<ConnectorsBar />}
-        composerProps={{
-          textareaRef,
-          value: inputValue,
-          onChange: setInputValue,
-          onSend: handleSendTask,
-          isSubmitting,
-          allowProjectize: false,
-          onRepoDefaultsSave: async (payload) => {
-            await updateProject(projectId, payload);
-          },
-        }}
-      />
-    </div>
+        <TaskEntrySection
+          title={projectTitle}
+          mode={mode}
+          onModeChange={setMode}
+          footer={<ConnectorsBar />}
+          composerProps={{
+            textareaRef,
+            value: inputValue,
+            onChange: setInputValue,
+            onSend: handleSendTask,
+            isSubmitting,
+            allowProjectize: false,
+            onRepoDefaultsSave: async (payload) => {
+              await updateProject(projectId, payload);
+            },
+          }}
+        />
+      </div>
+    </CapabilityToggleProvider>
   );
 }

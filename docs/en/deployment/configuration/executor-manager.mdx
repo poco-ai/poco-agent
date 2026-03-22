@@ -1,0 +1,41 @@
+---
+title: Executor Manager Configuration
+description: Environment variables for scheduling, dispatching, and callback coordination. Schedules tasks and coordinates Backend and Executor services.
+---
+
+## Required (service cannot start or cannot schedule execution)
+
+- `BACKEND_URL`: backend URL, example: `http://backend:8000`
+- `INTERNAL_API_TOKEN`: must match backend `INTERNAL_API_TOKEN`
+- `CALLBACK_BASE_URL`: **must be reachable by Executor containers**, default in Docker Compose is `http://host.docker.internal:8001`
+- `EXECUTOR_IMAGE`: executor image name (Executor Manager starts this image through Docker API). Recommended default: `ghcr.io/poco-ai/poco-executor:lite`
+- `EXECUTOR_BROWSER_IMAGE`: optional executor image for browser/desktop capability (`browser_enabled=true`). Recommended default: `ghcr.io/poco-ai/poco-executor:full`
+- `POCO_BROWSER_VIEWPORT_SIZE`: optional browser viewport size (affects screenshots and responsive layout), format like `1366x768` / `1920x1080`. Executor Manager passes this through to Executor containers (only when `browser_enabled=true`).
+- `EXECUTOR_TIMEZONE`: optional timezone passed to Executor containers (IANA timezone name like `Asia/Shanghai`, `UTC`). Default `Asia/Shanghai`.
+- `EXECUTOR_PUBLISHED_HOST`: host used by Executor Manager when accessing Executor containers via host-mapped ports (usually `localhost` for local bare run; `host.docker.internal` inside Compose)
+- `WORKSPACE_ROOT`: workspace root path (**must be a host path** because it is bind-mounted into Executor containers)
+- `S3_ENDPOINT` / `S3_ACCESS_KEY` / `S3_SECRET_KEY` / `S3_BUCKET`: used to export workspace to object storage (related APIs fail when missing)
+  - Cloudflare R2 usually recommends `S3_REGION=auto`, `S3_FORCE_PATH_STYLE=false`
+
+## Execution model (required for running tasks)
+
+- `ANTHROPIC_API_KEY`: required (supports official Anthropic or Anthropic-compatible services)
+- `ANTHROPIC_BASE_URL` (default `https://api.anthropic.com`; set explicitly when using compatible services)
+- `DEFAULT_MODEL` (default `claude-sonnet-4-20250514`; must be compatible with your endpoint)
+
+## Scheduling and pulling
+
+- `TASK_PULL_ENABLED` (default `true`): whether to pull tasks from backend run queue
+- `MAX_CONCURRENT_TASKS` (default `5`)
+- `TASK_PULL_INTERVAL_SECONDS` (default `2`)
+- `TASK_CLAIM_LEASE_SECONDS` (default `900`): lease duration for task claims. It must cover the elapsed time from claim to successful `start_run` on manager side (may include skill/attachment staging and starting Executor containers), otherwise tasks can be re-claimed after lease expiry and cause duplicate scheduling/container starts.
+- `SCHEDULE_CONFIG_PATH`: optional, TOML/JSON schedule config file used as source of truth
+
+## Workspace cleanup (optional)
+
+- `WORKSPACE_CLEANUP_ENABLED` (default `false`)
+- `WORKSPACE_CLEANUP_INTERVAL_HOURS` (default `24`)
+- `WORKSPACE_MAX_AGE_HOURS` (default `24`)
+- `WORKSPACE_ARCHIVE_ENABLED` (default `true`)
+- `WORKSPACE_ARCHIVE_DAYS` (default `7`)
+- `WORKSPACE_IGNORE_DOT_FILES` (default `true`)

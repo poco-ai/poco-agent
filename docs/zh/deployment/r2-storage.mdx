@@ -1,0 +1,77 @@
+---
+title: Cloudflare R2 / 外部 S3
+description: 不使用本地 RustFS 时，接入外部 S3 兼容对象存储。
+---
+
+当你不想在本地启动 `rustfs`，可以改用 `docker-compose.r2.yml`，并在 `.env` 里配置外部对象存储（bucket 需要提前创建好）。
+
+## 配置示例
+
+```bash
+# Cloudflare R2 (S3-compatible)
+S3_ENDPOINT=https://<accountid>.r2.cloudflarestorage.com
+S3_REGION=auto
+S3_BUCKET=<bucket-name>
+S3_ACCESS_KEY=<r2-access-key-id>
+S3_SECRET_KEY=<r2-secret-access-key>
+S3_FORCE_PATH_STYLE=false
+
+# 可选：用于生成给浏览器的预签名 URL；不填则默认用 S3_ENDPOINT
+# S3_PUBLIC_ENDPOINT=https://<accountid>.r2.cloudflarestorage.com
+```
+
+R2 bucket 的 CORS 配置（重要，用于浏览器预览/下载预签名 URL）：
+
+```json
+[
+  {
+    "AllowedOrigins": ["http://localhost:3000"],
+    "AllowedMethods": ["GET", "HEAD"],
+    "AllowedHeaders": ["*"],
+    "MaxAgeSeconds": 3600
+  }
+]
+```
+
+说明：
+
+- `AllowedOrigins` 里要包含你实际使用的所有前端域名（例如生产域名、预发域名、本地 `http://localhost:3000`）。
+- 建议放行 `HEAD`，因为部分预览器/探测逻辑会先请求对象元信息。
+- `Range` 能提升 PDF、视频、大文件分片加载的稳定性。
+- 如果 CORS 没配或配错，后端即使返回了有效预签名 URL，浏览器侧 `fetch`/预览仍可能报跨域错误。
+
+快速自检（浏览器 DevTools -> Network）：
+
+- 检查构件 URL 的响应是否带有 `Access-Control-Allow-Origin`。
+- 检查预览/下载相关请求是否都成功（包括 `HEAD` 或分片请求）。
+- 如果设置了 `S3_PUBLIC_ENDPOINT`，确认它是浏览器可达的公网或可访问域名。
+
+R2 自定义域路径说明（`S3_PUBLIC_ENDPOINT`）：
+
+- 当 `S3_PUBLIC_ENDPOINT` 配置为 Cloudflare R2 的自定义域（且该域名已绑定到单个 bucket）时，当前生成的文件地址通常会包含 `/<S3_BUCKET>/` 前缀。
+- 例如，生成地址可能是：
+  `https://files.example.com/my-bucket/path/to/file.png?...`
+- 对 bucket 级自定义域，访问路径通常应为：
+  `https://files.example.com/path/to/file.png?...`
+  即需要去掉 `/<S3_BUCKET>/` 这一段。
+
+建议：
+
+- 优先在网关/Worker/CDN 层做路径改写（例如：`^/<S3_BUCKET>/(.*)$ -> /$1`），避免前端逐处手动处理。
+- 如果你希望完全保持预签名 URL 原样，可将 `S3_PUBLIC_ENDPOINT` 继续配置为账号级 endpoint（`https://<accountid>.r2.cloudflarestorage.com`）。
+
+注意：
+
+- 如果对象访问依赖严格预签名鉴权，直接手动修改 URL 可能导致签名不匹配。请结合你的鉴权模式验证后再上线。
+
+启动（不会启动 rustfs）：
+
+```bash
+docker compose -f docker-compose.r2.yml up -d
+```
+
+如需同时启用 IM（Telegram/钉钉）服务，需要显式指定 profile：
+
+```bash
+docker compose -f docker-compose.r2.yml --profile im up -d im
+```

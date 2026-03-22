@@ -1,0 +1,84 @@
+---
+title: Telegram Integration
+description: Create a bot, configure env vars, register webhook, and complete end-to-end testing.
+---
+
+## Create a bot
+
+1. Find `@BotFather` in Telegram
+2. Run `/newbot` and finish creation
+3. Get `TELEGRAM_BOT_TOKEN`
+
+## Configure environment variables
+
+```bash
+TELEGRAM_BOT_TOKEN=<your bot token>
+# Recommended to prevent forged webhook requests
+TELEGRAM_WEBHOOK_SECRET_TOKEN=<random long string>
+```
+
+Notes:
+
+- `TELEGRAM_WEBHOOK_SECRET_TOKEN` is your own value, not provided by BotFather.
+- If you set it, Telegram `setWebhook` must send the same `secret_token`.
+
+## Start IM service
+
+- Docker (local rustfs, `docker-compose.yml`):
+
+```bash
+docker compose --profile im up -d im
+```
+
+- Docker (R2, `docker-compose.r2.yml`):
+
+```bash
+docker compose -f docker-compose.r2.yml --profile im up -d im
+```
+
+- Local:
+
+```bash
+cd im
+uv sync
+uv run uvicorn app.main:app --host 0.0.0.0 --port 8002
+```
+
+## Configure Telegram webhook
+
+Replace `WEBHOOK_BASE` with your public HTTPS domain.
+
+```bash
+export TELEGRAM_BOT_TOKEN="<your bot token>"
+export WEBHOOK_SECRET="<TELEGRAM_WEBHOOK_SECRET_TOKEN>"
+export WEBHOOK_BASE="https://your-domain.example.com"
+
+curl -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"url\": \"${WEBHOOK_BASE}/api/v1/webhooks/telegram\",
+    \"secret_token\": \"${WEBHOOK_SECRET}\",
+    \"allowed_updates\": [\"message\", \"edited_message\"],
+    \"drop_pending_updates\": true
+  }"
+```
+
+## Verify webhook
+
+```bash
+curl "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getWebhookInfo"
+```
+
+Check especially:
+
+- Whether `url` is correct
+- Whether `last_error_message` is empty
+- Whether `pending_update_count` keeps increasing
+
+## Integration test
+
+1. Send `/help` to the bot in private chat
+2. Send `/new <task description>` to create a session
+3. Send normal text to verify continuation
+
+Tip: For group commands, the current implementation works best with direct `/help`, `/list`, `/new ...`. If a command does not respond, verify in private chat first.

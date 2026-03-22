@@ -30,11 +30,13 @@ import type {
   SessionRegenerateRequest,
   SessionResponse,
   SessionUpdateRequest,
+  SubmitSkillResponse,
   TaskConfig,
   TaskEnqueueRequest,
   TaskEnqueueResponse,
   ToolExecutionDeltaResponse,
   ToolExecutionResponse,
+  WorkspaceArchiveResponse,
 } from "@/features/chat/types";
 
 import {
@@ -209,17 +211,16 @@ export const chatService = {
     attachments?: InputFile[],
     clientRequestId?: string,
   ): Promise<TaskEnqueueResponse> => {
-    const hasModelOverride = model !== undefined;
-    const normalizedModel =
-      model === null ? null : (model || "").trim() || null;
+    const normalizedModel = (model || "").trim() || undefined;
     const normalizedModelProviderId =
-      modelProviderId === null ? null : (modelProviderId || "").trim() || null;
+      (modelProviderId || "").trim() || undefined;
+    const hasModelOverride = Boolean(normalizedModel);
     const hasAttachments = (attachments?.length ?? 0) > 0;
     const config: TaskConfig | undefined =
       hasModelOverride || hasAttachments
         ? {
             ...(hasModelOverride ? { model: normalizedModel } : {}),
-            ...(hasModelOverride
+            ...(hasModelOverride && normalizedModelProviderId
               ? { model_provider_id: normalizedModelProviderId }
               : {}),
             ...(hasAttachments ? { input_files: attachments } : {}),
@@ -442,5 +443,25 @@ export const chatService = {
       console.error("[Chat Service] Failed to get files:", error);
       return [];
     }
+  },
+
+  submitSkill: async (
+    sessionId: string,
+    body: { folder_path: string; skill_name?: string },
+  ): Promise<SubmitSkillResponse> => {
+    return apiClient.post<SubmitSkillResponse>(
+      API_ENDPOINTS.sessionWorkspaceSubmitSkill(sessionId),
+      body,
+    );
+  },
+
+  getFolderArchive: async (
+    sessionId: string,
+    folderPath: string,
+  ): Promise<WorkspaceArchiveResponse> => {
+    const params = new URLSearchParams({ path: folderPath });
+    return apiClient.get<WorkspaceArchiveResponse>(
+      `${API_ENDPOINTS.sessionWorkspaceFolderArchive(sessionId)}?${params.toString()}`,
+    );
   },
 };

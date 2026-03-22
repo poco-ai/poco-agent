@@ -1,0 +1,48 @@
+name: Sync Docs to Fumadocs
+
+on:
+  push:
+    branches: [main, dev]
+    paths:
+      - "docs/**"
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # 必须，否则无法 push 到目标仓库
+
+    steps:
+      - name: Checkout source repo
+        uses: actions/checkout@v4
+        with:
+          path: source
+
+      - name: Checkout target repo
+        uses: actions/checkout@v4
+        with:
+          repository: poco-ai/docs
+          token: ${{ secrets.DOCS_SYNC_TOKEN }} # ← 这里使用 secret
+          path: target
+          ref: main
+
+      - name: Sync docs folder
+        run: |
+          mkdir -p target/content
+          rsync -av --delete source/docs/ target/content/docs/
+
+      - name: Commit & push changes
+        working-directory: target
+        env:
+          SOURCE_BRANCH: ${{ github.ref_name }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          if git status --porcelain | grep .; then
+            git add .
+            git commit -m "sync docs from ${{ github.repository }} ($SOURCE_BRANCH) (auto)"
+            git push origin HEAD:main
+          else
+            echo "No changes to push."
+          fi

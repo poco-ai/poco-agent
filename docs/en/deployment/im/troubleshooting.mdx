@@ -1,0 +1,31 @@
+---
+title: IM Troubleshooting
+description: Diagnose common Telegram and DingTalk integration issues.
+---
+
+## `setWebhook` succeeds in Telegram but bot does not reply
+
+Check in order:
+
+1. Confirm IM is actually running and `GET /api/v1/health` is healthy
+2. Confirm env vars are in the correct file (root `.env` vs `im/.env`)
+3. Confirm `TELEGRAM_BOT_TOKEN` is effective
+4. If `TELEGRAM_WEBHOOK_SECRET_TOKEN` is configured, confirm `setWebhook` used the same `secret_token`
+5. Check IM logs for:
+   - `Invalid webhook token`
+   - `im_provider_disabled`
+   - `telegram_send_failed`
+
+## DingTalk messages are not received
+
+1. Confirm `DINGTALK_ENABLED=true` is effective
+2. In Stream mode, confirm `DINGTALK_CLIENT_ID/SECRET/ROBOT_CODE` are correct
+3. In Webhook mode, confirm token validation values match
+4. In group chat, confirm the bot is mentioned with `@bot`
+
+## `/help` works but normal text does not trigger tasks
+
+This is usually caused by no active connected session:
+
+- Run `/new <task>` or `/connect <session_id>` first
+- Then send normal text to continue chat

@@ -1,0 +1,77 @@
+---
+title: Cloudflare R2 / External S3
+description: Connect external S3-compatible object storage when not using local RustFS.
+---
+
+If you do not want to run local `rustfs`, use `docker-compose.r2.yml` and configure external object storage in `.env` (bucket must be created in advance).
+
+## Example configuration
+
+```bash
+# Cloudflare R2 (S3-compatible)
+S3_ENDPOINT=https://<accountid>.r2.cloudflarestorage.com
+S3_REGION=auto
+S3_BUCKET=<bucket-name>
+S3_ACCESS_KEY=<r2-access-key-id>
+S3_SECRET_KEY=<r2-secret-access-key>
+S3_FORCE_PATH_STYLE=false
+
+# Optional: browser-facing presigned URL endpoint; defaults to S3_ENDPOINT when omitted
+# S3_PUBLIC_ENDPOINT=https://<accountid>.r2.cloudflarestorage.com
+```
+
+R2 bucket CORS config (important for browser preview/download with presigned URLs):
+
+```json
+[
+  {
+    "AllowedOrigins": ["http://localhost:3000"],
+    "AllowedMethods": ["GET", "HEAD"],
+    "AllowedHeaders": ["*"],
+    "MaxAgeSeconds": 3600
+  }
+]
+```
+
+Notes:
+
+- `AllowedOrigins` should include every frontend domain you actually use (production, staging, local `http://localhost:3000`, etc.).
+- Allowing `HEAD` is recommended because some preview/probe logic fetches object metadata first.
+- `Range` improves stability for PDF/video/large-file chunk loading.
+- If CORS is missing or incorrect, backend may return valid presigned URLs but browser `fetch`/preview can still fail with CORS errors.
+
+Quick self-check (browser DevTools -> Network):
+
+- Confirm asset responses include `Access-Control-Allow-Origin`.
+- Confirm all preview/download requests succeed (including `HEAD` or range/chunk requests).
+- If `S3_PUBLIC_ENDPOINT` is set, confirm it is publicly reachable from browser.
+
+R2 custom-domain path behavior (`S3_PUBLIC_ENDPOINT`):
+
+- When `S3_PUBLIC_ENDPOINT` uses a Cloudflare R2 custom domain bound to a single bucket, generated file URLs may include a `/<S3_BUCKET>/` prefix.
+- For example, generated URL may be:
+  `https://files.example.com/my-bucket/path/to/file.png?...`
+- For bucket-level custom domains, path is usually expected as:
+  `https://files.example.com/path/to/file.png?...`
+  meaning `/<S3_BUCKET>/` should be removed.
+
+Recommendations:
+
+- Prefer path rewriting at gateway/Worker/CDN layer (for example `^/<S3_BUCKET>/(.*)$ -> /$1`) instead of frontend manual handling everywhere.
+- If you want to keep presigned URLs untouched, keep `S3_PUBLIC_ENDPOINT` as account-level endpoint (`https://<accountid>.r2.cloudflarestorage.com`).
+
+Caution:
+
+- If object access relies on strict presigned URL auth, manually editing URL paths may break signatures. Validate with your auth model before production rollout.
+
+Start services (without rustfs):
+
+```bash
+docker compose -f docker-compose.r2.yml up -d
+```
+
+To also enable IM (Telegram/DingTalk), explicitly use profile:
+
+```bash
+docker compose -f docker-compose.r2.yml --profile im up -d im
+```

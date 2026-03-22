@@ -42,11 +42,15 @@ export interface SessionBranchRequest {
 export interface SessionRegenerateRequest {
   user_message_id: number;
   assistant_message_id: number;
+  model?: string | null;
+  model_provider_id?: string | null;
 }
 
 export interface SessionEditMessageRequest {
   user_message_id: number;
   content: string;
+  model?: string | null;
+  model_provider_id?: string | null;
 }
 
 export interface SessionBranchResponse {

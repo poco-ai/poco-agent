@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Search } from "lucide-react";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
@@ -39,6 +39,8 @@ export function ConnectorsDialog({
     (c) => c.type === activeTab || (activeTab === "app" && c.type === "app"),
   );
 
+  const dialogTitle = selectedConnector?.title ?? t("connectors.title");
+
   // Reset selection when dialog closes
   const handleOpenChange = (newOpen: boolean) => {
     if (!newOpen) {
@@ -49,7 +51,10 @@ export function ConnectorsDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange} key={key}>
-      <DialogContent className="max-w-4xl p-0 h-[600px] flex flex-col gap-0 bg-background border-border text-foreground overflow-hidden">
+      <DialogContent
+        className="max-w-4xl p-0 h-[600px] flex flex-col gap-0 bg-background border-border text-foreground overflow-hidden"
+        ariaTitle={dialogTitle}
+      >
         {selectedConnector ? (
           <ConnectorDetail
             connector={selectedConnector}
@@ -59,7 +64,9 @@ export function ConnectorsDialog({
           <>
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-              <DialogTitle>{t("connectors.title")}</DialogTitle>
+              <h2 className="text-lg leading-none font-semibold">
+                {dialogTitle}
+              </h2>
             </div>
 
             {/* Main Content */}

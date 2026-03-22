@@ -115,6 +115,8 @@ class SessionRegenerateRequest(BaseModel):
 
     user_message_id: int = Field(gt=0)
     assistant_message_id: int = Field(gt=0)
+    model: str | None = None
+    model_provider_id: str | None = None
 
 
 class SessionEditMessageRequest(BaseModel):
@@ -122,6 +124,8 @@ class SessionEditMessageRequest(BaseModel):
 
     user_message_id: int = Field(gt=0)
     content: str = Field(min_length=1)
+    model: str | None = None
+    model_provider_id: str | None = None
 
 
 class SessionBranchResponse(BaseModel):

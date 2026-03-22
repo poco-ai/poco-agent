@@ -1,0 +1,10 @@
+---
+title: 工程约定
+description: Poco 在前后端开发中采用的核心约定。
+---
+
+- 数据访问使用 repository pattern，业务逻辑放在 service layer
+- 数据库 session 通过 FastAPI 依赖注入，在 API 边界传入
+- API 契约优先使用明确的 Pydantic schema，而不是松散的字典
+- 前端采用 feature-first 组织，App Router 默认优先使用 Server Components
+- 优先复用共享 UI 组件；在已有 i18n 体系的地方避免硬编码用户可见文案

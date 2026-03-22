@@ -18,6 +18,7 @@ export interface ModelProvider {
   default_base_url: string;
   effective_base_url: string;
   base_url_source: BaseUrlSource;
+  known_models: [string, string][];
   models: ModelDefinition[];
 }
 
