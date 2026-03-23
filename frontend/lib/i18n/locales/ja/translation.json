@@ -8,7 +8,9 @@
     "newTaskWithShortcut": "新しいタスク ({{shortcut}})",
     "search": "検索",
     "library": "機能",
+    "openMain": "メインサイドバーを開く",
     "scheduledTasks": "スケジュールタスク",
+    "memories": "メモリ",
     "projects": "プロジェクト",
     "newProject": "新しいプロジェクト",
     "newProjectPrompt": "プロジェクト名を入力してください：",
@@ -274,6 +276,9 @@
     "planApprovalApprove": "承認して実行",
     "planApprovalReject": "拒否",
     "planApprovalEmpty": "計画が提供されていません",
+    "enterPlanModeTitle": "プランニングモードに入る",
+    "enterPlanModeHint": "Agent はまず実行手順を計画し、あなたの承認を待ってから実行を開始します。",
+    "enterPlanModeConfirm": "プランニングに入る",
     "askUserTimeout": "残り時間 {{seconds}}秒",
     "askUserPrevious": "前へ",
     "askUserNext": "次へ",
@@ -319,7 +324,8 @@
       "skillsConfigured": "スキル（設定済み）",
       "skillsUsed": "スキル",
       "mcpConfigured": "MCPサーバー（設定済み）",
-      "mcp": "MCPサーバー"
+      "mcp": "MCPサーバー",
+      "pluginsConfigured": "プリセット（設定済み）"
     },
     "typingWords": [
       "Accomplishing",
@@ -632,14 +638,14 @@
       "loadingDoc": "ドキュメントを読み込み中...",
       "parseError": "Excalidraw ファイルの解析に失敗しました",
       "fetchError": "ドキュメントコンテンツの取得に失敗しました",
+      "frontMatter": "フロントマター",
       "retry": "再試行",
       "selectFile": "プレビューするファイルを右から選択してください",
       "supportedFormats": "PDF、Officeドキュメント、一般的な画像形式、MP4 動画、XMind ファイル、.excalidraw ファイル、.drawio ファイルをサポート",
       "processing": "ファイル処理",
       "notSupported": "この形式はプレビューをサポートしていません",
       "openInNewWindow": "新しいウィンドウで開く",
-      "downloadOriginal": "元のファイルをダウンロード",
-      "frontMatter": "フロントマター"
+      "downloadOriginal": "元のファイルをダウンロード"
     },
     "summary": {
       "total": "合計",
@@ -662,6 +668,9 @@
     "title": "機能",
     "subtitle": "スキル、プリセット、ツールを管理",
     "comingSoon": "近日公開",
+    "mobile": {
+      "back": "機能一覧に戻る"
+    },
     "sidebar": {
       "title": "機能ショートカット",
       "description": "機能を選択して設定にジャンプします。",
@@ -693,6 +702,10 @@
       "feature2": "視覚的な管理",
       "feature3": "リアルタイム監視",
       "action": "サーバーを管理"
+    },
+    "pluginsStore": {
+      "title": "プリセット",
+      "description": "機能プリセットを閲覧してインストール"
     },
     "envVars": {
       "title": "環境変数",
@@ -1074,6 +1087,10 @@
         }
       }
     },
+    "pluginsPage": {
+      "searchPlaceholder": "プリセットを検索...",
+      "addCard": "プリセットを追加"
+    },
     "skillsManager": {
       "stats": {
         "available": "利用可能",
@@ -1220,9 +1237,103 @@
         "invalidKeyHint": "設定 > その他 で SkillsMP API キーを更新し、保存後にここへ戻ってもう一度お試しください。"
       }
     },
-    "pluginsPage": {
-      "searchPlaceholder": "プリセットを検索...",
-      "addCard": "プリセットを追加"
+    "pluginsManager": {
+      "stats": {
+        "enabled": "有効"
+      },
+      "scope": {
+        "system": "システム",
+        "user": "ユーザー"
+      },
+      "fields": {
+        "id": "id",
+        "source": "ソース"
+      },
+      "actions": {
+        "install": "インストール",
+        "uninstall": "アンインストール"
+      },
+      "toasts": {
+        "loadError": "プリセットの読み込みに失敗しました",
+        "actionError": "操作に失敗しました。後でもう一度お試しください",
+        "installed": "プリセットをインストールしました",
+        "uninstalled": "プリセットをアンインストールしました",
+        "enabled": "プリセットを有効にしました",
+        "disabled": "プリセットを無効にしました",
+        "actionFailed": "操作に失敗しました。後でもう一度お試しください",
+        "exclusiveEnabled": "（他のプリセットもオフにしました）"
+      },
+      "empty": "プリセットはまだありません",
+      "unknownPlugin": "不明なプリセット"
+    },
+    "pluginsImport": {
+      "title": "プリセットをインポート",
+      "description": "プリセット zip をアップロードするか、公開 GitHub リポジトリからインポートします。",
+      "relativePath": "相対パス",
+      "tabs": {
+        "zip": "Zip をアップロード",
+        "github": "GitHub URL"
+      },
+      "fields": {
+        "zip": "Zip ファイル",
+        "githubUrl": "公開 GitHub リポジトリ URL",
+        "nameOverride": "プリセット名"
+      },
+      "placeholders": {
+        "githubUrl": "https://github.com/owner/repo",
+        "name": "例: my-preset"
+      },
+      "hints": {
+        "github": "デフォルトは main/master（公開 github.com リポジトリのみ）"
+      },
+      "actions": {
+        "back": "戻る",
+        "discover": "検出",
+        "discovering": "検出中...",
+        "commit": "インポートしてインストール",
+        "committing": "インポート中..."
+      },
+      "preview": {
+        "found": "検出",
+        "items": "件のプリセット定義",
+        "overwrite": "上書きされます",
+        "overwriteItems": "既存のプリセット",
+        "willOverwrite": "上書き",
+        "root": "ルート",
+        "path": "パス",
+        "unnamed": "名称未設定",
+        "pagination": {
+          "page": "{{page}} / {{pages}} ページ",
+          "prev": "前へ",
+          "next": "次へ"
+        },
+        "selection": {
+          "selectPage": "このページを選択",
+          "clearPage": "このページの選択を解除",
+          "selectAll": "すべて選択",
+          "clearAll": "すべて解除"
+        }
+      },
+      "result": {
+        "title": "インポート結果",
+        "success": "成功",
+        "failed": "失敗"
+      },
+      "toasts": {
+        "missingZip": "Zip ファイルを選択してください",
+        "missingGithubUrl": "GitHub URL を入力してください",
+        "discovered": "検出しました。インポートする内容を確認してください。",
+        "discoverError": "検出に失敗しました。後でもう一度お試しください",
+        "committed": "インポートに成功しました",
+        "commitError": "インポートに失敗しました。後でもう一度お試しください",
+        "partialFailed": "一部のプリセットのインポートに失敗しました。詳細を確認してください。",
+        "commitTimeout": "インポートがタイムアウトしました。後でもう一度お試しください"
+      },
+      "progress": {
+        "title": "インポート進捗",
+        "value": "進捗",
+        "jobId": "ジョブ ID"
+      }
     },
     "mcpLibrary": {
       "header": {
@@ -1284,11 +1395,6 @@
       "skillCreator": "Skill Creator",
       "marketplace": "Marketplace",
       "skillsmp": "SkillsMP"
-    },
-    "pluginsManager": {
-      "toasts": {
-        "exclusiveEnabled": "（他のプリセットもオフにしました）"
-      }
     },
     "presets": {
       "title": "プリセット",
@@ -1366,6 +1472,7 @@
   },
   "common": {
     "cancel": "キャンセル",
+    "close": "閉じる",
     "create": "作成",
     "delete": "削除",
     "deleted": "削除済み",
@@ -1599,7 +1706,9 @@
     "downloadStart": "ワークスペースアーカイブのダウンロードを開始しています",
     "archiveNotAvailable": "アーカイブファイルがまだ利用できません",
     "archiveUnavailable": "アーカイブファイルがまだ利用できません",
-    "downloadFailed": "ダウンロードに失敗しました"
+    "downloadFailed": "ダウンロードに失敗しました",
+    "workspaceRoot": "ワークスペース",
+    "localMountsRoot": "ローカルマウント"
   },
   "pullToRefresh": {
     "refreshing": "更新中...",
@@ -1623,9 +1732,15 @@
     "noMcpInstalled": "MCPはインストールされていません",
     "noSkillsInstalled": "スキルはインストールされていません",
     "noPluginsInstalled": "プリセットはインストールされていません",
+    "fallbackMcp": "MCP #{{id}}",
+    "fallbackSkill": "スキル #{{id}}",
+    "fallbackPreset": "プリセット #{{id}}",
     "oneClickClose": "すべてをオフ",
     "notInstalledMcp": "MCPはインストールされていません",
     "notInstalledSkill": "スキルはインストールされていません",
+    "mcp": "MCP",
+    "skills": "スキル",
+    "plugins": "プリセット",
     "apps": "アプリ",
     "comingSoon": "近日公開",
     "clickForDetails": "詳細をクリック",
@@ -1673,6 +1788,9 @@
   },
   "skillsGrid": {
     "turnOffAll": "すべてをオフ"
+  },
+  "pluginsGrid": {
+    "turnOffAll": "すべてオフ"
   },
   "mcpSettings": {
     "configureServer": "MCPサーバーを設定",
@@ -1814,6 +1932,69 @@
   },
   "filesidebar": {
     "title": "ファイルリスト"
+  },
+  "memories": {
+    "title": "メモリ",
+    "subtitle": "ユーザーレベルの長期メモリエントリを管理します。",
+    "stats": {
+      "count": "{{count}} 件"
+    },
+    "actions": {
+      "search": "検索",
+      "showAll": "すべて表示",
+      "refresh": "更新",
+      "edit": "編集",
+      "update": "保存",
+      "delete": "削除",
+      "create": "作成",
+      "creating": "作成中..."
+    },
+    "search": {
+      "queryPlaceholder": "メモリを検索..."
+    },
+    "create": {
+      "title": "メモリを追加",
+      "desc": "Poco に覚えておいてほしい内容を入力してください。",
+      "contentPlaceholder": "Poco に覚えてほしい内容を入力"
+    },
+    "edit": {
+      "title": "メモリを編集",
+      "contentPlaceholder": "メモリ内容を更新"
+    },
+    "fields": {
+      "updatedAt": "更新日時",
+      "createdAt": "作成日時"
+    },
+    "progress": {
+      "title": "作成進捗",
+      "status": "ステータス",
+      "value": "進捗",
+      "jobId": "ジョブ ID",
+      "hints": {
+        "running": "メモリを追加しています...",
+        "success": "メモリを追加しました",
+        "failed": "メモリの追加に失敗しました"
+      },
+      "statuses": {
+        "queued": "待機中",
+        "running": "実行中",
+        "success": "成功",
+        "failed": "失敗",
+        "unknown": "不明"
+      }
+    },
+    "list": {
+      "empty": "メモリが見つかりません。"
+    },
+    "toasts": {
+      "invalidJson": "無効な JSON",
+      "error": "操作に失敗しました",
+      "created": "メモリを作成しました",
+      "updated": "メモリを更新しました",
+      "deleted": "メモリを削除しました",
+      "cleared": "すべてのメモリを消去しました",
+      "timeout": "作成がタイムアウトしました。後でもう一度お試しください。"
+    }
   },
   "onboarding": {
     "close": "Close tutorial",

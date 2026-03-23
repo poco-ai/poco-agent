@@ -1706,7 +1706,9 @@
     "downloadStart": "开始下载工作区归档",
     "archiveNotAvailable": "归档文件暂不可用",
     "archiveUnavailable": "归档文件暂不可用",
-    "downloadFailed": "下载失败"
+    "downloadFailed": "下载失败",
+    "workspaceRoot": "工作区",
+    "localMountsRoot": "本地目录"
   },
   "pullToRefresh": {
     "refreshing": "正在刷新...",

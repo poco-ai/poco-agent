@@ -1,11 +1,15 @@
 import uuid
 import json
+import mimetypes
+import shutil
 from datetime import datetime
+from urllib.parse import urlencode
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
+from starlette.background import BackgroundTask
 from sqlalchemy.orm import Session
 
 from app.core.observability.request_context import get_request_id, get_trace_id
@@ -41,6 +45,7 @@ from app.schemas.usage import UsageResponse
 from app.schemas.workspace import FileNode, WorkspaceArchiveResponse
 from app.schemas.workspace import SubmitSkillRequest, SubmitSkillResponse
 from app.services.message_service import MessageService
+from app.services.local_mount_browser_service import LocalMountBrowserService
 from app.services.pending_skill_creation_service import PendingSkillCreationService
 from app.services.session_service import SessionService
 from app.services.storage_service import S3StorageService
@@ -64,6 +69,7 @@ usage_service = UsageService()
 storage_service = S3StorageService()
 pending_skill_creation_service = PendingSkillCreationService()
 workspace_archive_service = WorkspaceArchiveService()
+local_mount_browser_service = LocalMountBrowserService()
 
 
 def _cancel_executor_manager(session_id: uuid.UUID, reason: str | None) -> bool:
@@ -107,6 +113,39 @@ def _cancel_executor_manager(session_id: uuid.UUID, reason: str | None) -> bool:
     except Exception:
         return False
     return False
+
+
+def _local_mount_file_url(
+    *,
+    session_id: uuid.UUID,
+    mount_id: str,
+    path: str,
+) -> str:
+    query = urlencode({"mount_id": mount_id, "path": path, "disposition": "inline"})
+    return f"/api/v1/sessions/{session_id}/local-mounts/file?{query}"
+
+
+def _attach_local_mount_file_urls(
+    *,
+    session_id: uuid.UUID,
+    nodes: list[FileNode],
+) -> list[FileNode]:
+    result: list[FileNode] = []
+    for node in nodes:
+        children = (
+            _attach_local_mount_file_urls(session_id=session_id, nodes=node.children)
+            if node.children
+            else None
+        )
+        url = node.url
+        if node.type == "file" and node.mount_id:
+            url = _local_mount_file_url(
+                session_id=session_id,
+                mount_id=node.mount_id,
+                path=node.path,
+            )
+        result.append(node.model_copy(update={"children": children, "url": url}))
+    return result
 
 
 @router.post("", response_model=ResponseSchema[SessionResponse])
@@ -679,6 +718,131 @@ async def get_session_workspace_files(
         file_url_builder=build_file_url,
     )
     return Response.success(data=nodes, message="Workspace files retrieved")
+
+
+@router.get(
+    "/{session_id}/local-mounts/files",
+    response_model=ResponseSchema[list[FileNode]],
+)
+async def get_session_local_mount_files(
+    session_id: uuid.UUID,
+    user_id: str = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+) -> JSONResponse:
+    """List authorized local mount files for a session."""
+    db_session = session_service.get_session(db, session_id)
+    if db_session.user_id != user_id:
+        raise AppException(
+            error_code=ErrorCode.FORBIDDEN,
+            message="Session does not belong to the user",
+        )
+
+    nodes = local_mount_browser_service.list_files(db_session)
+    nodes = _attach_local_mount_file_urls(session_id=session_id, nodes=nodes)
+    return Response.success(data=nodes, message="Local mount files retrieved")
+
+
+@router.get("/{session_id}/local-mounts/file")
+async def get_session_local_mount_file(
+    session_id: uuid.UUID,
+    mount_id: str = Query(...),
+    path: str = Query(...),
+    disposition: str = Query(default="inline"),
+    user_id: str = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+):
+    """Stream a file from a session-authorized local mount."""
+    db_session = session_service.get_session(db, session_id)
+    if db_session.user_id != user_id:
+        raise AppException(
+            error_code=ErrorCode.FORBIDDEN,
+            message="Session does not belong to the user",
+        )
+
+    file_path, _ = local_mount_browser_service.resolve_file(
+        db_session,
+        mount_id=mount_id,
+        path=path,
+    )
+    media_type, _ = mimetypes.guess_type(file_path.name)
+    return FileResponse(
+        path=file_path,
+        media_type=media_type or "application/octet-stream",
+        filename=file_path.name,
+        content_disposition_type="attachment"
+        if disposition == "attachment"
+        else "inline",
+    )
+
+
+@router.get(
+    "/{session_id}/local-mounts/folder-archive",
+    response_model=ResponseSchema[WorkspaceArchiveResponse],
+)
+async def get_session_local_mount_folder_archive(
+    session_id: uuid.UUID,
+    mount_id: str = Query(...),
+    path: str = Query(...),
+    user_id: str = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+) -> JSONResponse:
+    """Get a same-origin download URL for an authorized local mount folder archive."""
+    db_session = session_service.get_session(db, session_id)
+    if db_session.user_id != user_id:
+        raise AppException(
+            error_code=ErrorCode.FORBIDDEN,
+            message="Session does not belong to the user",
+        )
+
+    filename = local_mount_browser_service.build_archive_filename(
+        config=local_mount_browser_service.get_session_mount_config(db_session),
+        mount_id=mount_id,
+        path=path,
+    )
+    query = urlencode({"mount_id": mount_id, "path": path})
+    return Response.success(
+        data=WorkspaceArchiveResponse(
+            url=f"/api/v1/sessions/{session_id}/local-mounts/archive?{query}",
+            filename=filename,
+        ),
+        message="Local mount folder archive URL generated",
+    )
+
+
+@router.get("/{session_id}/local-mounts/archive")
+async def download_session_local_mount_archive(
+    session_id: uuid.UUID,
+    mount_id: str = Query(...),
+    path: str = Query(...),
+    user_id: str = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+):
+    """Create and stream a temporary zip archive for an authorized local mount folder."""
+    db_session = session_service.get_session(db, session_id)
+    if db_session.user_id != user_id:
+        raise AppException(
+            error_code=ErrorCode.FORBIDDEN,
+            message="Session does not belong to the user",
+        )
+
+    archive_path, filename = local_mount_browser_service.create_folder_archive(
+        db_session,
+        mount_id=mount_id,
+        path=path,
+    )
+
+    def cleanup_archive() -> None:
+        try:
+            archive_path.unlink(missing_ok=True)
+        finally:
+            shutil.rmtree(archive_path.parent, ignore_errors=True)
+
+    return FileResponse(
+        path=archive_path,
+        media_type="application/zip",
+        filename=filename,
+        background=BackgroundTask(cleanup_archive),
+    )
 
 
 @router.get(

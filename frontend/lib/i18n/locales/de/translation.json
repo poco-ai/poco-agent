@@ -10,6 +10,7 @@
     "library": "Funktionen",
     "openMain": "Hauptseitenleiste öffnen",
     "scheduledTasks": "Geplante Aufgaben",
+    "memories": "Erinnerungen",
     "projects": "Projekte",
     "newProject": "Neues Projekt",
     "newProjectPrompt": "Projektname eingeben:",
@@ -275,6 +276,9 @@
     "planApprovalApprove": "Genehmigen & ausführen",
     "planApprovalReject": "Ablehnen",
     "planApprovalEmpty": "Kein Plan bereitgestellt",
+    "enterPlanModeTitle": "Planungsmodus starten",
+    "enterPlanModeHint": "Der Agent plant zuerst die Ausführungsschritte und wartet auf deine Freigabe, bevor er beginnt.",
+    "enterPlanModeConfirm": "Planung starten",
     "askUserTimeout": "Verbleibende Zeit: {{seconds}}s",
     "askUserPrevious": "Zurück",
     "askUserNext": "Weiter",
@@ -320,7 +324,8 @@
       "skillsConfigured": "Skills (konfiguriert)",
       "skillsUsed": "Skills",
       "mcpConfigured": "MCP-Server (konfiguriert)",
-      "mcp": "MCP-Server"
+      "mcp": "MCP-Server",
+      "pluginsConfigured": "Voreinstellungen (konfiguriert)"
     },
     "typingWords": [
       "Accomplishing",
@@ -633,14 +638,14 @@
       "loadingDoc": "Dokument wird gelesen...",
       "parseError": "Excalidraw-Datei konnte nicht geparst werden",
       "fetchError": "Dokumentinhalt konnte nicht abgerufen werden",
+      "frontMatter": "Frontmatter",
       "retry": "Wiederholen",
       "selectFile": "Bitte wähle eine Datei rechts zur Vorschau",
       "supportedFormats": "Unterstützt PDF, Office-Dokumente, gängige Bildformate, MP4-Videos, XMind-Dateien, .excalidraw-Dateien und .drawio-Dateien",
       "processing": "Dateiverarbeitung",
       "notSupported": "Vorschau für dieses Format nicht unterstützt",
       "openInNewWindow": "In neuem Fenster öffnen",
-      "downloadOriginal": "Originaldatei herunterladen",
-      "frontMatter": "Frontmatter"
+      "downloadOriginal": "Originaldatei herunterladen"
     },
     "summary": {
       "total": "Gesamt",
@@ -697,6 +702,10 @@
       "feature2": "Visuelle Verwaltung",
       "feature3": "Echtzeit-Überwachung",
       "action": "Server verwalten"
+    },
+    "pluginsStore": {
+      "title": "Voreinstellungen",
+      "description": "Fähigkeits-Voreinstellungen durchsuchen und installieren"
     },
     "envVars": {
       "title": "Umgebungsvariablen",
@@ -1078,6 +1087,10 @@
         }
       }
     },
+    "pluginsPage": {
+      "searchPlaceholder": "Vorlagen durchsuchen...",
+      "addCard": "Vorlage hinzufügen"
+    },
     "skillsManager": {
       "stats": {
         "available": "Verfügbar",
@@ -1224,9 +1237,103 @@
         "invalidKeyHint": "Oeffne Einstellungen > Sonstiges, aktualisiere den SkillsMP API-Schluessel und versuche es danach hier erneut."
       }
     },
-    "pluginsPage": {
-      "searchPlaceholder": "Vorlagen durchsuchen...",
-      "addCard": "Vorlage hinzufügen"
+    "pluginsManager": {
+      "stats": {
+        "enabled": "Aktiviert"
+      },
+      "scope": {
+        "system": "System",
+        "user": "Benutzer"
+      },
+      "fields": {
+        "id": "id",
+        "source": "Quelle"
+      },
+      "actions": {
+        "install": "Installieren",
+        "uninstall": "Deinstallieren"
+      },
+      "toasts": {
+        "loadError": "Voreinstellungen konnten nicht geladen werden",
+        "actionError": "Aktion fehlgeschlagen, bitte versuche es später erneut",
+        "installed": "Voreinstellung installiert",
+        "uninstalled": "Voreinstellung deinstalliert",
+        "enabled": "Voreinstellung aktiviert",
+        "disabled": "Voreinstellung deaktiviert",
+        "actionFailed": "Aktion fehlgeschlagen, bitte versuche es später erneut",
+        "exclusiveEnabled": "(Andere Vorlagen wurden deaktiviert)"
+      },
+      "empty": "Noch keine Voreinstellungen",
+      "unknownPlugin": "Unbekannte Voreinstellung"
+    },
+    "pluginsImport": {
+      "title": "Voreinstellungen importieren",
+      "description": "Lade eine Preset-ZIP hoch oder importiere aus einem öffentlichen GitHub-Repository.",
+      "relativePath": "Relativer Pfad",
+      "tabs": {
+        "zip": "ZIP hochladen",
+        "github": "GitHub-URL"
+      },
+      "fields": {
+        "zip": "ZIP-Datei",
+        "githubUrl": "Öffentliche GitHub-Repo-URL",
+        "nameOverride": "Name der Voreinstellung"
+      },
+      "placeholders": {
+        "githubUrl": "https://github.com/owner/repo",
+        "name": "z. B. mein-preset"
+      },
+      "hints": {
+        "github": "Standardmäßig main/master (nur öffentliche github.com-Repos)"
+      },
+      "actions": {
+        "back": "Zurück",
+        "discover": "Erkennen",
+        "discovering": "Analysiere...",
+        "commit": "Importieren & installieren",
+        "committing": "Importiere..."
+      },
+      "preview": {
+        "found": "Gefunden",
+        "items": "Preset-Definitionen",
+        "overwrite": "werden überschrieben",
+        "overwriteItems": "vorhandene Voreinstellungen",
+        "willOverwrite": "Überschreiben",
+        "root": "Wurzel",
+        "path": "Pfad",
+        "unnamed": "Unbenannt",
+        "pagination": {
+          "page": "Seite {{page}} / {{pages}}",
+          "prev": "Zurück",
+          "next": "Weiter"
+        },
+        "selection": {
+          "selectPage": "Seite auswählen",
+          "clearPage": "Seitenauswahl aufheben",
+          "selectAll": "Alle auswählen",
+          "clearAll": "Alle Auswahlen aufheben"
+        }
+      },
+      "result": {
+        "title": "Importergebnis",
+        "success": "Erfolgreich",
+        "failed": "Fehlgeschlagen"
+      },
+      "toasts": {
+        "missingZip": "Bitte wähle eine ZIP-Datei",
+        "missingGithubUrl": "Bitte gib eine GitHub-URL ein",
+        "discovered": "Erkannt. Bitte bestätige, was importiert werden soll.",
+        "discoverError": "Erkennung fehlgeschlagen, bitte versuche es später erneut",
+        "committed": "Import erfolgreich",
+        "commitError": "Import fehlgeschlagen, bitte versuche es später erneut",
+        "partialFailed": "Einige Voreinstellungen konnten nicht importiert werden. Bitte prüfe die Details.",
+        "commitTimeout": "Import-Zeitüberschreitung, bitte versuche es später erneut"
+      },
+      "progress": {
+        "title": "Importfortschritt",
+        "value": "Fortschritt",
+        "jobId": "Job-ID"
+      }
     },
     "mcpLibrary": {
       "header": {
@@ -1288,11 +1395,6 @@
       "skillCreator": "Skill Creator",
       "marketplace": "Marketplace",
       "skillsmp": "SkillsMP"
-    },
-    "pluginsManager": {
-      "toasts": {
-        "exclusiveEnabled": "(Andere Vorlagen wurden deaktiviert)"
-      }
     },
     "presets": {
       "title": "Vorlagen",
@@ -1370,6 +1472,7 @@
   },
   "common": {
     "cancel": "Abbrechen",
+    "close": "Schließen",
     "create": "Erstellen",
     "delete": "Löschen",
     "deleted": "Gelöscht",
@@ -1603,7 +1706,9 @@
     "downloadStart": "Herunterladen des Arbeitsbereichs-Archivs gestartet",
     "archiveNotAvailable": "Archivdatei noch nicht verfügbar",
     "archiveUnavailable": "Archivdatei noch nicht verfügbar",
-    "downloadFailed": "Download fehlgeschlagen"
+    "downloadFailed": "Download fehlgeschlagen",
+    "workspaceRoot": "Arbeitsbereich",
+    "localMountsRoot": "Lokale Einbindungen"
   },
   "pullToRefresh": {
     "refreshing": "Aktualisiere...",
@@ -1627,9 +1732,15 @@
     "noMcpInstalled": "Kein MCP installiert",
     "noSkillsInstalled": "Keine Skills installiert",
     "noPluginsInstalled": "Keine Presets installiert",
+    "fallbackMcp": "MCP #{{id}}",
+    "fallbackSkill": "Skill #{{id}}",
+    "fallbackPreset": "Voreinstellung #{{id}}",
     "oneClickClose": "Alle ausschalten",
     "notInstalledMcp": "Kein MCP installiert",
     "notInstalledSkill": "Keine Skills installiert",
+    "mcp": "MCP",
+    "skills": "Skills",
+    "plugins": "Voreinstellungen",
     "apps": "Apps",
     "comingSoon": "Demnächst",
     "clickForDetails": "Für Details klicken",
@@ -1676,6 +1787,9 @@
     "settings": "Einstellungen"
   },
   "skillsGrid": {
+    "turnOffAll": "Alle ausschalten"
+  },
+  "pluginsGrid": {
     "turnOffAll": "Alle ausschalten"
   },
   "mcpSettings": {
@@ -1818,6 +1932,69 @@
   },
   "filesidebar": {
     "title": "Dateiliste"
+  },
+  "memories": {
+    "title": "Erinnerungen",
+    "subtitle": "Benutzerbezogene Langzeitspeicher-Einträge verwalten.",
+    "stats": {
+      "count": "{{count}} Einträge"
+    },
+    "actions": {
+      "search": "Suchen",
+      "showAll": "Alle anzeigen",
+      "refresh": "Aktualisieren",
+      "edit": "Bearbeiten",
+      "update": "Speichern",
+      "delete": "Löschen",
+      "create": "Erstellen",
+      "creating": "Wird erstellt..."
+    },
+    "search": {
+      "queryPlaceholder": "Erinnerungen durchsuchen..."
+    },
+    "create": {
+      "title": "Erinnerung hinzufügen",
+      "desc": "Gib ein, was Poco sich merken soll.",
+      "contentPlaceholder": "Gib ein, was Poco sich merken soll"
+    },
+    "edit": {
+      "title": "Erinnerung bearbeiten",
+      "contentPlaceholder": "Erinnerungsinhalt aktualisieren"
+    },
+    "fields": {
+      "updatedAt": "Aktualisiert",
+      "createdAt": "Erstellt"
+    },
+    "progress": {
+      "title": "Erstellungsfortschritt",
+      "status": "Status",
+      "value": "Fortschritt",
+      "jobId": "Job-ID",
+      "hints": {
+        "running": "Erinnerung wird hinzugefügt...",
+        "success": "Erinnerung hinzugefügt",
+        "failed": "Erinnerung konnte nicht hinzugefügt werden"
+      },
+      "statuses": {
+        "queued": "In Warteschlange",
+        "running": "Läuft",
+        "success": "Erfolgreich",
+        "failed": "Fehlgeschlagen",
+        "unknown": "Unbekannt"
+      }
+    },
+    "list": {
+      "empty": "Keine Erinnerungen gefunden."
+    },
+    "toasts": {
+      "invalidJson": "Ungültiges JSON",
+      "error": "Aktion fehlgeschlagen",
+      "created": "Erinnerung erstellt",
+      "updated": "Erinnerung aktualisiert",
+      "deleted": "Erinnerung gelöscht",
+      "cleared": "Alle Erinnerungen gelöscht",
+      "timeout": "Erstellung überschritten. Bitte versuche es später erneut."
+    }
   },
   "onboarding": {
     "close": "Close tutorial",

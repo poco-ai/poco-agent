@@ -1706,7 +1706,9 @@
     "downloadStart": "Starting workspace archive download",
     "archiveNotAvailable": "Archive file not available yet",
     "archiveUnavailable": "Archive file not available yet",
-    "downloadFailed": "Download failed"
+    "downloadFailed": "Download failed",
+    "workspaceRoot": "Workspace",
+    "localMountsRoot": "Local Mounts"
   },
   "pullToRefresh": {
     "refreshing": "Refreshing...",

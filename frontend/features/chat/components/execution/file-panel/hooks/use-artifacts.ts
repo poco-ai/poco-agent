@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { getFilesAction } from "@/features/chat/actions/query-actions";
+import { chatService } from "@/features/chat/api/chat-api";
 import type { FileNode } from "@/features/chat/types";
+import { useT } from "@/lib/i18n/client";
 
 export type ViewMode = "artifacts" | "document";
 
@@ -116,6 +117,7 @@ export function useArtifacts({
   sessionId,
   sessionStatus,
 }: UseArtifactsOptions): UseArtifactsReturn {
+  const { t } = useT("translation");
   const [files, setFiles] = useState<FileNode[]>([]);
   const [selectedPath, setSelectedPath] = useState<string | undefined>();
   const [viewMode, setViewMode] = useState<ViewMode>("artifacts");
@@ -130,7 +132,36 @@ export function useArtifacts({
     const promise = (async () => {
       setIsRefreshing(true);
       try {
-        const data = await getFilesAction({ sessionId });
+        const session = await chatService.getSessionRaw(sessionId);
+        const workspaceFiles = await chatService.getFiles(sessionId);
+        const filesystemMode =
+          session.config_snapshot?.filesystem_mode === "local_mount"
+            ? "local_mount"
+            : "sandbox";
+        const localMountFiles =
+          filesystemMode === "local_mount"
+            ? await chatService.getLocalMountFiles(sessionId)
+            : [];
+
+        const data =
+          filesystemMode === "local_mount"
+            ? [
+                {
+                  id: "__workspace_root__",
+                  name: t("fileSidebar.workspaceRoot"),
+                  path: "__workspace_root__",
+                  type: "folder" as const,
+                  children: workspaceFiles,
+                },
+                {
+                  id: "__local_mounts_root__",
+                  name: t("fileSidebar.localMountsRoot"),
+                  path: "__local_mounts_root__",
+                  type: "folder" as const,
+                  children: localMountFiles,
+                },
+              ]
+            : workspaceFiles;
         setFiles(data);
         return data;
       } catch (error) {
@@ -144,7 +175,7 @@ export function useArtifacts({
 
     fetchPromiseRef.current = promise;
     return promise;
-  }, [sessionId]);
+  }, [sessionId, t]);
 
   // Manual refresh method
   const refreshFiles = useCallback(async () => {

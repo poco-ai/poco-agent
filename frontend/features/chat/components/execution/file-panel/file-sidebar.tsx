@@ -134,11 +134,15 @@ function FileTreeItem({
   const canDownloadNode =
     Boolean(onDownloadNode) &&
     ((node.type === "file" && Boolean(node.url)) ||
-      (node.type === "folder" && canDownloadFolder));
+      (node.type === "folder" &&
+        canDownloadFolder &&
+        !node.path.startsWith("__")));
   const canPackageAsSkill =
     node.type === "folder" &&
+    node.source !== "local_mount" &&
     skillFolderPaths.has(node.path) &&
-    Boolean(onPackageSkill);
+    Boolean(onPackageSkill) &&
+    !node.path.startsWith("__");
   const hasActions = canDownloadNode || canPackageAsSkill;
 
   // Check if this node or any of its children is the selected one

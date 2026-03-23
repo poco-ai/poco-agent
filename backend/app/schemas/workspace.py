@@ -1,5 +1,10 @@
 from typing import Any, Literal
 
+from app.schemas.filesystem import LocalMountAccessMode
+
+
+FileSource = Literal["workspace", "local_mount"]
+
 from pydantic import BaseModel
 
 
@@ -15,6 +20,9 @@ class FileNode(BaseModel):
     mimeType: str | None = None
     oss_status: str | None = None
     oss_meta: dict[str, Any] | None = None
+    source: FileSource = "workspace"
+    mount_id: str | None = None
+    access_mode: LocalMountAccessMode | None = None
 
 
 class WorkspaceArchiveResponse(BaseModel):

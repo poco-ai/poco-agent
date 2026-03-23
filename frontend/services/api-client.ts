@@ -51,6 +51,12 @@ export const API_ENDPOINTS = {
   usageAnalytics: "/usage/analytics",
   sessionWorkspaceFiles: (sessionId: string) =>
     `/sessions/${sessionId}/workspace/files`,
+  sessionLocalMountFiles: (sessionId: string) =>
+    `/sessions/${sessionId}/local-mounts/files`,
+  sessionLocalMountFile: (sessionId: string) =>
+    `/sessions/${sessionId}/local-mounts/file`,
+  sessionLocalMountFolderArchive: (sessionId: string) =>
+    `/sessions/${sessionId}/local-mounts/folder-archive`,
   sessionWorkspaceArchive: (sessionId: string) =>
     `/sessions/${sessionId}/workspace/archive`,
   sessionWorkspaceFolderArchive: (sessionId: string) =>

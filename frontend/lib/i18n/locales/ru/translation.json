@@ -8,7 +8,9 @@
     "newTaskWithShortcut": "Новая задача ({{shortcut}})",
     "search": "Поиск",
     "library": "Возможности",
+    "openMain": "Открыть основную боковую панель",
     "scheduledTasks": "Запланированные задачи",
+    "memories": "Память",
     "projects": "Проекты",
     "newProject": "Новый проект",
     "newProjectPrompt": "Введите название проекта:",
@@ -88,6 +90,19 @@
       "scheduledHelp": "Выполняется по расписанию Cron и при необходимости повторно использует рабочее пространство.",
       "planPlaceholder": "Опишите сложную задачу. Я сначала предложу план, затем выполну после вашего подтверждения…",
       "planPrefix": "Сначала предложите чёткий план выполнения (шаги с контрольными точками). Пока не выполняйте. После подтверждения выполняйте пошагово.\\n\\nЗадача: {{prompt}}"
+    },
+    "modeLabels": {
+      "task": "Режим задачи",
+      "plan": "Режим плана",
+      "scheduled": "Режим расписания"
+    },
+    "skillCreatorCard": {
+      "title": "Создать навык",
+      "description": "Используйте пользовательские навыки, чтобы автоматизировать повторяющиеся рабочие процессы.",
+      "prefillPrompt": "Помоги мне использовать /skill-creator, чтобы создать навык. Сначала спроси меня, что должен делать этот навык."
+    },
+    "bottomCards": {
+      "selectCard": "Выбрать карточку {{index}}"
     },
     "repo": {
       "toggle": "Настройки репозитория",
@@ -195,19 +210,6 @@
       "tooManySkills": "Включено слишком много навыков ({{count}}). Это может замедлить загрузку системы и снизить производительность.",
       "mcpLimitReached": "Включение этого MCP превысит рекомендуемый лимит (3 сервера). Слишком много MCP может замедлить загрузку системы.",
       "skillLimitReached": "Включение этого навыка превысит рекомендуемый лимит (5 навыков). Слишком много навыков может замедлить загрузку системы."
-    },
-    "skillCreatorCard": {
-      "title": "Создать навык",
-      "description": "Используйте пользовательские навыки, чтобы автоматизировать повторяющиеся рабочие процессы.",
-      "prefillPrompt": "Помоги мне использовать /skill-creator, чтобы создать навык. Сначала спроси меня, что должен делать этот навык."
-    },
-    "bottomCards": {
-      "selectCard": "Выбрать карточку {{index}}"
-    },
-    "modeLabels": {
-      "task": "Режим задачи",
-      "plan": "Режим плана",
-      "scheduled": "Режим расписания"
     }
   },
   "prompts": {
@@ -274,6 +276,9 @@
     "planApprovalApprove": "Утвердить и запустить",
     "planApprovalReject": "Отклонить",
     "planApprovalEmpty": "План не предоставлен",
+    "enterPlanModeTitle": "Перейти в режим планирования",
+    "enterPlanModeHint": "Агент сначала составит план выполнения и будет ждать вашего подтверждения перед запуском.",
+    "enterPlanModeConfirm": "Перейти к плану",
     "askUserTimeout": "Осталось {{seconds}}с",
     "askUserPrevious": "Назад",
     "askUserNext": "Далее",
@@ -319,7 +324,8 @@
       "skillsConfigured": "Навыки (настроено)",
       "skillsUsed": "Навыки",
       "mcpConfigured": "MCP серверы (настроено)",
-      "mcp": "MCP серверы"
+      "mcp": "MCP серверы",
+      "pluginsConfigured": "Пресеты (настроены)"
     },
     "typingWords": [
       "Accomplishing",
@@ -632,14 +638,14 @@
       "loadingDoc": "Чтение документа...",
       "parseError": "Не удалось разобрать файл Excalidraw",
       "fetchError": "Не удалось получить содержимое документа",
+      "frontMatter": "Front matter",
       "retry": "Повторить",
       "selectFile": "Пожалуйста, выберите файл справа для предварительного просмотра",
       "supportedFormats": "Поддерживает PDF, документы Office, распространённые форматы изображений, видео MP4, файлы XMind, файлы .excalidraw и файлы .drawio",
       "processing": "Обработка файла",
       "notSupported": "Предварительный просмотр не поддерживается для этого формата",
       "openInNewWindow": "Открыть в новом окне",
-      "downloadOriginal": "Скачать исходный файл",
-      "frontMatter": "Front matter"
+      "downloadOriginal": "Скачать исходный файл"
     },
     "summary": {
       "total": "Всего",
@@ -662,6 +668,9 @@
     "title": "Возможности",
     "subtitle": "Управление навыками, пресетами и инструментами",
     "comingSoon": "Скоро",
+    "mobile": {
+      "back": "Назад к возможностям"
+    },
     "sidebar": {
       "title": "Ярлыки возможностей",
       "description": "Выберите возможность для перехода к её настройке.",
@@ -693,6 +702,10 @@
       "feature2": "Визуальное управление",
       "feature3": "Мониторинг в реальном времени",
       "action": "Управление серверами"
+    },
+    "pluginsStore": {
+      "title": "Пресеты",
+      "description": "Просматривайте и устанавливайте пресеты возможностей"
     },
     "envVars": {
       "title": "Переменные окружения",
@@ -1074,6 +1087,10 @@
         }
       }
     },
+    "pluginsPage": {
+      "searchPlaceholder": "Поиск пресетов...",
+      "addCard": "Добавить пресет"
+    },
     "skillsManager": {
       "stats": {
         "available": "Доступно",
@@ -1220,9 +1237,103 @@
         "invalidKeyHint": "Откройте Настройки > Другое, обновите API-ключ SkillsMP и затем вернитесь сюда, чтобы попробовать снова."
       }
     },
-    "pluginsPage": {
-      "searchPlaceholder": "Поиск пресетов...",
-      "addCard": "Добавить пресет"
+    "pluginsManager": {
+      "stats": {
+        "enabled": "Включено"
+      },
+      "scope": {
+        "system": "Система",
+        "user": "Пользователь"
+      },
+      "fields": {
+        "id": "id",
+        "source": "Источник"
+      },
+      "actions": {
+        "install": "Установить",
+        "uninstall": "Удалить"
+      },
+      "toasts": {
+        "loadError": "Не удалось загрузить пресеты",
+        "actionError": "Операция не удалась, попробуйте позже",
+        "installed": "Пресет установлен",
+        "uninstalled": "Пресет удалён",
+        "enabled": "Пресет включён",
+        "disabled": "Пресет выключен",
+        "actionFailed": "Операция не удалась, попробуйте позже",
+        "exclusiveEnabled": "(Другие пресеты отключены)"
+      },
+      "empty": "Пока нет пресетов",
+      "unknownPlugin": "Неизвестный пресет"
+    },
+    "pluginsImport": {
+      "title": "Импорт пресетов",
+      "description": "Загрузите zip с пресетами или импортируйте из публичного репозитория GitHub.",
+      "relativePath": "Относительный путь",
+      "tabs": {
+        "zip": "Загрузить zip",
+        "github": "URL GitHub"
+      },
+      "fields": {
+        "zip": "Файл zip",
+        "githubUrl": "URL публичного репозитория GitHub",
+        "nameOverride": "Название пресета"
+      },
+      "placeholders": {
+        "githubUrl": "https://github.com/owner/repo",
+        "name": "например, my-preset"
+      },
+      "hints": {
+        "github": "По умолчанию main/master (только публичные репозитории github.com)"
+      },
+      "actions": {
+        "back": "Назад",
+        "discover": "Найти",
+        "discovering": "Поиск...",
+        "commit": "Импортировать и установить",
+        "committing": "Импорт..."
+      },
+      "preview": {
+        "found": "Найдено",
+        "items": "описаний пресетов",
+        "overwrite": "перезапишет",
+        "overwriteItems": "существующие пресеты",
+        "willOverwrite": "Перезаписать",
+        "root": "Корень",
+        "path": "Путь",
+        "unnamed": "Без названия",
+        "pagination": {
+          "page": "Страница {{page}} / {{pages}}",
+          "prev": "Назад",
+          "next": "Далее"
+        },
+        "selection": {
+          "selectPage": "Выбрать страницу",
+          "clearPage": "Снять выбор страницы",
+          "selectAll": "Выбрать все",
+          "clearAll": "Снять весь выбор"
+        }
+      },
+      "result": {
+        "title": "Результат импорта",
+        "success": "Успешно",
+        "failed": "Ошибка"
+      },
+      "toasts": {
+        "missingZip": "Пожалуйста, выберите файл zip",
+        "missingGithubUrl": "Пожалуйста, введите URL GitHub",
+        "discovered": "Найдено. Пожалуйста, подтвердите, что импортировать.",
+        "discoverError": "Не удалось выполнить поиск, попробуйте позже",
+        "committed": "Импорт выполнен успешно",
+        "commitError": "Не удалось импортировать, попробуйте позже",
+        "partialFailed": "Некоторые пресеты не удалось импортировать. Проверьте детали.",
+        "commitTimeout": "Время импорта истекло, попробуйте позже"
+      },
+      "progress": {
+        "title": "Ход импорта",
+        "value": "Прогресс",
+        "jobId": "ID задания"
+      }
     },
     "mcpLibrary": {
       "header": {
@@ -1284,11 +1395,6 @@
       "skillCreator": "Skill Creator",
       "marketplace": "Marketplace",
       "skillsmp": "SkillsMP"
-    },
-    "pluginsManager": {
-      "toasts": {
-        "exclusiveEnabled": "(Другие пресеты отключены)"
-      }
     },
     "presets": {
       "title": "Пресеты",
@@ -1366,6 +1472,7 @@
   },
   "common": {
     "cancel": "Отмена",
+    "close": "Закрыть",
     "create": "Создать",
     "delete": "Удалить",
     "deleted": "Удалено",
@@ -1599,7 +1706,9 @@
     "downloadStart": "Начинается загрузка архива рабочего пространства",
     "archiveNotAvailable": "Файл архива пока недоступен",
     "archiveUnavailable": "Файл архива пока недоступен",
-    "downloadFailed": "Не удалось загрузить"
+    "downloadFailed": "Не удалось загрузить",
+    "workspaceRoot": "Рабочая область",
+    "localMountsRoot": "Локальные монтирования"
   },
   "pullToRefresh": {
     "refreshing": "Обновление...",
@@ -1623,9 +1732,15 @@
     "noMcpInstalled": "MCP не установлен",
     "noSkillsInstalled": "Навыки не установлены",
     "noPluginsInstalled": "Пресеты не установлены",
+    "fallbackMcp": "MCP #{{id}}",
+    "fallbackSkill": "Навык #{{id}}",
+    "fallbackPreset": "Пресет #{{id}}",
     "oneClickClose": "Выключить все",
     "notInstalledMcp": "MCP не установлен",
     "notInstalledSkill": "Навыки не установлены",
+    "mcp": "MCP",
+    "skills": "Навыки",
+    "plugins": "Пресеты",
     "apps": "Приложения",
     "comingSoon": "Скоро",
     "clickForDetails": "Нажмите для деталей",
@@ -1672,6 +1787,9 @@
     "settings": "Настройки"
   },
   "skillsGrid": {
+    "turnOffAll": "Выключить все"
+  },
+  "pluginsGrid": {
     "turnOffAll": "Выключить все"
   },
   "mcpSettings": {
@@ -1814,6 +1932,69 @@
   },
   "filesidebar": {
     "title": "Список файлов"
+  },
+  "memories": {
+    "title": "Память",
+    "subtitle": "Управляйте пользовательскими записями долговременной памяти.",
+    "stats": {
+      "count": "{{count}} элементов"
+    },
+    "actions": {
+      "search": "Поиск",
+      "showAll": "Показать все",
+      "refresh": "Обновить",
+      "edit": "Редактировать",
+      "update": "Сохранить",
+      "delete": "Удалить",
+      "create": "Создать",
+      "creating": "Создание..."
+    },
+    "search": {
+      "queryPlaceholder": "Поиск по памяти..."
+    },
+    "create": {
+      "title": "Добавить память",
+      "desc": "Введите, что Poco должен запомнить.",
+      "contentPlaceholder": "Введите, что Poco должен запомнить"
+    },
+    "edit": {
+      "title": "Редактировать память",
+      "contentPlaceholder": "Обновите содержимое памяти"
+    },
+    "fields": {
+      "updatedAt": "Обновлено",
+      "createdAt": "Создано"
+    },
+    "progress": {
+      "title": "Ход создания",
+      "status": "Статус",
+      "value": "Прогресс",
+      "jobId": "ID задания",
+      "hints": {
+        "running": "Добавляем память...",
+        "success": "Память добавлена",
+        "failed": "Не удалось добавить память"
+      },
+      "statuses": {
+        "queued": "В очереди",
+        "running": "Выполняется",
+        "success": "Успешно",
+        "failed": "Ошибка",
+        "unknown": "Неизвестно"
+      }
+    },
+    "list": {
+      "empty": "Память не найдена."
+    },
+    "toasts": {
+      "invalidJson": "Некорректный JSON",
+      "error": "Операция не удалась",
+      "created": "Память создана",
+      "updated": "Память обновлена",
+      "deleted": "Память удалена",
+      "cleared": "Вся память очищена",
+      "timeout": "Время создания истекло. Попробуйте позже."
+    }
   },
   "onboarding": {
     "close": "Close tutorial",
