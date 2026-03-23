@@ -3,6 +3,11 @@ import type {
   InputFile,
   LocalMountConfig,
 } from "@/features/chat/types/api/session";
+export type {
+  LocalFilesystemDraft,
+  LocalFilesystemSupport,
+  LocalMountDraftRow,
+} from "@/features/task-composer/types/local-filesystem";
 import type { ModelSelection } from "@/features/chat/lib/model-catalog";
 import type { RunScheduleMode } from "@/features/task-composer/model/run-schedule";
 

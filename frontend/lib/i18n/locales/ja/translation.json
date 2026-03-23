@@ -1676,7 +1676,12 @@
     "missingToolUseId": "ツール使用IDが見つかりません",
     "messageContentRequired": "メッセージ内容を入力してください",
     "sessionNameRequired": "セッション名を入力してください",
-    "sessionNameTooLong": "セッション名が長すぎます"
+    "sessionNameTooLong": "セッション名が長すぎます",
+    "localMountNameRequired": "ディレクトリ名を入力してください",
+    "localMountPathRequired": "ホストパスを入力してください",
+    "localMountCountRequired": "少なくとも 1 つのディレクトリを追加してください",
+    "localMountUnavailable": "現在ローカルファイルアクセスは利用できません",
+    "localMountPathDuplicate": "すでに追加済みのディレクトリです: {{path}}"
   },
   "user": {
     "plan": {
@@ -2046,6 +2051,65 @@
         "title": "Skills page",
         "description": "This is the Skills view inside Capabilities, where you browse and manage skills."
       }
+    }
+  },
+  "filesystem": {
+    "title": "ローカルファイル",
+    "description": "Poco が sandbox ワークスペース外のディレクトリへアクセスできるようにします。",
+    "status": {
+      "title": "環境ステータス",
+      "loading": "確認中...",
+      "unknown": "ステータス不明",
+      "available": "ヘルパー準備完了",
+      "not_running": "ヘルパー未起動",
+      "permission_denied": "ヘルパーの権限不足",
+      "bridge_unreachable": "クラウドブリッジ利用不可"
+    },
+    "mode": {
+      "sandboxTitle": "Sandbox のみ",
+      "sandboxDescription": "このタスクでは /workspace の sandbox ファイルのみを使います。",
+      "localMountTitle": "ローカルディレクトリを許可",
+      "localMountDescription": "選択したホストディレクトリの読み取りや編集を agent に許可します。"
+    },
+    "mounts": {
+      "title": "許可済みディレクトリ",
+      "description": "各ディレクトリは実行時に /mnt/local/<id> 配下へマウントされます。",
+      "itemTitle": "ディレクトリ {{index}}"
+    },
+    "actions": {
+      "manage": "ローカルファイル",
+      "addMount": "ディレクトリを追加",
+      "removeMount": "ディレクトリを削除",
+      "save": "次回実行向けに保存",
+      "apply": "このタスクに適用"
+    },
+    "fields": {
+      "name": "表示名",
+      "path": "ホストパス",
+      "access": "アクセス権"
+    },
+    "placeholders": {
+      "name": "例: Documents",
+      "path": "例: /Users/alice/Documents"
+    },
+    "accessModes": {
+      "ro": "読み取り専用",
+      "rw": "読み取りと書き込み"
+    },
+    "messages": {
+      "localDeployment": "ディレクトリはこのマシン上の実行環境へ直接マウントされます。",
+      "cloudDeployment": "ディレクトリはローカルヘルパーとクラウドブリッジ経由で実行環境に共有されます。",
+      "supportUnknown": "ヘルパーの状態を取得できませんでした。sandbox モードは引き続き安全に利用できます。",
+      "sandboxOnly": "このタスクでは /workspace sandbox のみが利用されます。",
+      "nextRun": "保存した変更は次回実行時に適用されます。現在のコンテナには即時反映されません。",
+      "draft": "これらのディレクトリはタスク開始時に許可されます。"
+    },
+    "summary": {
+      "localMountCount": "ローカルファイル（{{count}}）"
+    },
+    "toasts": {
+      "saved": "設定を保存しました。次回実行時に適用されます。",
+      "saveFailed": "ローカルファイル設定の保存に失敗しました"
     }
   }
 }

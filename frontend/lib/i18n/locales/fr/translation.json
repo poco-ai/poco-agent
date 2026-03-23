@@ -1676,7 +1676,12 @@
     "missingToolUseId": "ID d'utilisation d'outil manquant",
     "messageContentRequired": "Veuillez entrer le contenu du message",
     "sessionNameRequired": "Veuillez entrer le nom de la session",
-    "sessionNameTooLong": "Nom de session trop long"
+    "sessionNameTooLong": "Nom de session trop long",
+    "localMountNameRequired": "Veuillez saisir un nom de dossier",
+    "localMountPathRequired": "Veuillez saisir un chemin hôte",
+    "localMountCountRequired": "Veuillez ajouter au moins un dossier",
+    "localMountUnavailable": "L’accès aux fichiers locaux est indisponible pour le moment",
+    "localMountPathDuplicate": "Dossier déjà ajouté : {{path}}"
   },
   "user": {
     "plan": {
@@ -2046,6 +2051,65 @@
         "title": "Skills page",
         "description": "This is the Skills view inside Capabilities, where you browse and manage skills."
       }
+    }
+  },
+  "filesystem": {
+    "title": "Fichiers locaux",
+    "description": "Autorisez Poco à accéder à des dossiers en dehors de l’espace de travail sandbox.",
+    "status": {
+      "title": "État de l’environnement",
+      "loading": "Vérification...",
+      "unknown": "Statut indisponible",
+      "available": "Assistant prêt",
+      "not_running": "Assistant non lancé",
+      "permission_denied": "Permission refusée à l’assistant",
+      "bridge_unreachable": "Pont cloud indisponible"
+    },
+    "mode": {
+      "sandboxTitle": "Sandbox uniquement",
+      "sandboxDescription": "Utiliser uniquement les fichiers sandbox de /workspace pour cette tâche.",
+      "localMountTitle": "Autoriser des dossiers locaux",
+      "localMountDescription": "Permettre à l’agent de lire ou modifier les dossiers hôte sélectionnés."
+    },
+    "mounts": {
+      "title": "Dossiers autorisés",
+      "description": "Chaque dossier sera monté sous /mnt/local/<id> pendant l’exécution.",
+      "itemTitle": "Dossier {{index}}"
+    },
+    "actions": {
+      "manage": "Fichiers locaux",
+      "addMount": "Ajouter un dossier",
+      "removeMount": "Retirer le dossier",
+      "save": "Enregistrer pour la prochaine exécution",
+      "apply": "Appliquer à cette tâche"
+    },
+    "fields": {
+      "name": "Nom d’affichage",
+      "path": "Chemin hôte",
+      "access": "Accès"
+    },
+    "placeholders": {
+      "name": "ex. Documents",
+      "path": "ex. /Users/alice/Documents"
+    },
+    "accessModes": {
+      "ro": "Lecture seule",
+      "rw": "Lecture et écriture"
+    },
+    "messages": {
+      "localDeployment": "Les dossiers seront montés directement dans l’environnement d’exécution sur cette machine.",
+      "cloudDeployment": "Les dossiers seront partagés avec l’environnement d’exécution via l’assistant local et le pont cloud.",
+      "supportUnknown": "Impossible de charger l’état de l’assistant. Vous pouvez continuer à utiliser le mode sandbox en toute sécurité.",
+      "sandboxOnly": "Seul le sandbox /workspace sera disponible pour cette tâche.",
+      "nextRun": "Les changements enregistrés s’appliqueront à la prochaine exécution. Les conteneurs actuels ne sont pas rechargés à chaud.",
+      "draft": "Ces dossiers seront autorisés au démarrage de cette tâche."
+    },
+    "summary": {
+      "localMountCount": "Fichiers locaux ({{count}})"
+    },
+    "toasts": {
+      "saved": "Configuration enregistrée. Elle sera appliquée à la prochaine exécution.",
+      "saveFailed": "Impossible d’enregistrer les paramètres des fichiers locaux"
     }
   }
 }

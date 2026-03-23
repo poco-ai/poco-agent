@@ -57,6 +57,7 @@ export const API_ENDPOINTS = {
     `/sessions/${sessionId}/local-mounts/file`,
   sessionLocalMountFolderArchive: (sessionId: string) =>
     `/sessions/${sessionId}/local-mounts/folder-archive`,
+  filesystemSupport: "/filesystem/support",
   sessionWorkspaceArchive: (sessionId: string) =>
     `/sessions/${sessionId}/workspace/archive`,
   sessionWorkspaceFolderArchive: (sessionId: string) =>

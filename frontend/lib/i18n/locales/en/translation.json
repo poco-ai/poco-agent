@@ -1676,7 +1676,12 @@
     "missingToolUseId": "Missing tool use ID",
     "messageContentRequired": "Please enter message content",
     "sessionNameRequired": "Please enter session name",
-    "sessionNameTooLong": "Session name too long"
+    "sessionNameTooLong": "Session name too long",
+    "localMountNameRequired": "Please enter a directory name",
+    "localMountPathRequired": "Please enter a host path",
+    "localMountCountRequired": "Please add at least one directory",
+    "localMountUnavailable": "Local file access is unavailable right now",
+    "localMountPathDuplicate": "Directory already added: {{path}}"
   },
   "user": {
     "plan": {
@@ -2046,6 +2051,65 @@
         "title": "Skills page",
         "description": "This is the Skills view inside Capabilities, where you browse and manage skills."
       }
+    }
+  },
+  "filesystem": {
+    "title": "Local files",
+    "description": "Authorize Poco to access directories outside the sandbox workspace.",
+    "status": {
+      "title": "Environment status",
+      "loading": "Checking...",
+      "unknown": "Status unavailable",
+      "available": "Helper ready",
+      "not_running": "Helper not running",
+      "permission_denied": "Helper permission denied",
+      "bridge_unreachable": "Cloud bridge unavailable"
+    },
+    "mode": {
+      "sandboxTitle": "Sandbox only",
+      "sandboxDescription": "Use only /workspace sandbox files for this task.",
+      "localMountTitle": "Authorize local directories",
+      "localMountDescription": "Allow the agent to read or edit selected host directories."
+    },
+    "mounts": {
+      "title": "Authorized directories",
+      "description": "Each directory will be mounted under /mnt/local/<id> during execution.",
+      "itemTitle": "Directory {{index}}"
+    },
+    "actions": {
+      "manage": "Local files",
+      "addMount": "Add directory",
+      "removeMount": "Remove directory",
+      "save": "Save for next run",
+      "apply": "Apply to this task"
+    },
+    "fields": {
+      "name": "Display name",
+      "path": "Host path",
+      "access": "Access"
+    },
+    "placeholders": {
+      "name": "e.g. Documents",
+      "path": "e.g. /Users/alice/Documents"
+    },
+    "accessModes": {
+      "ro": "Read only",
+      "rw": "Read & write"
+    },
+    "messages": {
+      "localDeployment": "Directories will be mounted directly into the execution environment on this machine.",
+      "cloudDeployment": "Directories will be shared with the execution environment through the local helper and cloud bridge.",
+      "supportUnknown": "Couldn't load the helper status. You can keep using sandbox mode safely.",
+      "sandboxOnly": "Only the /workspace sandbox will be available for this task.",
+      "nextRun": "Saved changes apply to the next run. Current containers are not hot-reloaded.",
+      "draft": "These directories will be authorized when this task starts."
+    },
+    "summary": {
+      "localMountCount": "Local files ({{count}})"
+    },
+    "toasts": {
+      "saved": "Configuration saved. It will apply on the next run.",
+      "saveFailed": "Failed to save local file settings"
     }
   }
 }

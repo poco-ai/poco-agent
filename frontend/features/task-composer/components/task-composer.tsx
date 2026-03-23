@@ -12,6 +12,7 @@ import { RunScheduleDialog } from "@/features/task-composer/components/run-sched
 import { ComposerAttachments } from "@/features/task-composer/components/composer-attachments";
 import { CapabilityRecommendations } from "@/features/task-composer/components/capability-recommendations";
 import { ComposerToolbar } from "@/features/task-composer/components/composer-toolbar";
+import { LocalFilesystemDialog } from "@/features/task-composer/components/local-filesystem-dialog";
 import { RepoDialog } from "@/features/task-composer/components/repo-dialog";
 import { SlashAutocompleteDropdown } from "@/features/task-composer/components/slash-autocomplete-dropdown";
 import { useCapabilityRecommendations } from "@/features/task-composer/hooks/use-capability-recommendations";
@@ -27,6 +28,7 @@ import { useCapabilityToggle } from "@/features/connectors";
 import type { RunScheduleMode } from "@/features/task-composer/model/run-schedule";
 import type {
   ComposerMode,
+  LocalFilesystemDraft,
   RepoUsageMode,
   TaskSendOptions,
 } from "@/features/task-composer/types";
@@ -155,6 +157,12 @@ export function TaskComposer({
   const [browserEnabled, setBrowserEnabled] = React.useState(true);
   const [memoryEnabled, setMemoryEnabled] =
     React.useState(memoryFeatureEnabled);
+  const [filesystemDialogOpen, setFilesystemDialogOpen] = React.useState(false);
+  const [localFilesystemDraft, setLocalFilesystemDraft] =
+    React.useState<LocalFilesystemDraft>({
+      filesystem_mode: "sandbox",
+      local_mounts: [],
+    });
   const [trackedCapabilityItems, setTrackedCapabilityItems] = React.useState<
     TrackedCapabilityItem[]
   >([]);
@@ -344,6 +352,8 @@ export function TaskComposer({
         Object.keys(effectiveSkillConfig).length > 0
           ? effectiveSkillConfig
           : null,
+      filesystem_mode: localFilesystemDraft.filesystem_mode,
+      local_mounts: localFilesystemDraft.local_mounts,
       run_schedule:
         mode === "scheduled"
           ? null
@@ -383,6 +393,8 @@ export function TaskComposer({
     memoryEnabled,
     memoryFeatureEnabled,
     mode,
+    localFilesystemDraft.filesystem_mode,
+    localFilesystemDraft.local_mounts,
     onSend,
     projectName,
     repoUrl,
@@ -505,6 +517,16 @@ export function TaskComposer({
           onSave={handleRepoSave}
         />
 
+        <LocalFilesystemDialog
+          open={filesystemDialogOpen}
+          onOpenChange={setFilesystemDialogOpen}
+          value={localFilesystemDraft}
+          saveBehavior="draft"
+          onSave={(nextValue) => {
+            setLocalFilesystemDraft(nextValue);
+          }}
+        />
+
         {/* Scheduled task settings */}
         <ScheduledTaskSettingsDialog
           open={scheduledSettingsOpen}
@@ -607,9 +629,12 @@ export function TaskComposer({
               browserEnabled={browserEnabled}
               memoryFeatureEnabled={memoryFeatureEnabled}
               memoryEnabled={memoryEnabled}
+              filesystemMode={localFilesystemDraft.filesystem_mode}
+              localMountCount={localFilesystemDraft.local_mounts.length}
               onOpenRepoDialog={() => setRepoDialogOpen(true)}
               onBrowserEnabledChange={setBrowserEnabled}
               onMemoryEnabledChange={setMemoryEnabled}
+              onOpenLocalFilesystemDialog={() => setFilesystemDialogOpen(true)}
               onOpenFileInput={() => fileInputRef.current?.click()}
               onToggleVoiceInput={() => {
                 void voiceInput.toggleRecording();

@@ -9,6 +9,12 @@ FilesystemMode = Literal["sandbox", "local_mount"]
 LocalMountAccessMode = Literal["ro", "rw"]
 DeploymentMode = Literal["local", "cloud"]
 MountProviderType = Literal["direct_bind", "bridge_live_mount"]
+LocalFilesystemHelperStatus = Literal[
+    "available",
+    "not_running",
+    "permission_denied",
+    "bridge_unreachable",
+]
 
 
 class LocalMountConfig(BaseModel):
@@ -56,6 +62,15 @@ class MountResolutionResult(BaseModel):
     provider_type: MountProviderType
     resolved_mounts: list[ResolvedLocalMount] = Field(default_factory=list)
     mount_fingerprint: str
+
+
+class LocalFilesystemSupport(BaseModel):
+    """Frontend-facing local filesystem capability summary."""
+
+    deployment_mode: DeploymentMode
+    helper_status: LocalFilesystemHelperStatus
+    helper_message: str | None = None
+    local_mount_available: bool
 
 
 def build_mount_fingerprint(

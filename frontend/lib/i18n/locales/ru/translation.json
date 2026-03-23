@@ -1676,7 +1676,12 @@
     "missingToolUseId": "Отсутствует ID использования инструмента",
     "messageContentRequired": "Пожалуйста, введите содержимое сообщения",
     "sessionNameRequired": "Пожалуйста, введите имя сессии",
-    "sessionNameTooLong": "Имя сессии слишком длинное"
+    "sessionNameTooLong": "Имя сессии слишком длинное",
+    "localMountNameRequired": "Введите имя каталога",
+    "localMountPathRequired": "Введите путь хоста",
+    "localMountCountRequired": "Добавьте хотя бы один каталог",
+    "localMountUnavailable": "Доступ к локальным файлам сейчас недоступен",
+    "localMountPathDuplicate": "Каталог уже добавлен: {{path}}"
   },
   "user": {
     "plan": {
@@ -2046,6 +2051,65 @@
         "title": "Skills page",
         "description": "This is the Skills view inside Capabilities, where you browse and manage skills."
       }
+    }
+  },
+  "filesystem": {
+    "title": "Локальные файлы",
+    "description": "Разрешите Poco доступ к каталогам вне sandbox-рабочей области.",
+    "status": {
+      "title": "Состояние окружения",
+      "loading": "Проверка...",
+      "unknown": "Статус недоступен",
+      "available": "Помощник готов",
+      "not_running": "Помощник не запущен",
+      "permission_denied": "Недостаточно прав у помощника",
+      "bridge_unreachable": "Облачный мост недоступен"
+    },
+    "mode": {
+      "sandboxTitle": "Только sandbox",
+      "sandboxDescription": "Для этой задачи будут использоваться только файлы sandbox в /workspace.",
+      "localMountTitle": "Разрешить локальные каталоги",
+      "localMountDescription": "Разрешить агенту читать или изменять выбранные каталоги хоста."
+    },
+    "mounts": {
+      "title": "Разрешённые каталоги",
+      "description": "Во время выполнения каждый каталог будет смонтирован в /mnt/local/<id>.",
+      "itemTitle": "Каталог {{index}}"
+    },
+    "actions": {
+      "manage": "Локальные файлы",
+      "addMount": "Добавить каталог",
+      "removeMount": "Удалить каталог",
+      "save": "Сохранить для следующего запуска",
+      "apply": "Применить к этой задаче"
+    },
+    "fields": {
+      "name": "Отображаемое имя",
+      "path": "Путь хоста",
+      "access": "Доступ"
+    },
+    "placeholders": {
+      "name": "например, Documents",
+      "path": "например, /Users/alice/Documents"
+    },
+    "accessModes": {
+      "ro": "Только чтение",
+      "rw": "Чтение и запись"
+    },
+    "messages": {
+      "localDeployment": "Каталоги будут напрямую смонтированы в среду выполнения на этой машине.",
+      "cloudDeployment": "Каталоги будут предоставлены среде выполнения через локальный помощник и облачный мост.",
+      "supportUnknown": "Не удалось загрузить статус помощника. Вы можете продолжать безопасно использовать режим sandbox.",
+      "sandboxOnly": "Для этой задачи будет доступен только sandbox /workspace.",
+      "nextRun": "Сохранённые изменения применятся при следующем запуске. Текущие контейнеры не обновляются на лету.",
+      "draft": "Эти каталоги будут разрешены при запуске задачи."
+    },
+    "summary": {
+      "localMountCount": "Локальные файлы ({{count}})"
+    },
+    "toasts": {
+      "saved": "Конфигурация сохранена. Она будет применена при следующем запуске.",
+      "saveFailed": "Не удалось сохранить настройки локальных файлов"
     }
   }
 }

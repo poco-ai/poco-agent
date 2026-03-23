@@ -1,4 +1,5 @@
 from functools import lru_cache
+from typing import Literal
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -55,6 +56,18 @@ class Settings(BaseSettings):
         default="http://localhost:3000", alias="FRONTEND_PUBLIC_URL"
     )
     frontend_default_language: str = Field(default="zh", alias="FRONTEND_DEFAULT_LANG")
+    deployment_mode: Literal["local", "cloud"] = Field(
+        default="local", alias="DEPLOYMENT_MODE"
+    )
+    local_filesystem_helper_status: Literal[
+        "available",
+        "not_running",
+        "permission_denied",
+        "bridge_unreachable",
+    ] | None = Field(default=None, alias="LOCAL_FILESYSTEM_HELPER_STATUS")
+    local_filesystem_helper_message: str | None = Field(
+        default=None, alias="LOCAL_FILESYSTEM_HELPER_MESSAGE"
+    )
 
     telegram_bot_token: str = Field(default="", alias="TELEGRAM_BOT_TOKEN")
     telegram_webhook_secret_token: str | None = Field(

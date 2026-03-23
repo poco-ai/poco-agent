@@ -1676,7 +1676,12 @@
     "missingToolUseId": "缺少工具调用 ID",
     "messageContentRequired": "请输入消息内容",
     "sessionNameRequired": "请输入会话名称",
-    "sessionNameTooLong": "会话名称过长"
+    "sessionNameTooLong": "会话名称过长",
+    "localMountNameRequired": "请输入目录名称",
+    "localMountPathRequired": "请输入主机路径",
+    "localMountCountRequired": "请至少添加一个目录",
+    "localMountUnavailable": "当前不可用本地文件访问",
+    "localMountPathDuplicate": "目录已添加：{{path}}"
   },
   "user": {
     "plan": {
@@ -2046,6 +2051,65 @@
         "title": "技能页面（Skills）",
         "description": "这里是能力中心的 Skills 页面，用来浏览、启用和管理技能。"
       }
+    }
+  },
+  "filesystem": {
+    "title": "本地文件",
+    "description": "授权 Poco 访问 sandbox workspace 之外的目录。",
+    "status": {
+      "title": "环境状态",
+      "loading": "检查中...",
+      "unknown": "状态暂不可用",
+      "available": "助手已就绪",
+      "not_running": "助手未启动",
+      "permission_denied": "助手权限不足",
+      "bridge_unreachable": "云端桥接不可用"
+    },
+    "mode": {
+      "sandboxTitle": "仅使用 Sandbox",
+      "sandboxDescription": "本次任务只使用 /workspace sandbox 文件。",
+      "localMountTitle": "授权本地目录",
+      "localMountDescription": "允许 agent 读取或修改你选定的主机目录。"
+    },
+    "mounts": {
+      "title": "已授权目录",
+      "description": "执行时每个目录都会挂载到 /mnt/local/<id>。",
+      "itemTitle": "目录 {{index}}"
+    },
+    "actions": {
+      "manage": "本地文件",
+      "addMount": "添加目录",
+      "removeMount": "移除目录",
+      "save": "保存并下次执行生效",
+      "apply": "应用到本次任务"
+    },
+    "fields": {
+      "name": "显示名称",
+      "path": "主机路径",
+      "access": "权限"
+    },
+    "placeholders": {
+      "name": "例如：Documents",
+      "path": "例如：/Users/alice/Documents"
+    },
+    "accessModes": {
+      "ro": "只读",
+      "rw": "可读写"
+    },
+    "messages": {
+      "localDeployment": "目录将直接挂载到当前机器上的执行环境。",
+      "cloudDeployment": "目录将通过本地助手和云端 bridge 安全暴露给执行环境。",
+      "supportUnknown": "暂时无法获取助手状态，你仍可安全使用 sandbox 模式。",
+      "sandboxOnly": "本次任务只会使用 /workspace sandbox。",
+      "nextRun": "已保存，下一次执行时生效；当前容器不会热更新挂载。",
+      "draft": "这些目录会在任务开始时获得授权。"
+    },
+    "summary": {
+      "localMountCount": "本地文件（{{count}}）"
+    },
+    "toasts": {
+      "saved": "配置已保存，将在下一次执行时生效。",
+      "saveFailed": "保存本地文件配置失败"
     }
   }
 }
