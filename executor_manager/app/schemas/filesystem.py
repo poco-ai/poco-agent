@@ -7,8 +7,7 @@ from pydantic import BaseModel, Field, field_validator
 
 FilesystemMode = Literal["sandbox", "local_mount"]
 LocalMountAccessMode = Literal["ro", "rw"]
-DeploymentMode = Literal["local", "cloud"]
-MountProviderType = Literal["direct_bind", "bridge_live_mount"]
+MountProviderType = Literal["direct_bind"]
 
 
 class LocalMountConfig(BaseModel):
@@ -42,7 +41,6 @@ class ResolvedLocalMount(BaseModel):
 class MountFingerprintMaterial(BaseModel):
     """Canonical fingerprint payload for a single resolved mount."""
 
-    deployment_mode: DeploymentMode
     provider_type: MountProviderType
     normalized_source_path: str
     access_mode: LocalMountAccessMode
@@ -52,8 +50,6 @@ class MountFingerprintMaterial(BaseModel):
 class MountResolutionResult(BaseModel):
     """Internal mount resolution output."""
 
-    deployment_mode: DeploymentMode
-    provider_type: MountProviderType
     resolved_mounts: list[ResolvedLocalMount] = Field(default_factory=list)
     mount_fingerprint: str
 

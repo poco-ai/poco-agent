@@ -62,7 +62,6 @@ class ContainerPool:
             "local_mount" if mount_resolution.resolved_mounts else "sandbox"
         )
         mount_fingerprint = mount_resolution.mount_fingerprint
-        deployment_mode = mount_resolution.deployment_mode
         published_host = (
             self.settings.executor_published_host or ""
         ).strip() or "localhost"
@@ -85,7 +84,6 @@ class ContainerPool:
                 container=container,
                 browser_enabled=browser_enabled,
                 filesystem_mode=filesystem_mode,
-                deployment_mode=deployment_mode,
                 mount_fingerprint=mount_fingerprint,
             )
             if mismatch_reasons:
@@ -98,7 +96,6 @@ class ContainerPool:
                         "container_mode": container_mode,
                         "browser_enabled": bool(browser_enabled),
                         "filesystem_mode": filesystem_mode,
-                        "deployment_mode": deployment_mode,
                         "mount_fingerprint": mount_fingerprint,
                         "reasons": mismatch_reasons,
                     },
@@ -119,7 +116,6 @@ class ContainerPool:
                         "container_mode": container_mode,
                         "browser_enabled": bool(browser_enabled),
                         "filesystem_mode": filesystem_mode,
-                        "deployment_mode": deployment_mode,
                         "mount_fingerprint": mount_fingerprint,
                         "host_port": host_port,
                     },
@@ -182,8 +178,6 @@ class ContainerPool:
             "container_mode": container_mode,
             "browser_enabled": "true" if browser_enabled else "false",
             "filesystem_mode": filesystem_mode,
-            "deployment_mode": deployment_mode,
-            "mount_provider_type": mount_resolution.provider_type,
             "mount_fingerprint": mount_fingerprint,
         }
 
@@ -242,7 +236,6 @@ class ContainerPool:
                 "image": image,
                 "browser_enabled": bool(browser_enabled),
                 "filesystem_mode": filesystem_mode,
-                "deployment_mode": deployment_mode,
                 "mount_count": len(mount_resolution.resolved_mounts),
             },
         )
@@ -285,7 +278,6 @@ class ContainerPool:
                 "container_mode": container_mode,
                 "host_port": host_port,
                 "filesystem_mode": filesystem_mode,
-                "deployment_mode": deployment_mode,
                 "mount_fingerprint": mount_fingerprint,
             },
         )
@@ -322,7 +314,6 @@ class ContainerPool:
         container: "Container",
         browser_enabled: bool,
         filesystem_mode: str,
-        deployment_mode: str,
         mount_fingerprint: str,
     ) -> list[str]:
         reasons: list[str] = []
@@ -333,10 +324,6 @@ class ContainerPool:
         current_filesystem_mode = str(labels.get("filesystem_mode", "sandbox")).strip()
         if current_filesystem_mode != filesystem_mode:
             reasons.append("filesystem_mode")
-
-        current_deployment_mode = str(labels.get("deployment_mode", "")).strip()
-        if current_deployment_mode != deployment_mode:
-            reasons.append("deployment_mode")
 
         current_mount_fingerprint = str(labels.get("mount_fingerprint", "")).strip()
         if current_mount_fingerprint != mount_fingerprint:
@@ -766,8 +753,6 @@ class ContainerPool:
                 "reason": reason,
                 "session_id": session_id or labels.get("session_id"),
                 "container_id": labels.get("container_id"),
-                "deployment_mode": labels.get("deployment_mode"),
-                "provider_type": labels.get("mount_provider_type"),
                 "mount_fingerprint": labels.get("mount_fingerprint"),
             },
         )
