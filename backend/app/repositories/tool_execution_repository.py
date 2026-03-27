@@ -160,3 +160,18 @@ class ToolExecutionRepository:
             .filter(ToolExecution.session_id == session_id)
             .count()
         )
+
+    @staticmethod
+    def list_by_ids(
+        session_db: Session,
+        execution_ids: list[uuid.UUID],
+    ) -> list[ToolExecution]:
+        """Lists tool executions by ids preserving database order by creation time."""
+        if not execution_ids:
+            return []
+        return (
+            session_db.query(ToolExecution)
+            .filter(ToolExecution.id.in_(execution_ids))
+            .order_by(ToolExecution.created_at.asc(), ToolExecution.id.asc())
+            .all()
+        )

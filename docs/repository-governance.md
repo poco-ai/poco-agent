@@ -158,7 +158,7 @@ PR 描述至少包含：
 - Python:
   - Ruff lint
   - Ruff format
-  - Pyrefly
+  - Pyrefly（仅检查各 Python 服务 `app/` 目录下的应用代码）
 - Frontend:
   - ESLint
   - Prettier
@@ -271,25 +271,25 @@ PR 描述至少包含：
 
 ## 11. 当前治理执行矩阵
 
-| 主题 | 当前准绳 | 当前状态 |
-|---|---|---|
-| 项目入口 | `README.md` | 已落地 |
-| 贡献流程 | `CONTRIBUTING.md` | 已落地 |
-| AI 代理约束 | `AGENTS.md` | 已落地 |
-| 仓库治理 | `docs/repository-governance.md` | 草案 |
-| Python 代码检查 | `ci-ruff.yml`、`ci-pyrefly.yml`、`.pre-commit-config.yaml` | 已落地 |
-| Frontend 检查 | `ci-eslint.yml`、`ci-prettier.yml`、`.pre-commit-config.yaml` | 已落地 |
-| Markdown 检查 | `ci-markdownlint.yml` | 已落地 |
-| PR 标题校验 | `ci-pr-title.yml` | 已落地 |
-| Workflow 静态检查 | `ci-actionlint.yml` | 已落地 |
-| Secret scanning | `ci-gitleaks.yml` | 已落地 |
-| Dependabot | `.github/dependabot.yml` | 已落地 |
-| Docker 发布 | `docker-images.yml` | 已落地 |
-| CODEOWNERS | `.github/CODEOWNERS` | 已落地 |
-| Labeler | `.github/labeler.yml`、`.github/workflows/labeler.yml` | 已落地 |
-| GitHub labels | repository labels | 已落地 |
-| Merge strategy | repository settings | 已落地 |
-| Branch protection | repository settings | 已落地 |
+| 主题              | 当前准绳                                                      | 当前状态 |
+| ----------------- | ------------------------------------------------------------- | -------- |
+| 项目入口          | `README.md`                                                   | 已落地   |
+| 贡献流程          | `CONTRIBUTING.md`                                             | 已落地   |
+| AI 代理约束       | `AGENTS.md`                                                   | 已落地   |
+| 仓库治理          | `docs/repository-governance.md`                               | 草案     |
+| Python 代码检查   | `ci-ruff.yml`、`ci-pyrefly.yml`、`.pre-commit-config.yaml`    | 已落地   |
+| Frontend 检查     | `ci-eslint.yml`、`ci-prettier.yml`、`.pre-commit-config.yaml` | 已落地   |
+| Markdown 检查     | `ci-markdownlint.yml`                                         | 已落地   |
+| PR 标题校验       | `ci-pr-title.yml`                                             | 已落地   |
+| Workflow 静态检查 | `ci-actionlint.yml`                                           | 已落地   |
+| Secret scanning   | `ci-gitleaks.yml`                                             | 已落地   |
+| Dependabot        | `.github/dependabot.yml`                                      | 已落地   |
+| Docker 发布       | `docker-images.yml`                                           | 已落地   |
+| CODEOWNERS        | `.github/CODEOWNERS`                                          | 已落地   |
+| Labeler           | `.github/labeler.yml`、`.github/workflows/labeler.yml`        | 已落地   |
+| GitHub labels     | repository labels                                             | 已落地   |
+| Merge strategy    | repository settings                                           | 已落地   |
+| Branch protection | repository settings                                           | 已落地   |
 
 ## 12. 下一步建议
 

@@ -1663,6 +1663,22 @@
     "fileChanges": "ファイル変更",
     "totalFiles": "ファイル"
   },
+  "deliverables": {
+    "title": "成果物",
+    "latestVersion": "最新バージョン",
+    "previousVersion": "前のバージョン",
+    "referenceInputs": "参照資料",
+    "viewProcess": "作業プロセスを見る",
+    "download": "ダウンロード",
+    "preview": "プレビュー",
+    "versionHistory": "バージョン履歴",
+    "fullSessionProcess": "セッション全体のプロセス",
+    "unavailable": "利用不可",
+    "noDeliverables": "まだ成果物が見つかっていません",
+    "kindDocument": "ドキュメント",
+    "kindSpreadsheet": "表計算",
+    "kindPresentation": "プレゼンテーション"
+  },
   "mcpGrid": {
     "availableServers": "利用可能なサーバー：{{count}}",
     "enabledServers": "有効：{{count}}",

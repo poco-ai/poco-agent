@@ -1,0 +1,60 @@
+name: CI Pytest
+
+on:
+  pull_request:
+    paths:
+      - "backend/**"
+      - "executor/**"
+      - "executor_manager/**"
+      - ".github/workflows/ci-pytest.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "backend/**"
+      - "executor/**"
+      - "executor_manager/**"
+      - ".github/workflows/ci-pytest.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - backend
+          - executor
+          - executor_manager
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Install dependencies
+        run: |
+          cd ${{ matrix.service }}
+          uv sync --all-extras --all-groups
+        env:
+          # GitHub-hosted runners intermittently receive 403 responses from the
+          # Tsinghua mirror for some packages (for example `apscheduler`), which
+          # breaks dependency resolution before tests even start.
+          UV_INDEX_URL: https://pypi.org/simple
+
+      - name: Run tests
+        run: |
+          cd ${{ matrix.service }}
+          uv run pytest tests/ -v --tb=short
+        env:
+          PYTHONPATH: .

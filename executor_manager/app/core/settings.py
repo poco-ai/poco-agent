@@ -124,9 +124,7 @@ class Settings(BaseSettings):
     executor_prefer_local_image: bool = Field(
         default=False, alias="EXECUTOR_PREFER_LOCAL_IMAGE"
     )
-    executor_local_image: str | None = Field(
-        default=None, alias="EXECUTOR_LOCAL_IMAGE"
-    )
+    executor_local_image: str | None = Field(default=None, alias="EXECUTOR_LOCAL_IMAGE")
     # Optional: dedicated executor image with desktop/browser stack enabled.
     # When set, tasks with browser_enabled=true will use this image instead of EXECUTOR_IMAGE.
     executor_browser_image: str | None = Field(
@@ -201,6 +199,8 @@ class Settings(BaseSettings):
                 "ANTHROPIC_AUTH_TOKEN."
             )
         return self
+
+
 @lru_cache
 def get_settings() -> Settings:
     return Settings()

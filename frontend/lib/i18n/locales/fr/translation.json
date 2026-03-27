@@ -1663,6 +1663,22 @@
     "fileChanges": "Modifications de fichiers",
     "totalFiles": "fichiers"
   },
+  "deliverables": {
+    "title": "Livrables",
+    "latestVersion": "Dernière version",
+    "previousVersion": "Version précédente",
+    "referenceInputs": "Références",
+    "viewProcess": "Voir le processus",
+    "download": "Télécharger",
+    "preview": "Aperçu",
+    "versionHistory": "Historique des versions",
+    "fullSessionProcess": "Processus complet de la session",
+    "unavailable": "Indisponible",
+    "noDeliverables": "Aucun livrable détecté pour le moment",
+    "kindDocument": "Document",
+    "kindSpreadsheet": "Tableur",
+    "kindPresentation": "Présentation"
+  },
   "mcpGrid": {
     "availableServers": "Serveurs disponibles : {{count}}",
     "enabledServers": "Activés : {{count}}",

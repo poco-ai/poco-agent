@@ -8,6 +8,7 @@ export * from "./session-queue-item";
 export * from "./run";
 export * from "./callback";
 export * from "./computer";
+export * from "./deliverable";
 export * from "./file";
 export * from "./user-input-request";
 export * from "./models";

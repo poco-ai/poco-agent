@@ -11,6 +11,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { AssistantMessage } from "./messages/assistant-message";
+import type { AssistantDeliverableCardData } from "./messages/deliverable-card-group";
 import { UserMessage } from "./messages/user-message";
 import type {
   ChatMessage,
@@ -40,6 +41,9 @@ export interface ChatMessageListProps {
   showUserPromptTimeline?: boolean;
   contentPaddingClassName?: string;
   scrollButtonClassName?: string;
+  deliverablesByUserMessageId?: Record<string, AssistantDeliverableCardData[]>;
+  onOpenDeliverablePreview?: (deliverableId: string, versionId: string) => void;
+  onOpenDeliverableProcess?: (deliverableId: string, versionId: string) => void;
 }
 
 interface UserPromptTimelineItem {
@@ -97,6 +101,9 @@ export function ChatMessageList({
   showUserPromptTimeline = false,
   contentPaddingClassName,
   scrollButtonClassName,
+  deliverablesByUserMessageId,
+  onOpenDeliverablePreview,
+  onOpenDeliverableProcess,
 }: ChatMessageListProps) {
   const { t, i18n } = useT("translation");
   const scrollRef = React.useRef<HTMLDivElement>(null);
@@ -508,12 +515,17 @@ export function ChatMessageList({
               userMessageIdForUsage && runUsageByUserMessageId
                 ? (runUsageByUserMessageId[userMessageIdForUsage] ?? null)
                 : undefined;
+            const deliverables =
+              userMessageIdForUsage && deliverablesByUserMessageId
+                ? (deliverablesByUserMessageId[userMessageIdForUsage] ?? [])
+                : [];
 
             return (
               <div key={message.id} data-chat-export-item>
                 <AssistantMessage
                   message={message}
                   runUsage={runUsage}
+                  deliverables={deliverables}
                   sessionStatus={sessionStatus}
                   isCreatingBranch={branchingAssistantMessageId === message.id}
                   disableBranchAction={
@@ -534,6 +546,8 @@ export function ChatMessageList({
                       ? () => onCreateBranch(message.id)
                       : undefined
                   }
+                  onOpenDeliverablePreview={onOpenDeliverablePreview}
+                  onOpenDeliverableProcess={onOpenDeliverableProcess}
                 />
               </div>
             );

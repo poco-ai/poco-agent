@@ -6,9 +6,15 @@ import { DocumentViewer } from "./document-viewer";
 import { ArtifactsHeader } from "./artifacts-header";
 import { FileChangesList } from "./file-changes-list";
 import { ArtifactsEmpty } from "./artifacts-empty";
+import { DeliverablesList } from "./deliverables-list";
 import { useArtifacts } from "./hooks/use-artifacts";
 import { PackageSkillDialog } from "./package-skill-dialog";
-import type { FileChange, FileNode } from "@/features/chat/types";
+import type {
+  DeliverableResponse,
+  DeliverableVersionResponse,
+  FileChange,
+  FileNode,
+} from "@/features/chat/types";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n/client";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -19,6 +25,15 @@ interface ArtifactsPanelProps {
   fileChanges?: FileChange[];
   sessionId?: string;
   sessionStatus?: "pending" | "running" | "completed" | "failed" | "canceled";
+  deliverables?: DeliverableResponse[];
+  versionMap?: Record<string, DeliverableVersionResponse>;
+  selectedDeliverableId?: string | null;
+  onSelectDeliverable?: (
+    deliverableId: string,
+    versionId: string | null,
+  ) => void;
+  onOpenDeliverablePreview?: (deliverableId: string, versionId: string) => void;
+  onOpenDeliverableProcess?: (deliverableId: string, versionId: string) => void;
   headerAction?: React.ReactNode;
   hideHeader?: boolean;
 }
@@ -46,6 +61,12 @@ export function ArtifactsPanel({
   fileChanges = [],
   sessionId,
   sessionStatus,
+  deliverables = [],
+  versionMap = {},
+  selectedDeliverableId,
+  onSelectDeliverable,
+  onOpenDeliverablePreview,
+  onOpenDeliverableProcess,
   headerAction,
   hideHeader = false,
 }: ArtifactsPanelProps) {
@@ -82,6 +103,72 @@ export function ArtifactsPanel({
           file={selectedFile}
           ensureFreshFile={ensureFreshFile}
           onOpenPreviewWindow={openExpandedPreview}
+        />
+      );
+    }
+
+    // Show deliverables-first list when deliverables exist
+    if (deliverables.length > 0) {
+      return (
+        <DeliverablesList
+          deliverables={deliverables}
+          versionMap={versionMap}
+          selectedDeliverableId={selectedDeliverableId}
+          onSelectDeliverable={onSelectDeliverable}
+          onPreviewVersion={(version) => {
+            const file = findWorkspaceNodeByPath(version.file_path);
+            if (file) {
+              selectFile(file);
+              return;
+            }
+            onOpenDeliverablePreview?.(version.deliverable_id, version.id);
+          }}
+          onViewProcess={(deliverableId, versionId) => {
+            onOpenDeliverableProcess?.(deliverableId, versionId);
+          }}
+          onDownloadVersion={(version) => {
+            const file = findWorkspaceNodeByPath(version.file_path);
+            if (!file?.url) return;
+            void downloadFileFromUrl(
+              file.url,
+              file.name ||
+                version.file_name ||
+                version.file_path.split("/").pop() ||
+                "deliverable",
+            );
+          }}
+          onFileClick={(filePath) => {
+            const findFileByPath = (
+              nodes: FileNode[],
+              path: string,
+            ): FileNode | undefined => {
+              for (const node of nodes) {
+                if (node.path === path) return node;
+                if (node.children) {
+                  const found = findFileByPath(node.children, path);
+                  if (found) return found;
+                }
+              }
+              return undefined;
+            };
+
+            let file = findFileByPath(files, filePath);
+
+            if (!file) {
+              const name = filePath.split("/").pop() || filePath;
+              file = {
+                id: filePath,
+                name,
+                path: filePath,
+                type: "file",
+              };
+            }
+
+            if (file) {
+              selectFile(file);
+            }
+          }}
+          fileChanges={fileChanges}
         />
       );
     }
@@ -176,6 +263,23 @@ export function ArtifactsPanel({
       }
     },
     [sessionId, t],
+  );
+
+  const findWorkspaceNodeByPath = React.useCallback(
+    (path: string): FileNode | undefined => {
+      const walk = (nodes: FileNode[]): FileNode | undefined => {
+        for (const node of nodes) {
+          if (node.path === path) return node;
+          if (node.children?.length) {
+            const found = walk(node.children);
+            if (found) return found;
+          }
+        }
+        return undefined;
+      };
+      return walk(files);
+    },
+    [files],
   );
 
   const handleSubmitSkill = React.useCallback(

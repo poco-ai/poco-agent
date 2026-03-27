@@ -10,7 +10,11 @@ import { useSidebar } from "@/components/ui/sidebar";
 import { ChatPanel } from "../execution/chat-panel/chat-panel";
 import { ArtifactsPanel } from "../execution/file-panel/artifacts-panel";
 import { ComputerPanel } from "../execution/computer-panel/computer-panel";
-import type { ExecutionSession } from "@/features/chat/types";
+import type {
+  DeliverableResponse,
+  DeliverableVersionResponse,
+  ExecutionSession,
+} from "@/features/chat/types";
 import { useT } from "@/lib/i18n/client";
 import { MessageSquare, Layers, Monitor, PanelLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -21,6 +25,18 @@ interface MobileExecutionViewProps {
   updateSession: (newSession: Partial<ExecutionSession>) => void;
   showArtifactsTab: boolean;
   showComputerTab: boolean;
+  deliverables: DeliverableResponse[];
+  versionMap: Record<string, DeliverableVersionResponse>;
+  selectedDeliverableId: string | null;
+  selectedDeliverableVersionId: string | null;
+  processMode: "deliverable" | "session";
+  onSelectDeliverable: (
+    deliverableId: string,
+    versionId: string | null,
+  ) => void;
+  onProcessModeChange: (mode: "deliverable" | "session") => void;
+  onOpenDeliverablePreview: (deliverableId: string, versionId: string) => void;
+  onOpenDeliverableProcess: (deliverableId: string, versionId: string) => void;
 }
 
 export function MobileExecutionView({
@@ -29,6 +45,15 @@ export function MobileExecutionView({
   updateSession,
   showArtifactsTab,
   showComputerTab,
+  deliverables,
+  versionMap,
+  selectedDeliverableId,
+  selectedDeliverableVersionId,
+  processMode,
+  onSelectDeliverable,
+  onProcessModeChange,
+  onOpenDeliverablePreview,
+  onOpenDeliverableProcess,
 }: MobileExecutionViewProps) {
   const { t } = useT("translation");
   const { setOpenMobile } = useSidebar();
@@ -199,6 +224,11 @@ export function MobileExecutionView({
                         sessionId={sessionId}
                         sessionStatus={session?.status}
                         browserEnabled={browserEnabled}
+                        selectedDeliverableVersionId={
+                          selectedDeliverableVersionId
+                        }
+                        processMode={processMode}
+                        onProcessModeChange={onProcessModeChange}
                         hideHeader
                       />
                     ) : null
@@ -209,6 +239,12 @@ export function MobileExecutionView({
                       }
                       sessionId={sessionId}
                       sessionStatus={session?.status}
+                      deliverables={deliverables}
+                      versionMap={versionMap}
+                      selectedDeliverableId={selectedDeliverableId}
+                      onSelectDeliverable={onSelectDeliverable}
+                      onOpenDeliverablePreview={onOpenDeliverablePreview}
+                      onOpenDeliverableProcess={onOpenDeliverableProcess}
                       hideHeader
                     />
                   )}

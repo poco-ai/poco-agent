@@ -4,11 +4,18 @@ import React from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useT } from "@/lib/i18n/client";
 import { FileChangeCard } from "./file-change-card";
-import type { FileChange } from "@/features/chat/types";
+import type { DeliverableResponse, FileChange } from "@/features/chat/types";
 
 interface FileChangesListProps {
   fileChanges?: FileChange[];
   sessionStatus?: "pending" | "running" | "completed" | "failed" | "canceled";
+  deliverables?: DeliverableResponse[];
+  selectedDeliverableId?: string | null;
+  selectedDeliverableVersionId?: string | null;
+  onSelectDeliverable?: (
+    deliverableId: string,
+    versionId: string | null,
+  ) => void;
   onFileClick?: (filePath: string) => void;
 }
 

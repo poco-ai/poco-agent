@@ -18,6 +18,7 @@ from app.schemas.callback import (
     CallbackResponse,
     CallbackStatus,
 )
+from app.services.deliverable_detection_service import DeliverableDetectionService
 from app.services.run_lifecycle_service import RunLifecycleService
 from app.services.im import ImEventService
 from app.services.pending_skill_creation_service import PendingSkillCreationService
@@ -41,6 +42,7 @@ class CallbackService:
         self._session_queue = SessionQueueService()
         self._session_service = SessionService()
         self._im_events = ImEventService()
+        self._deliverable_detection = DeliverableDetectionService()
 
     def _parse_run_id(self, raw_run_id: str | None) -> uuid.UUID | None:
         if not raw_run_id:
@@ -379,6 +381,32 @@ class CallbackService:
         self._extract_tool_executions(db, message, session_id, db_message.id)
         return db_message
 
+    def _detect_deliverables_if_ready(
+        self,
+        *,
+        db: Session,
+        db_session: AgentSession,
+        db_run: AgentRun | None,
+        callback: AgentCallbackRequest,
+    ) -> None:
+        export_status = (callback.workspace_export_status or "").strip().lower()
+        if export_status != "ready":
+            return
+        if not (db_session.workspace_manifest_key or "").strip():
+            return
+
+        target_run = db_run
+        if target_run is None:
+            target_run = RunRepository.get_latest_terminal_by_session(db, db_session.id)
+        if target_run is None:
+            return
+
+        self._deliverable_detection.detect_for_completed_run(
+            db,
+            session=db_session,
+            run=target_run,
+        )
+
     def process_agent_callback(
         self, db: Session, callback: AgentCallbackRequest
     ) -> CallbackResponse:
@@ -570,6 +598,13 @@ class CallbackService:
                 db,
                 session=db_session,
             )
+
+        self._detect_deliverables_if_ready(
+            db=db,
+            db_session=db_session,
+            db_run=db_run,
+            callback=callback,
+        )
 
         db.commit()
         return CallbackResponse(

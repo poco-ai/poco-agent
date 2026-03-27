@@ -5,6 +5,8 @@ from app.models.agent_run import AgentRun
 from app.models.agent_scheduled_task import AgentScheduledTask
 from app.models.agent_session import AgentSession
 from app.models.claude_md import UserClaudeMdSetting
+from app.models.deliverable import Deliverable
+from app.models.deliverable_version import DeliverableVersion
 from app.models.env_var import UserEnvVar
 from app.models.im import (
     ActiveSession,
@@ -47,6 +49,8 @@ __all__ = [
     "DedupEvent",
     "UserClaudeMdSetting",
     "UserEnvVar",
+    "Deliverable",
+    "DeliverableVersion",
     "ImEventOutbox",
     "McpServer",
     "MemoryCreateJob",

@@ -11,7 +11,11 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { ComputerPanel } from "@/features/chat/components/execution/computer-panel/computer-panel";
 import { ArtifactsPanel } from "@/features/chat/components/execution/file-panel/artifacts-panel";
-import type { ExecutionSession } from "@/features/chat/types";
+import type {
+  DeliverableResponse,
+  DeliverableVersionResponse,
+  ExecutionSession,
+} from "@/features/chat/types";
 import { useT } from "@/lib/i18n/client";
 
 interface DesktopExecutionLayoutProps {
@@ -26,6 +30,18 @@ interface DesktopExecutionLayoutProps {
   chatPanel: React.ReactNode;
   tabsSwitch: React.ReactNode;
   browserEnabled: boolean;
+  deliverables: DeliverableResponse[];
+  versionMap: Record<string, DeliverableVersionResponse>;
+  selectedDeliverableId: string | null;
+  selectedDeliverableVersionId: string | null;
+  processMode: "deliverable" | "session";
+  onSelectDeliverable: (
+    deliverableId: string,
+    versionId: string | null,
+  ) => void;
+  onProcessModeChange: (mode: "deliverable" | "session") => void;
+  onOpenDeliverablePreview: (deliverableId: string, versionId: string) => void;
+  onOpenDeliverableProcess: (deliverableId: string, versionId: string) => void;
 }
 
 export function DesktopExecutionLayout({
@@ -40,6 +56,15 @@ export function DesktopExecutionLayout({
   chatPanel,
   tabsSwitch,
   browserEnabled,
+  deliverables,
+  versionMap,
+  selectedDeliverableId,
+  selectedDeliverableVersionId,
+  processMode,
+  onSelectDeliverable,
+  onProcessModeChange,
+  onOpenDeliverablePreview,
+  onOpenDeliverableProcess,
 }: DesktopExecutionLayoutProps) {
   const { t } = useT("translation");
   const isComputerLive =
@@ -113,6 +138,11 @@ export function DesktopExecutionLayout({
                           sessionId={sessionId}
                           sessionStatus={session?.status}
                           browserEnabled={browserEnabled}
+                          selectedDeliverableVersionId={
+                            selectedDeliverableVersionId
+                          }
+                          processMode={processMode}
+                          onProcessModeChange={onProcessModeChange}
                           hideHeader
                         />
                       </TabsContent>
@@ -128,6 +158,12 @@ export function DesktopExecutionLayout({
                           }
                           sessionId={sessionId}
                           sessionStatus={session?.status}
+                          deliverables={deliverables}
+                          versionMap={versionMap}
+                          selectedDeliverableId={selectedDeliverableId}
+                          onSelectDeliverable={onSelectDeliverable}
+                          onOpenDeliverablePreview={onOpenDeliverablePreview}
+                          onOpenDeliverableProcess={onOpenDeliverableProcess}
                           hideHeader
                         />
                       </TabsContent>

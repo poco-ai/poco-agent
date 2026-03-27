@@ -2,7 +2,7 @@
 
 import type { SkillsMpRecommendationSection } from "@/features/capabilities/skills/types";
 
-const CACHE_KEY = "poco_skills_marketplace_recommendations_v1";
+const RECOMMENDATIONS_CACHE_SLOT = "poco_skills_marketplace_recommendations_v1";
 const CACHE_TTL_MS = 8 * 60 * 60 * 1000;
 
 interface CachedMarketplaceRecommendations {
@@ -26,7 +26,7 @@ export function readCachedSkillsMarketplaceRecommendations():
   if (!storage) return null;
 
   try {
-    const raw = storage.getItem(CACHE_KEY);
+    const raw = storage.getItem(RECOMMENDATIONS_CACHE_SLOT);
     if (!raw) return null;
 
     const cached = JSON.parse(raw) as CachedMarketplaceRecommendations;
@@ -35,12 +35,12 @@ export function readCachedSkillsMarketplaceRecommendations():
       typeof cached.cached_at !== "number" ||
       !Array.isArray(cached.sections)
     ) {
-      storage.removeItem(CACHE_KEY);
+      storage.removeItem(RECOMMENDATIONS_CACHE_SLOT);
       return null;
     }
 
     if (Date.now() - cached.cached_at > CACHE_TTL_MS) {
-      storage.removeItem(CACHE_KEY);
+      storage.removeItem(RECOMMENDATIONS_CACHE_SLOT);
       return null;
     }
 
@@ -61,7 +61,7 @@ export function writeCachedSkillsMarketplaceRecommendations(
       cached_at: Date.now(),
       sections,
     };
-    storage.setItem(CACHE_KEY, JSON.stringify(payload));
+    storage.setItem(RECOMMENDATIONS_CACHE_SLOT, JSON.stringify(payload));
   } catch {
     // Ignore localStorage write failures.
   }
@@ -72,7 +72,7 @@ export function clearCachedSkillsMarketplaceRecommendations(): void {
   if (!storage) return;
 
   try {
-    storage.removeItem(CACHE_KEY);
+    storage.removeItem(RECOMMENDATIONS_CACHE_SLOT);
   } catch {
     // Ignore localStorage removal failures.
   }

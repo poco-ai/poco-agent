@@ -15,10 +15,21 @@ dependencies = [
     "uvicorn>=0.40.0",
 ]
 
+[project.optional-dependencies]
+test = [
+    "pytest>=9.0.0",
+    "pytest-cov>=5.0.0",
+    "pytest-asyncio>=0.24.0",
+]
+
 [tool.pyrefly]
 project-includes = [
-    "**/*.py*",
-    "**/*.ipynb",
+    "app/**/*.py",
+    "app/**/*.pyi",
 ]
 
 search_path = ["."]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

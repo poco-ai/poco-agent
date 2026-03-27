@@ -1779,6 +1779,22 @@
     "fileChanges": "File changes",
     "totalFiles": "files"
   },
+  "deliverables": {
+    "title": "Deliverables",
+    "latestVersion": "Latest version",
+    "previousVersion": "Previous version",
+    "referenceInputs": "Reference inputs",
+    "viewProcess": "View process",
+    "download": "Download",
+    "preview": "Preview",
+    "versionHistory": "Version history",
+    "fullSessionProcess": "Full session process",
+    "unavailable": "Unavailable",
+    "noDeliverables": "No deliverables detected yet",
+    "kindDocument": "Document",
+    "kindSpreadsheet": "Spreadsheet",
+    "kindPresentation": "Presentation"
+  },
   "mcpGrid": {
     "availableServers": "Available servers: {{count}}",
     "enabledServers": "Enabled: {{count}}",

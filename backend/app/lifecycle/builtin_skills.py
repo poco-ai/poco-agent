@@ -38,6 +38,31 @@ class BuiltinSkillDefinition:
 
 BUILTIN_SKILLS: tuple[BuiltinSkillDefinition, ...] = (
     BuiltinSkillDefinition(
+        name="office-assistant",
+        asset_dir_name="office-assistant",
+        description="Built-in chat-first office assistant workflow skill",
+    ),
+    BuiltinSkillDefinition(
+        name="docx",
+        asset_dir_name="docx",
+        description="Built-in skill for working with Word documents",
+    ),
+    BuiltinSkillDefinition(
+        name="xlsx",
+        asset_dir_name="xlsx",
+        description="Built-in skill for working with spreadsheets",
+    ),
+    BuiltinSkillDefinition(
+        name="pdf",
+        asset_dir_name="pdf",
+        description="Built-in skill for working with PDF documents",
+    ),
+    BuiltinSkillDefinition(
+        name="pptx",
+        asset_dir_name="pptx",
+        description="Built-in skill for working with presentation decks",
+    ),
+    BuiltinSkillDefinition(
         name="skill-creator",
         asset_dir_name="skill-creator",
         description="Built-in skill for creating new skills via agent",

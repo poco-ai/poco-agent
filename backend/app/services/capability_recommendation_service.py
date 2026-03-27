@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import cast
 
 import httpx
 from sqlalchemy.orm import Session
@@ -62,15 +63,16 @@ class CapabilityRecommendationService:
         if not isinstance(source, dict):
             return None
 
-        repo = self._clean_text(source.get("repo"))
+        source_dict = cast(dict[str, object], source)
+        repo = self._clean_text(source_dict.get("repo"))
         if repo:
             return repo
 
-        filename = self._clean_text(source.get("filename"))
+        filename = self._clean_text(source_dict.get("filename"))
         if filename:
             return filename
 
-        kind = self._clean_text(source.get("kind"))
+        kind = self._clean_text(source_dict.get("kind"))
         return kind
 
     def _build_document(

@@ -1,6 +1,6 @@
 import logging
 import time
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, cast
 
 import docker
 import docker.errors
@@ -49,14 +49,6 @@ class ContainerPool:
             "POCO_CALLBACK_TOKEN": settings.callback_token,
             "EXECUTOR_TIMEZONE": settings.executor_timezone,
         }
-
-        anthropic_auth_token = (settings.anthropic_auth_token or "").strip()
-        if anthropic_auth_token:
-            environment["ANTHROPIC_AUTH_TOKEN"] = anthropic_auth_token
-
-        anthropic_api_key = (settings.anthropic_api_key or "").strip()
-        if anthropic_api_key:
-            environment["ANTHROPIC_API_KEY"] = anthropic_api_key
 
         if browser_enabled:
             environment["POCO_BROWSER_VIEWPORT_SIZE"] = (
@@ -223,7 +215,7 @@ class ContainerPool:
             settings=self.settings,
             browser_enabled=browser_enabled,
         )
-        run_kwargs = {
+        run_kwargs: dict[str, Any] = {
             "image": image,
             "name": container_name,
             "environment": environment,
@@ -236,9 +228,7 @@ class ContainerPool:
         }
         if memory_limit is not None:
             run_kwargs["mem_limit"] = memory_limit
-        container = self.docker_client.containers.run(
-            **run_kwargs,
-        )
+        container = self.docker_client.containers.run(**cast(Any, run_kwargs))
         logger.info(
             "timing",
             extra={

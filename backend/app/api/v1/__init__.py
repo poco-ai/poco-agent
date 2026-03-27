@@ -6,6 +6,7 @@ from app.api.v1 import (
     callback,
     capability_recommendations,
     claude_md,
+    deliverables,
     env_vars,
     models,
     internal_claude_md,
@@ -56,6 +57,7 @@ api_v1_router.include_router(tasks.router)
 api_v1_router.include_router(runs.router)
 api_v1_router.include_router(schedules.router)
 api_v1_router.include_router(callback.router)
+api_v1_router.include_router(deliverables.router)
 api_v1_router.include_router(messages.router)
 api_v1_router.include_router(memories.router)
 api_v1_router.include_router(projects.router)

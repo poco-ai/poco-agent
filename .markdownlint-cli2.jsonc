@@ -1,0 +1,21 @@
+{
+  "config": {
+    "MD013": false,
+    "MD033": false,
+    "MD041": false,
+  },
+  "globs": [
+    "README.md",
+    "README_zh.md",
+    "AGENTS.md",
+    "CONTRIBUTING.md",
+    "docs/**/*.md",
+    ".github/**/*.md",
+    "frontend/README.md",
+  ],
+  "ignores": [
+    "docs/audits/**/*.md",
+    "docs/superpowers/specs/**/*.md",
+    "backend/assets/**/*.md",
+  ],
+}

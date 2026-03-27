@@ -32,9 +32,7 @@ class SessionTitleService:
         self._client: Anthropic | None = None
         self._model = settings.default_model
         if not self._enabled:
-            logger.warning(
-                "Anthropic credential is not set; title generation disabled"
-            )
+            logger.warning("Anthropic credential is not set; title generation disabled")
         elif self._auth_mode == "api_key":
             self._client = Anthropic(
                 api_key=self._api_key,
@@ -166,9 +164,7 @@ class SessionTitleService:
             return None
 
         if not isinstance(message, dict):
-            logger.error(
-                "Anthropic title generation failed: unexpected response shape"
-            )
+            logger.error("Anthropic title generation failed: unexpected response shape")
             return None
 
         return self._extract_text_content(message.get("content"))

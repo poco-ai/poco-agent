@@ -47,7 +47,7 @@ class ContainerEnvironmentTests(unittest.TestCase):
             playwright_mcp_image_responses="omit",
         )
 
-    def test_container_environment_includes_auth_token(self) -> None:
+    def test_container_environment_includes_runtime_context(self) -> None:
         environment = ContainerPool._build_container_environment(
             settings=self._make_settings(),
             session_id="session-123",
@@ -55,11 +55,20 @@ class ContainerEnvironmentTests(unittest.TestCase):
             browser_enabled=True,
         )
 
-        self.assertEqual(environment["ANTHROPIC_AUTH_TOKEN"], "auth-token")
-        self.assertEqual(environment["ANTHROPIC_API_KEY"], "api-key")
         self.assertEqual(environment["USER_ID"], "user-456")
         self.assertEqual(environment["SESSION_ID"], "session-123")
         self.assertEqual(environment["POCO_BROWSER_VIEWPORT_SIZE"], "1366x768")
+
+    def test_container_environment_excludes_provider_credentials(self) -> None:
+        environment = ContainerPool._build_container_environment(
+            settings=self._make_settings(),
+            session_id="session-123",
+            user_id="user-456",
+            browser_enabled=False,
+        )
+
+        self.assertNotIn("ANTHROPIC_AUTH_TOKEN", environment)
+        self.assertNotIn("ANTHROPIC_API_KEY", environment)
 
     def test_browser_container_uses_browser_memory_limit(self) -> None:
         memory_limit = ContainerPool._resolve_container_memory_limit(
@@ -116,6 +125,47 @@ class ConfigResolverProviderOverrideTests(unittest.TestCase):
             "https://api.anthropic.com",
         )
         self.assertNotIn("ANTHROPIC_API_KEY", overrides)
+
+    def test_auth_token_provider_injects_custom_model_aliases(self) -> None:
+        resolver = object.__new__(ConfigResolver)
+        resolver.settings = self._make_settings()
+
+        overrides = resolver._resolve_model_env_overrides(
+            {
+                "model": "glm-5",
+                "model_provider_id": "anthropic-authtoken",
+            },
+            {"ANTHROPIC_AUTH_TOKEN": "runtime-auth-token"},
+            user_id="user-123",
+        )
+
+        self.assertEqual(overrides["ANTHROPIC_MODEL"], "glm-5")
+        self.assertEqual(overrides["ANTHROPIC_DEFAULT_HAIKU_MODEL"], "glm-5")
+        self.assertEqual(overrides["ANTHROPIC_DEFAULT_SONNET_MODEL"], "glm-5")
+        self.assertEqual(overrides["ANTHROPIC_DEFAULT_OPUS_MODEL"], "glm-5")
+
+    def test_auth_token_provider_falls_back_to_anthropic_base_url(self) -> None:
+        resolver = object.__new__(ConfigResolver)
+        resolver.settings = SimpleNamespace(
+            **{
+                **self._make_settings().__dict__,
+                "anthropic_base_url": "http://gateway.example.com",
+            }
+        )
+
+        overrides = resolver._resolve_model_env_overrides(
+            {
+                "model": "glm-5",
+                "model_provider_id": "anthropic-authtoken",
+            },
+            {"ANTHROPIC_AUTH_TOKEN": "runtime-auth-token"},
+            user_id="user-123",
+        )
+
+        self.assertEqual(
+            overrides["ANTHROPIC_BASE_URL"],
+            "http://gateway.example.com",
+        )
 
 
 if __name__ == "__main__":

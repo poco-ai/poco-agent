@@ -1663,6 +1663,22 @@
     "fileChanges": "Изменения файлов",
     "totalFiles": "файлов"
   },
+  "deliverables": {
+    "title": "Результаты",
+    "latestVersion": "Последняя версия",
+    "previousVersion": "Предыдущая версия",
+    "referenceInputs": "Материалы",
+    "viewProcess": "Показать процесс",
+    "download": "Скачать",
+    "preview": "Предпросмотр",
+    "versionHistory": "История версий",
+    "fullSessionProcess": "Полный процесс сессии",
+    "unavailable": "Недоступно",
+    "noDeliverables": "Результаты пока не обнаружены",
+    "kindDocument": "Документ",
+    "kindSpreadsheet": "Таблица",
+    "kindPresentation": "Презентация"
+  },
   "mcpGrid": {
     "availableServers": "Доступно серверов: {{count}}",
     "enabledServers": "Включено: {{count}}",

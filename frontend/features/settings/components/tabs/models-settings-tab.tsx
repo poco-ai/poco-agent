@@ -69,7 +69,8 @@ function getCredentialPlaceholder(
   config: ApiProviderConfig,
 ) {
   const authTokenProviderName =
-    config.displayName.replace(/\s*AuthToken$/i, "").trim() || config.displayName;
+    config.displayName.replace(/\s*AuthToken$/i, "").trim() ||
+    config.displayName;
   return config.credentialKind === "authToken"
     ? t("settings.providerAuthTokenPlaceholder", {
         provider: authTokenProviderName,

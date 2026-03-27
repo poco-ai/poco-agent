@@ -29,7 +29,9 @@ class SessionTitleServiceAuthTests(unittest.TestCase):
         )
 
         with (
-            patch("app.services.session_title_service.get_settings", return_value=settings),
+            patch(
+                "app.services.session_title_service.get_settings", return_value=settings
+            ),
             patch("app.services.session_title_service.Anthropic") as anthropic_cls,
         ):
             service = SessionTitleService()
@@ -50,7 +52,9 @@ class SessionTitleServiceAuthTests(unittest.TestCase):
         )
 
         with (
-            patch("app.services.session_title_service.get_settings", return_value=settings),
+            patch(
+                "app.services.session_title_service.get_settings", return_value=settings
+            ),
             patch("app.services.session_title_service.Anthropic") as anthropic_cls,
         ):
             service = SessionTitleService()
@@ -68,7 +72,9 @@ class SessionTitleServiceAuthTests(unittest.TestCase):
         settings = self._make_settings()
 
         with (
-            patch("app.services.session_title_service.get_settings", return_value=settings),
+            patch(
+                "app.services.session_title_service.get_settings", return_value=settings
+            ),
             patch("app.services.session_title_service.Anthropic") as anthropic_cls,
         ):
             service = SessionTitleService()

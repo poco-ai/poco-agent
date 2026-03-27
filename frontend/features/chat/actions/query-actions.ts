@@ -54,6 +54,12 @@ const toolExecutionsDeltaSchema = sessionIdSchema
 const browserScreenshotSchema = sessionIdSchema.extend({
   toolUseId: z.string().trim().min(1, VALIDATION_ERRORS.missingToolUseId),
 });
+const deliverableIdSchema = sessionIdSchema.extend({
+  deliverableId: z.string().uuid(),
+});
+const deliverableVersionIdSchema = sessionIdSchema.extend({
+  versionId: z.string().uuid(),
+});
 
 export type ListSessionsInput = z.infer<typeof listSessionsSchema>;
 export type GetExecutionSessionInput = z.infer<typeof executionSessionSchema>;
@@ -74,6 +80,11 @@ export type GetToolExecutionsDeltaInput = z.infer<
   typeof toolExecutionsDeltaSchema
 >;
 export type GetBrowserScreenshotInput = z.infer<typeof browserScreenshotSchema>;
+export type GetDeliverablesInput = z.infer<typeof sessionIdSchema>;
+export type GetDeliverableInput = z.infer<typeof deliverableIdSchema>;
+export type GetDeliverableVersionInput = z.infer<
+  typeof deliverableVersionIdSchema
+>;
 
 export async function listSessionsAction(input?: ListSessionsInput) {
   const { userId, limit, offset } = listSessionsSchema.parse(input ?? {});
@@ -179,4 +190,33 @@ export async function getBrowserScreenshotAction(
 ) {
   const { sessionId, toolUseId } = browserScreenshotSchema.parse(input);
   return chatService.getBrowserScreenshot(sessionId, toolUseId);
+}
+
+export async function getDeliverablesAction(input: GetDeliverablesInput) {
+  const { sessionId } = sessionIdSchema.parse(input);
+  return chatService.getDeliverables(sessionId);
+}
+
+export async function getDeliverableAction(input: GetDeliverableInput) {
+  const { sessionId, deliverableId } = deliverableIdSchema.parse(input);
+  return chatService.getDeliverable(sessionId, deliverableId);
+}
+
+export async function getDeliverableVersionsAction(input: GetDeliverableInput) {
+  const { sessionId, deliverableId } = deliverableIdSchema.parse(input);
+  return chatService.getDeliverableVersions(sessionId, deliverableId);
+}
+
+export async function getDeliverableVersionAction(
+  input: GetDeliverableVersionInput,
+) {
+  const { sessionId, versionId } = deliverableVersionIdSchema.parse(input);
+  return chatService.getDeliverableVersion(sessionId, versionId);
+}
+
+export async function getDeliverableVersionToolExecutionsAction(
+  input: GetDeliverableVersionInput,
+) {
+  const { sessionId, versionId } = deliverableVersionIdSchema.parse(input);
+  return chatService.getDeliverableVersionToolExecutions(sessionId, versionId);
 }

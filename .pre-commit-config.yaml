@@ -15,6 +15,7 @@ repos:
       - id: pyrefly-check
         name: backend · typecheck
         exclude: ^backend/assets/
+        files: ^(backend/app|executor/app|executor_manager/app)/.*\.pyi?$
         pass_filenames: true
         language: system
 

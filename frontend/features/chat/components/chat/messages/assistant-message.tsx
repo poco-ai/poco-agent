@@ -23,6 +23,10 @@ import type {
 } from "@/features/chat/types";
 import { Button } from "@/components/ui/button";
 import { useT } from "@/lib/i18n/client";
+import {
+  type AssistantDeliverableCardData,
+  DeliverableCardGroup,
+} from "./deliverable-card-group";
 
 interface AssistantMessageProps {
   message: ChatMessage;
@@ -32,6 +36,9 @@ interface AssistantMessageProps {
   onCreateBranch?: () => void;
   isCreatingBranch?: boolean;
   disableBranchAction?: boolean;
+  deliverables?: AssistantDeliverableCardData[];
+  onOpenDeliverablePreview?: (deliverableId: string, versionId: string) => void;
+  onOpenDeliverableProcess?: (deliverableId: string, versionId: string) => void;
 }
 
 function pickNumber(value: unknown): number | null {
@@ -60,6 +67,9 @@ export function AssistantMessage({
   onCreateBranch,
   isCreatingBranch = false,
   disableBranchAction = false,
+  deliverables = [],
+  onOpenDeliverablePreview,
+  onOpenDeliverableProcess,
 }: AssistantMessageProps) {
   const { t } = useT("translation");
   const [isCopied, setIsCopied] = React.useState(false);
@@ -173,6 +183,11 @@ export function AssistantMessage({
         <MessageContent
           content={message.content}
           sessionStatus={sessionStatus}
+        />
+        <DeliverableCardGroup
+          cards={deliverables}
+          onOpenPreview={onOpenDeliverablePreview}
+          onOpenProcess={onOpenDeliverableProcess}
         />
         {isStreaming && <TypingIndicator />}
       </div>

@@ -33,8 +33,12 @@ import {
   editMessageAndRegenerateAction,
   regenerateMessageAction,
 } from "@/features/chat/actions/session-actions";
+import { getFilesAction } from "@/features/chat/actions/query-actions";
 import type {
+  DeliverableResponse,
+  DeliverableVersionResponse,
   ExecutionSession,
+  FileNode,
   InputFile,
   StatePatch,
   UserInputRequest,
@@ -67,6 +71,7 @@ import {
   normalizeModelSelection,
   type ModelSelection,
 } from "@/features/chat/lib/model-catalog";
+import type { AssistantDeliverableCardData } from "@/features/chat/components/chat/messages/deliverable-card-group";
 
 interface ChatPanelProps {
   session: ExecutionSession | null;
@@ -80,6 +85,13 @@ interface ChatPanelProps {
   isRightPanelToggleDisabled?: boolean;
   isRightPanelCollapsed?: boolean;
   hideHeader?: boolean;
+  deliverables?: DeliverableResponse[];
+  versionsByDeliverableId?: Record<string, DeliverableVersionResponse[]>;
+  ensureVersionsForDeliverable?: (
+    deliverableId: string | null | undefined,
+  ) => Promise<DeliverableVersionResponse[]>;
+  onOpenDeliverablePreview?: (deliverableId: string, versionId: string) => void;
+  onOpenDeliverableProcess?: (deliverableId: string, versionId: string) => void;
 }
 
 interface QuoteSelectionState {
@@ -166,6 +178,11 @@ export function ChatPanel({
   isRightPanelToggleDisabled = false,
   isRightPanelCollapsed = false,
   hideHeader = false,
+  deliverables = [],
+  versionsByDeliverableId = {},
+  ensureVersionsForDeliverable,
+  onOpenDeliverablePreview,
+  onOpenDeliverableProcess,
 }: ChatPanelProps) {
   const router = useRouter();
   const lng = useLanguage();
@@ -191,6 +208,9 @@ export function ChatPanel({
     React.useState<QuoteSelectionState | null>(null);
   const [draftModelSelection, setDraftModelSelection] =
     React.useState<ModelSelection | null>(null);
+  const [fileUrlByPath, setFileUrlByPath] = React.useState<
+    Record<string, string | null>
+  >({});
 
   // Message management hook
   const {
@@ -206,6 +226,69 @@ export function ChatPanel({
     reloadMessagesSnapshot,
     runUsageByUserMessageId,
   } = useChatMessages({ session });
+
+  React.useEffect(() => {
+    if (!ensureVersionsForDeliverable) return;
+    for (const deliverable of deliverables) {
+      void ensureVersionsForDeliverable(deliverable.id);
+    }
+  }, [deliverables, ensureVersionsForDeliverable]);
+
+  React.useEffect(() => {
+    const currentSessionId = session?.session_id;
+    if (!currentSessionId) {
+      setFileUrlByPath({});
+      return;
+    }
+
+    const visit = (nodes: FileNode[], acc: Record<string, string | null>) => {
+      for (const node of nodes) {
+        const normalizedPath = node.path.replace(/^\/+/, "");
+        if (node.type === "file") {
+          acc[normalizedPath] = node.url ?? null;
+        }
+        if (node.children?.length) {
+          visit(node.children, acc);
+        }
+      }
+      return acc;
+    };
+
+    void getFilesAction({ sessionId: currentSessionId }).then((nodes) => {
+      setFileUrlByPath(visit(nodes, {}));
+    });
+  }, [deliverables, session?.session_id]);
+
+  const deliverablesByUserMessageId = React.useMemo(() => {
+    const grouped: Record<string, AssistantDeliverableCardData[]> = {};
+
+    for (const deliverable of deliverables) {
+      const versions = versionsByDeliverableId[deliverable.id] ?? [];
+      if (versions.length === 0) continue;
+
+      const sortedVersions = [...versions].sort(
+        (a, b) => a.version_no - b.version_no,
+      );
+      const latestVersion = sortedVersions[sortedVersions.length - 1];
+      if (!latestVersion?.source_message_id) continue;
+
+      grouped[String(latestVersion.source_message_id)] ??= [];
+      grouped[String(latestVersion.source_message_id)].push({
+        deliverableId: deliverable.id,
+        logicalName: deliverable.logical_name,
+        kind: deliverable.kind,
+        versions: sortedVersions,
+        fileUrlByVersionId: Object.fromEntries(
+          sortedVersions.map((version) => [
+            version.id,
+            fileUrlByPath[version.file_path.replace(/^\/+/, "")] ?? null,
+          ]),
+        ),
+      });
+    }
+
+    return grouped;
+  }, [deliverables, fileUrlByPath, versionsByDeliverableId]);
 
   // Pending message queue hook
   const {
@@ -1127,6 +1210,9 @@ export function ChatPanel({
             onRegenerateMessage={handleRegenerateMessage}
             onCreateBranch={handleCreateBranch}
             branchingAssistantMessageId={branchingMessageId}
+            deliverablesByUserMessageId={deliverablesByUserMessageId}
+            onOpenDeliverablePreview={onOpenDeliverablePreview}
+            onOpenDeliverableProcess={onOpenDeliverableProcess}
             showUserPromptTimeline={isRightPanelCollapsed}
             contentPaddingClassName={messagePaddingClass}
             scrollButtonClassName={

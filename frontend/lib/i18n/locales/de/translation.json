@@ -1667,6 +1667,22 @@
     "fileChanges": "Dateiänderungen",
     "totalFiles": "Dateien"
   },
+  "deliverables": {
+    "title": "Ergebnisse",
+    "latestVersion": "Neueste Version",
+    "previousVersion": "Vorherige Version",
+    "referenceInputs": "Referenzdateien",
+    "viewProcess": "Ablauf ansehen",
+    "download": "Herunterladen",
+    "preview": "Vorschau",
+    "versionHistory": "Versionsverlauf",
+    "fullSessionProcess": "Gesamter Sitzungsablauf",
+    "unavailable": "Nicht verfügbar",
+    "noDeliverables": "Noch keine Ergebnisse erkannt",
+    "kindDocument": "Dokument",
+    "kindSpreadsheet": "Tabelle",
+    "kindPresentation": "Präsentation"
+  },
   "mcpGrid": {
     "availableServers": "Verfügbare Server: {{count}}",
     "enabledServers": "Aktiviert: {{count}}",

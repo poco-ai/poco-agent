@@ -37,9 +37,12 @@ _PROVIDER_RUNTIME_SPECS: dict[str, ProviderRuntimeSpec] = {
     },
     "anthropic-authtoken": {
         "source_api_key_env_keys": ("ANTHROPIC_AUTH_TOKEN",),
-        "source_base_url_env_keys": ("ANTHROPIC_AUTH_TOKEN_BASE_URL",),
+        "source_base_url_env_keys": (
+            "ANTHROPIC_AUTH_TOKEN_BASE_URL",
+            "ANTHROPIC_BASE_URL",
+        ),
         "source_api_key_settings_fields": ("anthropic_auth_token",),
-        "source_base_url_settings_fields": (),
+        "source_base_url_settings_fields": ("anthropic_base_url",),
         "default_base_url": "https://api.anthropic.com",
         "runtime_api_key_env_key": "ANTHROPIC_AUTH_TOKEN",
         "runtime_base_url_env_key": "ANTHROPIC_BASE_URL",
@@ -339,9 +342,39 @@ class ConfigResolver:
             or self._get_first_settings_value(spec["source_base_url_settings_fields"])
             or spec["default_base_url"]
         )
-        return {
+        overrides = {
             spec["runtime_api_key_env_key"]: api_key,
             spec["runtime_base_url_env_key"]: base_url,
+        }
+        overrides.update(
+            self._build_anthropic_model_alias_overrides(
+                provider_id=provider_id,
+                model_id=selected_model,
+            )
+        )
+        return overrides
+
+    @staticmethod
+    def _build_anthropic_model_alias_overrides(
+        *,
+        provider_id: str,
+        model_id: str,
+    ) -> dict[str, str]:
+        if provider_id not in {"anthropic", "anthropic-authtoken"}:
+            return {}
+
+        selected_model = (model_id or "").strip()
+        if not selected_model:
+            return {}
+
+        if selected_model.lower().startswith("claude-"):
+            return {}
+
+        return {
+            "ANTHROPIC_MODEL": selected_model,
+            "ANTHROPIC_DEFAULT_HAIKU_MODEL": selected_model,
+            "ANTHROPIC_DEFAULT_SONNET_MODEL": selected_model,
+            "ANTHROPIC_DEFAULT_OPUS_MODEL": selected_model,
         }
 
     @staticmethod

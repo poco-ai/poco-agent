@@ -29,9 +29,18 @@ dependencies = [
 [tool.pyrefly]
 project-excludes = ["assets/**"]
 project-includes = [
-    "**/*.py",
-    "**/*.pyi",
-    "**/*.ipynb",
+    "app/**/*.py",
+    "app/**/*.pyi",
 ]
 
 search_path = ["."]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
+    "pytest-cov>=7.1.0",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

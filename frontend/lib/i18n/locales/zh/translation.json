@@ -1779,6 +1779,22 @@
     "fileChanges": "文件变更",
     "totalFiles": "个文件"
   },
+  "deliverables": {
+    "title": "交付物",
+    "latestVersion": "最新版本",
+    "previousVersion": "上一版本",
+    "referenceInputs": "参考资料",
+    "viewProcess": "查看过程",
+    "download": "下载",
+    "preview": "预览",
+    "versionHistory": "版本历史",
+    "fullSessionProcess": "本次会话全部过程",
+    "unavailable": "暂不可用",
+    "noDeliverables": "暂未识别到交付物",
+    "kindDocument": "文档",
+    "kindSpreadsheet": "表格",
+    "kindPresentation": "演示文稿"
+  },
   "mcpGrid": {
     "availableServers": "可用服务器: {{count}}",
     "enabledServers": "已启用: {{count}}",
