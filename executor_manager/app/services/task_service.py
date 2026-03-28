@@ -66,17 +66,6 @@ class TaskService:
                     "run_id": enqueue_result.get("run_id"),
                     "queue_item_id": enqueue_result.get("queue_item_id"),
                     "status": enqueue_result.get("status"),
-                },
-            )
-            logger.info(
-                "task_enqueue_accepted",
-                extra={
-                    "user_id": user_id,
-                    "session_id": enqueue_result.get("session_id") or session_id,
-                    "accepted_type": enqueue_result.get("accepted_type"),
-                    "run_id": enqueue_result.get("run_id"),
-                    "queue_item_id": enqueue_result.get("queue_item_id"),
-                    "status": enqueue_result.get("status"),
                     "has_requested_container": bool(
                         config.get("container_id")
                         or config.get("container_mode") == "persistent"
@@ -95,7 +84,10 @@ class TaskService:
                     message="Backend enqueue response missing session_id",
                 )
 
-            if container_id or container_mode == "persistent":
+            should_prepare_container = scheduled_at is None and (
+                container_id or container_mode == "persistent"
+            )
+            if should_prepare_container:
                 browser_enabled = bool(config.get("browser_enabled"))
                 _, container_id = await TaskDispatcher.resolve_executor_target(
                     session_id=resolved_session_id,
@@ -114,14 +106,17 @@ class TaskService:
                         "browser_enabled": browser_enabled,
                     },
                 )
+            elif container_id or container_mode == "persistent":
                 logger.info(
-                    "task_enqueue_container_prepared",
+                    "task_enqueue_container_deferred",
                     extra={
                         "user_id": user_id,
                         "session_id": resolved_session_id,
                         "container_id": container_id,
                         "container_mode": container_mode,
-                        "browser_enabled": browser_enabled,
+                        "scheduled_at": (
+                            scheduled_at.isoformat() if scheduled_at else None
+                        ),
                     },
                 )
 

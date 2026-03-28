@@ -1,5 +1,3 @@
-import logging
-
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 
@@ -11,8 +9,6 @@ from app.schemas.task import (
     TaskStatusResponse,
 )
 from app.services.task_service import TaskService
-
-logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
 task_service = TaskService()
@@ -29,7 +25,7 @@ async def create_task(request: TaskCreateRequest) -> JSONResponse:
     result = await task_service.create_task(
         user_id=request.user_id,
         prompt=request.prompt,
-        config=request.config.model_dump(),
+        config=request.config.model_dump(exclude_unset=True),
         session_id=request.session_id,
         scheduled_at=request.scheduled_at,
     )

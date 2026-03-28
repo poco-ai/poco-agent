@@ -1,4 +1,5 @@
 import unittest
+from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
@@ -194,6 +195,47 @@ class TestTaskServiceCreateTask(unittest.TestCase):
             )
 
             assert result.container_id == "existing-container"
+
+    def test_create_task_scheduled_persistent_container_deferred(self) -> None:
+        """Test scheduled tasks defer persistent container provisioning."""
+        service = self._create_service()
+
+        mock_backend_client = MagicMock()
+        mock_backend_client.enqueue_task_from_manager = AsyncMock(
+            return_value={
+                "session_id": "session-123",
+                "accepted_type": "run",
+                "run_id": "run-123",
+                "status": "queued",
+            }
+        )
+
+        scheduled_at = datetime(2026, 1, 1, 9, 0, tzinfo=timezone.utc)
+
+        with (
+            patch(
+                "app.services.backend_client.BackendClient",
+                return_value=mock_backend_client,
+            ),
+            patch(
+                "app.scheduler.task_dispatcher.TaskDispatcher.resolve_executor_target",
+                new_callable=AsyncMock,
+            ) as mock_resolve_executor_target,
+        ):
+            import asyncio
+
+            result = asyncio.run(
+                service.create_task(
+                    user_id="user-123",
+                    prompt="Test prompt",
+                    config={"container_mode": "persistent", "browser_enabled": False},
+                    session_id=None,
+                    scheduled_at=scheduled_at,
+                )
+            )
+
+            mock_resolve_executor_target.assert_not_called()
+            assert result.container_id is None
 
     def test_create_task_http_error(self) -> None:
         """Test create_task handles HTTP errors."""

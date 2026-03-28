@@ -1203,6 +1203,38 @@ class TestTaskServiceInternalTaskMethods(unittest.TestCase):
         assert result.queue_item_id == task_id
         assert result.session_id == session_id
 
+    @patch("app.services.task_service.SessionQueueItemRepository")
+    @patch("app.services.task_service.RunRepository")
+    def test_get_internal_task_status_for_promoted_queue_item(
+        self,
+        mock_run_repo: MagicMock,
+        mock_queue_repo: MagicMock,
+    ) -> None:
+        queue_item_id = uuid.uuid4()
+        linked_run_id = uuid.uuid4()
+        session_id = uuid.uuid4()
+
+        promoted_item = MagicMock()
+        promoted_item.id = queue_item_id
+        promoted_item.session_id = session_id
+        promoted_item.status = "promoted"
+        promoted_item.linked_run_id = linked_run_id
+
+        linked_run = MagicMock()
+        linked_run.status = "running"
+
+        mock_run_repo.get_by_id.side_effect = [None, linked_run]
+        mock_queue_repo.get_by_id.return_value = promoted_item
+
+        result = self.service.get_internal_task_status(self.db, queue_item_id)
+
+        assert result.task_id == queue_item_id
+        assert result.task_type == "run"
+        assert result.run_id == linked_run_id
+        assert result.queue_item_id == queue_item_id
+        assert result.status == "running"
+        assert result.session_id == session_id
+
 
 if __name__ == "__main__":
     unittest.main()

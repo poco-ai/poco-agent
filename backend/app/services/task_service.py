@@ -550,6 +550,16 @@ class TaskService:
 
         queue_item = SessionQueueItemRepository.get_by_id(db, task_id)
         if queue_item is not None:
+            if queue_item.status == "promoted" and queue_item.linked_run_id:
+                linked_run = RunRepository.get_by_id(db, queue_item.linked_run_id)
+                return InternalTaskStatusResponse(
+                    task_id=queue_item.id,
+                    task_type="run",
+                    session_id=queue_item.session_id,
+                    status=linked_run.status if linked_run is not None else "queued",
+                    run_id=queue_item.linked_run_id,
+                    queue_item_id=queue_item.id,
+                )
             return InternalTaskStatusResponse(
                 task_id=queue_item.id,
                 task_type="queued_query",

@@ -35,7 +35,7 @@ class TestTasksEndpoints(unittest.TestCase):
                     "user_id": "user-123",
                     "prompt": "Test prompt",
                     "config": {
-                        "model": "claude-3",
+                        "repo_url": "https://github.com/org/repo",
                     },
                 },
             )
@@ -45,6 +45,8 @@ class TestTasksEndpoints(unittest.TestCase):
             assert data["code"] == 0
             assert data["data"]["task_id"] == "run-123"
             mock_service.create_task.assert_called_once()
+            _, kwargs = mock_service.create_task.call_args
+            assert kwargs["config"] == {"repo_url": "https://github.com/org/repo"}
 
     def test_create_task_with_session_id(self) -> None:
         """Test task creation with existing session_id."""
@@ -73,7 +75,7 @@ class TestTasksEndpoints(unittest.TestCase):
                     "prompt": "Continue conversation",
                     "session_id": "existing-session",
                     "config": {
-                        "model": "claude-3",
+                        "repo_url": "https://github.com/org/repo",
                     },
                 },
             )
@@ -82,6 +84,42 @@ class TestTasksEndpoints(unittest.TestCase):
             data = response.json()
             assert data["code"] == 0
             assert data["data"]["session_id"] == "existing-session"
+            _, kwargs = mock_service.create_task.call_args
+            assert kwargs["config"] == {"repo_url": "https://github.com/org/repo"}
+
+    def test_create_task_with_session_id_excludes_config_defaults(self) -> None:
+        """Test continuing a session does not forward schema defaults."""
+        from app.main import app
+
+        mock_result = MagicMock()
+        mock_result.model_dump.return_value = {
+            "task_id": "queue-789",
+            "session_id": "existing-session",
+            "status": "queued",
+            "task_type": "queued_query",
+        }
+
+        mock_service = MagicMock()
+        mock_service.create_task = AsyncMock(return_value=mock_result)
+
+        with patch(
+            "app.api.v1.tasks.task_service",
+            mock_service,
+        ):
+            client = TestClient(app)
+            response = client.post(
+                "/api/v1/tasks",
+                json={
+                    "user_id": "user-123",
+                    "prompt": "Continue conversation",
+                    "session_id": "existing-session",
+                    "config": {},
+                },
+            )
+
+            assert response.status_code == 200
+            _, kwargs = mock_service.create_task.call_args
+            assert kwargs["config"] == {}
 
     def test_get_task_status_success(self) -> None:
         """Test successful task status retrieval."""
