@@ -10,40 +10,99 @@ from fastapi.testclient import TestClient
 class TestCallbackEndpoint(unittest.TestCase):
     """Test /api/v1/callback endpoint."""
 
+    @staticmethod
+    def _mock_settings() -> MagicMock:
+        settings = MagicMock()
+        settings.callback_token = "callback-token"
+        return settings
+
     def test_receive_callback_success(self) -> None:
         """Test successful callback processing."""
         from app.main import app
 
-        with patch.object(
-            app.dependency_overrides.get(type(app.router.routes[0].path), MagicMock()),
-            "callback_service",
-            None,
+        with (
+            patch("app.api.v1.callback.callback_service") as mock_service,
+            patch(
+                "app.core.deps.get_settings",
+                return_value=self._mock_settings(),
+            ),
         ):
-            with patch("app.api.v1.callback.callback_service") as mock_service:
-                mock_result = MagicMock()
-                mock_result.model_dump.return_value = {
+            mock_result = MagicMock()
+            mock_result.model_dump.return_value = {
+                "session_id": "sess-123",
+                "status": "received",
+                "callback_status": "completed",
+                "progress": 100,
+            }
+            mock_service.process_callback = AsyncMock(return_value=mock_result)
+
+            client = TestClient(app)
+            response = client.post(
+                "/api/v1/callback",
+                json={
                     "session_id": "sess-123",
-                    "status": "received",
-                    "callback_status": "completed",
+                    "run_id": "run-456",
+                    "status": "completed",
                     "progress": 100,
-                }
-                mock_service.process_callback = AsyncMock(return_value=mock_result)
+                },
+                headers={"Authorization": "Bearer callback-token"},
+            )
 
-                client = TestClient(app)
-                response = client.post(
-                    "/api/v1/callback",
-                    json={
-                        "session_id": "sess-123",
-                        "run_id": "run-456",
-                        "status": "completed",
-                        "progress": 100,
-                    },
-                )
+            assert response.status_code == 200
+            data = response.json()
+            assert data["code"] == 0
+            assert data["data"]["session_id"] == "sess-123"
 
-                assert response.status_code == 200
-                data = response.json()
-                assert data["code"] == 0
-                assert data["data"]["session_id"] == "sess-123"
+    def test_receive_callback_missing_auth(self) -> None:
+        """Test callback endpoint rejects missing auth."""
+        from app.main import app
+
+        with (
+            patch(
+                "app.core.deps.get_settings",
+                return_value=self._mock_settings(),
+            ),
+            patch("app.api.v1.callback.callback_service") as mock_service,
+        ):
+            client = TestClient(app, raise_server_exceptions=False)
+            response = client.post(
+                "/api/v1/callback",
+                json={
+                    "session_id": "sess-123",
+                    "run_id": "run-456",
+                    "status": "completed",
+                    "progress": 100,
+                },
+            )
+
+            assert response.status_code == 403
+            mock_service.process_callback.assert_not_called()
+
+    def test_receive_callback_invalid_auth(self) -> None:
+        """Test callback endpoint rejects invalid auth."""
+        from app.main import app
+
+        with (
+            patch(
+                "app.core.deps.get_settings",
+                return_value=self._mock_settings(),
+            ),
+            patch("app.api.v1.callback.callback_service") as mock_service,
+        ):
+            client = TestClient(app, raise_server_exceptions=False)
+            response = client.post(
+                "/api/v1/callback",
+                json={
+                    "session_id": "sess-123",
+                    "run_id": "run-456",
+                    "status": "completed",
+                    "progress": 100,
+                },
+                headers={"Authorization": "Bearer wrong-token"},
+            )
+
+            assert response.status_code == 403
+            mock_service.process_callback.assert_not_called()
 
 
 class TestComputerEndpoint(unittest.TestCase):

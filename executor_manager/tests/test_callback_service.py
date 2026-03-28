@@ -302,6 +302,16 @@ class TestFilterStatePatch(unittest.TestCase):
 class TestProcessCallback(unittest.TestCase):
     """Test CallbackService.process_callback."""
 
+    @staticmethod
+    def _consume_background_coroutine(mock_create_task: MagicMock) -> None:
+        """Prevent un-awaited coroutine warnings from mocked create_task."""
+
+        def _close_coroutine(coro):
+            coro.close()
+            return MagicMock()
+
+        mock_create_task.side_effect = _close_coroutine
+
     def _create_callback(
         self,
         status: str = "running",
@@ -354,6 +364,7 @@ class TestProcessCallback(unittest.TestCase):
                 "app.services.callback_service.asyncio.create_task"
             ) as mock_create_task,
         ):
+            self._consume_background_coroutine(mock_create_task)
             service = CallbackService()
             callback = self._create_callback(status="completed", progress=100)
 
@@ -362,6 +373,10 @@ class TestProcessCallback(unittest.TestCase):
             result = asyncio.run(service.process_callback(callback))
 
             assert result.callback_status == "completed"
+            first_payload = mock_backend_client.forward_callback.await_args_list[0][0][
+                0
+            ]
+            assert first_payload["workspace_export_status"] == "pending"
             mock_create_task.assert_called_once()
             mock_task_dispatcher.on_task_complete.assert_called_once()
 
@@ -382,6 +397,7 @@ class TestProcessCallback(unittest.TestCase):
                 "app.services.callback_service.asyncio.create_task"
             ) as mock_create_task,
         ):
+            self._consume_background_coroutine(mock_create_task)
             service = CallbackService()
             callback = self._create_callback(status="failed", progress=80)
 
@@ -390,6 +406,10 @@ class TestProcessCallback(unittest.TestCase):
             result = asyncio.run(service.process_callback(callback))
 
             assert result.callback_status == "failed"
+            first_payload = mock_backend_client.forward_callback.await_args_list[0][0][
+                0
+            ]
+            assert first_payload["workspace_export_status"] == "pending"
             mock_create_task.assert_called_once()
             mock_task_dispatcher.on_task_complete.assert_called_once()
 
@@ -410,6 +430,7 @@ class TestProcessCallback(unittest.TestCase):
                 "app.services.callback_service.asyncio.create_task"
             ) as mock_create_task,
         ):
+            self._consume_background_coroutine(mock_create_task)
             service = CallbackService()
             callback = self._create_callback(status="completed", progress=100)
 
@@ -521,6 +542,14 @@ class TestExportAndForward(unittest.TestCase):
                 "test-session"
             )
             mock_backend_client.forward_callback.assert_called_once()
+            payload = mock_backend_client.forward_callback.await_args_list[0][0][0]
+            assert payload["run_id"] == "test-run"
+            assert payload["status"] == "completed"
+            assert payload["workspace_export_status"] == "ready"
+            assert (
+                payload["workspace_archive_key"]
+                == mock_export_result.workspace_archive_key
+            )
 
     def test_export_and_forward_export_failure(self) -> None:
         """Test export failure is handled gracefully."""
