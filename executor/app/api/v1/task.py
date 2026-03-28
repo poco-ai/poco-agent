@@ -3,8 +3,11 @@ import json
 from pathlib import Path
 
 from fastapi import APIRouter, BackgroundTasks
+from fastapi import HTTPException
+import httpx
 
 from app.core.callback import CallbackClient
+from app.core.callback import CallbackAuthenticationError
 from app.core.computer import ComputerClient
 from app.core.memory import MemoryClient
 from app.core.user_input import UserInputClient
@@ -38,6 +41,17 @@ def _build_task_context_env(
     }
 
 
+def _build_task_context_payload(
+    *,
+    session_id: str,
+    callback_base_url: str,
+) -> dict[str, str]:
+    return {
+        "session_id": session_id,
+        "callback_base_url": callback_base_url.rstrip("/"),
+    }
+
+
 @router.post("/execute")
 async def run_task(req: TaskRun, background_tasks: BackgroundTasks) -> dict:
     """Execute an agent task in the background.
@@ -53,6 +67,13 @@ async def run_task(req: TaskRun, background_tasks: BackgroundTasks) -> dict:
         callback_url=req.callback_url,
         callback_token=req.callback_token,
     )
+    try:
+        await callback_client.validate_auth()
+    except (CallbackAuthenticationError, httpx.HTTPError) as exc:
+        raise HTTPException(
+            status_code=502,
+            detail="Callback authentication validation failed",
+        ) from exc
     base_url = UserInputClient.resolve_base_url(
         callback_url=req.callback_url, callback_base_url=req.callback_base_url
     )
@@ -106,11 +127,10 @@ async def run_task(req: TaskRun, background_tasks: BackgroundTasks) -> dict:
         callback_base_url = req.callback_base_url or base_url
         task_context_path.write_text(
             json.dumps(
-                {
-                    "session_id": req.session_id,
-                    "callback_base_url": callback_base_url,
-                    "callback_token": req.callback_token,
-                },
+                _build_task_context_payload(
+                    session_id=req.session_id,
+                    callback_base_url=callback_base_url,
+                ),
                 indent=2,
             ),
             encoding="utf-8",

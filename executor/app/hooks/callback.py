@@ -3,6 +3,7 @@ from typing import Any, Optional
 from claude_agent_sdk.types import ResultMessage, SystemMessage
 
 from app.core.callback import CallbackClient
+from app.core.callback import CallbackAuthenticationError
 from app.hooks.base import AgentHook, ExecutionContext
 from app.schemas.callback import AgentCallbackRequest
 from app.schemas.enums import CallbackStatus, TodoStatus
@@ -58,6 +59,9 @@ class CallbackHook(AgentHook):
         )
 
     async def on_teardown(self, context: ExecutionContext):
+        if isinstance(self.execution_error, CallbackAuthenticationError):
+            return
+
         status = (
             CallbackStatus.COMPLETED
             if self.execution_error is None

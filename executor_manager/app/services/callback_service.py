@@ -19,6 +19,9 @@ workspace_export_service = WorkspaceExportService()
 class CallbackService:
     """Service layer for callback processing."""
 
+    _export_tasks: dict[tuple[str, str | None], asyncio.Task[None]] = {}
+    _completed_export_tasks: set[tuple[str, str | None]] = set()
+
     @staticmethod
     def _is_internal_mcp_server(name: str) -> bool:
         clean = (name or "").strip()
@@ -191,7 +194,7 @@ class CallbackService:
                         "session_status": backend_response.get("status"),
                     },
                 )
-                asyncio.create_task(self._export_and_forward(callback))
+                self._schedule_export(callback)
                 session_status = str(backend_response.get("status") or "").strip()
                 if session_status not in {"pending", "running"}:
                     await TaskDispatcher.on_task_complete(callback.session_id)
@@ -222,6 +225,51 @@ class CallbackService:
                 error_code=ErrorCode.CALLBACK_FORWARD_FAILED,
                 message="Failed to forward callback to backend",
             )
+
+    @classmethod
+    def _export_task_key(
+        cls, callback: AgentCallbackRequest
+    ) -> tuple[str, str | None]:
+        return (
+            callback.session_id,
+            callback.run_id,
+        )
+
+    @classmethod
+    def _schedule_export(cls, callback: AgentCallbackRequest) -> None:
+        key = cls._export_task_key(callback)
+        existing_task = cls._export_tasks.get(key)
+        if existing_task is not None and not existing_task.done():
+            logger.info(
+                "workspace_export_already_in_progress",
+                extra={
+                    "session_id": callback.session_id,
+                    "run_id": callback.run_id,
+                    "status": callback.status,
+                },
+            )
+            return
+        if key in cls._completed_export_tasks:
+            logger.info(
+                "workspace_export_already_completed",
+                extra={
+                    "session_id": callback.session_id,
+                    "run_id": callback.run_id,
+                    "status": callback.status,
+                },
+            )
+            return
+
+        service = cls()
+        task = asyncio.create_task(service._export_and_forward(callback))
+        cls._export_tasks[key] = task
+
+        def _finalize_export_task(done_task: asyncio.Task[None]) -> None:
+            cls._export_tasks.pop(key, None)
+            if not done_task.cancelled() and done_task.exception() is None:
+                cls._completed_export_tasks.add(key)
+
+        task.add_done_callback(_finalize_export_task)
 
     async def _export_and_forward(self, callback: AgentCallbackRequest) -> None:
         try:

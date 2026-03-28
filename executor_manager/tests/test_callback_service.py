@@ -302,13 +302,22 @@ class TestFilterStatePatch(unittest.TestCase):
 class TestProcessCallback(unittest.TestCase):
     """Test CallbackService.process_callback."""
 
+    def setUp(self) -> None:
+        CallbackService._export_tasks.clear()
+        CallbackService._completed_export_tasks.clear()
+
     @staticmethod
     def _consume_background_coroutine(mock_create_task: MagicMock) -> None:
         """Prevent un-awaited coroutine warnings from mocked create_task."""
 
         def _close_coroutine(coro):
+            task = MagicMock()
+            task.done.return_value = False
+            task.cancelled.return_value = False
+            task.exception.return_value = None
+            task.add_done_callback.side_effect = lambda _: None
             coro.close()
-            return MagicMock()
+            return task
 
         mock_create_task.side_effect = _close_coroutine
 
@@ -440,6 +449,62 @@ class TestProcessCallback(unittest.TestCase):
 
             # on_task_complete should NOT be called when session is still pending
             mock_task_dispatcher.on_task_complete.assert_not_called()
+            mock_create_task.assert_called_once()
+
+    def test_process_callback_deduplicates_terminal_export_tasks(self) -> None:
+        """Duplicate terminal callbacks should not start duplicate exports."""
+        mock_backend_client = MagicMock()
+        mock_backend_client.forward_callback = AsyncMock(
+            return_value={"status": "completed"}
+        )
+
+        created_task = MagicMock()
+        created_task.done.return_value = False
+        created_task.cancelled.return_value = False
+        created_task.exception.return_value = None
+        created_task.add_done_callback.side_effect = lambda _: None
+
+        mock_task_dispatcher = MagicMock()
+        mock_task_dispatcher.on_task_complete = AsyncMock()
+
+        with (
+            patch("app.services.callback_service.backend_client", mock_backend_client),
+            patch("app.scheduler.task_dispatcher.TaskDispatcher", mock_task_dispatcher),
+            patch(
+                "app.services.callback_service.asyncio.create_task",
+                side_effect=lambda coro: (coro.close(), created_task)[1],
+            ) as mock_create_task,
+        ):
+            service = CallbackService()
+            callback = self._create_callback(status="completed", progress=100)
+
+            import asyncio
+
+            asyncio.run(service.process_callback(callback))
+            asyncio.run(service.process_callback(callback))
+
+            mock_create_task.assert_called_once()
+
+    def test_process_callback_deduplicates_terminal_export_tasks_across_statuses(
+        self,
+    ) -> None:
+        """Terminal export dedupe should be keyed by session/run, not status."""
+        created_task = MagicMock()
+        created_task.done.return_value = False
+        created_task.cancelled.return_value = False
+        created_task.exception.return_value = None
+        created_task.add_done_callback.side_effect = lambda _: None
+
+        with patch(
+            "app.services.callback_service.asyncio.create_task",
+            side_effect=lambda coro: (coro.close(), created_task)[1],
+        ) as mock_create_task:
+            completed_callback = self._create_callback(status="completed", progress=100)
+            failed_callback = self._create_callback(status="failed", progress=100)
+
+            CallbackService._schedule_export(completed_callback)
+            CallbackService._schedule_export(failed_callback)
+
             mock_create_task.assert_called_once()
 
     def test_process_callback_with_state_patch(self) -> None:

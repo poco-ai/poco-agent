@@ -16,6 +16,10 @@ from app.core.observability.request_context import (
 logger = logging.getLogger(__name__)
 
 
+class CallbackAuthenticationError(RuntimeError):
+    """Raised when executor callback auth is rejected by executor_manager."""
+
+
 class CallbackClient:
     def __init__(
         self,
@@ -52,6 +56,20 @@ class CallbackClient:
     @staticmethod
     def _is_retriable_status(status_code: int) -> bool:
         return status_code == 429 or status_code >= 500
+
+    async def validate_auth(self) -> None:
+        """Fail fast when callback auth is misconfigured."""
+        async with httpx.AsyncClient(timeout=self.timeout) as client:
+            response = await client.post(
+                self.callback_url,
+                json={},
+                headers=self._build_headers(),
+            )
+        if response.status_code in {401, 403}:
+            raise CallbackAuthenticationError("Callback authentication failed")
+        if response.is_success or response.status_code == 422:
+            return
+        response.raise_for_status()
 
     async def send(self, report: AgentCallbackRequest) -> bool:
         total_attempts = self.max_retries + 1
@@ -139,6 +157,9 @@ class CallbackClient:
                 )
                 await asyncio.sleep(backoff_seconds)
                 continue
+
+            if response.status_code in {401, 403}:
+                raise CallbackAuthenticationError("Callback authentication failed")
 
             logger.error("callback_delivery_failed", extra=response_context)
             return False
