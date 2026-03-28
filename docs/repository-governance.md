@@ -26,7 +26,7 @@
 
 - 已形成前端、后端、executor、executor-manager、IM 的多服务结构。
 - 已具备 Docker 部署、基础 CI、镜像发布与贡献说明。
-- 仍缺少较完整的仓库治理自动化，例如 PR 标题校验、CODEOWNERS、labeler、secret scanning、统一 release 说明机制。
+- 仍缺少较完整的仓库治理自动化收敛，例如 fork / 上游自动化分层说明、统一的必检集合说明、统一 release 说明机制。
 
 阶段性原则：
 
@@ -111,14 +111,14 @@ PR 描述至少包含：
 
 - [CONTRIBUTING.md](/D:/codespace/poco-claw/CONTRIBUTING.md) 已对分支命名、提交格式和 PR 描述给出建议。
 - 仓库已提供 [PR 模板](/D:/codespace/poco-claw/.github/pull_request_template.md) 作为最小描述骨架。
-- 仓库已提供 [PR 标题校验 workflow](/D:/codespace/poco-claw/.github/workflows/ci-pr-title.yml)。
+- 仓库已提供 [PR 标题校验 workflow](/D:/codespace/poco-claw/.github/workflows/ci-pr-title.yml)，但默认仅在上游仓库启用。
 
 ## 4. 版本与发布策略
 
 ### 4.1 当前已落地
 
 - 发布入口是 Git tag。
-- [docker-images.yml](/D:/codespace/poco-claw/.github/workflows/docker-images.yml) 仅在 `v*` tag 上构建并推送镜像。
+- [docker-images.yml](/D:/codespace/poco-claw/.github/workflows/docker-images.yml) 仅在上游仓库的 `v*` tag 上默认构建并推送镜像。
 - Docker 镜像 registry 当前为 **GHCR**。
 - 镜像包含：
   - `poco-backend`
@@ -182,23 +182,33 @@ PR 描述至少包含：
 
 - `commit-msg` 提交信息校验
 - `pre-push` 完整检查
-- spelling / secret scanning / actionlint / contract sync 检查
+- spelling / contract sync 检查
 - 统一的根级 `check` 命令
 
 ## 6. GitHub Actions 与自动化现状
 
 ### 6.1 当前已落地
 
-仓库当前已有以下 workflow：
+仓库当前已有以下 workflow，并按 fork 友好的默认行为分层：
 
-- [ci-pr-title.yml](/D:/codespace/poco-claw/.github/workflows/ci-pr-title.yml)
-- [ci-eslint.yml](/D:/codespace/poco-claw/.github/workflows/ci-eslint.yml)
+**fork 默认保留的高信号检查：**
+
 - [ci-actionlint.yml](/D:/codespace/poco-claw/.github/workflows/ci-actionlint.yml)
+- [ci-eslint.yml](/D:/codespace/poco-claw/.github/workflows/ci-eslint.yml)
+- [ci-frontend-build.yml](/D:/codespace/poco-claw/.github/workflows/ci-frontend-build.yml)
 - [ci-gitleaks.yml](/D:/codespace/poco-claw/.github/workflows/ci-gitleaks.yml)
 - [ci-markdownlint.yml](/D:/codespace/poco-claw/.github/workflows/ci-markdownlint.yml)
 - [ci-prettier.yml](/D:/codespace/poco-claw/.github/workflows/ci-prettier.yml)
 - [ci-pyrefly.yml](/D:/codespace/poco-claw/.github/workflows/ci-pyrefly.yml)
+- [ci-pytest.yml](/D:/codespace/poco-claw/.github/workflows/ci-pytest.yml)
 - [ci-ruff.yml](/D:/codespace/poco-claw/.github/workflows/ci-ruff.yml)
+
+这些 workflow 保持启用，但会通过 `paths` 约束只在相关文件改动时运行，避免 fork 中出现无关噪音。
+
+**仅在上游仓库 `poco-ai/poco-claw` 默认执行的自动化：**
+
+- [ci-pr-title.yml](/D:/codespace/poco-claw/.github/workflows/ci-pr-title.yml)
+- [labeler.yml](/D:/codespace/poco-claw/.github/workflows/labeler.yml)
 - [docker-images.yml](/D:/codespace/poco-claw/.github/workflows/docker-images.yml)
 - [close-stale-issues.yml](/D:/codespace/poco-claw/.github/workflows/close-stale-issues.yml)
 - [docs-sync.yml](/D:/codespace/poco-claw/.github/workflows/docs-sync.yml)
@@ -208,12 +218,7 @@ PR 描述至少包含：
   - secret scanning
   - push protection
 
-其中以下自动化当前已配置为 **仅在上游仓库 `poco-ai/poco-claw` 中执行**，以避免 fork 仓库产生外部通知、文档同步或评论驱动 AI 任务噪音：
-
-- [docs-sync.yml](/D:/codespace/poco-claw/.github/workflows/docs-sync.yml)
-- [feishu-bot.yml](/D:/codespace/poco-claw/.github/workflows/feishu-bot.yml)
-- [opencode.yml](/D:/codespace/poco-claw/.github/workflows/opencode.yml)
-- [close-stale-issues.yml](/D:/codespace/poco-claw/.github/workflows/close-stale-issues.yml)
+这样做的目标是：fork 默认只保留代码质量与安全信号，把 PR 元数据、镜像发布、外部通知、评论驱动自动化与仓库维护任务收敛为上游职责。
 
 ### 6.2 治理缺口
 
@@ -285,16 +290,16 @@ PR 描述至少包含：
 | 贡献流程          | `CONTRIBUTING.md`                                             | 已落地   |
 | AI 代理约束       | `AGENTS.md`                                                   | 已落地   |
 | 仓库治理          | `docs/repository-governance.md`                               | 草案     |
-| Python 代码检查   | `ci-ruff.yml`、`ci-pyrefly.yml`、`.pre-commit-config.yaml`    | 已落地   |
-| Frontend 检查     | `ci-eslint.yml`、`ci-prettier.yml`、`.pre-commit-config.yaml` | 已落地   |
-| Markdown 检查     | `ci-markdownlint.yml`                                         | 已落地   |
-| PR 标题校验       | `ci-pr-title.yml`                                             | 已落地   |
+| Python 代码检查   | `ci-ruff.yml`、`ci-pyrefly.yml`、`ci-pytest.yml`、`.pre-commit-config.yaml` | fork 默认启用 |
+| Frontend 检查     | `ci-eslint.yml`、`ci-frontend-build.yml`、`ci-prettier.yml`、`.pre-commit-config.yaml` | fork 默认启用 |
+| Markdown 检查     | `ci-markdownlint.yml`                                         | fork 默认启用 |
+| PR 标题校验       | `ci-pr-title.yml`                                             | 仅上游默认启用 |
 | Workflow 静态检查 | `ci-actionlint.yml`                                           | 已落地   |
-| Secret scanning   | `ci-gitleaks.yml`                                             | 已落地   |
+| Secret scanning   | `ci-gitleaks.yml`                                             | fork 默认启用 |
 | Dependabot        | `.github/dependabot.yml`                                      | 已落地   |
-| Docker 发布       | `docker-images.yml`                                           | 已落地   |
+| Docker 发布       | `docker-images.yml`                                           | 仅上游默认启用 |
 | CODEOWNERS        | `.github/CODEOWNERS`                                          | 已落地   |
-| Labeler           | `.github/labeler.yml`、`.github/workflows/labeler.yml`        | 已落地   |
+| Labeler           | `.github/labeler.yml`、`.github/workflows/labeler.yml`        | 仅上游默认启用 |
 | GitHub labels     | repository labels                                             | 已落地   |
 | Merge strategy    | repository settings                                           | 已落地   |
 | Branch protection | repository settings                                           | 已落地   |

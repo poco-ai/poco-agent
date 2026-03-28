@@ -12,6 +12,7 @@ permissions:
 
 jobs:
   build-and-push:
+    if: github.repository == 'poco-ai/poco-claw'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false

@@ -62,7 +62,7 @@ Recommendations:
 - `perf`
 - `revert`
 
-当前仓库已通过 GitHub Actions 对 PR 标题进行校验，因此建议在创建 PR 前先自行确认标题格式。
+上游仓库默认会通过 GitHub Actions 对 PR 标题进行校验；个人 fork 可能会把该校验收敛为上游专用，因此建议在创建面向上游的 PR 前先自行确认标题格式。
 
 推荐 `scope`：
 
@@ -81,7 +81,7 @@ Recommendations:
 ## 4. Review 路由与标签
 
 - 核心目录当前已由 [CODEOWNERS](.github/CODEOWNERS) 覆盖。
-- 文档类变更当前会通过 labeler 自动标记为 `documentation`。
+- 上游仓库会通过 labeler 自动为文档类变更标记 `documentation`；个人 fork 可以将该自动化收敛为上游专用。
 - 其他路径级 label 规则会在仓库 labels 体系补齐后逐步扩展。
 
 ## 5. 提交前检查
@@ -186,5 +186,5 @@ Usually ready to merge when:
 ## 9. 发布与治理说明
 
 - release 当前以 `main` 上的 tag 为入口。
-- Docker 镜像发布当前由 GitHub Actions 在 `v*` tag 上执行。
+- Docker 镜像发布当前由 GitHub Actions 在上游仓库的 `v*` tag 上执行；个人 fork 如需发布镜像，应显式评估后再启用对应自动化。
 - 涉及分支策略、发布策略、Docker 行为、CI/CD 自动化、仓库规则的改动，请以 [仓库治理草案](docs/repository-governance.md) 为准，并同步更新相关文档。

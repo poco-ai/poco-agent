@@ -2,13 +2,15 @@ name: CI ESLint
 
 on:
   pull_request:
-    paths-ignore:
-      - backend/assets/**
+    paths:
+      - "frontend/**"
+      - ".github/workflows/ci-eslint.yml"
   push:
     branches:
       - main
-    paths-ignore:
-      - backend/assets/**
+    paths:
+      - "frontend/**"
+      - ".github/workflows/ci-eslint.yml"
   workflow_dispatch:
 
 permissions:

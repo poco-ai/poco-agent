@@ -2,13 +2,19 @@ name: CI Markdownlint
 
 on:
   pull_request:
-    paths-ignore:
-      - backend/assets/**
+    paths:
+      - "**/*.md"
+      - "**/*.mdx"
+      - ".markdownlint-cli2.jsonc"
+      - ".github/workflows/ci-markdownlint.yml"
   push:
     branches:
       - main
-    paths-ignore:
-      - backend/assets/**
+    paths:
+      - "**/*.md"
+      - "**/*.mdx"
+      - ".markdownlint-cli2.jsonc"
+      - ".github/workflows/ci-markdownlint.yml"
   workflow_dispatch:
 
 permissions:

@@ -2,13 +2,29 @@ name: CI Prettier
 
 on:
   pull_request:
-    paths-ignore:
-      - backend/assets/**
+    paths:
+      - "frontend/**"
+      - ".github/**"
+      - "**/*.md"
+      - "**/*.mdx"
+      - "**/*.json"
+      - "**/*.yml"
+      - "**/*.yaml"
+      - ".prettierignore"
+      - ".markdownlint-cli2.jsonc"
   push:
     branches:
       - main
-    paths-ignore:
-      - backend/assets/**
+    paths:
+      - "frontend/**"
+      - ".github/**"
+      - "**/*.md"
+      - "**/*.mdx"
+      - "**/*.json"
+      - "**/*.yml"
+      - "**/*.yaml"
+      - ".prettierignore"
+      - ".markdownlint-cli2.jsonc"
   workflow_dispatch:
 
 permissions:

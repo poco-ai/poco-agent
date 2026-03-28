@@ -2,13 +2,23 @@ name: CI Ruff
 
 on:
   pull_request:
-    paths-ignore:
-      - backend/assets/**
+    paths:
+      - "backend/**"
+      - "executor/**"
+      - "executor_manager/**"
+      - "pyproject.toml"
+      - ".pre-commit-config.yaml"
+      - ".github/workflows/ci-ruff.yml"
   push:
     branches:
       - main
-    paths-ignore:
-      - backend/assets/**
+    paths:
+      - "backend/**"
+      - "executor/**"
+      - "executor_manager/**"
+      - "pyproject.toml"
+      - ".pre-commit-config.yaml"
+      - ".github/workflows/ci-ruff.yml"
   workflow_dispatch:
 
 permissions:

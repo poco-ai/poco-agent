@@ -2,13 +2,23 @@ name: CI Pyrefly
 
 on:
   pull_request:
-    paths-ignore:
-      - backend/assets/**
+    paths:
+      - "backend/**"
+      - "executor/**"
+      - "executor_manager/**"
+      - "pyproject.toml"
+      - ".pre-commit-config.yaml"
+      - ".github/workflows/ci-pyrefly.yml"
   push:
     branches:
       - main
-    paths-ignore:
-      - backend/assets/**
+    paths:
+      - "backend/**"
+      - "executor/**"
+      - "executor_manager/**"
+      - "pyproject.toml"
+      - ".pre-commit-config.yaml"
+      - ".github/workflows/ci-pyrefly.yml"
   workflow_dispatch:
 
 permissions:

@@ -13,6 +13,7 @@ permissions:
 
 jobs:
   labeler:
+    if: github.repository == 'poco-ai/poco-claw'
     runs-on: ubuntu-latest
     steps:
       - name: Label PR by changed paths
