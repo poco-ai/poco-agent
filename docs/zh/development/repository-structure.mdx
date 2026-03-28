@@ -4,6 +4,6 @@ description: Poco 代码仓库的高层目录结构。
 ---
 
 - `frontend/`：应用路由、features、组件、hooks 与共享工具
-- `backend/app/`：API、models、repositories、schemas 与 services
+- `backend/app/`：API、models、repositories、schemas 与 services，同时作为 queued runs 与 session state 的真实来源
 - `executor/app/`：执行引擎、hooks、utils 与请求模型
-- `executor_manager/app/`：调度器、服务集成客户端与分发逻辑
+- `executor_manager/app/`：用于轮询与维护的调度作业、backend / executor 集成客户端，以及基于队列的运行时分发路径（`RunPullService`）

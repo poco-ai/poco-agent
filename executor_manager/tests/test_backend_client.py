@@ -156,6 +156,68 @@ class TestBackendClientCreateSession:
 
 
 @pytest.mark.asyncio
+class TestBackendClientInternalTasks:
+    """Test BackendClient internal task helpers."""
+
+    async def test_enqueue_task_from_manager_success(self) -> None:
+        with patch("app.services.backend_client.get_settings") as mock_settings:
+            mock_settings.return_value = MagicMock(
+                backend_url="http://backend",
+                internal_api_token="internal-token",
+            )
+
+            client = BackendClient()
+
+            mock_response = MagicMock()
+            mock_response.json.return_value = {
+                "data": {
+                    "session_id": "sess-123",
+                    "run_id": "run-456",
+                    "status": "queued",
+                }
+            }
+            mock_response.raise_for_status = MagicMock()
+
+            with patch.object(
+                client._client, "request", AsyncMock(return_value=mock_response)
+            ) as mock_request:
+                result = await client.enqueue_task_from_manager(
+                    user_id="user-123",
+                    prompt="test prompt",
+                    config_snapshot={"container_mode": "persistent"},
+                    session_id="sess-123",
+                    scheduled_at=None,
+                )
+
+                assert result["run_id"] == "run-456"
+                call_kwargs = mock_request.call_args.kwargs
+                assert call_kwargs["headers"]["X-Internal-Token"] == "internal-token"
+                assert call_kwargs["headers"]["X-User-Id"] == "user-123"
+
+    async def test_get_internal_task_status_success(self) -> None:
+        with patch("app.services.backend_client.get_settings") as mock_settings:
+            mock_settings.return_value = MagicMock(
+                backend_url="http://backend",
+                internal_api_token="internal-token",
+            )
+
+            client = BackendClient()
+
+            mock_response = MagicMock()
+            mock_response.json.return_value = {
+                "data": {"task_id": "run-123", "task_type": "run", "status": "running"}
+            }
+            mock_response.raise_for_status = MagicMock()
+
+            with patch.object(
+                client._client, "request", AsyncMock(return_value=mock_response)
+            ):
+                result = await client.get_internal_task_status("run-123")
+
+                assert result["task_type"] == "run"
+
+
+@pytest.mark.asyncio
 class TestBackendClientUpdateSessionStatus:
     """Test BackendClient.update_session_status."""
 

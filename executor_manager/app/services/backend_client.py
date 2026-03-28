@@ -68,6 +68,55 @@ class BackendClient:
         data = response.json()
         return data["data"]
 
+    async def enqueue_task_from_manager(
+        self,
+        *,
+        user_id: str,
+        prompt: str,
+        config_snapshot: dict | None,
+        session_id: str | None = None,
+        scheduled_at: str | None = None,
+    ) -> dict[str, Any]:
+        """Enqueue work into backend's run queue for manager-owned task creation."""
+        payload: dict[str, Any] = {
+            "prompt": prompt,
+            "config_snapshot": config_snapshot or None,
+            "schedule_mode": "scheduled" if scheduled_at else "immediate",
+            "scheduled_at": scheduled_at,
+        }
+        if session_id:
+            payload["session_id"] = session_id
+
+        response = await self._request(
+            "POST",
+            "/api/v1/internal/tasks",
+            json=payload,
+            headers={
+                "X-Internal-Token": self.settings.internal_api_token,
+                "X-User-Id": user_id,
+                **self._trace_headers(),
+            },
+            retry_connect_errors=2,
+        )
+        data = response.json()
+        result = data.get("data", {})
+        return result if isinstance(result, dict) else {}
+
+    async def get_internal_task_status(self, task_id: str) -> dict[str, Any]:
+        """Resolve unified task status from backend for runs and queued queries."""
+        response = await self._request(
+            "GET",
+            f"/api/v1/internal/tasks/{task_id}",
+            headers={
+                "X-Internal-Token": self.settings.internal_api_token,
+                **self._trace_headers(),
+            },
+            retry_connect_errors=2,
+        )
+        data = response.json()
+        result = data.get("data", {})
+        return result if isinstance(result, dict) else {}
+
     async def update_session_status(self, session_id: str, status: str) -> None:
         """Update session status."""
         await self._request(

@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
+from uuid import UUID
 
 from sqlalchemy.orm import Session
 
@@ -9,12 +10,19 @@ from app.core.errors.exceptions import AppException
 from app.repositories.project_repository import ProjectRepository
 from app.repositories.run_repository import RunRepository
 from app.repositories.session_repository import SessionRepository
+from app.repositories.session_queue_item_repository import SessionQueueItemRepository
 from app.repositories.sub_agent_repository import SubAgentRepository
 from app.repositories.user_mcp_install_repository import UserMcpInstallRepository
 from app.repositories.user_plugin_install_repository import UserPluginInstallRepository
 from app.repositories.user_skill_install_repository import UserSkillInstallRepository
+from app.schemas.input_file import InputFile
 from app.schemas.session import TaskConfig
-from app.schemas.task import TaskEnqueueRequest, TaskEnqueueResponse
+from app.schemas.task import (
+    InternalTaskEnqueueRequest,
+    InternalTaskStatusResponse,
+    TaskEnqueueRequest,
+    TaskEnqueueResponse,
+)
 from app.services.session_queue_service import SessionQueueService
 from app.services.model_config_service import get_allowed_model_ids, infer_provider_id
 from app.services.model_config_service import (
@@ -195,7 +203,7 @@ class TaskService:
         return scheduled_at.astimezone(timezone.utc)
 
     def _resolve_schedule(
-        self, request: TaskEnqueueRequest
+        self, request: TaskEnqueueRequest | InternalTaskEnqueueRequest
     ) -> tuple[str, datetime | None]:
         """Resolve run schedule metadata.
 
@@ -238,6 +246,94 @@ class TaskService:
 
         return schedule_mode, scheduled_at
 
+    @staticmethod
+    def _normalize_permission_mode(raw_permission_mode: str | None) -> str:
+        permission_mode = (raw_permission_mode or "default").strip()
+        if not permission_mode:
+            permission_mode = "default"
+        if permission_mode not in {
+            "default",
+            "acceptEdits",
+            "plan",
+            "bypassPermissions",
+        }:
+            raise AppException(
+                error_code=ErrorCode.BAD_REQUEST,
+                message=f"Invalid permission_mode: {permission_mode}",
+            )
+        return permission_mode
+
+    @staticmethod
+    def _build_run_config_snapshot(
+        config_snapshot: dict | None,
+        *,
+        input_files: list[InputFile] | None = None,
+    ) -> dict | None:
+        run_config_snapshot = dict(config_snapshot or {})
+        if input_files:
+            run_config_snapshot["input_files"] = [
+                file.model_dump(mode="json") for file in input_files
+            ]
+        return run_config_snapshot or None
+
+    @staticmethod
+    def _enqueue_or_materialize(
+        db: Session,
+        *,
+        session_queue_service: SessionQueueService,
+        db_session,
+        blocking_run,
+        prompt: str,
+        permission_mode: str,
+        schedule_mode: str,
+        run_config_snapshot: dict | None,
+        scheduled_at: datetime | None,
+        client_request_id: str | None,
+    ) -> TaskEnqueueResponse:
+        if blocking_run is not None and schedule_mode == "immediate":
+            item = session_queue_service.enqueue(
+                db,
+                db_session=db_session,
+                prompt=prompt,
+                permission_mode=permission_mode,
+                run_config_snapshot=run_config_snapshot,
+                client_request_id=client_request_id,
+            )
+            db.commit()
+            return TaskEnqueueResponse(
+                session_id=db_session.id,
+                accepted_type="queued_query",
+                queue_item_id=item.id,
+                status=item.status,
+                queued_query_count=session_queue_service.count_active_items(
+                    db, db_session.id
+                ),
+            )
+
+        _, db_run = session_queue_service.materialize_run(
+            db,
+            db_session=db_session,
+            prompt=prompt,
+            permission_mode=permission_mode,
+            schedule_mode=schedule_mode,
+            run_config_snapshot=run_config_snapshot,
+            scheduled_at=scheduled_at,
+        )
+
+        db.commit()
+        db.refresh(db_session)
+        db.refresh(db_run)
+
+        return TaskEnqueueResponse(
+            session_id=db_session.id,
+            accepted_type="run",
+            run_id=db_run.id,
+            status=db_run.status,
+            queued_query_count=session_queue_service.count_active_items(
+                db, db_session.id
+            ),
+        )
+
     def enqueue_task(
         self, db: Session, user_id: str, request: TaskEnqueueRequest
     ) -> TaskEnqueueResponse:
@@ -252,19 +348,7 @@ class TaskService:
                 message="Prompt cannot be empty",
             )
 
-        permission_mode = (request.permission_mode or "default").strip()
-        if not permission_mode:
-            permission_mode = "default"
-        if permission_mode not in {
-            "default",
-            "acceptEdits",
-            "plan",
-            "bypassPermissions",
-        }:
-            raise AppException(
-                error_code=ErrorCode.BAD_REQUEST,
-                message=f"Invalid permission_mode: {permission_mode}",
-            )
+        permission_mode = self._normalize_permission_mode(request.permission_mode)
 
         base_config: dict | None = None
         project_id = request.project_id
@@ -335,36 +419,12 @@ class TaskService:
             )
             db.flush()
 
-        run_config_snapshot = dict(merged_config or {})
-        if request.config is not None and request.config.input_files:
-            run_config_snapshot["input_files"] = [
-                f.model_dump(mode="json") for f in request.config.input_files
-            ]
-        run_config_snapshot = run_config_snapshot or None
-
-        if (
-            blocking_run is not None
-            and schedule_mode == "immediate"
-            and db_session is not None
-        ):
-            item = session_queue_service.enqueue(
-                db,
-                db_session=db_session,
-                prompt=prompt,
-                permission_mode=permission_mode,
-                run_config_snapshot=run_config_snapshot,
-                client_request_id=request.client_request_id,
-            )
-            db.commit()
-            return TaskEnqueueResponse(
-                session_id=db_session.id,
-                accepted_type="queued_query",
-                queue_item_id=item.id,
-                status=item.status,
-                queued_query_count=session_queue_service.count_active_items(
-                    db, db_session.id
-                ),
-            )
+        run_config_snapshot = self._build_run_config_snapshot(
+            merged_config,
+            input_files=request.config.input_files
+            if request.config is not None
+            else None,
+        )
 
         if db_session is None:
             raise AppException(
@@ -372,28 +432,135 @@ class TaskService:
                 message="Failed to initialize session",
             )
 
-        _, db_run = session_queue_service.materialize_run(
+        return self._enqueue_or_materialize(
             db,
+            session_queue_service=session_queue_service,
             db_session=db_session,
+            blocking_run=blocking_run,
             prompt=prompt,
             permission_mode=permission_mode,
             schedule_mode=schedule_mode,
             run_config_snapshot=run_config_snapshot,
             scheduled_at=scheduled_at,
+            client_request_id=request.client_request_id,
         )
 
-        db.commit()
-        db.refresh(db_session)
-        db.refresh(db_run)
+    def enqueue_task_from_manager(
+        self,
+        db: Session,
+        user_id: str,
+        request: InternalTaskEnqueueRequest,
+    ) -> TaskEnqueueResponse:
+        """Enqueue a task from executor_manager using a raw config snapshot."""
+        session_queue_service = SessionQueueService()
+        schedule_mode, scheduled_at = self._resolve_schedule(request)
 
-        return TaskEnqueueResponse(
-            session_id=db_session.id,
-            accepted_type="run",
-            run_id=db_run.id,
-            status=db_run.status,
-            queued_query_count=session_queue_service.count_active_items(
-                db, db_session.id
-            ),
+        prompt = request.prompt.strip()
+        if not prompt:
+            raise AppException(
+                error_code=ErrorCode.BAD_REQUEST,
+                message="Prompt cannot be empty",
+            )
+
+        permission_mode = self._normalize_permission_mode(request.permission_mode)
+        merged_config = dict(request.config_snapshot or {}) or None
+        db_session = None
+        blocking_run = None
+
+        if request.session_id:
+            db_session = SessionRepository.get_by_id_for_update(db, request.session_id)
+            if not db_session:
+                raise AppException(
+                    error_code=ErrorCode.NOT_FOUND,
+                    message=f"Session not found: {request.session_id}",
+                )
+            if db_session.user_id != user_id:
+                raise AppException(
+                    error_code=ErrorCode.FORBIDDEN,
+                    message="Session does not belong to the user",
+                )
+
+            if schedule_mode == "immediate" and db_session.kind == "chat":
+                existing_response = session_queue_service.get_existing_enqueue_response(
+                    db,
+                    session_id=db_session.id,
+                    client_request_id=request.client_request_id,
+                )
+                if existing_response is not None:
+                    return existing_response
+
+                blocking_run = RunRepository.get_blocking_by_session(db, db_session.id)
+                if blocking_run is not None:
+                    base_config = session_queue_service.get_effective_base_config(
+                        db, db_session
+                    )
+                else:
+                    base_config = db_session.config_snapshot or {}
+            else:
+                base_config = db_session.config_snapshot or {}
+
+            merged_config = self._merge_config_map(
+                dict(base_config or {}), merged_config or {}
+            )
+        else:
+            db_session = SessionRepository.create(
+                session_db=db,
+                user_id=user_id,
+                config=SessionQueueService.extract_session_config(merged_config),
+                kind="chat",
+            )
+            db.flush()
+
+        run_config_snapshot = self._build_run_config_snapshot(merged_config)
+
+        if db_session is None:
+            raise AppException(
+                error_code=ErrorCode.INTERNAL_ERROR,
+                message="Failed to initialize session",
+            )
+
+        return self._enqueue_or_materialize(
+            db,
+            session_queue_service=session_queue_service,
+            db_session=db_session,
+            blocking_run=blocking_run,
+            prompt=prompt,
+            permission_mode=permission_mode,
+            schedule_mode=schedule_mode,
+            run_config_snapshot=run_config_snapshot,
+            scheduled_at=scheduled_at,
+            client_request_id=request.client_request_id,
+        )
+
+    def get_internal_task_status(
+        self,
+        db: Session,
+        task_id: UUID,
+    ) -> InternalTaskStatusResponse:
+        """Return unified task status for runs and queued queries."""
+        db_run = RunRepository.get_by_id(db, task_id)
+        if db_run is not None:
+            return InternalTaskStatusResponse(
+                task_id=db_run.id,
+                task_type="run",
+                session_id=db_run.session_id,
+                status=db_run.status,
+                run_id=db_run.id,
+            )
+
+        queue_item = SessionQueueItemRepository.get_by_id(db, task_id)
+        if queue_item is not None:
+            return InternalTaskStatusResponse(
+                task_id=queue_item.id,
+                task_type="queued_query",
+                session_id=queue_item.session_id,
+                status=queue_item.status,
+                queue_item_id=queue_item.id,
+            )
+
+        raise AppException(
+            error_code=ErrorCode.NOT_FOUND,
+            message=f"Task not found: {task_id}",
         )
 
     def _build_config_snapshot(

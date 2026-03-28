@@ -15,9 +15,10 @@ class TestTasksEndpoints(unittest.TestCase):
 
         mock_result = MagicMock()
         mock_result.model_dump.return_value = {
-            "task_id": "task-123",
+            "task_id": "run-123",
             "session_id": "session-123",
-            "status": "pending",
+            "status": "queued",
+            "task_type": "run",
         }
 
         mock_service = MagicMock()
@@ -42,7 +43,7 @@ class TestTasksEndpoints(unittest.TestCase):
             assert response.status_code == 200
             data = response.json()
             assert data["code"] == 0
-            assert data["data"]["task_id"] == "task-123"
+            assert data["data"]["task_id"] == "run-123"
             mock_service.create_task.assert_called_once()
 
     def test_create_task_with_session_id(self) -> None:
@@ -51,9 +52,10 @@ class TestTasksEndpoints(unittest.TestCase):
 
         mock_result = MagicMock()
         mock_result.model_dump.return_value = {
-            "task_id": "task-456",
+            "task_id": "queue-456",
             "session_id": "existing-session",
-            "status": "pending",
+            "status": "queued",
+            "task_type": "queued_query",
         }
 
         mock_service = MagicMock()
@@ -89,11 +91,12 @@ class TestTasksEndpoints(unittest.TestCase):
         mock_result.model_dump.return_value = {
             "task_id": "task-123",
             "status": "running",
-            "progress": 50,
+            "task_type": "run",
+            "session_id": "session-123",
         }
 
         mock_service = MagicMock()
-        mock_service.get_task_status.return_value = mock_result
+        mock_service.get_task_status = AsyncMock(return_value=mock_result)
 
         with patch(
             "app.api.v1.tasks.task_service",

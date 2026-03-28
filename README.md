@@ -64,6 +64,15 @@ For detailed deployment documentation and troubleshooting, please refer to the [
 - [Repository Governance Draft](docs/repository-governance.md)
 - [AI Agent Guide](AGENTS.md)
 
+## Dispatch Model
+
+Poco now uses a queue-driven execution model:
+
+- Backend is the source of truth for dispatchable work and run/session state
+- `executor_manager` claims queued runs through `RunPullService`
+- `executor_manager` stages runtime assets, allocates or reuses containers, and calls executor
+- APScheduler in `executor_manager` is used for polling and maintenance jobs, not as the primary execution state for user-created tasks
+
 ## Star History
 
 [![Star History Chart](https://api.star-history.com/svg?repos=poco-ai/poco-agent&type=date&legend=top-left)](https://www.star-history.com/#poco-ai/poco-agent&type=date&legend=top-left)

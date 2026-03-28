@@ -1109,5 +1109,100 @@ class TestTaskServiceEnqueueTask(unittest.TestCase):
         self.assertEqual(ctx.exception.error_code, ErrorCode.PROJECT_NOT_FOUND)
 
 
+class TestTaskServiceInternalTaskMethods(unittest.TestCase):
+    """Test manager-facing internal task helpers."""
+
+    def setUp(self) -> None:
+        self.db = MagicMock()
+        self.service = TaskService()
+        self.user_id = "user-123"
+
+    @patch("app.services.task_service.SessionRepository")
+    @patch("app.services.task_service.SessionQueueService")
+    def test_enqueue_task_from_manager_new_session(
+        self,
+        mock_queue_service_cls: MagicMock,
+        mock_session_repo: MagicMock,
+    ) -> None:
+        request = MagicMock()
+        request.prompt = "run from manager"
+        request.schedule_mode = "immediate"
+        request.scheduled_at = None
+        request.timezone = None
+        request.permission_mode = "default"
+        request.config_snapshot = {
+            "container_mode": "persistent",
+            "browser_enabled": True,
+        }
+        request.session_id = None
+        request.client_request_id = None
+
+        mock_queue_service = MagicMock()
+        mock_queue_service_cls.return_value = mock_queue_service
+        mock_session = MagicMock()
+        mock_session.id = uuid.uuid4()
+        mock_session_repo.create.return_value = mock_session
+
+        expected = MagicMock()
+        expected.session_id = mock_session.id
+        expected.accepted_type = "run"
+        expected.status = "queued"
+        mock_queue_service.count_active_items.return_value = 0
+
+        with patch.object(
+            self.service,
+            "_enqueue_or_materialize",
+            return_value=expected,
+        ) as mock_enqueue:
+            result = self.service.enqueue_task_from_manager(
+                self.db,
+                self.user_id,
+                request,
+            )
+
+            assert result is expected
+            mock_session_repo.create.assert_called_once()
+            mock_enqueue.assert_called_once()
+
+    @patch("app.services.task_service.RunRepository")
+    def test_get_internal_task_status_for_run(self, mock_run_repo: MagicMock) -> None:
+        run_id = uuid.uuid4()
+        session_id = uuid.uuid4()
+        mock_run = MagicMock()
+        mock_run.id = run_id
+        mock_run.session_id = session_id
+        mock_run.status = "queued"
+        mock_run_repo.get_by_id.return_value = mock_run
+
+        result = self.service.get_internal_task_status(self.db, run_id)
+
+        assert result.task_id == run_id
+        assert result.task_type == "run"
+        assert result.session_id == session_id
+        assert result.run_id == run_id
+
+    @patch("app.services.task_service.SessionQueueItemRepository")
+    @patch("app.services.task_service.RunRepository")
+    def test_get_internal_task_status_for_queue_item(
+        self,
+        mock_run_repo: MagicMock,
+        mock_queue_repo: MagicMock,
+    ) -> None:
+        task_id = uuid.uuid4()
+        session_id = uuid.uuid4()
+        mock_run_repo.get_by_id.return_value = None
+        queue_item = MagicMock()
+        queue_item.id = task_id
+        queue_item.session_id = session_id
+        queue_item.status = "queued"
+        mock_queue_repo.get_by_id.return_value = queue_item
+
+        result = self.service.get_internal_task_status(self.db, task_id)
+
+        assert result.task_type == "queued_query"
+        assert result.queue_item_id == task_id
+        assert result.session_id == session_id
+
+
 if __name__ == "__main__":
     unittest.main()

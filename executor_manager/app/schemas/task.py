@@ -54,6 +54,7 @@ class TaskCreateResponse(BaseModel):
     session_id: str
     status: str
     container_id: str | None = None
+    task_type: Literal["run", "queued_query"] | None = None
 
 
 class TaskStatusResponse(BaseModel):
@@ -62,6 +63,8 @@ class TaskStatusResponse(BaseModel):
     task_id: str
     status: str
     next_run_time: str | None = None
+    task_type: Literal["run", "queued_query"] | None = None
+    session_id: str | None = None
 
 
 class SessionStatusResponse(BaseModel):

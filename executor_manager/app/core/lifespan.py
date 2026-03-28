@@ -16,6 +16,13 @@ async def lifespan(app: FastAPI):
     logger.info("Starting APScheduler...")
     scheduler.start()
     logger.info("APScheduler started")
+    logger.info(
+        "scheduler_runtime_model",
+        extra={
+            "user_task_dispatch_model": "backend_run_queue",
+            "scheduler_role": "polling_and_maintenance_only",
+        },
+    )
 
     pull_service = None
     pull_job_ids: list[str] = []
@@ -37,7 +44,13 @@ async def lifespan(app: FastAPI):
             schedule_config = default_pull_schedule_config_from_settings(settings)
 
         pull_job_ids = register_pull_jobs(scheduler, pull_service, schedule_config)
-        logger.info(f"Run pull service started (jobs={pull_job_ids})")
+        logger.info(
+            "run_pull_jobs_registered",
+            extra={
+                "job_ids": pull_job_ids,
+                "dispatch_model": "queue_driven",
+            },
+        )
 
     if settings.workspace_cleanup_enabled:
         from app.services.cleanup_service import CleanupService

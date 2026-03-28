@@ -1,5 +1,4 @@
 import unittest
-from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
@@ -43,37 +42,23 @@ class TestTaskServiceCreateTask(unittest.TestCase):
             return TaskService()
 
     def test_create_task_new_session(self) -> None:
-        """Test creating a task with a new session."""
+        """Test creating a task with a new backend run."""
         service = self._create_service()
 
         mock_backend_client = MagicMock()
-        mock_backend_client.create_session = AsyncMock(
+        mock_backend_client.enqueue_task_from_manager = AsyncMock(
             return_value={
                 "session_id": "new-session-123",
-                "sdk_session_id": "sdk-123",
+                "accepted_type": "run",
+                "run_id": "run-123",
+                "status": "queued",
             }
         )
-
-        mock_scheduler = MagicMock()
-        mock_job = MagicMock()
-        mock_scheduler.add_job = MagicMock(return_value=mock_job)
-
-        mock_task_dispatcher = MagicMock()
 
         with (
             patch(
                 "app.services.backend_client.BackendClient",
                 return_value=mock_backend_client,
-            ),
-            patch("app.services.task_service.scheduler", mock_scheduler),
-            patch("app.scheduler.task_dispatcher.TaskDispatcher", mock_task_dispatcher),
-            patch(
-                "app.core.observability.request_context.get_request_id",
-                return_value="req-123",
-            ),
-            patch(
-                "app.core.observability.request_context.get_trace_id",
-                return_value="trace-123",
             ),
         ):
             import asyncio
@@ -89,53 +74,29 @@ class TestTaskServiceCreateTask(unittest.TestCase):
 
             assert isinstance(result, TaskCreateResponse)
             assert result.session_id == "new-session-123"
-            assert result.status == "scheduled"
-            mock_backend_client.create_session.assert_called_once()
-            mock_scheduler.add_job.assert_called_once()
+            assert result.task_id == "run-123"
+            assert result.status == "queued"
+            assert result.task_type == "run"
+            mock_backend_client.enqueue_task_from_manager.assert_called_once()
 
     def test_create_task_continue_session(self) -> None:
         """Test creating a task with an existing session."""
         service = self._create_service()
 
         mock_backend_client = MagicMock()
-        mock_backend_client.create_session = AsyncMock()
-
-        mock_scheduler = MagicMock()
-        mock_job = MagicMock()
-        mock_scheduler.add_job = MagicMock(return_value=mock_job)
-
-        mock_task_dispatcher = MagicMock()
-
-        # Mock get_session_status to return existing session
-        mock_session_status = SessionStatusResponse(
-            session_id="existing-session",
-            user_id="user-123",
-            sdk_session_id="sdk-existing",
-            status="running",
-            created_at=datetime.now(),
-            updated_at=datetime.now(),
+        mock_backend_client.enqueue_task_from_manager = AsyncMock(
+            return_value={
+                "session_id": "existing-session",
+                "accepted_type": "queued_query",
+                "queue_item_id": "queue-123",
+                "status": "queued",
+            }
         )
 
         with (
             patch(
                 "app.services.backend_client.BackendClient",
                 return_value=mock_backend_client,
-            ),
-            patch("app.services.task_service.scheduler", mock_scheduler),
-            patch("app.scheduler.task_dispatcher.TaskDispatcher", mock_task_dispatcher),
-            patch(
-                "app.core.observability.request_context.get_request_id",
-                return_value="req-123",
-            ),
-            patch(
-                "app.core.observability.request_context.get_trace_id",
-                return_value="trace-123",
-            ),
-            patch.object(
-                service,
-                "get_session_status",
-                new_callable=AsyncMock,
-                return_value=mock_session_status,
             ),
         ):
             import asyncio
@@ -150,43 +111,33 @@ class TestTaskServiceCreateTask(unittest.TestCase):
             )
 
             assert result.session_id == "existing-session"
-            # Should NOT call create_session when continuing
-            mock_backend_client.create_session.assert_not_called()
+            assert result.task_id == "queue-123"
+            assert result.task_type == "queued_query"
+            mock_backend_client.enqueue_task_from_manager.assert_called_once()
 
     def test_create_task_with_persistent_container(self) -> None:
         """Test creating a task with persistent container mode."""
         service = self._create_service()
 
         mock_backend_client = MagicMock()
-        mock_backend_client.create_session = AsyncMock(
+        mock_backend_client.enqueue_task_from_manager = AsyncMock(
             return_value={
                 "session_id": "session-123",
-                "sdk_session_id": "sdk-123",
+                "accepted_type": "run",
+                "run_id": "run-123",
+                "status": "queued",
             }
         )
-
-        mock_scheduler = MagicMock()
-        mock_job = MagicMock()
-        mock_scheduler.add_job = MagicMock(return_value=mock_job)
 
         with (
             patch(
                 "app.services.backend_client.BackendClient",
                 return_value=mock_backend_client,
             ),
-            patch("app.services.task_service.scheduler", mock_scheduler),
             patch(
                 "app.scheduler.task_dispatcher.TaskDispatcher.resolve_executor_target",
                 new_callable=AsyncMock,
                 return_value=("container-123", "container-123"),
-            ),
-            patch(
-                "app.core.observability.request_context.get_request_id",
-                return_value="req-123",
-            ),
-            patch(
-                "app.core.observability.request_context.get_trace_id",
-                return_value="trace-123",
             ),
         ):
             import asyncio
@@ -207,40 +158,29 @@ class TestTaskServiceCreateTask(unittest.TestCase):
         service = self._create_service()
 
         mock_backend_client = MagicMock()
-        mock_backend_client.create_session = AsyncMock(
+        mock_backend_client.enqueue_task_from_manager = AsyncMock(
             return_value={
                 "session_id": "session-123",
-                "sdk_session_id": "sdk-123",
+                "accepted_type": "run",
+                "run_id": "run-123",
+                "status": "queued",
             }
         )
-
-        mock_scheduler = MagicMock()
-        mock_job = MagicMock()
-        mock_scheduler.add_job = MagicMock(return_value=mock_job)
 
         with (
             patch(
                 "app.services.backend_client.BackendClient",
                 return_value=mock_backend_client,
             ),
-            patch("app.services.task_service.scheduler", mock_scheduler),
             patch(
                 "app.scheduler.task_dispatcher.TaskDispatcher.resolve_executor_target",
                 new_callable=AsyncMock,
                 return_value=("existing-container", "existing-container"),
             ),
-            patch(
-                "app.core.observability.request_context.get_request_id",
-                return_value="req-123",
-            ),
-            patch(
-                "app.core.observability.request_context.get_trace_id",
-                return_value="trace-123",
-            ),
         ):
             import asyncio
 
-            asyncio.run(
+            result = asyncio.run(
                 service.create_task(
                     user_id="user-123",
                     prompt="Test prompt",
@@ -253,6 +193,8 @@ class TestTaskServiceCreateTask(unittest.TestCase):
                 )
             )
 
+            assert result.container_id == "existing-container"
+
     def test_create_task_http_error(self) -> None:
         """Test create_task handles HTTP errors."""
         service = self._create_service()
@@ -260,7 +202,7 @@ class TestTaskServiceCreateTask(unittest.TestCase):
         mock_backend_client = MagicMock()
         mock_response = MagicMock()
         mock_response.text = "Bad request"
-        mock_backend_client.create_session = AsyncMock(
+        mock_backend_client.enqueue_task_from_manager = AsyncMock(
             side_effect=httpx.HTTPStatusError(
                 "Error", request=MagicMock(), response=mock_response
             )
@@ -282,14 +224,14 @@ class TestTaskServiceCreateTask(unittest.TestCase):
                     )
                 )
 
-            assert ctx.exception.error_code == ErrorCode.SESSION_CREATE_FAILED
+            assert ctx.exception.error_code == ErrorCode.TASK_SCHEDULING_FAILED
 
     def test_create_task_generic_error(self) -> None:
         """Test create_task handles generic errors."""
         service = self._create_service()
 
         mock_backend_client = MagicMock()
-        mock_backend_client.create_session = AsyncMock(
+        mock_backend_client.enqueue_task_from_manager = AsyncMock(
             side_effect=Exception("Unexpected error")
         )
 
@@ -325,51 +267,84 @@ class TestTaskServiceGetTaskStatus(unittest.TestCase):
             return TaskService()
 
     def test_get_task_status_found(self) -> None:
-        """Test getting status of an existing task."""
+        """Test getting status of an existing backend task."""
         service = self._create_service()
 
-        mock_job = MagicMock()
-        mock_job.next_run_time = datetime.now()
+        mock_backend_client = MagicMock()
+        mock_backend_client.get_internal_task_status = AsyncMock(
+            return_value={
+                "task_id": "task-123",
+                "task_type": "run",
+                "session_id": "session-123",
+                "status": "running",
+            }
+        )
 
-        mock_scheduler = MagicMock()
-        mock_scheduler.get_job = MagicMock(return_value=mock_job)
+        with patch(
+            "app.services.backend_client.BackendClient",
+            return_value=mock_backend_client,
+        ):
+            import asyncio
 
-        with patch("app.services.task_service.scheduler", mock_scheduler):
-            result = service.get_task_status("task-123")
+            result = asyncio.run(service.get_task_status("task-123"))
 
             assert isinstance(result, TaskStatusResponse)
             assert result.task_id == "task-123"
-            assert result.status == "scheduled"
-            assert result.next_run_time is not None
+            assert result.status == "running"
+            assert result.task_type == "run"
+            assert result.session_id == "session-123"
+            assert result.next_run_time is None
 
     def test_get_task_status_not_found(self) -> None:
         """Test getting status of a non-existent task."""
         service = self._create_service()
 
-        mock_scheduler = MagicMock()
-        mock_scheduler.get_job = MagicMock(return_value=None)
+        mock_response = MagicMock()
+        mock_response.status_code = 404
+        mock_response.text = "Not found"
+        mock_backend_client = MagicMock()
+        mock_backend_client.get_internal_task_status = AsyncMock(
+            side_effect=httpx.HTTPStatusError(
+                "Not found", request=MagicMock(), response=mock_response
+            )
+        )
 
-        with patch("app.services.task_service.scheduler", mock_scheduler):
+        with patch(
+            "app.services.backend_client.BackendClient",
+            return_value=mock_backend_client,
+        ):
+            import asyncio
+
             with self.assertRaises(AppException) as ctx:
-                service.get_task_status("nonexistent-task")
+                asyncio.run(service.get_task_status("nonexistent-task"))
 
             assert ctx.exception.error_code == ErrorCode.TASK_NOT_FOUND
             assert "Task not found" in ctx.exception.message
 
-    def test_get_task_status_no_next_run_time(self) -> None:
-        """Test getting status when job has no next_run_time."""
+    def test_get_task_status_backend_unavailable(self) -> None:
+        """Test backend failures propagate as backend unavailable."""
         service = self._create_service()
 
-        mock_job = MagicMock()
-        mock_job.next_run_time = None
+        mock_response = MagicMock()
+        mock_response.status_code = 500
+        mock_response.text = "Server error"
+        mock_backend_client = MagicMock()
+        mock_backend_client.get_internal_task_status = AsyncMock(
+            side_effect=httpx.HTTPStatusError(
+                "Server error", request=MagicMock(), response=mock_response
+            )
+        )
 
-        mock_scheduler = MagicMock()
-        mock_scheduler.get_job = MagicMock(return_value=mock_job)
+        with patch(
+            "app.services.backend_client.BackendClient",
+            return_value=mock_backend_client,
+        ):
+            import asyncio
 
-        with patch("app.services.task_service.scheduler", mock_scheduler):
-            result = service.get_task_status("task-123")
+            with self.assertRaises(AppException) as ctx:
+                asyncio.run(service.get_task_status("task-123"))
 
-            assert result.next_run_time is None
+            assert ctx.exception.error_code == ErrorCode.BACKEND_UNAVAILABLE
 
 
 class TestTaskServiceGetSessionStatus(unittest.TestCase):

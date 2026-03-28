@@ -39,7 +39,7 @@ def _extract_enabled_skill_names(skills: object) -> list[str]:
 
 
 class RunPullService:
-    """Background service that pulls queued runs from Backend and dispatches them."""
+    """Primary runtime dispatcher for backend-queued runs."""
 
     def __init__(self) -> None:
         self.settings = get_settings()
@@ -146,8 +146,12 @@ class RunPullService:
 
         if not self._logged_started:
             logger.info(
-                f"RunPullService started (worker_id={self.worker_id}, "
-                f"lease={lease_seconds}s, max_concurrent={self.settings.max_concurrent_tasks})"
+                "run_pull_service_started",
+                extra={
+                    "worker_id": self.worker_id,
+                    "lease_seconds": lease_seconds,
+                    "max_concurrent_tasks": self.settings.max_concurrent_tasks,
+                },
             )
             self._logged_started = True
 
@@ -162,16 +166,19 @@ class RunPullService:
                     schedule_modes=schedule_modes,
                 )
                 if claim:
+                    run = claim.get("run") or {}
                     logger.info(
-                        "timing",
+                        "run_claimed",
                         extra={
-                            "step": "run_pull_claim_run",
                             "duration_ms": int(
                                 (time.perf_counter() - step_started) * 1000
                             ),
                             "worker_id": self.worker_id,
                             "lease_seconds": lease_seconds,
                             "schedule_modes": schedule_modes,
+                            "run_id": run.get("run_id"),
+                            "session_id": run.get("session_id"),
+                            "schedule_mode": run.get("schedule_mode"),
                         },
                     )
             except asyncio.CancelledError:
@@ -187,6 +194,13 @@ class RunPullService:
                 return
 
             if not claim:
+                logger.debug(
+                    "run_claim_empty",
+                    extra={
+                        "worker_id": self.worker_id,
+                        "schedule_modes": schedule_modes,
+                    },
+                )
                 self._semaphore.release()
                 return
 
@@ -259,6 +273,15 @@ class RunPullService:
             "session_id": session_id,
             "user_id": user_id,
         }
+        logger.info(
+            "run_dispatch_started",
+            extra={
+                **ctx,
+                "worker_id": self.worker_id,
+                "schedule_mode": run.get("schedule_mode"),
+                "container_mode": container_mode,
+            },
+        )
 
         try:
             step_started = time.perf_counter()
@@ -474,6 +497,16 @@ class RunPullService:
 
             logger.info(f"Dispatched run {run_id} (session={session_id})")
             logger.info(
+                "run_dispatch_succeeded",
+                extra={
+                    "duration_ms": int((time.perf_counter() - dispatch_started) * 1000),
+                    "container_mode": container_mode,
+                    "container_id": container_id,
+                    "worker_id": self.worker_id,
+                    **ctx,
+                },
+            )
+            logger.info(
                 "timing",
                 extra={
                     "step": "run_dispatch_total",
@@ -485,6 +518,17 @@ class RunPullService:
             )
 
         except Exception as e:
+            logger.error(
+                "run_dispatch_failed",
+                extra={
+                    "duration_ms": int((time.perf_counter() - dispatch_started) * 1000),
+                    "worker_id": self.worker_id,
+                    "container_mode": container_mode,
+                    "container_id": container_id,
+                    **ctx,
+                },
+                exc_info=True,
+            )
             logger.error(
                 f"Failed to dispatch run {run_id} (session={session_id}): "
                 f"{type(e).__name__}: {e}",
