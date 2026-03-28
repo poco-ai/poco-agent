@@ -14,6 +14,7 @@ interface UseSessionDeliverablesOptions {
   sessionId?: string;
   isActive?: boolean;
   pollingIntervalMs?: number;
+  suppressUntilReady?: boolean;
 }
 
 interface UseSessionDeliverablesReturn {
@@ -35,6 +36,7 @@ export function useSessionDeliverables({
   sessionId,
   isActive = false,
   pollingIntervalMs = 4000,
+  suppressUntilReady = false,
 }: UseSessionDeliverablesOptions): UseSessionDeliverablesReturn {
   const [deliverables, setDeliverables] = React.useState<DeliverableResponse[]>(
     [],
@@ -49,7 +51,7 @@ export function useSessionDeliverables({
   const [error, setError] = React.useState<Error | null>(null);
 
   const refresh = React.useCallback(async () => {
-    if (!sessionId) {
+    if (!sessionId || suppressUntilReady) {
       setDeliverables([]);
       setVersionMap({});
       setVersionsByDeliverableId({});
@@ -67,7 +69,7 @@ export function useSessionDeliverables({
     } finally {
       setIsLoading(false);
     }
-  }, [sessionId]);
+  }, [sessionId, suppressUntilReady]);
 
   React.useEffect(() => {
     setIsLoading(true);
@@ -86,7 +88,7 @@ export function useSessionDeliverables({
     async (
       versionId: string | null | undefined,
     ): Promise<DeliverableVersionResponse | null> => {
-      if (!sessionId || !versionId) return null;
+      if (!sessionId || !versionId || suppressUntilReady) return null;
       const cached = versionMap[versionId];
       if (cached) return cached;
 
@@ -100,12 +102,12 @@ export function useSessionDeliverables({
       }));
       return version;
     },
-    [sessionId, versionMap],
+    [sessionId, suppressUntilReady, versionMap],
   );
 
   const ensureVersionsForDeliverable = React.useCallback(
     async (deliverableId: string | null | undefined) => {
-      if (!sessionId || !deliverableId) return [];
+      if (!sessionId || !deliverableId || suppressUntilReady) return [];
       const cached = versionsByDeliverableId[deliverableId];
       if (cached) return cached;
 
@@ -126,7 +128,7 @@ export function useSessionDeliverables({
       });
       return versions;
     },
-    [sessionId, versionsByDeliverableId],
+    [sessionId, suppressUntilReady, versionsByDeliverableId],
   );
 
   return {

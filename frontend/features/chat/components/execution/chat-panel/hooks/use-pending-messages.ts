@@ -74,11 +74,12 @@ export function usePendingMessages({
 
   const sessionId = session?.session_id ?? null;
   const executionState = deriveExecutionSessionState(session);
+  const hasRunnablePendingMessages = pendingMessages.some(
+    (item) => item.status === "queued",
+  );
   const shouldPoll =
     Boolean(sessionId) &&
-    (executionState.isRunActive ||
-      pendingMessages.length > 0 ||
-      executionState.hasQueuedQueries);
+    (executionState.isRunActive || hasRunnablePendingMessages);
 
   const refreshPendingMessages = useCallback(async () => {
     if (!sessionId) {

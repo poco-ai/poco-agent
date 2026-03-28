@@ -41,6 +41,8 @@ export function ExecutionContainer({ sessionId }: ExecutionContainerProps) {
   } = useSessionDeliverables({
     sessionId,
     isActive: executionState.shouldPollDeliverables,
+    suppressUntilReady:
+      executionState.isRunActive || executionState.isWorkspaceExportPending,
   });
   const hasArtifacts =
     fileChanges.length > 0 ||

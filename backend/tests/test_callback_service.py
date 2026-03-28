@@ -295,7 +295,9 @@ class TestCallbackServiceShouldPreserveExistingReadyWorkspace(unittest.TestCase)
         db_session.workspace_files_prefix = None
 
         callback = create_callback_request()
-        result = service._should_preserve_existing_ready_workspace(db_session, callback)
+        result = service._should_preserve_existing_ready_workspace(
+            db_session, None, callback
+        )
         self.assertFalse(result)
 
     def test_existing_ready_workspace_with_incoming_artifacts(self) -> None:
@@ -310,7 +312,9 @@ class TestCallbackServiceShouldPreserveExistingReadyWorkspace(unittest.TestCase)
             workspace_export_status="pending",
             workspace_files_prefix="new/prefix",
         )
-        result = service._should_preserve_existing_ready_workspace(db_session, callback)
+        result = service._should_preserve_existing_ready_workspace(
+            db_session, None, callback
+        )
         self.assertFalse(result)
 
     def test_existing_ready_workspace_incoming_status_ready(self) -> None:
@@ -320,7 +324,9 @@ class TestCallbackServiceShouldPreserveExistingReadyWorkspace(unittest.TestCase)
         db_session.workspace_files_prefix = "files/prefix"
 
         callback = create_callback_request(workspace_export_status="ready")
-        result = service._should_preserve_existing_ready_workspace(db_session, callback)
+        result = service._should_preserve_existing_ready_workspace(
+            db_session, None, callback
+        )
         self.assertFalse(result)
 
     def test_existing_ready_workspace_should_preserve(self) -> None:
@@ -332,8 +338,43 @@ class TestCallbackServiceShouldPreserveExistingReadyWorkspace(unittest.TestCase)
         db_session.workspace_archive_key = None
 
         callback = create_callback_request(workspace_export_status="pending")
-        result = service._should_preserve_existing_ready_workspace(db_session, callback)
+        result = service._should_preserve_existing_ready_workspace(
+            db_session, None, callback
+        )
         self.assertTrue(result)
+
+    def test_existing_ready_workspace_with_resolved_run_does_not_preserve(self) -> None:
+        service = CallbackService()
+        db_session = MagicMock()
+        db_session.workspace_export_status = "ready"
+        db_session.workspace_files_prefix = "files/prefix"
+        db_session.workspace_manifest_key = "manifest.json"
+        db_session.workspace_archive_key = None
+
+        callback = create_callback_request(workspace_export_status="pending")
+        result = service._should_preserve_existing_ready_workspace(
+            db_session, MagicMock(), callback
+        )
+        self.assertFalse(result)
+
+    def test_existing_ready_workspace_with_callback_run_id_does_not_preserve(
+        self,
+    ) -> None:
+        service = CallbackService()
+        db_session = MagicMock()
+        db_session.workspace_export_status = "ready"
+        db_session.workspace_files_prefix = "files/prefix"
+        db_session.workspace_manifest_key = "manifest.json"
+        db_session.workspace_archive_key = None
+
+        callback = create_callback_request(
+            run_id=str(uuid.uuid4()),
+            workspace_export_status="pending",
+        )
+        result = service._should_preserve_existing_ready_workspace(
+            db_session, None, callback
+        )
+        self.assertFalse(result)
 
 
 class TestCallbackServiceExtractToolExecutions(unittest.TestCase):
@@ -1149,6 +1190,70 @@ class TestCallbackServiceProcessAgentCallback(unittest.TestCase):
                             db_session.workspace_archive_key, "archive.zip"
                         )
                         self.assertEqual(db_session.workspace_export_status, "ready")
+
+    def test_pending_workspace_export_clears_previous_workspace_keys(self) -> None:
+        db = MagicMock()
+        service = CallbackService()
+        db_session = create_mock_db_session(
+            workspace_export_status="ready",
+            workspace_files_prefix="old/files",
+            workspace_manifest_key="old/manifest.json",
+            workspace_archive_key="old/archive.zip",
+        )
+        db_run = MagicMock()
+        db_run.id = uuid.uuid4()
+
+        with (
+            patch.object(service, "_resolve_session_and_run") as mock_resolve,
+            patch.object(service, "_should_apply_workspace_export") as mock_apply,
+            patch("app.services.callback_service.run_lifecycle_service"),
+            patch("app.services.deliverable_detection_service.S3StorageService"),
+        ):
+            mock_resolve.return_value = (db_session, db_run)
+            mock_apply.return_value = True
+
+            callback = create_callback_request(
+                status=CallbackStatus.RUNNING,
+                run_id=str(db_run.id),
+                workspace_export_status="pending",
+            )
+            service.process_agent_callback(db, callback)
+
+        self.assertEqual(db_session.workspace_export_status, "pending")
+        self.assertIsNone(db_session.workspace_files_prefix)
+        self.assertIsNone(db_session.workspace_manifest_key)
+        self.assertIsNone(db_session.workspace_archive_key)
+
+    def test_pending_workspace_export_without_run_preserves_ready_workspace(
+        self,
+    ) -> None:
+        db = MagicMock()
+        service = CallbackService()
+        db_session = create_mock_db_session(
+            workspace_export_status="ready",
+            workspace_files_prefix="ready/files",
+            workspace_manifest_key="ready/manifest.json",
+            workspace_archive_key="ready/archive.zip",
+        )
+
+        with (
+            patch.object(service, "_resolve_session_and_run") as mock_resolve,
+            patch.object(service, "_should_apply_workspace_export") as mock_apply,
+            patch("app.services.deliverable_detection_service.S3StorageService"),
+        ):
+            mock_resolve.return_value = (db_session, None)
+            mock_apply.return_value = True
+
+            callback = create_callback_request(
+                status=CallbackStatus.RUNNING,
+                workspace_export_status="pending",
+            )
+            service.process_agent_callback(db, callback)
+
+        self.assertEqual(db_session.workspace_export_status, "ready")
+        self.assertEqual(db_session.workspace_files_prefix, "ready/files")
+        self.assertEqual(db_session.workspace_manifest_key, "ready/manifest.json")
+        self.assertEqual(db_session.workspace_archive_key, "ready/archive.zip")
 
     def test_run_completed(self) -> None:
         db = MagicMock()

@@ -43,7 +43,8 @@ export function deriveExecutionSessionState(
     status === "completed" || status === "failed" || status === "canceled";
   const isWorkspaceExportPending =
     session?.workspace_export_status === "pending";
-  const isWorkspaceExportReady = session?.workspace_export_status === "ready";
+  const isWorkspaceExportReady =
+    !isRunActive && session?.workspace_export_status === "ready";
 
   let phase: ExecutionUxPhase;
   switch (status) {
@@ -54,14 +55,14 @@ export function deriveExecutionSessionState(
       phase = "pending";
       break;
     case "failed":
+      phase = "failed";
+      break;
     case "canceled":
+      phase = "canceled";
+      break;
     case "completed":
       if (hasQueuedQueries) {
         phase = "queued";
-      } else if (status === "failed") {
-        phase = "failed";
-      } else if (status === "canceled") {
-        phase = "canceled";
       } else if (isWorkspaceExportPending) {
         phase = "export_pending";
       } else {
@@ -81,9 +82,7 @@ export function deriveExecutionSessionState(
     isTerminal,
     isWorkspaceExportPending,
     isWorkspaceExportReady,
-    shouldPollSession: Boolean(
-      session && (isRunActive || hasQueuedQueries || isWorkspaceExportPending),
-    ),
+    shouldPollSession: Boolean(session && (isRunActive || isWorkspaceExportPending)),
     shouldPollMessages: isRunActive,
     shouldPollDeliverables: isRunActive || isWorkspaceExportPending,
     shouldPollToolExecutions: isRunActive,
@@ -93,12 +92,7 @@ export function deriveExecutionSessionState(
 export function mapSessionToTaskHistoryStatus(
   session: Pick<SessionResponse, "status" | "queued_query_count">,
 ): TaskHistoryItem["status"] {
-  if (
-    (session.queued_query_count ?? 0) > 0 &&
-    (session.status === "completed" ||
-      session.status === "failed" ||
-      session.status === "canceled")
-  ) {
+  if ((session.queued_query_count ?? 0) > 0 && session.status === "completed") {
     return "pending";
   }
 

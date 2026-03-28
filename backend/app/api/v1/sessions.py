@@ -64,6 +64,7 @@ usage_service = UsageService()
 storage_service = S3StorageService()
 pending_skill_creation_service = PendingSkillCreationService()
 workspace_archive_service = WorkspaceArchiveService()
+TERMINAL_SESSION_STATUSES = {"completed", "failed", "canceled"}
 
 
 def _cancel_executor_manager(session_id: uuid.UUID, reason: str | None) -> bool:
@@ -641,7 +642,8 @@ async def get_session_workspace_files(
             message="Session does not belong to the user",
         )
     if (
-        db_session.workspace_export_status != "ready"
+        (db_session.status or "").strip().lower() not in TERMINAL_SESSION_STATUSES
+        or db_session.workspace_export_status != "ready"
         or not db_session.workspace_manifest_key
     ):
         return Response.success(data=[], message="Workspace export not ready")
@@ -703,7 +705,11 @@ async def get_session_workspace_archive(
 
     filename = f"workspace-{session_id}.zip"
     archive_key = (db_session.workspace_archive_key or "").strip()
-    if not archive_key or db_session.workspace_export_status != "ready":
+    if (
+        (db_session.status or "").strip().lower() not in TERMINAL_SESSION_STATUSES
+        or db_session.workspace_export_status != "ready"
+        or not archive_key
+    ):
         return Response.success(
             data=WorkspaceArchiveResponse(url=None, filename=filename),
             message="Workspace export not ready",
@@ -746,7 +752,10 @@ async def get_session_workspace_folder_archive(
     )
     filename = f"{folder_name or f'workspace-{session_id}'}.zip"
 
-    if db_session.workspace_export_status != "ready":
+    if (
+        (db_session.status or "").strip().lower() not in TERMINAL_SESSION_STATUSES
+        or db_session.workspace_export_status != "ready"
+    ):
         return Response.success(
             data=WorkspaceArchiveResponse(url=None, filename=filename),
             message="Workspace export not ready",

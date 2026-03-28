@@ -143,8 +143,12 @@ class CallbackService:
     def _should_preserve_existing_ready_workspace(
         self,
         db_session: AgentSession,
+        db_run: AgentRun | None,
         callback: AgentCallbackRequest,
     ) -> bool:
+        if db_run is not None or callback.run_id:
+            return False
+
         has_existing_ready_workspace = (
             db_session.workspace_export_status or ""
         ).strip().lower() == "ready" and any(
@@ -480,7 +484,11 @@ class CallbackService:
         )
         preserve_existing_ready_workspace = (
             should_apply_workspace_export
-            and self._should_preserve_existing_ready_workspace(db_session, callback)
+            and self._should_preserve_existing_ready_workspace(
+                db_session,
+                db_run,
+                callback,
+            )
         )
         should_process_final_workspace_export = (
             should_apply_workspace_export and not preserve_existing_ready_workspace
@@ -495,6 +503,16 @@ class CallbackService:
                 },
             )
         elif should_apply_workspace_export:
+            incoming_export_status = (
+                (callback.workspace_export_status or "").strip().lower()
+            )
+            if incoming_export_status == "pending":
+                if callback.workspace_files_prefix is None:
+                    db_session.workspace_files_prefix = None
+                if callback.workspace_manifest_key is None:
+                    db_session.workspace_manifest_key = None
+                if callback.workspace_archive_key is None:
+                    db_session.workspace_archive_key = None
             if callback.workspace_files_prefix is not None:
                 db_session.workspace_files_prefix = callback.workspace_files_prefix
             if callback.workspace_manifest_key is not None:

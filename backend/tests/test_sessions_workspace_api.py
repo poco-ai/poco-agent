@@ -48,6 +48,7 @@ class SessionWorkspaceApiTests(unittest.TestCase):
         session_id = uuid4()
         db_session = SimpleNamespace(
             user_id="user-123",
+            status="running",
             workspace_export_status="pending",
             workspace_manifest_key="workspaces/user/session/manifest.json",
             workspace_files_prefix="workspaces/user/session/files",
@@ -77,6 +78,7 @@ class SessionWorkspaceApiTests(unittest.TestCase):
         session_id = uuid4()
         db_session = SimpleNamespace(
             user_id="user-123",
+            status="completed",
             workspace_export_status="ready",
             workspace_manifest_key="workspaces/user/session/manifest.json",
             workspace_files_prefix="workspaces/user/session/files",
@@ -151,12 +153,45 @@ class SessionWorkspaceApiTests(unittest.TestCase):
         mock_presign.assert_called_once()
         mock_build_nodes.assert_called_once()
 
+    def test_get_session_workspace_files_returns_empty_when_run_not_terminal(
+        self,
+    ) -> None:
+        session_id = uuid4()
+        db_session = SimpleNamespace(
+            user_id="user-123",
+            status="pending",
+            workspace_export_status="ready",
+            workspace_manifest_key="workspaces/user/session/manifest.json",
+            workspace_files_prefix="workspaces/user/session/files",
+        )
+
+        with (
+            patch.object(
+                sessions_api.session_service,
+                "get_session",
+                return_value=db_session,
+            ),
+            patch.object(sessions_api.storage_service, "get_manifest") as mock_manifest,
+        ):
+            response = asyncio.run(
+                sessions_api.get_session_workspace_files(
+                    session_id=session_id,
+                    user_id="user-123",
+                    db=MagicMock(),
+                )
+            )
+
+        payload = json.loads(response.body)
+        self.assertEqual(payload["data"], [])
+        mock_manifest.assert_not_called()
+
     def test_get_session_workspace_archive_returns_null_until_export_ready(
         self,
     ) -> None:
         session_id = uuid4()
         db_session = SimpleNamespace(
             user_id="user-123",
+            status="running",
             workspace_export_status="pending",
             workspace_archive_key="workspaces/user/session/archive.zip",
         )
@@ -176,6 +211,37 @@ class SessionWorkspaceApiTests(unittest.TestCase):
 
         payload = json.loads(response.body)
         self.assertIsNone(payload["data"]["url"])
+
+    def test_get_session_workspace_archive_returns_null_when_run_not_terminal(
+        self,
+    ) -> None:
+        session_id = uuid4()
+        db_session = SimpleNamespace(
+            user_id="user-123",
+            status="running",
+            workspace_export_status="ready",
+            workspace_archive_key="workspaces/user/session/archive.zip",
+        )
+
+        with (
+            patch.object(
+                sessions_api.session_service,
+                "get_session",
+                return_value=db_session,
+            ),
+            patch.object(sessions_api.storage_service, "presign_get") as mock_presign,
+        ):
+            response = asyncio.run(
+                sessions_api.get_session_workspace_archive(
+                    session_id=session_id,
+                    user_id="user-123",
+                    db=MagicMock(),
+                )
+            )
+
+        payload = json.loads(response.body)
+        self.assertIsNone(payload["data"]["url"])
+        mock_presign.assert_not_called()
 
 
 if __name__ == "__main__":

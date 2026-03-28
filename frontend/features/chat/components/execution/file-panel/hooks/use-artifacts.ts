@@ -122,11 +122,17 @@ export function useArtifacts({
   const [selectedPath, setSelectedPath] = useState<string | undefined>();
   const [viewMode, setViewMode] = useState<ViewMode>("artifacts");
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const shouldSuppressArtifacts =
+    isActiveStatus(sessionStatus) || workspaceExportStatus === "pending";
 
   // Coalesce concurrent refresh triggers (manual / auto / polling) into one request.
   const fetchPromiseRef = useRef<Promise<FileNode[]> | null>(null);
   const fetchFiles = useCallback(async (): Promise<FileNode[]> => {
     if (!sessionId) return [];
+    if (shouldSuppressArtifacts) {
+      setFiles([]);
+      return [];
+    }
     if (fetchPromiseRef.current) return fetchPromiseRef.current;
 
     const promise = (async () => {
@@ -146,7 +152,15 @@ export function useArtifacts({
 
     fetchPromiseRef.current = promise;
     return promise;
-  }, [sessionId]);
+  }, [sessionId, shouldSuppressArtifacts]);
+
+  // Clear stale artifacts while a new run is executing or while export is pending.
+  useEffect(() => {
+    if (!shouldSuppressArtifacts) return;
+    setFiles([]);
+    setSelectedPath(undefined);
+    setViewMode("artifacts");
+  }, [shouldSuppressArtifacts]);
 
   // Manual refresh method
   const refreshFiles = useCallback(async () => {
