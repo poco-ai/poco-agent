@@ -201,11 +201,18 @@ PR 描述至少包含：
 - [ci-ruff.yml](/D:/codespace/poco-claw/.github/workflows/ci-ruff.yml)
 - [docker-images.yml](/D:/codespace/poco-claw/.github/workflows/docker-images.yml)
 - [close-stale-issues.yml](/D:/codespace/poco-claw/.github/workflows/close-stale-issues.yml)
+- [docs-sync.yml](/D:/codespace/poco-claw/.github/workflows/docs-sync.yml)
 - [opencode.yml](/D:/codespace/poco-claw/.github/workflows/opencode.yml)
 - [feishu-bot.yml](/D:/codespace/poco-claw/.github/workflows/feishu-bot.yml)
 - GitHub 仓库级安全设置当前已启用：
   - secret scanning
   - push protection
+
+其中以下自动化当前已配置为 **仅在上游仓库 `poco-ai/poco-claw` 中执行**，以避免 fork 仓库产生外部通知、文档同步或评论驱动 AI 任务噪音：
+
+- [docs-sync.yml](/D:/codespace/poco-claw/.github/workflows/docs-sync.yml)
+- [feishu-bot.yml](/D:/codespace/poco-claw/.github/workflows/feishu-bot.yml)
+- [opencode.yml](/D:/codespace/poco-claw/.github/workflows/opencode.yml)
 
 ### 6.2 治理缺口
 

@@ -40,6 +40,7 @@ on:
 
 jobs:
   send-event:
+    if: github.repository == 'poco-ai/poco-claw'
     name: Webhook
     runs-on: ubuntu-latest
     steps:
