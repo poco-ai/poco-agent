@@ -10,6 +10,7 @@ permissions:
 
 jobs:
   close-stale-issues:
+    if: github.repository == 'poco-ai/poco-claw'
     runs-on: ubuntu-latest
     steps:
       - name: Close stale issues

@@ -213,6 +213,7 @@ PR 描述至少包含：
 - [docs-sync.yml](/D:/codespace/poco-claw/.github/workflows/docs-sync.yml)
 - [feishu-bot.yml](/D:/codespace/poco-claw/.github/workflows/feishu-bot.yml)
 - [opencode.yml](/D:/codespace/poco-claw/.github/workflows/opencode.yml)
+- [close-stale-issues.yml](/D:/codespace/poco-claw/.github/workflows/close-stale-issues.yml)
 
 ### 6.2 治理缺口
 
