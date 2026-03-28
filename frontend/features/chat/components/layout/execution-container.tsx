@@ -11,6 +11,7 @@ import { ChatPanelSkeleton } from "@/features/chat/components/layout/execution-c
 import { ExecutionTabsSwitch } from "@/features/chat/components/layout/execution-tabs-switch";
 import { DesktopExecutionLayout } from "@/features/chat/components/layout/desktop-execution-layout";
 import { useToolExecutions } from "@/features/chat/components/execution/computer-panel/hooks/use-tool-executions";
+import { deriveExecutionSessionState } from "@/features/chat/lib/execution-session-state";
 import { useSessionDeliverables } from "@/features/chat/hooks/use-session-deliverables";
 
 interface ExecutionContainerProps {
@@ -25,8 +26,7 @@ export function ExecutionContainer({ sessionId }: ExecutionContainerProps) {
     onPollingStop: refreshTasks,
   });
   const isMobile = useIsMobile();
-  const isSessionActive =
-    session?.status === "running" || session?.status === "pending";
+  const executionState = deriveExecutionSessionState(session);
   const browserEnabled = Boolean(
     session?.config_snapshot?.browser_enabled ||
     session?.state_patch?.browser?.enabled,
@@ -40,18 +40,23 @@ export function ExecutionContainer({ sessionId }: ExecutionContainerProps) {
     ensureVersionsForDeliverable,
   } = useSessionDeliverables({
     sessionId,
-    isActive: isSessionActive,
+    isActive: executionState.shouldPollDeliverables,
   });
-  const hasArtifacts = fileChanges.length > 0 || deliverables.length > 0;
+  const hasArtifacts =
+    fileChanges.length > 0 ||
+    deliverables.length > 0 ||
+    executionState.isWorkspaceExportReady;
   const { executions, isLoading: isLoadingToolExecutions } = useToolExecutions({
     sessionId,
-    isActive: isSessionActive,
+    isActive: executionState.shouldPollToolExecutions,
     pollingIntervalMs: 2000,
     limit: 1,
   });
   const hasComputerRecords = executions.length > 0;
   const isRightPanelReady = !isLoadingToolExecutions;
-  const showArtifactsTab = isRightPanelReady && hasArtifacts;
+  const showArtifactsTab =
+    isRightPanelReady &&
+    (hasArtifacts || executionState.isWorkspaceExportPending);
   const showComputerTab = isRightPanelReady && hasComputerRecords;
   const showFilePanel = showArtifactsTab || showComputerTab;
 

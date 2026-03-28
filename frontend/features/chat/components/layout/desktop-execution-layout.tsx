@@ -158,6 +158,7 @@ export function DesktopExecutionLayout({
                           }
                           sessionId={sessionId}
                           sessionStatus={session?.status}
+                          workspaceExportStatus={session?.workspace_export_status}
                           deliverables={deliverables}
                           versionMap={versionMap}
                           selectedDeliverableId={selectedDeliverableId}

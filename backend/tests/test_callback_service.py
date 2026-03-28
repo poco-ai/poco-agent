@@ -724,7 +724,7 @@ class TestCallbackServiceShouldApplyWorkspaceExport(unittest.TestCase):
             )
             self.assertTrue(result)
 
-    def test_ready_status_with_stale_run(self) -> None:
+    def test_ready_status_with_stale_run_is_rejected(self) -> None:
         db = MagicMock()
         db_session = MagicMock()
         db_session.id = uuid.uuid4()
@@ -743,8 +743,7 @@ class TestCallbackServiceShouldApplyWorkspaceExport(unittest.TestCase):
             result = service._should_apply_workspace_export(
                 db, db_session, db_run, callback
             )
-            # Should return True because status is "ready" and session doesn't have "ready" yet
-            self.assertTrue(result)
+            self.assertFalse(result)
 
     def test_stale_run_non_ready_status(self) -> None:
         db = MagicMock()
@@ -989,6 +988,52 @@ class TestCallbackServiceProcessAgentCallback(unittest.TestCase):
             result = service.process_agent_callback(db, callback)
 
             self.assertEqual(result.status, "canceled")
+
+    def test_stale_ready_export_callback_does_not_trigger_detection(self) -> None:
+        db = MagicMock()
+        service = CallbackService()
+        db_session = create_mock_db_session(
+            status="running",
+            workspace_export_status="pending",
+            workspace_manifest_key="manifest.json",
+        )
+        db_session.id = uuid.uuid4()
+        db_run = MagicMock()
+        db_run.id = uuid.uuid4()
+        newer_terminal_run = MagicMock()
+        newer_terminal_run.id = uuid.uuid4()
+
+        with (
+            patch.object(service, "_resolve_session_and_run") as mock_resolve,
+            patch.object(
+                service,
+                "_detect_deliverables_if_ready",
+            ) as mock_detect_deliverables,
+            patch("app.services.callback_service.RunRepository") as mock_run_repo,
+            patch("app.services.callback_service.run_lifecycle_service"),
+            patch("app.services.callback_service.session_queue_service") as mock_queue,
+            patch(
+                "app.services.callback_service.pending_skill_creation_service"
+            ) as mock_pending_skill_creation,
+        ):
+            mock_resolve.return_value = (db_session, db_run)
+            mock_run_repo.get_latest_terminal_by_session.return_value = (
+                newer_terminal_run
+            )
+            mock_queue.has_active_items.return_value = False
+            service._im_events = MagicMock()
+
+            callback = create_callback_request(
+                run_id=str(db_run.id),
+                workspace_manifest_key="manifest.json",
+                workspace_export_status="ready",
+            )
+            callback.progress = 100
+
+            service.process_agent_callback(db, callback)
+
+            mock_detect_deliverables.assert_not_called()
+            mock_pending_skill_creation.detect_and_create_pending.assert_called_once()
 
     def test_updates_sdk_session_id_from_message(self) -> None:
         db = MagicMock()

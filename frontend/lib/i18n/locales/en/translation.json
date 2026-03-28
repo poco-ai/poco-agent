@@ -317,6 +317,18 @@
     "exportImageMultiSuccess": "Exported {{count}} images",
     "exportImageEmpty": "No conversation content to export",
     "exportImageFailed": "Failed to generate conversation image",
+    "executionState": {
+      "pending": "Pending",
+      "running": "Running",
+      "queued": "Queued",
+      "exportPending": "Finalizing",
+      "completed": "Completed",
+      "failed": "Failed",
+      "canceled": "Canceled",
+      "queueCount_one": "{{count}} queued prompt",
+      "queueCount_other": "{{count}} queued prompts",
+      "exportPendingHint": "Processing workspace files and deliverables"
+    },
     "statusBar": {
       "browser": "Browser",
       "openDesktop": "Open desktop",

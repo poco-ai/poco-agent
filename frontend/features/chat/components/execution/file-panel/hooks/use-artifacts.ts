@@ -88,6 +88,7 @@ const findFileByPath = (
 interface UseArtifactsOptions {
   sessionId?: string;
   sessionStatus?: "pending" | "running" | "completed" | "failed" | "canceled";
+  workspaceExportStatus?: string | null;
 }
 
 interface UseArtifactsReturn {
@@ -115,6 +116,7 @@ interface UseArtifactsReturn {
 export function useArtifacts({
   sessionId,
   sessionStatus,
+  workspaceExportStatus,
 }: UseArtifactsOptions): UseArtifactsReturn {
   const [files, setFiles] = useState<FileNode[]>([]);
   const [selectedPath, setSelectedPath] = useState<string | undefined>();
@@ -192,6 +194,22 @@ export function useArtifacts({
       void fetchFiles();
     }
   }, [sessionId, sessionStatus, fetchFiles]);
+
+  const prevWorkspaceExportStatusRef = useRef<
+    UseArtifactsOptions["workspaceExportStatus"]
+  >(undefined);
+  useEffect(() => {
+    const prevWorkspaceExportStatus = prevWorkspaceExportStatusRef.current;
+    prevWorkspaceExportStatusRef.current = workspaceExportStatus;
+
+    if (!sessionId) return;
+    if (
+      prevWorkspaceExportStatus !== "ready" &&
+      workspaceExportStatus === "ready"
+    ) {
+      void fetchFiles();
+    }
+  }, [sessionId, workspaceExportStatus, fetchFiles]);
 
   // Select a file and switch to document view
   const selectFile = useCallback((file: FileNode) => {

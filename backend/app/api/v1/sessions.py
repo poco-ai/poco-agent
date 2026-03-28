@@ -640,7 +640,10 @@ async def get_session_workspace_files(
             error_code=ErrorCode.FORBIDDEN,
             message="Session does not belong to the user",
         )
-    if not db_session.workspace_manifest_key:
+    if (
+        db_session.workspace_export_status != "ready"
+        or not db_session.workspace_manifest_key
+    ):
         return Response.success(data=[], message="Workspace export not ready")
 
     manifest = storage_service.get_manifest(db_session.workspace_manifest_key)

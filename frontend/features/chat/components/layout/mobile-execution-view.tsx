@@ -10,6 +10,7 @@ import { useSidebar } from "@/components/ui/sidebar";
 import { ChatPanel } from "../execution/chat-panel/chat-panel";
 import { ArtifactsPanel } from "../execution/file-panel/artifacts-panel";
 import { ComputerPanel } from "../execution/computer-panel/computer-panel";
+import { ExecutionStatusBadge } from "./execution-status-badge";
 import type {
   DeliverableResponse,
   DeliverableVersionResponse,
@@ -174,6 +175,11 @@ export function MobileExecutionView({
             </div>
           ) : null}
         </div>
+        {session?.session_id ? (
+          <div className="mt-1.5 flex items-center">
+            <ExecutionStatusBadge session={session} />
+          </div>
+        ) : null}
       </div>
 
       <div className="min-h-0 flex-1">
@@ -239,6 +245,7 @@ export function MobileExecutionView({
                       }
                       sessionId={sessionId}
                       sessionStatus={session?.status}
+                      workspaceExportStatus={session?.workspace_export_status}
                       deliverables={deliverables}
                       versionMap={versionMap}
                       selectedDeliverableId={selectedDeliverableId}

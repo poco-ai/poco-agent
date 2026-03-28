@@ -5,6 +5,7 @@ import {
   type TaskEnqueueActionResult,
 } from "@/features/chat/actions/session-actions";
 import { getQueuedQueriesAction } from "@/features/chat/actions/query-actions";
+import { deriveExecutionSessionState } from "@/features/chat/lib/execution-session-state";
 import type { ExecutionSession, InputFile } from "@/features/chat/types";
 import type { ModelSelection } from "@/features/chat/lib/model-catalog";
 
@@ -72,13 +73,12 @@ export function usePendingMessages({
   const requestIdRef = useRef(0);
 
   const sessionId = session?.session_id ?? null;
-  const isSessionActive =
-    session?.status === "running" || session?.status === "pending";
+  const executionState = deriveExecutionSessionState(session);
   const shouldPoll =
     Boolean(sessionId) &&
-    (isSessionActive ||
+    (executionState.isRunActive ||
       pendingMessages.length > 0 ||
-      (session?.queued_query_count ?? 0) > 0);
+      executionState.hasQueuedQueries);
 
   const refreshPendingMessages = useCallback(async () => {
     if (!sessionId) {

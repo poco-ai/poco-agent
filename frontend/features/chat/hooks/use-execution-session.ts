@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { getExecutionSessionAction } from "@/features/chat/actions/query-actions";
+import { deriveExecutionSessionState } from "@/features/chat/lib/execution-session-state";
 import { useAdaptivePolling } from "./use-adaptive-polling";
 import type { ExecutionSession } from "@/features/chat/types";
 import { playCompletionSound } from "@/lib/utils/sound";
@@ -133,10 +134,9 @@ export function useExecutionSession({
   }, [fetchSession]);
 
   // Adaptive polling while session is active
-  // Poll only when session is active (or initial load)
-  const isSessionActive =
-    !!sessionId &&
-    (!session || ["pending", "running"].includes(session.status));
+  const executionState = deriveExecutionSessionState(session);
+  const shouldPollSession =
+    !!sessionId && (!session || executionState.shouldPollSession);
 
   // Trigger callback when polling stops.
   const hasStoppedRef = useRef(false);
@@ -154,39 +154,42 @@ export function useExecutionSession({
 
   useEffect(() => {
     if (
-      session &&
-      ["completed", "failed", "canceled"].includes(session.status)
+      session?.status === "completed" &&
+      prevStatusRef.current !== null &&
+      ["pending", "running"].includes(prevStatusRef.current)
     ) {
-      // Trigger callback only once when polling stops
-      if (!hasStoppedRef.current && onPollingStop) {
-        hasStoppedRef.current = true;
-
-        // Only play sound if the status actually transitioned to completed
-        // while the component was mounted (i.e. not during initial load of an already completed session)
-        if (
-          session.status === "completed" &&
-          prevStatusRef.current !== null &&
-          ["pending", "running"].includes(prevStatusRef.current)
-        ) {
-          playCompletionSound();
-        }
-
-        onPollingStop();
-      }
-    } else if (session && ["pending", "running"].includes(session.status)) {
-      // Reset ref when session becomes active again
-      hasStoppedRef.current = false;
+      playCompletionSound();
     }
 
-    // Update previous status ref
     if (session) {
       prevStatusRef.current = session.status;
     }
-  }, [session, onPollingStop]);
+  }, [session]);
+
+  useEffect(() => {
+    if (!session) return;
+
+    if (executionState.isTerminal && !executionState.shouldPollSession) {
+      if (!hasStoppedRef.current && onPollingStop) {
+        hasStoppedRef.current = true;
+        onPollingStop();
+      }
+      return;
+    }
+
+    if (executionState.shouldPollSession) {
+      hasStoppedRef.current = false;
+    }
+  }, [
+    executionState.isTerminal,
+    executionState.shouldPollSession,
+    onPollingStop,
+    session,
+  ]);
 
   const { currentInterval, errorCount, trigger } = useAdaptivePolling({
     callback: fetchSession,
-    isActive: isSessionActive,
+    isActive: shouldPollSession,
     interval: pollingInterval,
     enableBackoff,
   });

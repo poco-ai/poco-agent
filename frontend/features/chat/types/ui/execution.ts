@@ -84,6 +84,10 @@ export interface ExecutionSession {
   new_message?: NewMessage;
   state_patch: StatePatch;
   config_snapshot?: ConfigSnapshot | null;
+  workspace_export_status?: string | null;
+  workspace_files_prefix?: string | null;
+  workspace_manifest_key?: string | null;
+  workspace_archive_key?: string | null;
   task_name?: string;
   user_prompt?: string;
   title?: string | null;

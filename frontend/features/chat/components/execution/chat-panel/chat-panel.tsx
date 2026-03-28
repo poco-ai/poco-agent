@@ -66,6 +66,7 @@ import {
 } from "@/components/ui/dialog";
 import { useLanguage } from "@/hooks/use-language";
 import { ModelSelector } from "@/features/chat/components/chat/model-selector";
+import { ExecutionStatusBadge } from "@/features/chat/components/layout/execution-status-badge";
 import { useModelCatalog } from "@/features/chat/hooks/use-model-catalog";
 import {
   normalizeModelSelection,
@@ -125,6 +126,21 @@ function getQueuedQueryPreview(
   }
 
   return null;
+}
+
+function toExecutionStatus(
+  status: string | undefined,
+): ExecutionSession["status"] | null {
+  switch (status) {
+    case "pending":
+    case "running":
+    case "completed":
+    case "failed":
+    case "canceled":
+      return status;
+    default:
+      return null;
+  }
 }
 
 function ChatHistorySkeleton() {
@@ -754,8 +770,8 @@ export function ChatPanel({
       }
 
       updateSession({
-        ...(result.acceptedType === "queued_query"
-          ? { status: "pending" as const }
+        ...(result.acceptedType === "run"
+          ? { status: toExecutionStatus(result.status) ?? "pending" }
           : {}),
         queued_query_count: result.queuedQueryCount,
         next_queued_query_preview:
@@ -797,7 +813,9 @@ export function ChatPanel({
         );
 
         updateSession({
-          status: "pending",
+          ...(result.acceptedType === "run"
+            ? { status: toExecutionStatus(result.status) ?? "pending" }
+            : {}),
           queued_query_count: result.queuedQueryCount,
           next_queued_query_preview:
             result.queuedQueryCount > 0
@@ -1107,6 +1125,12 @@ export function ChatPanel({
           action={
             session?.session_id || showRightPanelToggle ? (
               <div className="flex items-center gap-1">
+                {session?.session_id ? (
+                  <ExecutionStatusBadge
+                    session={session}
+                    className="hidden sm:inline-flex"
+                  />
+                ) : null}
                 {selectedModelId ? (
                   <ModelSelector
                     options={modelOptions}

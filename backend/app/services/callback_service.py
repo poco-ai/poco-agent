@@ -123,13 +123,10 @@ class CallbackService:
         if db_run is None:
             return True
 
-        export_status = (callback.workspace_export_status or "").strip().lower()
         latest_terminal_run = RunRepository.get_latest_terminal_by_session(
             db, db_session.id
         )
         if latest_terminal_run is None or latest_terminal_run.id == db_run.id:
-            return True
-        if export_status == "ready" and db_session.workspace_export_status != "ready":
             return True
 
         logger.info(
@@ -485,6 +482,9 @@ class CallbackService:
             should_apply_workspace_export
             and self._should_preserve_existing_ready_workspace(db_session, callback)
         )
+        should_process_final_workspace_export = (
+            should_apply_workspace_export and not preserve_existing_ready_workspace
+        )
         if preserve_existing_ready_workspace:
             logger.info(
                 "preserve_existing_ready_workspace_export",
@@ -585,8 +585,7 @@ class CallbackService:
                 session=db_session,
             )
         elif (
-            should_apply_workspace_export
-            and not preserve_existing_ready_workspace
+            should_process_final_workspace_export
             and callback.workspace_export_status is not None
             and callback.workspace_export_status.strip().lower() == "ready"
             and (db_session.status or "").strip().lower() in {"completed", "failed"}
@@ -599,12 +598,13 @@ class CallbackService:
                 session=db_session,
             )
 
-        self._detect_deliverables_if_ready(
-            db=db,
-            db_session=db_session,
-            db_run=db_run,
-            callback=callback,
-        )
+        if should_process_final_workspace_export:
+            self._detect_deliverables_if_ready(
+                db=db,
+                db_session=db_session,
+                db_run=db_run,
+                callback=callback,
+            )
 
         db.commit()
         return CallbackResponse(

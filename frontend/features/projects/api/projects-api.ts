@@ -1,4 +1,5 @@
 import { apiClient, API_ENDPOINTS } from "@/services/api-client";
+import { mapSessionToTaskHistoryStatus } from "@/features/chat/lib/execution-session-state";
 import type { SessionResponse } from "@/features/chat/types";
 import { userInputService } from "@/features/chat/api/user-input-api";
 import type { ProjectItem, TaskHistoryItem } from "@/features/projects/types";
@@ -50,7 +51,7 @@ function mapSessionToTask(session: SessionResponse): TaskHistoryItem {
     id: session.session_id,
     title: resolveSessionTitle(session),
     timestamp: session.updated_at || session.created_at,
-    status: session.status as TaskHistoryItem["status"],
+    status: mapSessionToTaskHistoryStatus(session),
     projectId: session.project_id || undefined,
     isPinned: session.is_pinned ?? false,
     pinnedAt: session.pinned_at ?? null,

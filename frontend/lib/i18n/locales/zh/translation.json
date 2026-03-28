@@ -317,6 +317,18 @@
     "exportImageMultiSuccess": "已导出 {{count}} 张图片",
     "exportImageEmpty": "暂无可导出的对话内容",
     "exportImageFailed": "生成对话长图失败",
+    "executionState": {
+      "pending": "待处理",
+      "running": "执行中",
+      "queued": "已排队",
+      "exportPending": "整理中",
+      "completed": "已完成",
+      "failed": "失败",
+      "canceled": "已取消",
+      "queueCount_one": "{{count}} 条排队消息",
+      "queueCount_other": "{{count}} 条排队消息",
+      "exportPendingHint": "正在整理工作区文件和交付物"
+    },
     "statusBar": {
       "browser": "浏览器",
       "openDesktop": "打开桌面",

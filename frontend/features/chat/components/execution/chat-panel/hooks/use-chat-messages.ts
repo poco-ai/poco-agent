@@ -9,6 +9,7 @@ import {
   getMessagesRawAction,
   getRunsBySessionAction,
 } from "@/features/chat/actions/query-actions";
+import { deriveExecutionSessionState } from "@/features/chat/lib/execution-session-state";
 import type {
   ChatMessage,
   ExecutionSession,
@@ -267,6 +268,7 @@ export function useChatMessages({
     sessionId: string;
     promise: Promise<{ changed: boolean; hasMore: boolean }>;
   } | null>(null);
+  const executionState = deriveExecutionSessionState(session);
 
   const buildParsedMessages = useCallback(() => {
     const realUserMessageIds = realUserMessageIdsRef.current ?? undefined;
@@ -687,15 +689,11 @@ export function useChatMessages({
     // Setup polling
     let interval: NodeJS.Timeout;
 
-    const isTerminal = ["completed", "failed", "canceled"].includes(
-      session.status,
-    );
-
-    if (session.session_id && !isTerminal) {
+    if (session.session_id && executionState.shouldPollMessages) {
       interval = setInterval(() => {
         void fetchMessages(false);
       }, pollingInterval);
-    } else if (session.session_id && isTerminal) {
+    } else if (session.session_id && executionState.isTerminal) {
       // Refresh run usage once the session becomes terminal so UI can display cost/tokens.
       void refreshRealUserMessageIds();
     }
@@ -707,7 +705,11 @@ export function useChatMessages({
   }, [
     session?.session_id,
     session?.status,
+    session?.queued_query_count,
+    session?.workspace_export_status,
     pollingInterval,
+    executionState.isTerminal,
+    executionState.shouldPollMessages,
     fetchMessagesDelta,
     fetchMessageAttachmentsDelta,
     refreshRealUserMessageIds,
@@ -725,8 +727,7 @@ export function useChatMessages({
   }, [messages]);
 
   // Determine if session is running/active
-  const isSessionActive =
-    session?.status === "running" || session?.status === "pending";
+  const isSessionActive = executionState.isRunActive;
 
   // Reset typing state when session becomes inactive
   useEffect(() => {

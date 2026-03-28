@@ -6,13 +6,20 @@ import { useT } from "@/lib/i18n/client";
  */
 interface ArtifactsEmptyProps {
   sessionStatus?: "pending" | "running" | "completed" | "failed" | "canceled";
+  workspaceExportStatus?: string | null;
 }
 
 /**
  * Empty state component for artifacts panel
  */
-export function ArtifactsEmpty({ sessionStatus }: ArtifactsEmptyProps) {
-  const isRunning = sessionStatus === "running" || sessionStatus === "pending";
+export function ArtifactsEmpty({
+  sessionStatus,
+  workspaceExportStatus,
+}: ArtifactsEmptyProps) {
+  const isRunning =
+    sessionStatus === "running" ||
+    sessionStatus === "pending" ||
+    workspaceExportStatus === "pending";
   const { t } = useT("translation");
 
   if (isRunning) {

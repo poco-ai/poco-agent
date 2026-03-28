@@ -25,6 +25,7 @@ interface ArtifactsPanelProps {
   fileChanges?: FileChange[];
   sessionId?: string;
   sessionStatus?: "pending" | "running" | "completed" | "failed" | "canceled";
+  workspaceExportStatus?: string | null;
   deliverables?: DeliverableResponse[];
   versionMap?: Record<string, DeliverableVersionResponse>;
   selectedDeliverableId?: string | null;
@@ -61,6 +62,7 @@ export function ArtifactsPanel({
   fileChanges = [],
   sessionId,
   sessionStatus,
+  workspaceExportStatus,
   deliverables = [],
   versionMap = {},
   selectedDeliverableId,
@@ -85,7 +87,7 @@ export function ArtifactsPanel({
     selectFile,
     closeViewer,
     ensureFreshFile,
-  } = useArtifacts({ sessionId, sessionStatus });
+  } = useArtifacts({ sessionId, sessionStatus, workspaceExportStatus });
   const openExpandedPreview = React.useCallback(() => {
     setIsExpandedPreviewOpen(true);
   }, []);
@@ -174,7 +176,12 @@ export function ArtifactsPanel({
     }
 
     if (fileChanges.length === 0) {
-      return <ArtifactsEmpty sessionStatus={sessionStatus} />;
+      return (
+        <ArtifactsEmpty
+          sessionStatus={sessionStatus}
+          workspaceExportStatus={workspaceExportStatus}
+        />
+      );
     }
 
     return (
