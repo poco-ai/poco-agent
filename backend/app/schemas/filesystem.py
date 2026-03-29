@@ -9,12 +9,6 @@ FilesystemMode = Literal["sandbox", "local_mount"]
 LocalMountAccessMode = Literal["ro", "rw"]
 DeploymentMode = Literal["local", "cloud"]
 MountProviderType = Literal["direct_bind", "bridge_live_mount"]
-LocalFilesystemHelperStatus = Literal[
-    "available",
-    "not_running",
-    "permission_denied",
-    "bridge_unreachable",
-]
 
 
 class LocalMountConfig(BaseModel):
@@ -68,8 +62,6 @@ class LocalFilesystemSupport(BaseModel):
     """Frontend-facing local filesystem capability summary."""
 
     deployment_mode: DeploymentMode
-    helper_status: LocalFilesystemHelperStatus
-    helper_message: str | None = None
     local_mount_available: bool
 
 

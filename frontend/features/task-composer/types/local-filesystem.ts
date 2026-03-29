@@ -5,16 +5,9 @@ import type {
 } from "@/features/chat/types/api/session";
 
 export type DeploymentMode = "local" | "cloud";
-export type LocalFilesystemHelperStatus =
-  | "available"
-  | "not_running"
-  | "permission_denied"
-  | "bridge_unreachable";
 
 export interface LocalFilesystemSupport {
   deployment_mode: DeploymentMode;
-  helper_status: LocalFilesystemHelperStatus;
-  helper_message?: string | null;
   local_mount_available: boolean;
 }
 

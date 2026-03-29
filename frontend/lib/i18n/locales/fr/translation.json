@@ -2060,10 +2060,8 @@
       "title": "État de l’environnement",
       "loading": "Vérification...",
       "unknown": "Statut indisponible",
-      "available": "Assistant prêt",
-      "not_running": "Assistant non lancé",
-      "permission_denied": "Permission refusée à l’assistant",
-      "bridge_unreachable": "Pont cloud indisponible"
+      "available": "Montage locale prête",
+      "unavailable": "Montage de répertoire local indisponible"
     },
     "mode": {
       "sandboxTitle": "Sandbox uniquement",

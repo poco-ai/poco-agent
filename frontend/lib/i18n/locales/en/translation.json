@@ -2060,10 +2060,8 @@
       "title": "Environment status",
       "loading": "Checking...",
       "unknown": "Status unavailable",
-      "available": "Helper ready",
-      "not_running": "Helper not running",
-      "permission_denied": "Helper permission denied",
-      "bridge_unreachable": "Cloud bridge unavailable"
+      "available": "Local mount ready",
+      "unavailable": "Local directory mounting is not available"
     },
     "mode": {
       "sandboxTitle": "Sandbox only",

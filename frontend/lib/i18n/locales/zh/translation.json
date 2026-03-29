@@ -2060,10 +2060,8 @@
       "title": "环境状态",
       "loading": "检查中...",
       "unknown": "状态暂不可用",
-      "available": "助手已就绪",
-      "not_running": "助手未启动",
-      "permission_denied": "助手权限不足",
-      "bridge_unreachable": "云端桥接不可用"
+      "available": "本地挂载已就绪",
+      "unavailable": "云端部署不支持本地目录挂载"
     },
     "mode": {
       "sandboxTitle": "仅使用 Sandbox",

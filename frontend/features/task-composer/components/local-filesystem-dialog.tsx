@@ -51,18 +51,10 @@ interface LocalFilesystemDialogProps {
   saveBehavior?: "draft" | "next_run";
 }
 
-const STATUS_STYLES: Record<
-  NonNullable<LocalFilesystemSupport["helper_status"]>,
-  string
-> = {
-  available:
-    "border-emerald-500/20 bg-emerald-500/8 text-emerald-700 dark:text-emerald-300",
-  not_running:
-    "border-amber-500/20 bg-amber-500/8 text-amber-700 dark:text-amber-300",
-  permission_denied:
-    "border-amber-500/20 bg-amber-500/8 text-amber-700 dark:text-amber-300",
-  bridge_unreachable: "border-destructive/20 bg-destructive/8 text-destructive",
-};
+const STATUS_AVAILABLE =
+  "border-emerald-500/20 bg-emerald-500/8 text-emerald-700 dark:text-emerald-300";
+const STATUS_UNAVAILABLE =
+  "border-destructive/20 bg-destructive/8 text-destructive";
 
 export function LocalFilesystemDialog({
   open,
@@ -189,15 +181,16 @@ export function LocalFilesystemDialog({
     !support.local_mount_available &&
     filesystemMode !== "local_mount";
 
-  const statusIcon =
-    support?.helper_status === "available" ? (
-      <ShieldCheck className="size-4" />
-    ) : (
-      <ShieldAlert className="size-4" />
-    );
+  const statusIcon = support?.local_mount_available ? (
+    <ShieldCheck className="size-4" />
+  ) : (
+    <ShieldAlert className="size-4" />
+  );
 
   const statusClassName = support
-    ? STATUS_STYLES[support.helper_status]
+    ? support.local_mount_available
+      ? STATUS_AVAILABLE
+      : STATUS_UNAVAILABLE
     : "border-border/60 bg-muted/40 text-foreground";
 
   const footerHintKey =
@@ -225,29 +218,31 @@ export function LocalFilesystemDialog({
                   <Loader2 className="size-3 animate-spin" />
                   {t("filesystem.status.loading")}
                 </Badge>
-              ) : null}
+              ) : (
+                <div
+                  className={cn(
+                    "inline-flex items-center gap-2 rounded-full border px-3 py-1 text-sm font-medium",
+                    statusClassName,
+                  )}
+                >
+                  {statusIcon}
+                  <span>
+                    {support
+                      ? support.local_mount_available
+                        ? t("filesystem.status.available")
+                        : t("filesystem.status.unavailable")
+                      : t("filesystem.status.unknown")}
+                  </span>
+                </div>
+              )}
             </div>
             <div className="mt-3 flex flex-wrap items-start gap-3">
-              <div
-                className={cn(
-                  "inline-flex items-center gap-2 rounded-full border px-3 py-1 text-sm font-medium",
-                  statusClassName,
-                )}
-              >
-                {statusIcon}
-                <span>
-                  {support
-                    ? t(`filesystem.status.${support.helper_status}`)
-                    : t("filesystem.status.unknown")}
-                </span>
-              </div>
               <p className="max-w-2xl text-sm text-muted-foreground">
                 {supportLoadFailed
                   ? t("filesystem.messages.supportUnknown")
-                  : support?.helper_message?.trim() ||
-                    (support?.deployment_mode === "cloud"
-                      ? t("filesystem.messages.cloudDeployment")
-                      : t("filesystem.messages.localDeployment"))}
+                  : support?.deployment_mode === "cloud"
+                    ? t("filesystem.messages.cloudDeployment")
+                    : t("filesystem.messages.localDeployment")}
               </p>
             </div>
           </div>

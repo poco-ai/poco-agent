@@ -2060,10 +2060,8 @@
       "title": "Umgebungsstatus",
       "loading": "Wird geprüft...",
       "unknown": "Status nicht verfügbar",
-      "available": "Helper bereit",
-      "not_running": "Helper nicht gestartet",
-      "permission_denied": "Helper ohne Berechtigung",
-      "bridge_unreachable": "Cloud-Bridge nicht verfügbar"
+      "available": "Lokale Einbindung bereit",
+      "unavailable": "Lokale Verzeichniseinbindung nicht verfügbar"
     },
     "mode": {
       "sandboxTitle": "Nur Sandbox",

@@ -2060,10 +2060,8 @@
       "title": "環境ステータス",
       "loading": "確認中...",
       "unknown": "ステータス不明",
-      "available": "ヘルパー準備完了",
-      "not_running": "ヘルパー未起動",
-      "permission_denied": "ヘルパーの権限不足",
-      "bridge_unreachable": "クラウドブリッジ利用不可"
+      "available": "ローカルマウント準備完了",
+      "unavailable": "ローカルディレクトリのマウントは利用できません"
     },
     "mode": {
       "sandboxTitle": "Sandbox のみ",
