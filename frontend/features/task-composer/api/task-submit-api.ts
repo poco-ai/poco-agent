@@ -51,6 +51,18 @@ function buildTaskConfig(
   if (options.skill_config && Object.keys(options.skill_config).length > 0) {
     config.skill_config = options.skill_config;
   }
+  if (options.plugin_config && Object.keys(options.plugin_config).length > 0) {
+    config.plugin_config = options.plugin_config;
+  }
+  if (Array.isArray(options.subagent_ids)) {
+    config.subagent_ids = options.subagent_ids;
+  }
+  if (options.filesystem_mode) {
+    config.filesystem_mode = options.filesystem_mode;
+  }
+  if (Array.isArray(options.local_mounts)) {
+    config.local_mounts = options.local_mounts;
+  }
 
   return Object.keys(config).length > 0 ? config : undefined;
 }

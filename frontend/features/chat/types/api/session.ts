@@ -4,12 +4,23 @@
 
 import type { ApiStatePatch } from "./callback";
 
+export type FilesystemMode = "sandbox" | "local_mount";
+export type LocalMountAccessMode = "ro" | "rw";
+
+export interface LocalMountConfig {
+  id: string;
+  name: string;
+  host_path: string;
+  access_mode?: LocalMountAccessMode;
+}
+
 export interface SessionCreateRequest {
   config?: TaskConfig | null;
 }
 
 export interface SessionUpdateRequest {
   status?: string | null;
+  config?: TaskConfig | null;
   sdk_session_id?: string | null;
   title?: string | null;
   is_pinned?: boolean | null;
@@ -182,5 +193,7 @@ export interface TaskConfig {
   plugin_config?: Record<string, boolean>;
   /** Optional explicit subagent selection (by id). */
   subagent_ids?: number[];
+  filesystem_mode?: FilesystemMode;
+  local_mounts?: LocalMountConfig[];
   input_files?: InputFile[];
 }

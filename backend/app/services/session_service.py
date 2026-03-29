@@ -23,9 +23,11 @@ from app.repositories.usage_log_repository import UsageLogRepository
 from app.repositories.user_input_request_repository import UserInputRequestRepository
 from app.schemas.session import SessionCreateRequest, SessionUpdateRequest
 from app.schemas.task import TaskEnqueueResponse
+from app.services.task_service import TaskService
 
 logger = logging.getLogger(__name__)
 JsonValueT = TypeVar("JsonValueT")
+task_service = TaskService()
 
 
 class SessionService:
@@ -103,6 +105,27 @@ class SessionService:
                         message=f"Project not found: {project_id}",
                     )
                 db_session.project_id = project_id
+
+        if "config" in request.model_fields_set and request.config is not None:
+            base_config = self._deepcopy_json(db_session.config_snapshot) or {}
+            merged_config = task_service._build_config_snapshot(  # noqa: SLF001
+                db,
+                db_session.user_id,
+                request.config,
+                base_config=base_config,
+            )
+            project = (
+                ProjectRepository.get_by_id(db, db_session.project_id)
+                if db_session.project_id is not None
+                else None
+            )
+            db_session.config_snapshot = (
+                task_service._apply_project_repo_defaults(  # noqa: SLF001
+                    merged_config,
+                    project,
+                )
+                or None
+            )
 
         if "title" in request.model_fields_set:
             if request.title is None:

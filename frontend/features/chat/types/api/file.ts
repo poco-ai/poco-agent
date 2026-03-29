@@ -12,6 +12,9 @@ export interface FileNode {
   mimeType?: string | null;
   oss_status?: string | null;
   oss_meta?: Record<string, unknown> | null;
+  source?: "workspace" | "local_mount";
+  mount_id?: string | null;
+  access_mode?: "ro" | "rw" | null;
 }
 
 export interface WorkspaceArchiveResponse {

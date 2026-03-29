@@ -3,6 +3,7 @@
  */
 
 import type { ApiStatePatch } from "../api/callback";
+import type { FilesystemMode, LocalMountConfig } from "../api/session";
 
 export type ExecutionStatus =
   | "pending"
@@ -62,6 +63,8 @@ export interface ConfigSnapshot {
   repo_url?: string;
   git_branch?: string;
   git_token_env_key?: string | null;
+  filesystem_mode?: FilesystemMode;
+  local_mounts?: LocalMountConfig[];
 }
 
 /**

@@ -9,6 +9,8 @@ import httpx
 from app.core.errors.error_codes import ErrorCode
 from app.core.errors.exceptions import AppException
 from app.core.settings import get_settings
+from app.schemas.filesystem import MountResolutionResult
+from app.services.local_mount_service import LocalMountService
 from app.services.workspace_manager import WorkspaceManager
 
 if TYPE_CHECKING:
@@ -24,6 +26,7 @@ class ContainerPool:
         self.docker_client = docker.from_env()
         self.settings = get_settings()
         self.workspace_manager = WorkspaceManager()
+        self.local_mount_service = LocalMountService(self.settings)
 
         self.containers: dict[str, "Container"] = {}
         self.session_to_container: dict[str, str] = {}
@@ -33,10 +36,11 @@ class ContainerPool:
         session_id: str,
         user_id: str,
         *,
+        task_config: dict | None = None,
         browser_enabled: bool = False,
         container_mode: str = "ephemeral",
         container_id: str | None = None,
-    ) -> tuple[str, str]:
+    ) -> tuple[str, str, MountResolutionResult]:
         """Get or create container.
 
         Args:
@@ -50,6 +54,14 @@ class ContainerPool:
             (executor_url, container_id)
         """
         overall_started = time.perf_counter()
+        _, mount_resolution = self.local_mount_service.build_runtime_config(
+            task_config,
+            session_id=session_id,
+        )
+        filesystem_mode = (
+            "local_mount" if mount_resolution.resolved_mounts else "sandbox"
+        )
+        mount_fingerprint = mount_resolution.mount_fingerprint
         published_host = (
             self.settings.executor_published_host or ""
         ).strip() or "localhost"
@@ -68,15 +80,24 @@ class ContainerPool:
 
             # If the caller now requires browser support but the existing container was created
             # without it, recreate the container (most common when upgrading a persistent container).
-            if browser_enabled and not self._is_browser_enabled_container(container):
+            mismatch_reasons = self._get_reuse_mismatch_reasons(
+                container=container,
+                browser_enabled=browser_enabled,
+                filesystem_mode=filesystem_mode,
+                mount_fingerprint=mount_fingerprint,
+            )
+            if mismatch_reasons:
                 logger.info(
-                    "container_reuse_mismatch_recreate",
+                    "mount_reuse_mismatch",
                     extra={
                         "session_id": session_id,
                         "user_id": user_id,
                         "container_id": container_id,
                         "container_mode": container_mode,
-                        "browser_enabled": True,
+                        "browser_enabled": bool(browser_enabled),
+                        "filesystem_mode": filesystem_mode,
+                        "mount_fingerprint": mount_fingerprint,
+                        "reasons": mismatch_reasons,
                     },
                 )
                 await self.delete_container(container_id)
@@ -94,12 +115,15 @@ class ContainerPool:
                         "container_id": container_id,
                         "container_mode": container_mode,
                         "browser_enabled": bool(browser_enabled),
+                        "filesystem_mode": filesystem_mode,
+                        "mount_fingerprint": mount_fingerprint,
                         "host_port": host_port,
                     },
                 )
                 return (
                     f"http://{published_host}:{host_port}",
                     container_id,
+                    mount_resolution,
                 )
 
         container_id = f"exec-{session_id[:8]}"
@@ -153,6 +177,8 @@ class ContainerPool:
             "user": user_id,
             "container_mode": container_mode,
             "browser_enabled": "true" if browser_enabled else "false",
+            "filesystem_mode": filesystem_mode,
+            "mount_fingerprint": mount_fingerprint,
         }
 
         step_started = time.perf_counter()
@@ -188,7 +214,10 @@ class ContainerPool:
             image=image,
             name=container_name,
             environment=environment,
-            volumes={workspace_volume: {"bind": "/workspace", "mode": "rw"}},
+            volumes=self._build_volume_map(
+                workspace_volume=workspace_volume,
+                mount_resolution=mount_resolution,
+            ),
             ports=ports,
             detach=True,
             auto_remove=True,
@@ -206,6 +235,8 @@ class ContainerPool:
                 "container_name": container_name,
                 "image": image,
                 "browser_enabled": bool(browser_enabled),
+                "filesystem_mode": filesystem_mode,
+                "mount_count": len(mount_resolution.resolved_mounts),
             },
         )
 
@@ -246,9 +277,59 @@ class ContainerPool:
                 "container_name": container_name,
                 "container_mode": container_mode,
                 "host_port": host_port,
+                "filesystem_mode": filesystem_mode,
+                "mount_fingerprint": mount_fingerprint,
             },
         )
-        return executor_url, container_id
+        return executor_url, container_id, mount_resolution
+
+    @staticmethod
+    def _build_volume_map(
+        *,
+        workspace_volume: str,
+        mount_resolution: MountResolutionResult,
+    ) -> dict[str, dict[str, str]]:
+        volumes: dict[str, dict[str, str]] = {
+            workspace_volume: {"bind": "/workspace", "mode": "rw"}
+        }
+        for mount in mount_resolution.resolved_mounts:
+            logger.info(
+                "mount_attach",
+                extra={
+                    "source_path": mount.source_path,
+                    "container_path": mount.container_path,
+                    "access_mode": mount.access_mode,
+                    "provider_type": mount.provider_type,
+                },
+            )
+            volumes[mount.source_path] = {
+                "bind": mount.container_path,
+                "mode": mount.access_mode,
+            }
+        return volumes
+
+    def _get_reuse_mismatch_reasons(
+        self,
+        *,
+        container: "Container",
+        browser_enabled: bool,
+        filesystem_mode: str,
+        mount_fingerprint: str,
+    ) -> list[str]:
+        reasons: list[str] = []
+        if browser_enabled and not self._is_browser_enabled_container(container):
+            reasons.append("browser_enabled")
+
+        labels = getattr(container, "labels", None) or {}
+        current_filesystem_mode = str(labels.get("filesystem_mode", "sandbox")).strip()
+        if current_filesystem_mode != filesystem_mode:
+            reasons.append("filesystem_mode")
+
+        current_mount_fingerprint = str(labels.get("mount_fingerprint", "")).strip()
+        if current_mount_fingerprint != mount_fingerprint:
+            reasons.append("mount_fingerprint")
+
+        return reasons
 
     def _resolve_executor_image(self, *, browser_enabled: bool) -> str:
         """Pick executor image based on browser requirement."""
@@ -506,6 +587,11 @@ class ContainerPool:
             if container_mode == "ephemeral":
                 logger.info(f"Container {container_id} is ephemeral, stopping")
                 try:
+                    self._log_mount_release(
+                        container,
+                        reason="task_complete",
+                        session_id=session_id,
+                    )
                     container.stop(timeout=10)
                 except Exception as e:
                     logger.error(f"Failed to stop container {container_id}: {e}")
@@ -531,6 +617,7 @@ class ContainerPool:
             return
 
         try:
+            self._log_mount_release(container, reason="delete_container")
             container.stop(timeout=10)
         except Exception as e:
             logger.error(f"Failed to stop container {cid}: {e}")
@@ -611,6 +698,11 @@ class ContainerPool:
             labels = getattr(container, "labels", None) or {}
             logical_id = labels.get("container_id")
             try:
+                self._log_mount_release(
+                    container,
+                    reason="cancel_task",
+                    session_id=session_id,
+                )
                 container.stop(timeout=10)
                 logger.info(
                     "container_stopped",
@@ -646,6 +738,24 @@ class ContainerPool:
                 ]
                 for sid in bound_sessions:
                     self.session_to_container.pop(sid, None)
+
+    @staticmethod
+    def _log_mount_release(
+        container: "Container",
+        *,
+        reason: str,
+        session_id: str | None = None,
+    ) -> None:
+        labels = getattr(container, "labels", None) or {}
+        logger.info(
+            "mount_release",
+            extra={
+                "reason": reason,
+                "session_id": session_id or labels.get("session_id"),
+                "container_id": labels.get("container_id"),
+                "mount_fingerprint": labels.get("mount_fingerprint"),
+            },
+        )
 
     def get_container_stats(self) -> dict[str, int | list[dict]]:
         """Get container statistics."""

@@ -36,6 +36,7 @@ ANTHROPIC_KEY=""
 ANTHROPIC_BASE_URL=""
 DEFAULT_MODEL=""
 API_PROVIDER_MODE=""
+DEPLOYMENT_MODE=""
 # Language setting (en or zh)
 LANG="en"
 
@@ -90,6 +91,7 @@ msg() {
     "header.s3_endpoint") [[ "$LANG" == "zh" ]] && echo "S3 公共端点配置" || echo "S3 Public Endpoint Configuration" ;;
     "header.setup_complete") [[ "$LANG" == "zh" ]] && echo "设置完成" || echo "Setup Complete" ;;
     "header.lang_select") [[ "$LANG" == "zh" ]] && echo "语言选择" || echo "Language Selection" ;;
+    "header.deployment_mode") [[ "$LANG" == "zh" ]] && echo "部署模式" || echo "Deployment Mode" ;;
 
     # Interactive setup
     "setup.welcome") [[ "$LANG" == "zh" ]] && echo "欢迎使用 Poco！此向导将帮助您配置基本设置。" || echo "Welcome to Poco! This wizard will help you configure the essential settings." ;;
@@ -114,6 +116,7 @@ msg() {
     "success.default_model") [[ "$LANG" == "zh" ]] && echo "已配置默认模型" || echo "Default model configured" ;;
     "success.s3_endpoint") [[ "$LANG" == "zh" ]] && echo "已配置 S3 公共端点" || echo "S3 public endpoint configured" ;;
     "success.bootstrap") [[ "$LANG" == "zh" ]] && echo "引导完成！" || echo "Bootstrap completed!" ;;
+    "success.deployment_mode") [[ "$LANG" == "zh" ]] && echo "已配置部署模式" || echo "Deployment mode configured" ;;
 
     # Info messages
     "info.anthropic_configured") [[ "$LANG" == "zh" ]] && echo "已配置模型 API 密钥" || echo "Model API key is configured" ;;
@@ -560,6 +563,65 @@ select_language() {
   fi
 }
 
+select_deployment_mode() {
+  local existing="${1:-local}"
+  local default_choice="1"
+  if [[ "$existing" == "cloud" ]]; then
+    default_choice="2"
+  fi
+
+  print_header "$(msg "header.deployment_mode")"
+
+  if [[ "$LANG" == "zh" ]]; then
+    echo "选择部署模式："
+    echo "  1) 本地开发（默认）— 支持本地目录挂载"
+    echo "  2) 云端部署 — 禁用本地目录挂载"
+  else
+    echo "Select deployment mode:"
+    echo "  1) Local development (default) — local directory mounting enabled"
+    echo "  2) Cloud deployment — local directory mounting disabled"
+  fi
+
+  if [[ -n "$existing" ]]; then
+    echo ""
+    echo "  $(msg "setup.keep_current"): ${existing}"
+  fi
+
+  echo ""
+  echo -n "$(msg "prompt.provider_choice"): "
+
+  local choice
+  read_line choice
+
+  case "$choice" in
+    1) DEPLOYMENT_MODE="local" ;;
+    2) DEPLOYMENT_MODE="cloud" ;;
+    *) DEPLOYMENT_MODE="$existing" ;;
+  esac
+
+  # Also update backend/.env if it exists (for uv run local dev)
+  local backend_env="${ROOT_DIR}/backend/.env"
+  if [[ -f "$backend_env" ]]; then
+    local tmp
+    tmp="$(mktemp)"
+    awk -v key="DEPLOYMENT_MODE" -v val="$DEPLOYMENT_MODE" '
+      BEGIN { replaced = 0 }
+      $0 ~ "^" key "=" {
+        print key "=" val
+        replaced = 1
+        next
+      }
+      { print }
+      END {
+        if (replaced == 0) {
+          print key "=" val
+        }
+      }
+    ' "$backend_env" > "$tmp"
+    mv "$tmp" "$backend_env"
+  fi
+}
+
 infer_provider_mode_from_base_url() {
   local raw_url="$1"
   local normalized
@@ -614,18 +676,23 @@ interactive_setup() {
   local existing_anthropic_base_url
   local existing_default_model
   local existing_s3_endpoint
+  local existing_deployment_mode
 
   existing_anthropic="$(read_env_key "ANTHROPIC_API_KEY" || true)"
   existing_anthropic_base_url="$(read_env_key "ANTHROPIC_BASE_URL" || true)"
   existing_default_model="$(read_env_key "DEFAULT_MODEL" || true)"
   existing_s3_endpoint="$(read_env_key "S3_PUBLIC_ENDPOINT" || true)"
+  existing_deployment_mode="$(read_env_key "DEPLOYMENT_MODE" || true)"
 
   # Allow CLI args to override .env defaults during interactive setup.
   if [[ -n "$ANTHROPIC_KEY" ]]; then existing_anthropic="$ANTHROPIC_KEY"; fi
   if [[ -n "$ANTHROPIC_BASE_URL" ]]; then existing_anthropic_base_url="$ANTHROPIC_BASE_URL"; fi
   if [[ -n "$DEFAULT_MODEL" ]]; then existing_default_model="$DEFAULT_MODEL"; fi
 
-  # Prompt for model API endpoint type and credentials.
+  # --- Deployment mode selection ---
+  select_deployment_mode "$existing_deployment_mode"
+
+  # --- Model API configuration ---
   print_header "$(msg "header.required_config")"
   local default_provider_mode
   default_provider_mode="$(infer_provider_mode_from_base_url "$existing_anthropic_base_url")"
@@ -722,6 +789,10 @@ EOF
 
   # Write all collected keys
   # NOTE: write_env_key now handles check-before-write logic correctly
+  if [[ -n "$DEPLOYMENT_MODE" ]]; then
+    write_env_key "DEPLOYMENT_MODE" "$DEPLOYMENT_MODE"
+    print_success "$(msg "success.deployment_mode")"
+  fi
   if [[ -n "$ANTHROPIC_KEY" ]]; then
     write_env_key "ANTHROPIC_API_KEY" "$ANTHROPIC_KEY"
     print_success "$(msg "success.anthropic_configured")"
@@ -955,7 +1026,7 @@ if [[ "$START_ALL" = true ]]; then
   fi
 
   if [[ "$INIT_BUCKET" = true ]]; then
-    "${COMPOSE[@]}" --profile init up -d rustfs-init || \
+    "${COMPOSE[@]}" --profile init up -d --no-deps rustfs-init || \
       warn "$(msg "warn.rustfs_init_failed")"
   fi
 fi

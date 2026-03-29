@@ -31,6 +31,9 @@ def build_workspace_file_nodes(
         mime_type = node.get("mimeType") or node.get("mime_type")
         oss_status = node.get("oss_status") or node.get("ossStatus")
         oss_meta = node.get("oss_meta") or node.get("ossMeta")
+        source = node.get("source") or "workspace"
+        mount_id = node.get("mount_id") or node.get("mountId")
+        access_mode = node.get("access_mode") or node.get("accessMode")
 
         children_raw = node.get("children")
         children = (
@@ -62,6 +65,9 @@ def build_workspace_file_nodes(
                 mimeType=mime_type,
                 oss_status=oss_status,
                 oss_meta=oss_meta,
+                source=source,
+                mount_id=mount_id,
+                access_mode=access_mode,
             )
         )
 

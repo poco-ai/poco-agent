@@ -160,10 +160,14 @@ export function ArtifactsPanel({
         }
 
         if (!sessionId) return;
-        const response = await chatService.getFolderArchive(
-          sessionId,
-          node.path,
-        );
+        const response =
+          node.source === "local_mount" && node.mount_id
+            ? await chatService.getLocalMountFolderArchive(
+                sessionId,
+                node.mount_id,
+                node.path,
+              )
+            : await chatService.getFolderArchive(sessionId, node.path);
         if (!response.url) {
           toast.error(t("fileSidebar.archiveNotAvailable"));
           return;

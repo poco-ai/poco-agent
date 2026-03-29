@@ -22,6 +22,7 @@ A safer, more beautiful, and easier-to-use OpenClaw alternative
 
 - **Secure Sandbox**
   All tasks run in an isolated container. Feel free to install dependencies, modify files, and execute commands — without affecting the host environment.
+  - **Local Directory Mounting** — mount host directories into the sandbox so the agent can work with your real project files directly (self-hosted only)
 - **More Than a Chatbot**
   - Supports Plan Mode, conversation queueing, conversation termination ...
   - **Project management**: organize and switch between tasks and contexts more effectively

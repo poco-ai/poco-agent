@@ -5,9 +5,11 @@ repos:
       - id: ruff-check
         name: backend · lint
         exclude: ^backend/assets/
+        args: [backend, executor, executor_manager]
       - id: ruff-format
         name: backend · format
         exclude: ^backend/assets/
+        args: [backend, executor, executor_manager]
 
   - repo: https://github.com/facebook/pyrefly-pre-commit
     rev: 0.47.0
@@ -17,6 +19,18 @@ repos:
         exclude: ^backend/assets/
         pass_filenames: true
         language: system
+      - id: pyrefly-check
+        name: executor · typecheck
+        entry: bash -c 'cd executor && uv run --frozen --with pyrefly==0.47.0 pyrefly check'
+        pass_filenames: false
+        language: system
+        always_run: true
+      - id: pyrefly-check
+        name: executor_manager · typecheck
+        entry: bash -c 'cd executor_manager && uv run --frozen --with pyrefly==0.47.0 pyrefly check'
+        pass_filenames: false
+        language: system
+        always_run: true
 
   - repo: https://github.com/pre-commit/mirrors-eslint
     rev: v9.39.1

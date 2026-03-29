@@ -4,6 +4,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import {
   Image as ImageIcon,
+  HardDrive,
   Loader2,
   MessageSquare,
   PanelRightClose,
@@ -62,11 +63,16 @@ import {
 } from "@/components/ui/dialog";
 import { useLanguage } from "@/hooks/use-language";
 import { ModelSelector } from "@/features/chat/components/chat/model-selector";
+import { chatService } from "@/features/chat/api/chat-api";
 import { useModelCatalog } from "@/features/chat/hooks/use-model-catalog";
 import {
   normalizeModelSelection,
   type ModelSelection,
 } from "@/features/chat/lib/model-catalog";
+import {
+  LocalFilesystemDialog,
+  type LocalFilesystemDraft,
+} from "@/features/task-composer";
 
 interface ChatPanelProps {
   session: ExecutionSession | null;
@@ -191,6 +197,8 @@ export function ChatPanel({
     React.useState<QuoteSelectionState | null>(null);
   const [draftModelSelection, setDraftModelSelection] =
     React.useState<ModelSelection | null>(null);
+  const [filesystemDialogOpen, setFilesystemDialogOpen] = React.useState(false);
+  const [isSavingFilesystem, setIsSavingFilesystem] = React.useState(false);
 
   // Message management hook
   const {
@@ -1008,6 +1016,46 @@ export function ChatPanel({
     [canExportConversationImage, headerDescription, isExportingImage, t],
   );
 
+  const localFilesystemValue = React.useMemo<LocalFilesystemDraft>(
+    () => ({
+      filesystem_mode: session?.config_snapshot?.filesystem_mode ?? "sandbox",
+      local_mounts: session?.config_snapshot?.local_mounts ?? [],
+    }),
+    [
+      session?.config_snapshot?.filesystem_mode,
+      session?.config_snapshot?.local_mounts,
+    ],
+  );
+
+  const handleSaveLocalFilesystem = React.useCallback(
+    async (nextValue: LocalFilesystemDraft) => {
+      if (!session?.session_id) {
+        return;
+      }
+
+      setIsSavingFilesystem(true);
+      try {
+        await chatService.updateSession(session.session_id, {
+          config: {
+            filesystem_mode: nextValue.filesystem_mode,
+            local_mounts: nextValue.local_mounts,
+          },
+        });
+        updateSession({
+          config_snapshot: {
+            ...(session.config_snapshot ?? {}),
+            filesystem_mode: nextValue.filesystem_mode,
+            local_mounts: nextValue.local_mounts,
+          },
+        });
+        toast.success(t("filesystem.toasts.saved"));
+      } finally {
+        setIsSavingFilesystem(false);
+      }
+    },
+    [session?.config_snapshot, session?.session_id, t, updateSession],
+  );
+
   return (
     <div
       ref={panelRootRef}
@@ -1034,6 +1082,14 @@ export function ChatPanel({
                     disabled={isLoadingModelCatalog}
                     triggerClassName="h-8 max-w-[220px] px-2"
                   />
+                ) : null}
+                {session?.session_id ? (
+                  <PanelHeaderAction
+                    onClick={() => setFilesystemDialogOpen(true)}
+                    title={t("filesystem.actions.manage")}
+                  >
+                    <HardDrive className="size-4" />
+                  </PanelHeaderAction>
                 ) : null}
                 {session?.session_id ? (
                   <DropdownMenu>
@@ -1226,6 +1282,17 @@ export function ChatPanel({
           ) : null}
         </DialogContent>
       </Dialog>
+
+      {session?.session_id ? (
+        <LocalFilesystemDialog
+          open={filesystemDialogOpen}
+          onOpenChange={setFilesystemDialogOpen}
+          value={localFilesystemValue}
+          isSaving={isSavingFilesystem}
+          saveBehavior="next_run"
+          onSave={handleSaveLocalFilesystem}
+        />
+      ) : null}
 
       {/* Status Bar - Skills and MCP */}
       {(hasConfigSnapshot || hasSkills || hasMcp || hasBrowser) && (

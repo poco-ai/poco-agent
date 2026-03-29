@@ -49,6 +49,7 @@ class WorkspaceManager:
             ".git",
             ".hg",
             ".svn",
+            ".poco-local",
             ".DS_Store",
             "__pycache__",
             ".pytest_cache",
@@ -82,7 +83,9 @@ class WorkspaceManager:
             user_dir.mkdir(parents=True, exist_ok=True)
             session_dir.mkdir(exist_ok=True)
 
-            (session_dir / "workspace").mkdir(exist_ok=True)
+            workspace_dir = session_dir / "workspace"
+            workspace_dir.mkdir(exist_ok=True)
+            (workspace_dir / ".poco-local").mkdir(exist_ok=True)
             (session_dir / "logs").mkdir(exist_ok=True)
 
             self._write_meta(session_dir, user_id, session_id)

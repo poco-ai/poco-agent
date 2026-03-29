@@ -7,6 +7,7 @@ from app.api.v1 import (
     capability_recommendations,
     claude_md,
     env_vars,
+    filesystem,
     models,
     internal_claude_md,
     internal_env_vars,
@@ -65,6 +66,7 @@ api_v1_router.include_router(attachments.router)
 api_v1_router.include_router(audio.router)
 api_v1_router.include_router(capability_recommendations.router)
 api_v1_router.include_router(env_vars.router)
+api_v1_router.include_router(filesystem.router)
 api_v1_router.include_router(claude_md.router)
 api_v1_router.include_router(models.router)
 api_v1_router.include_router(search.router)

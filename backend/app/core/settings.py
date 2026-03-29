@@ -1,4 +1,5 @@
 from functools import lru_cache
+from typing import Literal
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -55,6 +56,9 @@ class Settings(BaseSettings):
         default="http://localhost:3000", alias="FRONTEND_PUBLIC_URL"
     )
     frontend_default_language: str = Field(default="zh", alias="FRONTEND_DEFAULT_LANG")
+    deployment_mode: Literal["local", "cloud"] = Field(
+        default="local", alias="DEPLOYMENT_MODE"
+    )
 
     telegram_bot_token: str = Field(default="", alias="TELEGRAM_BOT_TOKEN")
     telegram_webhook_secret_token: str | None = Field(

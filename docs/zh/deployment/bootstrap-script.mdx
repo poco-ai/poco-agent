@@ -15,6 +15,7 @@ description: 适合首次使用本地 RustFS 存储进行部署。
 脚本会：
 
 - 复制 `.env.example` -> `.env`（若不存在）
+- 询问部署模式（`local` 或 `cloud`）；将 `DEPLOYMENT_MODE` 写入 `.env` 和 `backend/.env`
 - 自动检测并写入 `DOCKER_GID`；交互模式会写入 API Key/模型配置；其余仅在传参时写入（如 `--data-dir` / `--s3-*` / `--cors-origins`）
 - 创建 `oss_data/` 与 `tmp_workspace/`；默认尝试将 `oss_data/` chown 为 `10001:10001`（RustFS 用户）
 - 为 `oss_data/` 与 `tmp_workspace/` 写入 `.gitignore`（内容为 `*`）

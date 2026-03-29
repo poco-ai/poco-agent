@@ -17,6 +17,7 @@ from app.utils.git.operations import (
 )
 
 logger = logging.getLogger(__name__)
+_LOCAL_MOUNT_EXCLUDE = ":(exclude).poco-local"
 
 
 def _sanitize_ref_token(value: str) -> str:
@@ -91,7 +92,7 @@ class RunSnapshotHook(AgentHook):
         # Ensure HEAD exists so subsequent status/diff are relative to a concrete baseline.
         try:
             if not has_commits(cwd):
-                add_files(".", cwd=cwd, all_files=True)
+                add_files([".", _LOCAL_MOUNT_EXCLUDE], cwd=cwd, all_files=True)
                 commit(
                     message="poco:init",
                     cwd=cwd,
@@ -149,7 +150,7 @@ class RunSnapshotHook(AgentHook):
             message = f"{message} {self._error_type}"
 
         try:
-            add_files(".", cwd=cwd, all_files=True)
+            add_files([".", _LOCAL_MOUNT_EXCLUDE], cwd=cwd, all_files=True)
         except Exception as exc:
             logger.warning(
                 "run_snapshot_add_failed",

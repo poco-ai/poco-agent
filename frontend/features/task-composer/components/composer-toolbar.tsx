@@ -15,6 +15,7 @@ import {
   ListTodo,
   Mic,
   MicOff,
+  HardDrive,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -58,9 +59,12 @@ interface ComposerToolbarProps {
   browserEnabled: boolean;
   memoryFeatureEnabled: boolean;
   memoryEnabled: boolean;
+  filesystemMode: "sandbox" | "local_mount";
+  localMountCount: number;
   onOpenRepoDialog: () => void;
   onBrowserEnabledChange: (enabled: boolean) => void;
   onMemoryEnabledChange: (enabled: boolean) => void;
+  onOpenLocalFilesystemDialog: () => void;
   onOpenFileInput: () => void;
   onToggleVoiceInput: () => void;
   onSubmit: () => void;
@@ -84,9 +88,12 @@ export function ComposerToolbar({
   browserEnabled,
   memoryFeatureEnabled,
   memoryEnabled,
+  filesystemMode,
+  localMountCount,
   onOpenRepoDialog,
   onBrowserEnabledChange,
   onMemoryEnabledChange,
+  onOpenLocalFilesystemDialog,
   onOpenFileInput,
   onToggleVoiceInput,
   onSubmit,
@@ -257,6 +264,17 @@ export function ComposerToolbar({
                   <span>{t("hero.memory.toggle")}</span>
                 </DropdownMenuCheckboxItem>
               ) : null}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onSelect={onOpenLocalFilesystemDialog}>
+                <HardDrive className="size-4" />
+                <span>
+                  {filesystemMode === "local_mount"
+                    ? t("filesystem.summary.localMountCount", {
+                        count: localMountCount,
+                      })
+                    : t("filesystem.actions.manage")}
+                </span>
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
           <TooltipContent side="top" sideOffset={8}>

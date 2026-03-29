@@ -5,6 +5,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.schemas.callback import AgentCurrentState
+from app.schemas.filesystem import LocalMountConfig, FilesystemMode
 from app.schemas.input_file import InputFile
 
 
@@ -24,6 +25,8 @@ class TaskConfig(BaseModel):
     skill_config: dict[str, bool] = Field(default_factory=dict)
     plugin_config: dict[str, bool] = Field(default_factory=dict)
     subagent_ids: list[int] = Field(default_factory=list)
+    filesystem_mode: FilesystemMode = "sandbox"
+    local_mounts: list[LocalMountConfig] = Field(default_factory=list)
     input_files: list[InputFile] = Field(default_factory=list)
 
 
@@ -38,6 +41,7 @@ class SessionUpdateRequest(BaseModel):
     """Request to update a session."""
 
     status: str | None = None
+    config: TaskConfig | None = None
     sdk_session_id: str | None = None
     title: str | None = None
     is_pinned: bool | None = None

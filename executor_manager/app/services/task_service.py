@@ -99,9 +99,10 @@ class TaskService:
             if container_id or container_mode == "persistent":
                 step_started = time.perf_counter()
                 browser_enabled = bool(config.get("browser_enabled"))
-                _, container_id = await TaskDispatcher.resolve_executor_target(
+                _, container_id, _ = await TaskDispatcher.resolve_executor_target(
                     session_id=session_id,
                     user_id=user_id,
+                    task_config=config,
                     browser_enabled=browser_enabled,
                     container_mode=container_mode,
                     container_id=container_id,

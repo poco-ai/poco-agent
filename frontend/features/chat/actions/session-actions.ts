@@ -35,6 +35,18 @@ const configSchema = z
     mcp_config: z.record(z.string(), z.boolean()).optional(),
     skill_config: z.record(z.string(), z.boolean()).optional(),
     plugin_config: z.record(z.string(), z.boolean()).optional(),
+    subagent_ids: z.array(z.number().int()).optional(),
+    filesystem_mode: z.enum(["sandbox", "local_mount"]).optional(),
+    local_mounts: z
+      .array(
+        z.object({
+          id: z.string().trim().min(1),
+          name: z.string().trim().min(1),
+          host_path: z.string().trim().min(1),
+          access_mode: z.enum(["ro", "rw"]).optional(),
+        }),
+      )
+      .optional(),
     input_files: z.array(inputFileSchema).optional(),
   })
   .passthrough();

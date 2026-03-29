@@ -59,6 +59,10 @@ function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
 }
 
+function isLocalMountAccessMode(value: unknown): value is "ro" | "rw" {
+  return value === "ro" || value === "rw";
+}
+
 function typeIncludes(typeValue: unknown, needle: string): boolean {
   if (!isNonEmptyString(typeValue)) return false;
   return typeValue === needle || typeValue.includes(needle);
@@ -114,6 +118,33 @@ export function parseConfigSnapshot(
     Array.isArray(arr)
       ? arr.filter((id): id is number => typeof id === "number")
       : undefined;
+  const parseLocalMounts = (
+    mounts: unknown,
+  ): ConfigSnapshot["local_mounts"] | undefined => {
+    if (!Array.isArray(mounts)) return undefined;
+    const parsed = mounts.flatMap((mount) => {
+      if (!mount || typeof mount !== "object") return [];
+      const rawMount = mount as Record<string, unknown>;
+      if (
+        !isNonEmptyString(rawMount.id) ||
+        !isNonEmptyString(rawMount.name) ||
+        !isNonEmptyString(rawMount.host_path)
+      ) {
+        return [];
+      }
+      return [
+        {
+          id: rawMount.id.trim(),
+          name: rawMount.name.trim(),
+          host_path: rawMount.host_path.trim(),
+          access_mode: isLocalMountAccessMode(rawMount.access_mode)
+            ? rawMount.access_mode
+            : "ro",
+        },
+      ];
+    });
+    return parsed.length > 0 ? parsed : undefined;
+  };
 
   return {
     mcp_server_ids: parseIds(raw.mcp_server_ids),
@@ -136,6 +167,9 @@ export function parseConfigSnapshot(
     git_token_env_key: isNonEmptyString(raw.git_token_env_key)
       ? raw.git_token_env_key.trim()
       : undefined,
+    filesystem_mode:
+      raw.filesystem_mode === "local_mount" ? "local_mount" : "sandbox",
+    local_mounts: parseLocalMounts(raw.local_mounts),
   };
 }
 

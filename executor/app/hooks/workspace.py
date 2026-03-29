@@ -14,6 +14,8 @@ from app.utils.git.operations import (
     remote_url,
 )
 
+_LOCAL_MOUNT_ROOT = ".poco-local/"
+
 
 class WorkspaceHook(AgentHook):
     """Hook that monitors workspace file changes and updates state."""
@@ -66,6 +68,8 @@ class WorkspaceHook(AgentHook):
         staged_numstat = get_numstat(cwd, cached=True)
 
         for file in git_status.modified:
+            if self._should_skip_path(file):
+                continue
             added, deleted = unstaged_numstat.get(file, (0, 0))
             diff_content = diff(file=file, cwd=cwd, cached=False)
             file_changes.append(
@@ -79,6 +83,8 @@ class WorkspaceHook(AgentHook):
             )
 
         for file in git_status.staged:
+            if self._should_skip_path(file):
+                continue
             added, deleted = staged_numstat.get(file, (0, 0))
             diff_content = diff(file=file, cwd=cwd, cached=True)
             file_changes.append(
@@ -92,6 +98,8 @@ class WorkspaceHook(AgentHook):
             )
 
         for file in git_status.untracked:
+            if self._should_skip_path(file):
+                continue
             file_changes.append(
                 FileChange(
                     path=file,
@@ -102,6 +110,8 @@ class WorkspaceHook(AgentHook):
             )
 
         for file in git_status.deleted:
+            if self._should_skip_path(file):
+                continue
             file_changes.append(
                 FileChange(
                     path=file, status=FileStatus.DELETED, added_lines=0, deleted_lines=0
@@ -109,6 +119,8 @@ class WorkspaceHook(AgentHook):
             )
 
         for old_path, new_path in git_status.renamed:
+            if self._should_skip_path(old_path) or self._should_skip_path(new_path):
+                continue
             file_changes.append(
                 FileChange(
                     path=new_path,
@@ -120,6 +132,14 @@ class WorkspaceHook(AgentHook):
             )
 
         return file_changes
+
+    @staticmethod
+    def _should_skip_path(path: str) -> bool:
+        normalized = (path or "").strip()
+        while normalized.startswith("./"):
+            normalized = normalized[2:]
+        normalized = normalized.lstrip("/")
+        return normalized == ".poco-local" or normalized.startswith(_LOCAL_MOUNT_ROOT)
 
     def _get_repository_url(self, cwd: str) -> str | None:
         """Get repository URL from Git remotes.

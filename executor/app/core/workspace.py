@@ -40,6 +40,7 @@ DEFAULT_GIT_EXCLUDES = [
     # Agent/runtime artifacts
     ".claude_data/",
     ".claude/",
+    ".poco-local/",
     "inputs/",
 ]
 

@@ -16,6 +16,7 @@ from app.services.backend_client import BackendClient
 from app.services.container_pool import ContainerPool
 from app.services.executor_client import ExecutorClient
 from app.services.config_resolver import ConfigResolver
+from app.services.local_mount_service import LocalMountService
 from app.services.skill_stager import SkillStager
 from app.services.plugin_stager import PluginStager
 from app.services.attachment_stager import AttachmentStager
@@ -60,14 +61,16 @@ class TaskDispatcher:
         *,
         session_id: str,
         user_id: str,
+        task_config: dict | None,
         browser_enabled: bool,
         container_mode: str,
         container_id: str | None,
-    ) -> tuple[str, str | None]:
+    ) -> tuple[str, str | None, object]:
         container_pool = cls.get_container_pool()
         return await container_pool.get_or_create_container(
             session_id=session_id,
             user_id=user_id,
+            task_config=task_config,
             browser_enabled=browser_enabled,
             container_mode=container_mode,
             container_id=container_id,
@@ -100,6 +103,7 @@ class TaskDispatcher:
         executor_client = ExecutorClient()
         backend_client = BackendClient()
         config_resolver = ConfigResolver(backend_client)
+        local_mount_service = LocalMountService(settings)
         skill_stager = SkillStager()
         plugin_stager = PluginStager()
         attachment_stager = AttachmentStager()
@@ -145,6 +149,10 @@ class TaskDispatcher:
                 config or {},
                 session_id=session_id,
                 task_id=task_id,
+            )
+            resolved_config, _ = local_mount_service.build_runtime_config(
+                resolved_config,
+                session_id=session_id,
             )
             logger.info(
                 "timing",
@@ -265,9 +273,14 @@ class TaskDispatcher:
 
             step_started = time.perf_counter()
             browser_enabled = bool(resolved_config.get("browser_enabled"))
-            executor_url, container_id = await TaskDispatcher.resolve_executor_target(
+            (
+                executor_url,
+                container_id,
+                _,
+            ) = await TaskDispatcher.resolve_executor_target(
                 session_id=session_id,
                 user_id=user_id,
+                task_config=resolved_config,
                 browser_enabled=browser_enabled,
                 container_mode=container_mode,
                 container_id=container_id,

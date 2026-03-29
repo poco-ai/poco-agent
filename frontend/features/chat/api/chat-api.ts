@@ -445,6 +445,19 @@ export const chatService = {
     }
   },
 
+  getLocalMountFiles: async (sessionId?: string): Promise<FileNode[]> => {
+    if (!sessionId) return [];
+
+    try {
+      return await apiClient.get<FileNode[]>(
+        API_ENDPOINTS.sessionLocalMountFiles(sessionId),
+      );
+    } catch (error) {
+      console.error("[Chat Service] Failed to get local mount files:", error);
+      return [];
+    }
+  },
+
   submitSkill: async (
     sessionId: string,
     body: { folder_path: string; skill_name?: string },
@@ -462,6 +475,17 @@ export const chatService = {
     const params = new URLSearchParams({ path: folderPath });
     return apiClient.get<WorkspaceArchiveResponse>(
       `${API_ENDPOINTS.sessionWorkspaceFolderArchive(sessionId)}?${params.toString()}`,
+    );
+  },
+
+  getLocalMountFolderArchive: async (
+    sessionId: string,
+    mountId: string,
+    folderPath: string,
+  ): Promise<WorkspaceArchiveResponse> => {
+    const query = buildQuery({ mount_id: mountId, path: folderPath });
+    return apiClient.get<WorkspaceArchiveResponse>(
+      `${API_ENDPOINTS.sessionLocalMountFolderArchive(sessionId)}${query}`,
     );
   },
 };

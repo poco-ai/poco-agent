@@ -48,6 +48,7 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 _SUBAGENT_NAME_PATTERN = re.compile(r"^[A-Za-z0-9._-]+$")
+_LOCAL_MOUNT_ROOT = "/workspace/.poco-local"
 
 
 @contextmanager
@@ -142,8 +143,7 @@ class AgentExecutor:
 
                 prompt = f"{prompt}\n\nPlease reply in the same language as the user's input unless explicitly requested otherwise."
                 prompt = (
-                    f"{prompt}\n\nCurrent working directory: {ctx.cwd}."
-                    "All operations must be performed within this directory only."
+                    f"{prompt}\n\n{self._build_workspace_scope_hint(ctx.cwd, config)}"
                 )
 
             async def dummy_hook(
@@ -320,8 +320,16 @@ class AgentExecutor:
                 if not selected_model:
                     selected_model = os.environ["DEFAULT_MODEL"]
 
+                extra_allowed_dirs = sorted(
+                    {
+                        mount.container_path
+                        for mount in (config.resolved_local_mounts or [])
+                        if mount.container_path
+                    }
+                )
                 options = ClaudeAgentOptions(
                     cwd=ctx.cwd,
+                    add_dirs=[str(d) for d in extra_allowed_dirs],
                     resume=self.sdk_session_id,
                     # Load both user-level (~/.claude) and project-level (.claude) settings.
                     # Skills are staged into user-level ~/.claude/skills (symlinked to /workspace/.claude_data).
@@ -380,21 +388,102 @@ class AgentExecutor:
             reset_trace_id(trace_id_token)
 
     def _build_input_hint(self, config: TaskConfig) -> str | None:
+        lines: list[str] = []
         inputs = config.input_files or []
-        if not inputs:
-            return None
+        if inputs:
+            lines.append(
+                "User-uploaded inputs are available under inputs/ (or /workspace/inputs):"
+            )
+            for item in inputs:
+                path = getattr(item, "path", None) or ""
+                name = getattr(item, "name", None) or ""
+                display = (
+                    path.lstrip("/") if path else (f"inputs/{name}" if name else "")
+                )
+                if display:
+                    lines.append(f"- {display}")
+            lines.append("Do not modify files under inputs/ unless the user asks.")
 
-        lines = [
-            "User-uploaded inputs are available under inputs/ (or /workspace/inputs):",
-        ]
-        for item in inputs:
-            path = getattr(item, "path", None) or ""
-            name = getattr(item, "name", None) or ""
-            display = path.lstrip("/") if path else (f"inputs/{name}" if name else "")
-            if display:
-                lines.append(f"- {display}")
-        lines.append("Do not modify files under inputs/ unless the user asks.")
-        return "\n".join(lines)
+        mounts = config.resolved_local_mounts or []
+        if mounts:
+            if lines:
+                lines.append("")
+            lines.append("Filesystem layout for this task:")
+            lines.append("- /workspace is the Poco sandbox workspace.")
+            lines.append(
+                f"- Authorized user local directories are mounted under {_LOCAL_MOUNT_ROOT}/."
+            )
+            lines.append(
+                f"- Changes under {_LOCAL_MOUNT_ROOT}/... affect the user's real local files directly."
+            )
+            lines.append(
+                f"- Do not treat {_LOCAL_MOUNT_ROOT}/... as part of the sandbox workspace snapshot or git history."
+            )
+            configured_mounts = {
+                mount.id: mount for mount in (config.local_mounts or [])
+            }
+            for mount in mounts:
+                requested_host_path = None
+                configured_mount = configured_mounts.get(mount.id)
+                if configured_mount:
+                    requested_host_path = configured_mount.host_path
+                lines.append(
+                    f"- {mount.container_path} ({mount.access_mode}, name: {mount.name})"
+                )
+                if requested_host_path:
+                    lines.append(
+                        "- User path "
+                        f"{requested_host_path} is exposed inside the container as "
+                        f"{mount.container_path}."
+                    )
+            # Build an explicit resolution table so the agent can match
+            # user-referenced paths without reasoning.
+            resolution_lines = [
+                "Path resolution table — MUST consult before ANY file I/O:",
+            ]
+            for mount in mounts:
+                host_path = None
+                cfg = configured_mounts.get(mount.id)
+                if cfg:
+                    host_path = cfg.host_path
+                dir_name = Path(host_path).name if host_path else mount.name
+                resolution_lines.append(
+                    f'  "{dir_name}" or "{mount.name}"'
+                    + (f' or "{host_path}"' if host_path else "")
+                    + f" => {mount.container_path}"
+                )
+            resolution_lines.append(
+                "If the user's mentioned path matches a key above, use the "
+                "mapped container path. NEVER create a duplicate under /workspace."
+            )
+            lines.append("")
+            lines.extend(resolution_lines)
+            lines.append("")
+            lines.append(
+                "- Respect read-only local mounts and never write to ro paths."
+            )
+
+        return "\n".join(lines) if lines else None
+
+    @staticmethod
+    def _build_workspace_scope_hint(cwd: str, config: TaskConfig) -> str:
+        mounts = config.resolved_local_mounts or []
+        if not mounts:
+            return (
+                f"Current working directory: {cwd}. "
+                "Keep normal work inside this workspace unless the user explicitly asks otherwise."
+            )
+
+        mount_paths = ", ".join(
+            mount.container_path for mount in sorted(mounts, key=lambda item: item.id)
+        )
+        return (
+            f"Current working directory: {cwd}. "
+            f"The following authorized local mount paths are available: {mount_paths}. "
+            "Before creating or writing any file, check the path resolution table above. "
+            "If the path matches a local mount, use the container mount path instead of /workspace. "
+            "Do not mix local mount changes into workspace git operations unless the user asks."
+        )
 
     def _discover_plugins(self) -> list[SdkPluginConfig]:
         """Discover staged plugins under /workspace/.claude_data/plugins.

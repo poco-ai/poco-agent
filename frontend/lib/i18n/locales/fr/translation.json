@@ -8,7 +8,9 @@
     "newTaskWithShortcut": "Nouvelle tâche ({{shortcut}})",
     "search": "Rechercher",
     "library": "Capacités",
+    "openMain": "Ouvrir la barre latérale principale",
     "scheduledTasks": "Tâches planifiées",
+    "memories": "Mémoires",
     "projects": "Projets",
     "newProject": "Nouveau projet",
     "newProjectPrompt": "Entrez le nom du projet :",
@@ -274,6 +276,9 @@
     "planApprovalApprove": "Approuver & exécuter",
     "planApprovalReject": "Rejeter",
     "planApprovalEmpty": "Aucun plan fourni",
+    "enterPlanModeTitle": "Entrer en mode planification",
+    "enterPlanModeHint": "L'agent planifiera d'abord les étapes d'exécution et attendra votre approbation avant de démarrer.",
+    "enterPlanModeConfirm": "Entrer en planification",
     "askUserTimeout": "Temps restant {{seconds}}s",
     "askUserPrevious": "Précédent",
     "askUserNext": "Suivant",
@@ -319,7 +324,8 @@
       "skillsConfigured": "Compétences (configurées)",
       "skillsUsed": "Compétences",
       "mcpConfigured": "Serveurs MCP (configurés)",
-      "mcp": "Serveurs MCP"
+      "mcp": "Serveurs MCP",
+      "pluginsConfigured": "Préréglages (configurés)"
     },
     "typingWords": [
       "Accomplishing",
@@ -632,14 +638,14 @@
       "loadingDoc": "Lecture du document...",
       "parseError": "Impossible d'analyser le fichier Excalidraw",
       "fetchError": "Échec de la récupération du contenu du document",
+      "frontMatter": "Front matter",
       "retry": "Réessayer",
       "selectFile": "Veuillez sélectionner un fichier à droite pour la prévisualisation",
       "supportedFormats": "Supporte les PDF, documents Office, formats d'image courants, vidéos MP4, fichiers XMind, fichiers .excalidraw et fichiers .drawio",
       "processing": "Traitement du fichier",
       "notSupported": "Prévisualisation non supportée pour ce format",
       "openInNewWindow": "Ouvrir dans une nouvelle fenêtre",
-      "downloadOriginal": "Télécharger le fichier original",
-      "frontMatter": "Front matter"
+      "downloadOriginal": "Télécharger le fichier original"
     },
     "summary": {
       "total": "Total",
@@ -662,6 +668,9 @@
     "title": "Capacités",
     "subtitle": "Gérer vos compétences, préréglages et outils",
     "comingSoon": "Bientôt disponible",
+    "mobile": {
+      "back": "Retour aux capacités"
+    },
     "sidebar": {
       "title": "Raccourcis de capacités",
       "description": "Sélectionnez une capacité pour accéder à sa configuration.",
@@ -693,6 +702,10 @@
       "feature2": "Gestion visuelle",
       "feature3": "Monitoring en temps réel",
       "action": "Gérer les serveurs"
+    },
+    "pluginsStore": {
+      "title": "Préréglages",
+      "description": "Parcourir et installer des préréglages de capacités"
     },
     "envVars": {
       "title": "Variables d'environnement",
@@ -1074,6 +1087,10 @@
         }
       }
     },
+    "pluginsPage": {
+      "searchPlaceholder": "Rechercher des préréglages...",
+      "addCard": "Ajouter un préréglage"
+    },
     "skillsManager": {
       "stats": {
         "available": "Disponible",
@@ -1220,9 +1237,103 @@
         "invalidKeyHint": "Ouvrez Paramètres > Autre, mettez à jour la clé API SkillsMP, puis revenez ici pour réessayer."
       }
     },
-    "pluginsPage": {
-      "searchPlaceholder": "Rechercher des préréglages...",
-      "addCard": "Ajouter un préréglage"
+    "pluginsManager": {
+      "stats": {
+        "enabled": "Activés"
+      },
+      "scope": {
+        "system": "Système",
+        "user": "Utilisateur"
+      },
+      "fields": {
+        "id": "id",
+        "source": "Source"
+      },
+      "actions": {
+        "install": "Installer",
+        "uninstall": "Désinstaller"
+      },
+      "toasts": {
+        "loadError": "Impossible de charger les préréglages",
+        "actionError": "L'opération a échoué, veuillez réessayer plus tard",
+        "installed": "Préréglage installé",
+        "uninstalled": "Préréglage désinstallé",
+        "enabled": "Préréglage activé",
+        "disabled": "Préréglage désactivé",
+        "actionFailed": "L'opération a échoué, veuillez réessayer plus tard",
+        "exclusiveEnabled": "(Autres préréglages désactivés)"
+      },
+      "empty": "Aucun préréglage pour le moment",
+      "unknownPlugin": "Préréglage inconnu"
+    },
+    "pluginsImport": {
+      "title": "Importer des préréglages",
+      "description": "Téléversez un zip de préréglages ou importez depuis un dépôt GitHub public.",
+      "relativePath": "Chemin relatif",
+      "tabs": {
+        "zip": "Téléverser un zip",
+        "github": "URL GitHub"
+      },
+      "fields": {
+        "zip": "Fichier zip",
+        "githubUrl": "URL du dépôt GitHub public",
+        "nameOverride": "Nom du préréglage"
+      },
+      "placeholders": {
+        "githubUrl": "https://github.com/owner/repo",
+        "name": "ex. mon-préréglage"
+      },
+      "hints": {
+        "github": "Branche main/master par défaut (dépôts github.com publics uniquement)"
+      },
+      "actions": {
+        "back": "Retour",
+        "discover": "Découvrir",
+        "discovering": "Découverte...",
+        "commit": "Importer et installer",
+        "committing": "Importation..."
+      },
+      "preview": {
+        "found": "Trouvé",
+        "items": "définitions de préréglages",
+        "overwrite": "écrasera",
+        "overwriteItems": "préréglages existants",
+        "willOverwrite": "Écraser",
+        "root": "Racine",
+        "path": "Chemin",
+        "unnamed": "Sans nom",
+        "pagination": {
+          "page": "Page {{page}} / {{pages}}",
+          "prev": "Précédent",
+          "next": "Suivant"
+        },
+        "selection": {
+          "selectPage": "Sélectionner la page",
+          "clearPage": "Effacer la sélection de la page",
+          "selectAll": "Tout sélectionner",
+          "clearAll": "Tout désélectionner"
+        }
+      },
+      "result": {
+        "title": "Résultat de l'import",
+        "success": "Succès",
+        "failed": "Échec"
+      },
+      "toasts": {
+        "missingZip": "Veuillez choisir un fichier zip",
+        "missingGithubUrl": "Veuillez saisir une URL GitHub",
+        "discovered": "Découvert. Veuillez confirmer ce qu'il faut importer.",
+        "discoverError": "Échec de la découverte, veuillez réessayer plus tard",
+        "committed": "Import réussi",
+        "commitError": "Échec de l'import, veuillez réessayer plus tard",
+        "partialFailed": "Certains préréglages n'ont pas pu être importés. Veuillez vérifier les détails.",
+        "commitTimeout": "Délai d'import dépassé, veuillez réessayer plus tard"
+      },
+      "progress": {
+        "title": "Progression de l'import",
+        "value": "Progression",
+        "jobId": "ID de tâche"
+      }
     },
     "mcpLibrary": {
       "header": {
@@ -1284,11 +1395,6 @@
       "skillCreator": "Skill Creator",
       "marketplace": "Marketplace",
       "skillsmp": "SkillsMP"
-    },
-    "pluginsManager": {
-      "toasts": {
-        "exclusiveEnabled": "(Autres préréglages désactivés)"
-      }
     },
     "presets": {
       "title": "Préréglages",
@@ -1366,6 +1472,7 @@
   },
   "common": {
     "cancel": "Annuler",
+    "close": "Fermer",
     "create": "Créer",
     "delete": "Supprimer",
     "deleted": "Supprimé",
@@ -1569,7 +1676,12 @@
     "missingToolUseId": "ID d'utilisation d'outil manquant",
     "messageContentRequired": "Veuillez entrer le contenu du message",
     "sessionNameRequired": "Veuillez entrer le nom de la session",
-    "sessionNameTooLong": "Nom de session trop long"
+    "sessionNameTooLong": "Nom de session trop long",
+    "localMountNameRequired": "Veuillez saisir un nom de dossier",
+    "localMountPathRequired": "Veuillez saisir un chemin hôte",
+    "localMountCountRequired": "Veuillez ajouter au moins un dossier",
+    "localMountUnavailable": "L’accès aux fichiers locaux est indisponible pour le moment",
+    "localMountPathDuplicate": "Dossier déjà ajouté : {{path}}"
   },
   "user": {
     "plan": {
@@ -1599,7 +1711,9 @@
     "downloadStart": "Début du téléchargement de l'archive de l'espace de travail",
     "archiveNotAvailable": "Archive non disponible pour le moment",
     "archiveUnavailable": "Archive non disponible pour le moment",
-    "downloadFailed": "Échec du téléchargement"
+    "downloadFailed": "Échec du téléchargement",
+    "workspaceRoot": "Espace de travail",
+    "localMountsRoot": "Montages locaux"
   },
   "pullToRefresh": {
     "refreshing": "Actualisation...",
@@ -1623,9 +1737,15 @@
     "noMcpInstalled": "Aucun MCP installé",
     "noSkillsInstalled": "Aucune compétence installée",
     "noPluginsInstalled": "Aucun preset installé",
+    "fallbackMcp": "MCP #{{id}}",
+    "fallbackSkill": "Compétence #{{id}}",
+    "fallbackPreset": "Préréglage #{{id}}",
     "oneClickClose": "Tout éteindre",
     "notInstalledMcp": "Aucun MCP installé",
     "notInstalledSkill": "Aucune compétence installée",
+    "mcp": "MCP",
+    "skills": "Compétences",
+    "plugins": "Préréglages",
     "apps": "Apps",
     "comingSoon": "Bientôt disponible",
     "clickForDetails": "Cliquez pour les détails",
@@ -1673,6 +1793,9 @@
   },
   "skillsGrid": {
     "turnOffAll": "Tout éteindre"
+  },
+  "pluginsGrid": {
+    "turnOffAll": "Tout désactiver"
   },
   "mcpSettings": {
     "configureServer": "Configurer le serveur MCP",
@@ -1815,6 +1938,69 @@
   "filesidebar": {
     "title": "Liste des fichiers"
   },
+  "memories": {
+    "title": "Mémoires",
+    "subtitle": "Gérer les entrées de mémoire à long terme au niveau utilisateur.",
+    "stats": {
+      "count": "{{count}} éléments"
+    },
+    "actions": {
+      "search": "Rechercher",
+      "showAll": "Tout afficher",
+      "refresh": "Actualiser",
+      "edit": "Modifier",
+      "update": "Enregistrer",
+      "delete": "Supprimer",
+      "create": "Créer",
+      "creating": "Création..."
+    },
+    "search": {
+      "queryPlaceholder": "Rechercher dans les mémoires..."
+    },
+    "create": {
+      "title": "Ajouter une mémoire",
+      "desc": "Saisissez ce que Poco doit retenir.",
+      "contentPlaceholder": "Saisissez ce que Poco doit retenir"
+    },
+    "edit": {
+      "title": "Modifier la mémoire",
+      "contentPlaceholder": "Mettre à jour le contenu de la mémoire"
+    },
+    "fields": {
+      "updatedAt": "Mis à jour",
+      "createdAt": "Créé"
+    },
+    "progress": {
+      "title": "Progression de création",
+      "status": "Statut",
+      "value": "Progression",
+      "jobId": "ID de tâche",
+      "hints": {
+        "running": "Ajout de la mémoire...",
+        "success": "Mémoire ajoutée",
+        "failed": "Échec de l'ajout de la mémoire"
+      },
+      "statuses": {
+        "queued": "En file d'attente",
+        "running": "En cours",
+        "success": "Succès",
+        "failed": "Échec",
+        "unknown": "Inconnu"
+      }
+    },
+    "list": {
+      "empty": "Aucune mémoire trouvée."
+    },
+    "toasts": {
+      "invalidJson": "JSON invalide",
+      "error": "Échec de l'opération",
+      "created": "Mémoire créée",
+      "updated": "Mémoire mise à jour",
+      "deleted": "Mémoire supprimée",
+      "cleared": "Toutes les mémoires ont été effacées",
+      "timeout": "Le délai de création a expiré. Veuillez réessayer plus tard."
+    }
+  },
   "onboarding": {
     "close": "Close tutorial",
     "skip": "Skip",
@@ -1865,6 +2051,67 @@
         "title": "Skills page",
         "description": "This is the Skills view inside Capabilities, where you browse and manage skills."
       }
+    }
+  },
+  "filesystem": {
+    "title": "Fichiers locaux",
+    "description": "Autorisez Poco à accéder à des dossiers en dehors de l’espace de travail sandbox.",
+    "status": {
+      "title": "État de l’environnement",
+      "loading": "Vérification...",
+      "unknown": "Statut indisponible",
+      "available": "Montage locale prête",
+      "unavailable": "Montage de répertoire local indisponible"
+    },
+    "mode": {
+      "sandboxTitle": "Sandbox uniquement",
+      "sandboxDescription": "Utiliser uniquement les fichiers sandbox de /workspace pour cette tâche.",
+      "localMountTitle": "Autoriser des dossiers locaux",
+      "localMountDescription": "Permettre à l’agent de lire ou modifier les dossiers hôte sélectionnés."
+    },
+    "mounts": {
+      "title": "Dossiers autorisés",
+      "description": "Chaque dossier sera monté sous /mnt/local/<id> pendant l’exécution.",
+      "itemTitle": "Dossier {{index}}"
+    },
+    "actions": {
+      "manage": "Fichiers locaux",
+      "addMount": "Ajouter un dossier",
+      "removeMount": "Retirer le dossier",
+      "save": "Enregistrer pour la prochaine exécution",
+      "apply": "Appliquer à cette tâche"
+    },
+    "fields": {
+      "name": "Nom d’affichage",
+      "path": "Chemin hôte",
+      "access": "Accès"
+    },
+    "placeholders": {
+      "name": "ex. Documents",
+      "path": "ex. /Users/alice/Documents"
+    },
+    "accessModes": {
+      "ro": "Lecture seule",
+      "rw": "Lecture et écriture"
+    },
+    "messages": {
+      "localDeployment": "Les dossiers seront montés directement dans l’environnement d’exécution sur cette machine.",
+      "cloudDeployment": "Les dossiers seront partagés avec l’environnement d’exécution via l’assistant local et le pont cloud.",
+      "supportUnknown": "Impossible de charger l’état de l’assistant. Vous pouvez continuer à utiliser le mode sandbox en toute sécurité.",
+      "sandboxOnly": "Seul le sandbox /workspace sera disponible pour cette tâche.",
+      "nextRun": "Les changements enregistrés s’appliqueront à la prochaine exécution. Les conteneurs actuels ne sont pas rechargés à chaud.",
+      "draft": "Ces dossiers seront autorisés au démarrage de cette tâche."
+    },
+    "summary": {
+      "localMountCount": "Fichiers locaux ({{count}})"
+    },
+    "toasts": {
+      "saved": "Configuration enregistrée. Elle sera appliquée à la prochaine exécution.",
+      "saveFailed": "Impossible d’enregistrer les paramètres des fichiers locaux"
+    },
+    "picker": {
+      "notSupported": "Le sélecteur de dossiers natif n’est pas pris en charge dans ce navigateur. Veuillez saisir le chemin manuellement.",
+      "resolveFailed": "Impossible de détecter automatiquement le chemin. Veuillez saisir le chemin d’hôte manuellement."
     }
   }
 }

@@ -28,6 +28,12 @@ description: Core environment variables for the FastAPI backend service. Handles
 - `DEFAULT_MODEL` (default `claude-sonnet-4-20250514`; also used for session title generation)
 - `MAX_UPLOAD_SIZE_MB` (default `100`)
 
+## Local Directory Mounting
+
+- `DEPLOYMENT_MODE` (default `local`): Controls whether local directory mounting is available.
+  - `local`: Users can mount local host directories into the executor sandbox (default for self-hosted deployments)
+  - `cloud`: Disables local directory mounting in the UI (recommended for cloud deployments)
+
 ## Logging (shared by all 3 Python services)
 
 - `DEBUG` (default `false`)

@@ -11,10 +11,12 @@ If this is your first setup and you are using local `rustfs` (`docker-compose.ym
 
 The script runs in interactive mode by default. It prompts for your model API key (saved as `ANTHROPIC_API_KEY`, supports Anthropic-compatible endpoints) and writes it to `.env`.
 If you need CI mode, use `--non-interactive` with `--llm-api-key` / `--llm-base-url` / `--model`.
+To use Chinese prompts, add `--lang zh`.
 
 The script will:
 
 - Copy `.env.example` -> `.env` (when missing)
+- Prompt for deployment mode (`local` or `cloud`); writes `DEPLOYMENT_MODE` to `.env` and `backend/.env`
 - Detect and write `DOCKER_GID`; interactive mode writes API key/model settings; other values are only written when passed as args (such as `--data-dir` / `--s3-*` / `--cors-origins`)
 - Create `oss_data/` and `tmp_workspace/`; by default tries to `chown` `oss_data/` to `10001:10001` (RustFS user)
 - Write `.gitignore` files for `oss_data/` and `tmp_workspace/` (content: `*`)

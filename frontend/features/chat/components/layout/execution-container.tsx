@@ -31,7 +31,10 @@ export function ExecutionContainer({ sessionId }: ExecutionContainerProps) {
     session?.state_patch?.browser?.enabled,
   );
   const fileChanges = session?.state_patch.workspace_state?.file_changes ?? [];
-  const hasArtifacts = fileChanges.length > 0;
+  const hasLocalMountArtifacts =
+    session?.config_snapshot?.filesystem_mode === "local_mount" &&
+    (session.config_snapshot.local_mounts?.length ?? 0) > 0;
+  const hasArtifacts = fileChanges.length > 0 || hasLocalMountArtifacts;
   const { executions, isLoading: isLoadingToolExecutions } = useToolExecutions({
     sessionId,
     isActive: isSessionActive,

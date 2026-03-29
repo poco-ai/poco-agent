@@ -8,6 +8,8 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
     healthcheck:
       test:
         [
@@ -86,7 +88,10 @@ services:
     image: ${RUSTFS_INIT_IMAGE:-minio/mc:latest}
     profiles: ["init"]
     depends_on:
-      - rustfs
+      postgres:
+        condition: service_healthy
+      rustfs:
+        condition: service_started
     environment:
       S3_ACCESS_KEY: ${S3_ACCESS_KEY:-poco}
       S3_SECRET_KEY: ${S3_SECRET_KEY:-poco-secret}
@@ -121,6 +126,7 @@ services:
       BACKEND_USER_ID: ${BACKEND_USER_ID:-default}
       FRONTEND_PUBLIC_URL: ${FRONTEND_PUBLIC_URL:-http://localhost:3000}
       FRONTEND_DEFAULT_LANG: ${FRONTEND_DEFAULT_LANG:-zh}
+      DEPLOYMENT_MODE: ${DEPLOYMENT_MODE:-local}
       IM_EVENT_DISPATCH_ENABLED: ${IM_EVENT_DISPATCH_ENABLED:-false}
       IM_EVENT_DISPATCH_INTERVAL_SECONDS: ${IM_EVENT_DISPATCH_INTERVAL_SECONDS:-0.5}
       IM_EVENT_DISPATCH_BATCH_SIZE: ${IM_EVENT_DISPATCH_BATCH_SIZE:-20}
