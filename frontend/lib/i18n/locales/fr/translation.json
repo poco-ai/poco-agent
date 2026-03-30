@@ -1403,6 +1403,76 @@
     "presetsPage": {
       "header": {
         "title": "Préréglages"
+      },
+      "summary": "{{count}} préréglages réutilisables",
+      "searchPlaceholder": "Rechercher des préréglages...",
+      "addCard": "Créer un préréglage",
+      "empty": "Aucun préréglage pour le moment",
+      "emptySearch": "Aucun préréglage ne correspond à votre recherche",
+      "emptyDescription": "Aucune description pour le moment",
+      "emptySkills": "Aucune compétence disponible",
+      "emptyMcp": "Aucun serveur MCP disponible",
+      "emptyPlugins": "Aucun préréglage de plugin disponible",
+      "loadingCapabilities": "Chargement des capacités...",
+      "flags": {
+        "browser": "Navigateur",
+        "memory": "Mémoire"
+      },
+      "tabs": {
+        "general": "Général",
+        "capabilities": "Capacités",
+        "subagents": "Sous-agents"
+      },
+      "picker": {
+        "placeholder": "Sélectionner un préréglage",
+        "none": "Aucun préréglage"
+      },
+      "selectors": {
+        "skills": "Choisissez les compétences réutilisables incluses dans ce préréglage.",
+        "mcp": "Choisissez les serveurs MCP que ce préréglage doit activer.",
+        "plugins": "Choisissez les préréglages de plugin que ce préréglage doit embarquer."
+      },
+      "form": {
+        "name": "Nom",
+        "namePlaceholder": "Par exemple : Livraison frontend",
+        "description": "Description",
+        "descriptionPlaceholder": "Décrivez dans quels cas utiliser ce préréglage",
+        "promptTemplate": "Modèle de prompt",
+        "promptTemplatePlaceholder": "Instructions de base facultatives pour les exécutions créées depuis ce préréglage",
+        "icon": "Icône",
+        "color": "Couleur",
+        "colorInvalid": "Utilisez une couleur hexadécimale valide comme #0ea5e9",
+        "browserEnabled": "Activer le navigateur",
+        "browserEnabledHint": "Ajoute la capacité navigateur chaque fois que ce préréglage est appliqué.",
+        "memoryEnabled": "Activer la mémoire",
+        "memoryEnabledHint": "Ajoute la capacité mémoire aux exécutions créées à partir de ce préréglage."
+      },
+      "dialog": {
+        "createTitle": "Créer un préréglage",
+        "editTitle": "Modifier le préréglage"
+      },
+      "subagents": {
+        "title": "Sous-agents inline",
+        "description": "Définissez des sous-agents supplémentaires à injecter avec ce préréglage.",
+        "add": "Ajouter un sous-agent",
+        "empty": "Aucun sous-agent configuré",
+        "itemTitle": "Sous-agent {{index}}",
+        "fields": {
+          "name": "Nom",
+          "model": "Modèle",
+          "description": "Description",
+          "tools": "Outils",
+          "toolsPlaceholder": "Read, Edit, Bash",
+          "prompt": "Prompt"
+        }
+      },
+      "toasts": {
+        "loadError": "Échec du chargement des préréglages",
+        "created": "Préréglage créé",
+        "updated": "Préréglage mis à jour",
+        "deleted": "Préréglage supprimé",
+        "saveFailed": "Échec de l’enregistrement du préréglage",
+        "deleteFailed": "Échec de la suppression du préréglage"
       }
     },
     "skillSettings": {

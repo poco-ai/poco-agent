@@ -154,6 +154,10 @@ export const API_ENDPOINTS = {
   slashCommandSuggestions: "/slash-commands/suggestions",
   slashCommand: (commandId: number) => `/slash-commands/${commandId}`,
 
+  // Presets
+  presets: "/presets",
+  preset: (presetId: number) => `/presets/${presetId}`,
+
   // Sub Agents
   subAgents: "/subagents",
   subAgent: (subAgentId: number) => `/subagents/${subAgentId}`,
@@ -178,6 +182,13 @@ export const API_ENDPOINTS = {
   // Projects
   projects: "/projects",
   project: (projectId: string) => `/projects/${projectId}`,
+  projectPresets: (projectId: string) => `/projects/${projectId}/presets`,
+  projectPreset: (projectId: string, presetId: number) =>
+    `/projects/${projectId}/presets/${presetId}`,
+  projectPresetDefault: (projectId: string, presetId: number) =>
+    `/projects/${projectId}/presets/${presetId}/default`,
+  projectPresetOrder: (projectId: string, presetId: number) =>
+    `/projects/${projectId}/presets/${presetId}/order`,
 
   // Health
   health: "/health",

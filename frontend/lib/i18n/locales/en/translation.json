@@ -1403,6 +1403,76 @@
     "presetsPage": {
       "header": {
         "title": "Presets"
+      },
+      "summary": "{{count}} reusable presets",
+      "searchPlaceholder": "Search presets...",
+      "addCard": "Create a preset",
+      "empty": "No presets yet",
+      "emptySearch": "No presets match your search",
+      "emptyDescription": "No description yet",
+      "emptySkills": "No skills available",
+      "emptyMcp": "No MCP servers available",
+      "emptyPlugins": "No presets available",
+      "loadingCapabilities": "Loading capabilities...",
+      "flags": {
+        "browser": "Browser",
+        "memory": "Memory"
+      },
+      "tabs": {
+        "general": "General",
+        "capabilities": "Capabilities",
+        "subagents": "Subagents"
+      },
+      "picker": {
+        "placeholder": "Select a preset",
+        "none": "No preset"
+      },
+      "selectors": {
+        "skills": "Choose the reusable skills bundled into this preset.",
+        "mcp": "Choose the MCP servers this preset should enable.",
+        "plugins": "Choose the plugin presets this preset should carry."
+      },
+      "form": {
+        "name": "Name",
+        "namePlaceholder": "For example: Frontend delivery",
+        "description": "Description",
+        "descriptionPlaceholder": "Describe when to use this preset",
+        "promptTemplate": "Prompt template",
+        "promptTemplatePlaceholder": "Optional baseline instructions for runs created from this preset",
+        "icon": "Icon",
+        "color": "Color",
+        "colorInvalid": "Use a valid hex color such as #0ea5e9",
+        "browserEnabled": "Enable browser",
+        "browserEnabledHint": "Add browser capability whenever this preset is applied.",
+        "memoryEnabled": "Enable memory",
+        "memoryEnabledHint": "Carry memory capability into runs created from this preset."
+      },
+      "dialog": {
+        "createTitle": "Create preset",
+        "editTitle": "Edit preset"
+      },
+      "subagents": {
+        "title": "Inline subagents",
+        "description": "Define extra subagents that should be injected with this preset.",
+        "add": "Add subagent",
+        "empty": "No subagents configured",
+        "itemTitle": "Subagent {{index}}",
+        "fields": {
+          "name": "Name",
+          "model": "Model",
+          "description": "Description",
+          "tools": "Tools",
+          "toolsPlaceholder": "Read, Edit, Bash",
+          "prompt": "Prompt"
+        }
+      },
+      "toasts": {
+        "loadError": "Failed to load presets",
+        "created": "Preset created",
+        "updated": "Preset updated",
+        "deleted": "Preset deleted",
+        "saveFailed": "Failed to save preset",
+        "deleteFailed": "Failed to delete preset"
       }
     },
     "skillSettings": {

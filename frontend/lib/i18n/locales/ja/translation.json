@@ -1403,6 +1403,76 @@
     "presetsPage": {
       "header": {
         "title": "プリセット"
+      },
+      "summary": "再利用可能なプリセット {{count}} 件",
+      "searchPlaceholder": "プリセットを検索...",
+      "addCard": "プリセットを作成",
+      "empty": "まだプリセットがありません",
+      "emptySearch": "検索条件に一致するプリセットはありません",
+      "emptyDescription": "説明はまだありません",
+      "emptySkills": "利用可能なスキルがありません",
+      "emptyMcp": "利用可能な MCP サーバーがありません",
+      "emptyPlugins": "利用可能なプラグインプリセットがありません",
+      "loadingCapabilities": "機能を読み込み中...",
+      "flags": {
+        "browser": "ブラウザ",
+        "memory": "メモリ"
+      },
+      "tabs": {
+        "general": "基本情報",
+        "capabilities": "機能",
+        "subagents": "サブエージェント"
+      },
+      "picker": {
+        "placeholder": "プリセットを選択",
+        "none": "プリセットなし"
+      },
+      "selectors": {
+        "skills": "このプリセットに含める再利用可能なスキルを選択します。",
+        "mcp": "このプリセットで有効にする MCP サーバーを選択します。",
+        "plugins": "このプリセットに含めるプラグインプリセットを選択します。"
+      },
+      "form": {
+        "name": "名前",
+        "namePlaceholder": "例: フロントエンド納品",
+        "description": "説明",
+        "descriptionPlaceholder": "このプリセットを使う場面を説明してください",
+        "promptTemplate": "プロンプトテンプレート",
+        "promptTemplatePlaceholder": "このプリセットから作成される実行向けの任意の基本指示",
+        "icon": "アイコン",
+        "color": "色",
+        "colorInvalid": "#0ea5e9 のような有効な16進カラーを入力してください",
+        "browserEnabled": "ブラウザを有効化",
+        "browserEnabledHint": "このプリセットが適用されるたびにブラウザ機能を追加します。",
+        "memoryEnabled": "メモリを有効化",
+        "memoryEnabledHint": "このプリセットから作成される実行にメモリ機能を引き継ぎます。"
+      },
+      "dialog": {
+        "createTitle": "プリセットを作成",
+        "editTitle": "プリセットを編集"
+      },
+      "subagents": {
+        "title": "インラインサブエージェント",
+        "description": "このプリセットと一緒に注入する追加サブエージェントを定義します。",
+        "add": "サブエージェントを追加",
+        "empty": "サブエージェントは未設定です",
+        "itemTitle": "サブエージェント {{index}}",
+        "fields": {
+          "name": "名前",
+          "model": "モデル",
+          "description": "説明",
+          "tools": "ツール",
+          "toolsPlaceholder": "Read, Edit, Bash",
+          "prompt": "プロンプト"
+        }
+      },
+      "toasts": {
+        "loadError": "プリセットの読み込みに失敗しました",
+        "created": "プリセットを作成しました",
+        "updated": "プリセットを更新しました",
+        "deleted": "プリセットを削除しました",
+        "saveFailed": "プリセットの保存に失敗しました",
+        "deleteFailed": "プリセットの削除に失敗しました"
       }
     },
     "skillSettings": {

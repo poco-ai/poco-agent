@@ -1403,6 +1403,76 @@
     "presetsPage": {
       "header": {
         "title": "Vorlagen"
+      },
+      "summary": "{{count}} wiederverwendbare Vorlagen",
+      "searchPlaceholder": "Vorlagen durchsuchen...",
+      "addCard": "Vorlage erstellen",
+      "empty": "Noch keine Vorlagen",
+      "emptySearch": "Keine Vorlagen entsprechen deiner Suche",
+      "emptyDescription": "Noch keine Beschreibung",
+      "emptySkills": "Keine Skills verfügbar",
+      "emptyMcp": "Keine MCP-Server verfügbar",
+      "emptyPlugins": "Keine Plugin-Vorlagen verfügbar",
+      "loadingCapabilities": "Fähigkeiten werden geladen...",
+      "flags": {
+        "browser": "Browser",
+        "memory": "Speicher"
+      },
+      "tabs": {
+        "general": "Allgemein",
+        "capabilities": "Fähigkeiten",
+        "subagents": "Subagents"
+      },
+      "picker": {
+        "placeholder": "Vorlage auswählen",
+        "none": "Keine Vorlage"
+      },
+      "selectors": {
+        "skills": "Wähle die wiederverwendbaren Skills für diese Vorlage aus.",
+        "mcp": "Wähle die MCP-Server aus, die diese Vorlage aktivieren soll.",
+        "plugins": "Wähle die Plugin-Vorlagen aus, die diese Vorlage enthalten soll."
+      },
+      "form": {
+        "name": "Name",
+        "namePlaceholder": "Zum Beispiel: Frontend-Auslieferung",
+        "description": "Beschreibung",
+        "descriptionPlaceholder": "Beschreibe, wann diese Vorlage verwendet werden soll",
+        "promptTemplate": "Prompt-Vorlage",
+        "promptTemplatePlaceholder": "Optionale Basisanweisungen für Läufe, die aus dieser Vorlage erstellt werden",
+        "icon": "Symbol",
+        "color": "Farbe",
+        "colorInvalid": "Verwende eine gültige Hex-Farbe wie #0ea5e9",
+        "browserEnabled": "Browser aktivieren",
+        "browserEnabledHint": "Fügt Browser-Fähigkeit hinzu, wenn diese Vorlage angewendet wird.",
+        "memoryEnabled": "Speicher aktivieren",
+        "memoryEnabledHint": "Übernimmt die Speicher-Fähigkeit in Läufe, die mit dieser Vorlage erstellt werden."
+      },
+      "dialog": {
+        "createTitle": "Vorlage erstellen",
+        "editTitle": "Vorlage bearbeiten"
+      },
+      "subagents": {
+        "title": "Inline-Subagents",
+        "description": "Definiere zusätzliche Subagents, die mit dieser Vorlage injiziert werden.",
+        "add": "Subagent hinzufügen",
+        "empty": "Keine Subagents konfiguriert",
+        "itemTitle": "Subagent {{index}}",
+        "fields": {
+          "name": "Name",
+          "model": "Modell",
+          "description": "Beschreibung",
+          "tools": "Werkzeuge",
+          "toolsPlaceholder": "Read, Edit, Bash",
+          "prompt": "Prompt"
+        }
+      },
+      "toasts": {
+        "loadError": "Vorlagen konnten nicht geladen werden",
+        "created": "Vorlage erstellt",
+        "updated": "Vorlage aktualisiert",
+        "deleted": "Vorlage gelöscht",
+        "saveFailed": "Vorlage konnte nicht gespeichert werden",
+        "deleteFailed": "Vorlage konnte nicht gelöscht werden"
       }
     },
     "skillSettings": {

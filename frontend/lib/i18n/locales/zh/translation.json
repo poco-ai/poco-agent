@@ -1403,6 +1403,76 @@
     "presetsPage": {
       "header": {
         "title": "预设"
+      },
+      "summary": "{{count}} 个可复用预设",
+      "searchPlaceholder": "搜索预设...",
+      "addCard": "创建一个预设",
+      "empty": "还没有预设",
+      "emptySearch": "没有匹配的预设",
+      "emptyDescription": "暂无描述",
+      "emptySkills": "暂无 Skill",
+      "emptyMcp": "暂无 MCP 服务",
+      "emptyPlugins": "暂无插件预设",
+      "loadingCapabilities": "正在加载能力列表...",
+      "flags": {
+        "browser": "浏览器",
+        "memory": "记忆"
+      },
+      "tabs": {
+        "general": "基础信息",
+        "capabilities": "能力组合",
+        "subagents": "子代理"
+      },
+      "picker": {
+        "placeholder": "选择预设",
+        "none": "不使用预设"
+      },
+      "selectors": {
+        "skills": "选择这个预设默认启用的 Skills。",
+        "mcp": "选择这个预设默认启用的 MCP 服务。",
+        "plugins": "选择这个预设携带的插件预设。"
+      },
+      "form": {
+        "name": "名称",
+        "namePlaceholder": "例如：前端交付",
+        "description": "描述",
+        "descriptionPlaceholder": "说明这个预设适合什么场景",
+        "promptTemplate": "提示词模板",
+        "promptTemplatePlaceholder": "可选，为使用该预设创建的任务提供默认指令基线",
+        "icon": "图标",
+        "color": "颜色",
+        "colorInvalid": "请输入合法的十六进制颜色，例如 #0ea5e9",
+        "browserEnabled": "启用浏览器",
+        "browserEnabledHint": "应用该预设时自动附带浏览器能力。",
+        "memoryEnabled": "启用记忆",
+        "memoryEnabledHint": "应用该预设时自动附带记忆能力。"
+      },
+      "dialog": {
+        "createTitle": "创建预设",
+        "editTitle": "编辑预设"
+      },
+      "subagents": {
+        "title": "内联子代理",
+        "description": "定义会随预设一起注入的额外子代理。",
+        "add": "添加子代理",
+        "empty": "暂未配置子代理",
+        "itemTitle": "子代理 {{index}}",
+        "fields": {
+          "name": "名称",
+          "model": "模型",
+          "description": "描述",
+          "tools": "工具",
+          "toolsPlaceholder": "Read, Edit, Bash",
+          "prompt": "提示词"
+        }
+      },
+      "toasts": {
+        "loadError": "加载预设失败",
+        "created": "预设已创建",
+        "updated": "预设已更新",
+        "deleted": "预设已删除",
+        "saveFailed": "保存预设失败",
+        "deleteFailed": "删除预设失败"
       }
     },
     "skillSettings": {
