@@ -3,7 +3,6 @@
 import * as React from "react";
 import type { LucideIcon } from "lucide-react";
 import {
-  Sparkles,
   Store,
   Puzzle,
   Plug,
@@ -16,7 +15,6 @@ import {
 
 import { useT } from "@/lib/i18n/client";
 import { SkillsMarketplacePageClient } from "@/features/capabilities/marketplace/components/skills-marketplace-page-client";
-import { PresetsPageClient } from "@/features/capabilities/presets/components/presets-page-client";
 import { SkillsPageClient } from "@/features/capabilities/skills/components/skills-page-client";
 import { McpPageClient } from "@/features/capabilities/mcp/components/mcp-page-client";
 import { PluginsPageClient } from "@/features/capabilities/plugins/components/plugins-page-client";
@@ -49,14 +47,6 @@ export function useCapabilityViews(): CapabilityView[] {
         group: "featured",
         icon: Store,
         component: SkillsMarketplacePageClient,
-      },
-      {
-        id: "presets",
-        label: t("library.presets.title"),
-        description: t("library.presets.description"),
-        group: "featured",
-        icon: Sparkles,
-        component: PresetsPageClient,
       },
       {
         id: "skills",

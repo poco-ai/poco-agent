@@ -35,9 +35,21 @@ export function CapabilitiesPageClient() {
   const [isMobileDetailVisible, setIsMobileDetailVisible] =
     React.useState(false);
   const [enteredDetailViaView, setEnteredDetailViaView] = React.useState(false);
+  const capabilitiesPathSuffix = "/capabilities";
+
+  React.useEffect(() => {
+    if (viewFromUrl !== "presets") return;
+
+    const basePath = pathname.endsWith(capabilitiesPathSuffix)
+      ? pathname.slice(0, -capabilitiesPathSuffix.length)
+      : "";
+    const targetPath = `${basePath}/presets`;
+    router.replace(targetPath, { scroll: false });
+  }, [capabilitiesPathSuffix, pathname, router, viewFromUrl]);
 
   React.useEffect(() => {
     if (!views.length) return;
+    if (viewFromUrl === "presets") return;
 
     const isMobile =
       typeof window !== "undefined" &&
@@ -97,6 +109,7 @@ export function CapabilitiesPageClient() {
   // Strip from=home on internal nav so back-from-list stays correct.
   React.useEffect(() => {
     if (!activeViewId || !views.length) return;
+    if (viewFromUrl === "presets") return;
     const urlHasValidView =
       viewFromUrl === "list" ||
       (viewFromUrl && views.some((v) => v.id === viewFromUrl));

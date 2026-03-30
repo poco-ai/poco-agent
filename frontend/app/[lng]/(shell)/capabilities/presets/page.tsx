@@ -10,5 +10,5 @@ export default async function CapabilitiesPresetsPage({
   params,
 }: CapabilitiesPresetsPageProps) {
   const { lng } = await params;
-  redirect(`/${lng}/capabilities?view=presets`);
+  redirect(`/${lng}/presets`);
 }
