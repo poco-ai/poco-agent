@@ -326,7 +326,7 @@
       "skillsUsed": "Skills",
       "mcpConfigured": "MCP-Server (konfiguriert)",
       "mcp": "MCP-Server",
-      "pluginsConfigured": "Voreinstellungen (konfiguriert)"
+      "pluginsConfigured": "Plugins (konfiguriert)"
     },
     "typingWords": [
       "Accomplishing",
@@ -667,7 +667,7 @@
   },
   "library": {
     "title": "Funktionen",
-    "subtitle": "Verwalte deine Skills, Vorlagen und Tools",
+    "subtitle": "Verwalte deine Skills, Plugins und Tools",
     "comingSoon": "Demnächst",
     "mobile": {
       "back": "Zurück zu den Funktionen"
@@ -705,8 +705,8 @@
       "action": "Server verwalten"
     },
     "pluginsStore": {
-      "title": "Voreinstellungen",
-      "description": "Fähigkeits-Voreinstellungen durchsuchen und installieren"
+      "title": "Plugins",
+      "description": "Plugins durchsuchen und installieren"
     },
     "envVars": {
       "title": "Umgebungsvariablen",
@@ -1089,8 +1089,8 @@
       }
     },
     "pluginsPage": {
-      "searchPlaceholder": "Vorlagen durchsuchen...",
-      "addCard": "Vorlage hinzufügen"
+      "searchPlaceholder": "Plugins durchsuchen...",
+      "addCard": "Plugin hinzufügen"
     },
     "skillsManager": {
       "stats": {
@@ -1255,21 +1255,21 @@
         "uninstall": "Deinstallieren"
       },
       "toasts": {
-        "loadError": "Voreinstellungen konnten nicht geladen werden",
+        "loadError": "Plugins konnten nicht geladen werden",
         "actionError": "Aktion fehlgeschlagen, bitte versuche es später erneut",
-        "installed": "Voreinstellung installiert",
-        "uninstalled": "Voreinstellung deinstalliert",
-        "enabled": "Voreinstellung aktiviert",
-        "disabled": "Voreinstellung deaktiviert",
+        "installed": "Plugin installiert",
+        "uninstalled": "Plugin deinstalliert",
+        "enabled": "Plugin aktiviert",
+        "disabled": "Plugin deaktiviert",
         "actionFailed": "Aktion fehlgeschlagen, bitte versuche es später erneut",
-        "exclusiveEnabled": "(Andere Vorlagen wurden deaktiviert)"
+        "exclusiveEnabled": "(Andere Plugins wurden deaktiviert)"
       },
-      "empty": "Noch keine Voreinstellungen",
-      "unknownPlugin": "Unbekannte Voreinstellung"
+      "empty": "Noch keine Plugins",
+      "unknownPlugin": "Unbekanntes Plugin"
     },
     "pluginsImport": {
-      "title": "Voreinstellungen importieren",
-      "description": "Lade eine Preset-ZIP hoch oder importiere aus einem öffentlichen GitHub-Repository.",
+      "title": "Plugins importieren",
+      "description": "Lade eine Plugin-ZIP hoch oder importiere aus einem öffentlichen GitHub-Repository.",
       "relativePath": "Relativer Pfad",
       "tabs": {
         "zip": "ZIP hochladen",
@@ -1278,11 +1278,11 @@
       "fields": {
         "zip": "ZIP-Datei",
         "githubUrl": "Öffentliche GitHub-Repo-URL",
-        "nameOverride": "Name der Voreinstellung"
+        "nameOverride": "Plugin-Name"
       },
       "placeholders": {
         "githubUrl": "https://github.com/owner/repo",
-        "name": "z. B. mein-preset"
+        "name": "z. B. mein-plugin"
       },
       "hints": {
         "github": "Standardmäßig main/master (nur öffentliche github.com-Repos)"
@@ -1296,9 +1296,9 @@
       },
       "preview": {
         "found": "Gefunden",
-        "items": "Preset-Definitionen",
+        "items": "Plugin-Definitionen",
         "overwrite": "werden überschrieben",
-        "overwriteItems": "vorhandene Voreinstellungen",
+        "overwriteItems": "vorhandene Plugins",
         "willOverwrite": "Überschreiben",
         "root": "Wurzel",
         "path": "Pfad",
@@ -1327,7 +1327,7 @@
         "discoverError": "Erkennung fehlgeschlagen, bitte versuche es später erneut",
         "committed": "Import erfolgreich",
         "commitError": "Import fehlgeschlagen, bitte versuche es später erneut",
-        "partialFailed": "Einige Voreinstellungen konnten nicht importiert werden. Bitte prüfe die Details.",
+        "partialFailed": "Einige Plugins konnten nicht importiert werden. Bitte prüfe die Details.",
         "commitTimeout": "Import-Zeitüberschreitung, bitte versuche es später erneut"
       },
       "progress": {
@@ -1413,7 +1413,7 @@
       "emptyDescription": "Noch keine Beschreibung",
       "emptySkills": "Keine Skills verfügbar",
       "emptyMcp": "Keine MCP-Server verfügbar",
-      "emptyPlugins": "Keine Plugin-Vorlagen verfügbar",
+      "emptyPlugins": "Keine Plugins verfuegbar",
       "loadingCapabilities": "Fähigkeiten werden geladen...",
       "flags": {
         "browser": "Browser",
@@ -1431,7 +1431,7 @@
       "selectors": {
         "skills": "Wähle die wiederverwendbaren Skills für diese Vorlage aus.",
         "mcp": "Wähle die MCP-Server aus, die diese Vorlage aktivieren soll.",
-        "plugins": "Wähle die Plugin-Vorlagen aus, die diese Vorlage enthalten soll."
+        "plugins": "Waehle die Plugins aus, die diese Vorlage enthalten soll."
       },
       "form": {
         "name": "Name",
@@ -1544,7 +1544,7 @@
         "stats": {
           "skills": "{{count}} Skills",
           "mcp": "{{count}} MCP",
-          "plugins": "{{count}} Vorlagen"
+          "plugins": "{{count}} Plugins"
         },
         "toasts": {
           "loadError": "Projektvorlagen konnten nicht geladen werden",

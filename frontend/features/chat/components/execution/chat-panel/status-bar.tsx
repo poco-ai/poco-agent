@@ -267,7 +267,7 @@ export function StatusBar({
             </div>,
           )}
 
-        {/* Presets Card */}
+        {/* Plugins Card */}
         {hasPresets && (
           <Tooltip>
             <TooltipTrigger asChild>

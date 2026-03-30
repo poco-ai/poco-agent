@@ -60,7 +60,7 @@ export function ConnectToolsDialog({
           className="px-4 pb-4 pt-0 md:px-6 md:pb-6"
           aria-label="Capability categories"
         >
-          <section className={gridStyles} aria-label="MCP, Skills, and Presets">
+          <section className={gridStyles} aria-label="MCP, Skills, and Plugins">
             {cards.map((card) => (
               <CapabilityCard
                 key={card.title}

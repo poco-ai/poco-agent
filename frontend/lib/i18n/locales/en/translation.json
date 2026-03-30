@@ -326,7 +326,7 @@
       "skillsUsed": "Skills",
       "mcpConfigured": "MCP servers (configured)",
       "mcp": "MCP servers",
-      "pluginsConfigured": "Presets (configured)"
+      "pluginsConfigured": "Plugins (configured)"
     },
     "typingWords": [
       "Accomplishing",
@@ -667,7 +667,7 @@
   },
   "library": {
     "title": "Capabilities",
-    "subtitle": "Manage your skills, presets and tools",
+    "subtitle": "Manage your skills, plugins, and tools",
     "comingSoon": "Coming Soon",
     "mobile": {
       "back": "Back to capabilities"
@@ -705,8 +705,8 @@
       "action": "Manage Servers"
     },
     "pluginsStore": {
-      "title": "Presets",
-      "description": "Browse and install capability presets"
+      "title": "Plugins",
+      "description": "Browse and install plugins"
     },
     "envVars": {
       "title": "Environment Variables",
@@ -1089,8 +1089,8 @@
       }
     },
     "pluginsPage": {
-      "searchPlaceholder": "Search presets...",
-      "addCard": "Add a preset"
+      "searchPlaceholder": "Search plugins...",
+      "addCard": "Add a plugin"
     },
     "skillsManager": {
       "stats": {
@@ -1255,21 +1255,21 @@
         "uninstall": "Uninstall"
       },
       "toasts": {
-        "loadError": "Failed to load presets",
+        "loadError": "Failed to load plugins",
         "actionError": "Operation failed, please try again later",
-        "installed": "Preset installed",
-        "uninstalled": "Preset uninstalled",
-        "enabled": "Preset enabled",
-        "disabled": "Preset disabled",
+        "installed": "Plugin installed",
+        "uninstalled": "Plugin uninstalled",
+        "enabled": "Plugin enabled",
+        "disabled": "Plugin disabled",
         "actionFailed": "Operation failed, please try again later",
-        "exclusiveEnabled": "(Other presets were turned off)"
+        "exclusiveEnabled": "(Other plugins were turned off)"
       },
-      "empty": "No presets yet",
-      "unknownPlugin": "Unknown preset"
+      "empty": "No plugins yet",
+      "unknownPlugin": "Unknown plugin"
     },
     "pluginsImport": {
-      "title": "Import Presets",
-      "description": "Upload a preset zip or import from a public GitHub repository.",
+      "title": "Import Plugins",
+      "description": "Upload a plugin zip or import from a public GitHub repository.",
       "relativePath": "Relative path",
       "tabs": {
         "zip": "Upload Zip",
@@ -1278,11 +1278,11 @@
       "fields": {
         "zip": "Zip file",
         "githubUrl": "GitHub public repo URL",
-        "nameOverride": "Preset name"
+        "nameOverride": "Plugin name"
       },
       "placeholders": {
         "githubUrl": "https://github.com/owner/repo",
-        "name": "e.g. my-preset"
+        "name": "e.g. my-plugin"
       },
       "hints": {
         "github": "Defaults to main/master (public github.com repos only)"
@@ -1296,9 +1296,9 @@
       },
       "preview": {
         "found": "Found",
-        "items": "preset definitions",
+        "items": "plugin definitions",
         "overwrite": "will overwrite",
-        "overwriteItems": "existing presets",
+        "overwriteItems": "existing plugins",
         "willOverwrite": "Overwrite",
         "root": "Root",
         "path": "Path",
@@ -1327,7 +1327,7 @@
         "discoverError": "Discover failed, please try again later",
         "committed": "Import succeeded",
         "commitError": "Import failed, please try again later",
-        "partialFailed": "Some presets failed to import. Please review the details.",
+        "partialFailed": "Some plugins failed to import. Please review the details.",
         "commitTimeout": "Import timed out, please try again later"
       },
       "progress": {
@@ -1413,7 +1413,7 @@
       "emptyDescription": "No description yet",
       "emptySkills": "No skills available",
       "emptyMcp": "No MCP servers available",
-      "emptyPlugins": "No presets available",
+      "emptyPlugins": "No plugins available",
       "loadingCapabilities": "Loading capabilities...",
       "flags": {
         "browser": "Browser",
@@ -1431,7 +1431,7 @@
       "selectors": {
         "skills": "Choose the reusable skills bundled into this preset.",
         "mcp": "Choose the MCP servers this preset should enable.",
-        "plugins": "Choose the plugin presets this preset should carry."
+        "plugins": "Choose the plugins this preset should carry."
       },
       "form": {
         "name": "Name",
@@ -1544,7 +1544,7 @@
         "stats": {
           "skills": "{{count}} skills",
           "mcp": "{{count}} MCP",
-          "plugins": "{{count}} presets"
+          "plugins": "{{count}} plugins"
         },
         "toasts": {
           "loadError": "Failed to load project presets",

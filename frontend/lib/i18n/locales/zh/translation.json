@@ -326,7 +326,7 @@
       "skillsUsed": "技能使用",
       "mcpConfigured": "MCP 服务器配置",
       "mcp": "MCP 服务器",
-      "pluginsConfigured": "预设配置"
+      "pluginsConfigured": "插件配置"
     },
     "typingWords": [
       "Accomplishing",
@@ -667,7 +667,7 @@
   },
   "library": {
     "title": "能力",
-    "subtitle": "管理您的技能、预设和工具",
+    "subtitle": "管理您的技能、插件和工具",
     "comingSoon": "即将推出",
     "mobile": {
       "back": "返回能力列表"
@@ -705,8 +705,8 @@
       "action": "管理服务器"
     },
     "pluginsStore": {
-      "title": "预设",
-      "description": "浏览并安装能力预设"
+      "title": "插件",
+      "description": "浏览并安装插件"
     },
     "envVars": {
       "title": "环境变量",
@@ -1089,7 +1089,7 @@
       }
     },
     "pluginsPage": {
-      "searchPlaceholder": "搜索预设...",
+      "searchPlaceholder": "搜索插件...",
       "addCard": "新增一个 Plugin"
     },
     "skillsManager": {
@@ -1255,21 +1255,21 @@
         "uninstall": "卸载"
       },
       "toasts": {
-        "loadError": "加载预设列表失败",
+        "loadError": "加载插件列表失败",
         "actionError": "操作失败，请稍后再试",
-        "installed": "预设已安装",
-        "uninstalled": "预设已卸载",
-        "enabled": "预设已启用",
-        "disabled": "预设已停用",
+        "installed": "插件已安装",
+        "uninstalled": "插件已卸载",
+        "enabled": "插件已启用",
+        "disabled": "插件已停用",
         "actionFailed": "操作失败，请稍后再试",
-        "exclusiveEnabled": "（同时关闭其他预设）"
+        "exclusiveEnabled": "（同时关闭其他插件）"
       },
-      "empty": "暂无预设",
-      "unknownPlugin": "未知预设"
+      "empty": "暂无插件",
+      "unknownPlugin": "未知插件"
     },
     "pluginsImport": {
-      "title": "导入预设",
-      "description": "上传预设 zip，或从 GitHub 公共仓库导入。",
+      "title": "导入插件",
+      "description": "上传插件 zip，或从 GitHub 公共仓库导入。",
       "relativePath": "相对路径",
       "tabs": {
         "zip": "上传压缩包",
@@ -1278,11 +1278,11 @@
       "fields": {
         "zip": "Zip 文件",
         "githubUrl": "GitHub 公共仓库地址",
-        "nameOverride": "预设名称"
+        "nameOverride": "插件名称"
       },
       "placeholders": {
         "githubUrl": "https://github.com/owner/repo",
-        "name": "例如：my-preset"
+        "name": "例如：my-plugin"
       },
       "hints": {
         "github": "默认为 main/master 分支，仅支持公开 GitHub 仓库"
@@ -1296,9 +1296,9 @@
       },
       "preview": {
         "found": "发现",
-        "items": "个预设定义",
+        "items": "个插件定义",
         "overwrite": "将覆盖",
-        "overwriteItems": "个同名预设",
+        "overwriteItems": "个同名插件",
         "willOverwrite": "将覆盖",
         "root": "根目录",
         "path": "路径",
@@ -1323,11 +1323,11 @@
       "toasts": {
         "missingZip": "请选择一个 zip 文件",
         "missingGithubUrl": "请输入 GitHub 地址",
-        "discovered": "解析成功，请确认要导入的预设",
+        "discovered": "解析成功，请确认要导入的插件",
         "discoverError": "解析失败，请稍后重试",
-        "committed": "预设导入成功",
+        "committed": "插件导入成功",
         "commitError": "导入失败，请稍后重试",
-        "partialFailed": "部分预设导入失败，请查看详情",
+        "partialFailed": "部分插件导入失败，请查看详情",
         "commitTimeout": "导入超时，请稍后重试"
       },
       "progress": {
@@ -1413,7 +1413,7 @@
       "emptyDescription": "暂无描述",
       "emptySkills": "暂无 Skill",
       "emptyMcp": "暂无 MCP 服务",
-      "emptyPlugins": "暂无插件预设",
+      "emptyPlugins": "暂无插件",
       "loadingCapabilities": "正在加载能力列表...",
       "flags": {
         "browser": "浏览器",
@@ -1431,7 +1431,7 @@
       "selectors": {
         "skills": "选择这个预设默认启用的 Skills。",
         "mcp": "选择这个预设默认启用的 MCP 服务。",
-        "plugins": "选择这个预设携带的插件预设。"
+        "plugins": "选择这个预设携带的插件。"
       },
       "form": {
         "name": "名称",
@@ -1544,7 +1544,7 @@
         "stats": {
           "skills": "{{count}} 个技能",
           "mcp": "{{count}} 个 MCP",
-          "plugins": "{{count}} 个预设"
+          "plugins": "{{count}} 个插件"
         },
         "toasts": {
           "loadError": "加载项目预设失败",

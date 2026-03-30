@@ -326,7 +326,7 @@
       "skillsUsed": "Compétences",
       "mcpConfigured": "Serveurs MCP (configurés)",
       "mcp": "Serveurs MCP",
-      "pluginsConfigured": "Préréglages (configurés)"
+      "pluginsConfigured": "Plugins (configurés)"
     },
     "typingWords": [
       "Accomplishing",
@@ -667,7 +667,7 @@
   },
   "library": {
     "title": "Capacités",
-    "subtitle": "Gérer vos compétences, préréglages et outils",
+    "subtitle": "Gérer vos compétences, plugins et outils",
     "comingSoon": "Bientôt disponible",
     "mobile": {
       "back": "Retour aux capacités"
@@ -1089,8 +1089,8 @@
       }
     },
     "pluginsPage": {
-      "searchPlaceholder": "Rechercher des préréglages...",
-      "addCard": "Ajouter un préréglage"
+      "searchPlaceholder": "Rechercher des plugins...",
+      "addCard": "Ajouter un plugin"
     },
     "skillsManager": {
       "stats": {
@@ -1255,21 +1255,21 @@
         "uninstall": "Désinstaller"
       },
       "toasts": {
-        "loadError": "Impossible de charger les préréglages",
+        "loadError": "Impossible de charger les plugins",
         "actionError": "L'opération a échoué, veuillez réessayer plus tard",
-        "installed": "Préréglage installé",
-        "uninstalled": "Préréglage désinstallé",
-        "enabled": "Préréglage activé",
-        "disabled": "Préréglage désactivé",
+        "installed": "Plugin installé",
+        "uninstalled": "Plugin désinstallé",
+        "enabled": "Plugin activé",
+        "disabled": "Plugin désactivé",
         "actionFailed": "L'opération a échoué, veuillez réessayer plus tard",
-        "exclusiveEnabled": "(Autres préréglages désactivés)"
+        "exclusiveEnabled": "(Autres plugins désactivés)"
       },
-      "empty": "Aucun préréglage pour le moment",
-      "unknownPlugin": "Préréglage inconnu"
+      "empty": "Aucun plugin pour le moment",
+      "unknownPlugin": "Plugin inconnu"
     },
     "pluginsImport": {
-      "title": "Importer des préréglages",
-      "description": "Téléversez un zip de préréglages ou importez depuis un dépôt GitHub public.",
+      "title": "Importer des plugins",
+      "description": "Téléversez un zip de plugins ou importez depuis un dépôt GitHub public.",
       "relativePath": "Chemin relatif",
       "tabs": {
         "zip": "Téléverser un zip",
@@ -1278,11 +1278,11 @@
       "fields": {
         "zip": "Fichier zip",
         "githubUrl": "URL du dépôt GitHub public",
-        "nameOverride": "Nom du préréglage"
+        "nameOverride": "Nom du plugin"
       },
       "placeholders": {
         "githubUrl": "https://github.com/owner/repo",
-        "name": "ex. mon-préréglage"
+        "name": "ex. mon-plugin"
       },
       "hints": {
         "github": "Branche main/master par défaut (dépôts github.com publics uniquement)"
@@ -1296,9 +1296,9 @@
       },
       "preview": {
         "found": "Trouvé",
-        "items": "définitions de préréglages",
+        "items": "définitions de plugins",
         "overwrite": "écrasera",
-        "overwriteItems": "préréglages existants",
+        "overwriteItems": "plugins existants",
         "willOverwrite": "Écraser",
         "root": "Racine",
         "path": "Chemin",
@@ -1327,7 +1327,7 @@
         "discoverError": "Échec de la découverte, veuillez réessayer plus tard",
         "committed": "Import réussi",
         "commitError": "Échec de l'import, veuillez réessayer plus tard",
-        "partialFailed": "Certains préréglages n'ont pas pu être importés. Veuillez vérifier les détails.",
+        "partialFailed": "Certains plugins n'ont pas pu être importés. Veuillez vérifier les détails.",
         "commitTimeout": "Délai d'import dépassé, veuillez réessayer plus tard"
       },
       "progress": {
@@ -1413,7 +1413,7 @@
       "emptyDescription": "Aucune description pour le moment",
       "emptySkills": "Aucune compétence disponible",
       "emptyMcp": "Aucun serveur MCP disponible",
-      "emptyPlugins": "Aucun préréglage de plugin disponible",
+      "emptyPlugins": "Aucun plugin disponible",
       "loadingCapabilities": "Chargement des capacités...",
       "flags": {
         "browser": "Navigateur",
@@ -1431,7 +1431,7 @@
       "selectors": {
         "skills": "Choisissez les compétences réutilisables incluses dans ce préréglage.",
         "mcp": "Choisissez les serveurs MCP que ce préréglage doit activer.",
-        "plugins": "Choisissez les préréglages de plugin que ce préréglage doit embarquer."
+        "plugins": "Choisissez les plugins que ce préréglage doit embarquer."
       },
       "form": {
         "name": "Nom",
@@ -1544,7 +1544,7 @@
         "stats": {
           "skills": "{{count}} compétences",
           "mcp": "{{count}} MCP",
-          "plugins": "{{count}} préréglages"
+          "plugins": "{{count}} plugins"
         },
         "toasts": {
           "loadError": "Échec du chargement des préréglages du projet",

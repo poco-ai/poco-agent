@@ -326,7 +326,7 @@
       "skillsUsed": "スキル",
       "mcpConfigured": "MCPサーバー（設定済み）",
       "mcp": "MCPサーバー",
-      "pluginsConfigured": "プリセット（設定済み）"
+      "pluginsConfigured": "プラグイン（設定済み）"
     },
     "typingWords": [
       "Accomplishing",
@@ -667,7 +667,7 @@
   },
   "library": {
     "title": "機能",
-    "subtitle": "スキル、プリセット、ツールを管理",
+    "subtitle": "スキル、プラグイン、ツールを管理",
     "comingSoon": "近日公開",
     "mobile": {
       "back": "機能一覧に戻る"
@@ -705,8 +705,8 @@
       "action": "サーバーを管理"
     },
     "pluginsStore": {
-      "title": "プリセット",
-      "description": "機能プリセットを閲覧してインストール"
+      "title": "プラグイン",
+      "description": "プラグインを閲覧してインストール"
     },
     "envVars": {
       "title": "環境変数",
@@ -1089,8 +1089,8 @@
       }
     },
     "pluginsPage": {
-      "searchPlaceholder": "プリセットを検索...",
-      "addCard": "プリセットを追加"
+      "searchPlaceholder": "プラグインを検索...",
+      "addCard": "プラグインを追加"
     },
     "skillsManager": {
       "stats": {
@@ -1255,21 +1255,21 @@
         "uninstall": "アンインストール"
       },
       "toasts": {
-        "loadError": "プリセットの読み込みに失敗しました",
+        "loadError": "プラグインの読み込みに失敗しました",
         "actionError": "操作に失敗しました。後でもう一度お試しください",
-        "installed": "プリセットをインストールしました",
-        "uninstalled": "プリセットをアンインストールしました",
-        "enabled": "プリセットを有効にしました",
-        "disabled": "プリセットを無効にしました",
+        "installed": "プラグインをインストールしました",
+        "uninstalled": "プラグインをアンインストールしました",
+        "enabled": "プラグインを有効にしました",
+        "disabled": "プラグインを無効にしました",
         "actionFailed": "操作に失敗しました。後でもう一度お試しください",
-        "exclusiveEnabled": "（他のプリセットもオフにしました）"
+        "exclusiveEnabled": "（他のプラグインもオフにしました）"
       },
-      "empty": "プリセットはまだありません",
-      "unknownPlugin": "不明なプリセット"
+      "empty": "プラグインはまだありません",
+      "unknownPlugin": "不明なプラグイン"
     },
     "pluginsImport": {
-      "title": "プリセットをインポート",
-      "description": "プリセット zip をアップロードするか、公開 GitHub リポジトリからインポートします。",
+      "title": "プラグインをインポート",
+      "description": "プラグイン zip をアップロードするか、公開 GitHub リポジトリからインポートします。",
       "relativePath": "相対パス",
       "tabs": {
         "zip": "Zip をアップロード",
@@ -1278,11 +1278,11 @@
       "fields": {
         "zip": "Zip ファイル",
         "githubUrl": "公開 GitHub リポジトリ URL",
-        "nameOverride": "プリセット名"
+        "nameOverride": "プラグイン名"
       },
       "placeholders": {
         "githubUrl": "https://github.com/owner/repo",
-        "name": "例: my-preset"
+        "name": "例: my-plugin"
       },
       "hints": {
         "github": "デフォルトは main/master（公開 github.com リポジトリのみ）"
@@ -1296,9 +1296,9 @@
       },
       "preview": {
         "found": "検出",
-        "items": "件のプリセット定義",
+        "items": "件のプラグイン定義",
         "overwrite": "上書きされます",
-        "overwriteItems": "既存のプリセット",
+        "overwriteItems": "既存のプラグイン",
         "willOverwrite": "上書き",
         "root": "ルート",
         "path": "パス",
@@ -1327,7 +1327,7 @@
         "discoverError": "検出に失敗しました。後でもう一度お試しください",
         "committed": "インポートに成功しました",
         "commitError": "インポートに失敗しました。後でもう一度お試しください",
-        "partialFailed": "一部のプリセットのインポートに失敗しました。詳細を確認してください。",
+        "partialFailed": "一部のプラグインのインポートに失敗しました。詳細を確認してください。",
         "commitTimeout": "インポートがタイムアウトしました。後でもう一度お試しください"
       },
       "progress": {
@@ -1413,7 +1413,7 @@
       "emptyDescription": "説明はまだありません",
       "emptySkills": "利用可能なスキルがありません",
       "emptyMcp": "利用可能な MCP サーバーがありません",
-      "emptyPlugins": "利用可能なプラグインプリセットがありません",
+      "emptyPlugins": "利用可能なプラグインがありません",
       "loadingCapabilities": "機能を読み込み中...",
       "flags": {
         "browser": "ブラウザ",
@@ -1431,7 +1431,7 @@
       "selectors": {
         "skills": "このプリセットに含める再利用可能なスキルを選択します。",
         "mcp": "このプリセットで有効にする MCP サーバーを選択します。",
-        "plugins": "このプリセットに含めるプラグインプリセットを選択します。"
+        "plugins": "このプリセットに含めるプラグインを選択します。"
       },
       "form": {
         "name": "名前",
@@ -1544,7 +1544,7 @@
         "stats": {
           "skills": "{{count}} スキル",
           "mcp": "{{count}} MCP",
-          "plugins": "{{count}} プリセット"
+          "plugins": "{{count}} プラグイン"
         },
         "toasts": {
           "loadError": "プロジェクトプリセットの読み込みに失敗しました",

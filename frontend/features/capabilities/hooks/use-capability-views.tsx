@@ -66,8 +66,8 @@ export function useCapabilityViews(): CapabilityView[] {
       },
       {
         id: "plugins",
-        label: t("library.pluginsManager.title"),
-        description: t("library.pluginsManager.description"),
+        label: t("library.pluginsStore.title"),
+        description: t("library.pluginsStore.description"),
         group: "primary",
         icon: Plug,
         component: PluginsPageClient,
