@@ -288,6 +288,17 @@ class S3StorageService:
 
         return deleted
 
+    def delete_object(self, *, key: str) -> None:
+        try:
+            self.client.delete_object(Bucket=self.bucket, Key=key)
+        except (ClientError, BotoCoreError) as exc:
+            logger.error(f"Failed to delete object {key}: {exc}")
+            raise AppException(
+                error_code=ErrorCode.EXTERNAL_SERVICE_ERROR,
+                message="Failed to delete file",
+                details={"key": key, "error": str(exc)},
+            ) from exc
+
     def sync_directory(
         self,
         *,

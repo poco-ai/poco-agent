@@ -22,6 +22,7 @@ from app.models.plugin import Plugin
 from app.models.plugin_import_job import PluginImportJob
 from app.models.preset import Preset
 from app.models.project import Project
+from app.models.project_file import ProjectFile
 from app.models.project_preset import ProjectPreset
 from app.models.session_queue_item import AgentSessionQueueItem
 from app.models.skill import Skill
@@ -58,6 +59,7 @@ __all__ = [
     "PluginImportJob",
     "Preset",
     "Project",
+    "ProjectFile",
     "ProjectPreset",
     "Skill",
     "SkillImportJob",

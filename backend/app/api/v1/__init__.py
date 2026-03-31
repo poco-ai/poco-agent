@@ -30,6 +30,7 @@ from app.api.v1 import (
     pending_skill_creations,
     presets,
     projects,
+    project_files,
     project_presets,
     runs,
     schedules,
@@ -62,6 +63,7 @@ api_v1_router.include_router(callback.router)
 api_v1_router.include_router(messages.router)
 api_v1_router.include_router(memories.router)
 api_v1_router.include_router(projects.router)
+api_v1_router.include_router(project_files.router)
 api_v1_router.include_router(project_presets.router)
 api_v1_router.include_router(tool_executions.router)
 api_v1_router.include_router(usage.router)
