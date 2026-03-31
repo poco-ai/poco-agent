@@ -17,6 +17,7 @@ import type { ProjectPreset } from "@/features/capabilities/presets";
 import type { ProjectItem, TaskHistoryItem } from "@/features/projects/types";
 
 import { ProjectHeader } from "@/features/projects/components/project-header";
+import { ProjectInfoSection } from "@/features/projects/components/project-info-section";
 import { ProjectSettingsDialog } from "@/features/projects/components/project-settings-dialog";
 import { getDefaultProjectPresetId } from "@/features/projects/lib/project-presets";
 import { CapabilityToggleProvider, ConnectorsBar } from "@/features/connectors";
@@ -59,13 +60,10 @@ export function ProjectPageClient({ projectId }: ProjectPageClientProps) {
   );
 
   const projectTitle = React.useMemo(() => {
-    const baseName =
-      currentProject?.name || t("project.untitled", "Untitled Project");
-    return t("project.titleWithCount", {
-      name: baseName,
-      count: projectTaskCount,
+    return t("project.detail.composerTitle", {
+      name: currentProject?.name || t("project.untitled", "Untitled Project"),
     });
-  }, [currentProject?.name, projectTaskCount, t]);
+  }, [currentProject?.name, t]);
 
   React.useEffect(() => {
     let active = true;
@@ -172,7 +170,7 @@ export function ProjectPageClient({ projectId }: ProjectPageClientProps) {
 
   const handleRenameProject = React.useCallback(
     (targetProjectId: string, newName: string) => {
-      updateProject(targetProjectId, { name: newName });
+      void updateProject(targetProjectId, { name: newName });
     },
     [updateProject],
   );
@@ -189,7 +187,7 @@ export function ProjectPageClient({ projectId }: ProjectPageClientProps) {
 
   return (
     <CapabilityToggleProvider>
-      <div className="flex flex-1 flex-col min-h-0">
+      <div className="flex min-h-0 flex-1 flex-col bg-background">
         <ProjectHeader
           project={currentProject}
           onOpenSettings={() => setSettingsOpen(true)}
@@ -197,11 +195,28 @@ export function ProjectPageClient({ projectId }: ProjectPageClientProps) {
           onDeleteProject={handleDeleteProject}
         />
 
+        {currentProject ? (
+          <div className="px-4 pt-6 sm:px-6">
+            <div className="mx-auto w-full max-w-5xl">
+              <ProjectInfoSection
+                project={currentProject}
+                sessionCount={projectTaskCount}
+                presetCount={projectPresets.length}
+                onUpdateProject={async (updates) => {
+                  await updateProject(projectId, { name: updates.name });
+                }}
+                onOpenSettings={() => setSettingsOpen(true)}
+              />
+            </div>
+          </div>
+        ) : null}
+
         <TaskEntrySection
           title={projectTitle}
           mode={mode}
           onModeChange={setMode}
           footer={<ConnectorsBar />}
+          className="px-4 pt-8 sm:px-6"
           composerProps={{
             textareaRef,
             value: inputValue,

@@ -1533,6 +1533,35 @@
     "delete": "プロジェクトを削除",
     "deleteDescription": "このプロジェクトを削除すると、すべてのタスクがメインリストに戻ります。",
     "deleteConfirm": "削除",
+    "detail": {
+      "overview": "プロジェクト概要",
+      "renameAction": "名前を編集",
+      "emptyDescription": "このプロジェクトにはまだ概要がありません。新しいセッションを始めてコンテキストを作成してください。",
+      "unknownUpdatedAt": "まだアクティビティはありません",
+      "composerTitle": "{{name}} で新しいセッションを開始",
+      "stats": {
+        "sessions": "セッション",
+        "presets": "プリセット",
+        "updated": "最終更新"
+      },
+      "quickActions": {
+        "title": "クイックアクション",
+        "subtitle": "よく使うプロジェクト操作を 1 つのパネルにまとめます。",
+        "soon": "近日対応",
+        "presets": {
+          "title": "プリセットを管理",
+          "description": "デフォルトのプリセットを設定し、新しいセッションの開始状態を管理します。"
+        },
+        "rename": {
+          "title": "プロジェクトを編集",
+          "description": "詳細ビューを離れずにプロジェクト名を更新します。"
+        },
+        "docs": {
+          "title": "プロジェクトドキュメント",
+          "description": "ドキュメントと共有コンテキスト資産のための予約済みエントリです。"
+        }
+      }
+    },
     "settingsPanel": {
       "dialogTitle": "{{name}} の設定",
       "dialogDescription": "このプロジェクトで利用できるプリセットを管理し、新しい実行のデフォルトを選択します。",

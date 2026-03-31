@@ -1533,6 +1533,35 @@
     "delete": "Projekt löschen",
     "deleteDescription": "Das Löschen dieses Projekts verschiebt alle seine Aufgaben zurück in die Hauptliste.",
     "deleteConfirm": "Löschen",
+    "detail": {
+      "overview": "Projektübersicht",
+      "renameAction": "Namen bearbeiten",
+      "emptyDescription": "Dieses Projekt hat noch keine Zusammenfassung. Starte eine neue Sitzung, um Kontext aufzubauen.",
+      "unknownUpdatedAt": "Noch keine Aktivität",
+      "composerTitle": "Neue Sitzung in {{name}} starten",
+      "stats": {
+        "sessions": "Sitzungen",
+        "presets": "Vorlagen",
+        "updated": "Zuletzt aktualisiert"
+      },
+      "quickActions": {
+        "title": "Schnellaktionen",
+        "subtitle": "Die wichtigsten Projektaktionen an einem Ort im Detailbereich halten.",
+        "soon": "Bald",
+        "presets": {
+          "title": "Vorlagen verwalten",
+          "description": "Lege die Standardvorlage fest und steuere, womit neue Sitzungen starten."
+        },
+        "rename": {
+          "title": "Projekt bearbeiten",
+          "description": "Aktualisiere den Projektnamen, ohne die Detailansicht zu verlassen."
+        },
+        "docs": {
+          "title": "Projektdokumente",
+          "description": "Reservierter Einstiegspunkt für Dokumentation und gemeinsame Kontextressourcen."
+        }
+      }
+    },
     "settingsPanel": {
       "dialogTitle": "{{name}} Einstellungen",
       "dialogDescription": "Verwalte, welche Vorlagen in diesem Projekt verfügbar sind, und wähle die Standardvorlage für neue Läufe.",

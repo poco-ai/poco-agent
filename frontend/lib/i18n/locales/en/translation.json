@@ -1533,6 +1533,35 @@
     "delete": "Delete Project",
     "deleteDescription": "Deleting this project will move all of its tasks back to the main list.",
     "deleteConfirm": "Delete",
+    "detail": {
+      "overview": "Project overview",
+      "renameAction": "Edit name",
+      "emptyDescription": "This project does not have a summary yet. Start with a new session to build context.",
+      "unknownUpdatedAt": "No activity yet",
+      "composerTitle": "Start a new session in {{name}}",
+      "stats": {
+        "sessions": "Sessions",
+        "presets": "Presets",
+        "updated": "Last updated"
+      },
+      "quickActions": {
+        "title": "Quick actions",
+        "subtitle": "Keep the most common project controls in one panel.",
+        "soon": "Soon",
+        "presets": {
+          "title": "Manage presets",
+          "description": "Set the default preset and control what new sessions start with."
+        },
+        "rename": {
+          "title": "Edit project",
+          "description": "Update the project name without leaving the detail view."
+        },
+        "docs": {
+          "title": "Project docs",
+          "description": "Reserved entry point for documentation and shared context assets."
+        }
+      }
+    },
     "settingsPanel": {
       "dialogTitle": "{{name}} settings",
       "dialogDescription": "Manage which presets are available in this project and choose the default one for new runs.",

@@ -1533,6 +1533,35 @@
     "delete": "删除项目",
     "deleteDescription": "删除项目后，项目中的所有任务将回到任务清单。",
     "deleteConfirm": "删除",
+    "detail": {
+      "overview": "项目概览",
+      "renameAction": "编辑名称",
+      "emptyDescription": "这个项目还没有补充说明，可以先从一次新对话开始。",
+      "unknownUpdatedAt": "暂无记录",
+      "composerTitle": "在 {{name}} 中开始新对话",
+      "stats": {
+        "sessions": "会话",
+        "presets": "预设",
+        "updated": "最近更新"
+      },
+      "quickActions": {
+        "title": "快捷操作",
+        "subtitle": "把常用入口放在项目上下文里，减少来回切换。",
+        "soon": "即将支持",
+        "presets": {
+          "title": "管理预设",
+          "description": "配置项目默认预设，控制新对话的起点。"
+        },
+        "rename": {
+          "title": "编辑项目",
+          "description": "快速调整项目名称，保持侧边栏和详情一致。"
+        },
+        "docs": {
+          "title": "项目文档",
+          "description": "预留给文档与上下文资产的统一入口。"
+        }
+      }
+    },
     "settingsPanel": {
       "dialogTitle": "{{name}} 设置",
       "dialogDescription": "管理这个项目可用的预设，并为新任务选择默认预设。",

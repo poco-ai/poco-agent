@@ -1533,6 +1533,35 @@
     "delete": "Supprimer le projet",
     "deleteDescription": "La suppression de ce projet déplacera toutes ses tâches vers la liste principale.",
     "deleteConfirm": "Supprimer",
+    "detail": {
+      "overview": "Vue d’ensemble du projet",
+      "renameAction": "Modifier le nom",
+      "emptyDescription": "Ce projet n’a pas encore de résumé. Démarrez une nouvelle session pour créer du contexte.",
+      "unknownUpdatedAt": "Aucune activité pour le moment",
+      "composerTitle": "Démarrer une nouvelle session dans {{name}}",
+      "stats": {
+        "sessions": "Sessions",
+        "presets": "Préréglages",
+        "updated": "Dernière mise à jour"
+      },
+      "quickActions": {
+        "title": "Actions rapides",
+        "subtitle": "Gardez les actions de projet les plus courantes dans un seul panneau.",
+        "soon": "Bientôt",
+        "presets": {
+          "title": "Gérer les préréglages",
+          "description": "Définissez le préréglage par défaut et contrôlez le point de départ des nouvelles sessions."
+        },
+        "rename": {
+          "title": "Modifier le projet",
+          "description": "Mettez à jour le nom du projet sans quitter la vue détaillée."
+        },
+        "docs": {
+          "title": "Documentation du projet",
+          "description": "Point d’entrée réservé à la documentation et aux ressources de contexte partagées."
+        }
+      }
+    },
     "settingsPanel": {
       "dialogTitle": "Paramètres de {{name}}",
       "dialogDescription": "Gérez les préréglages disponibles dans ce projet et choisissez celui par défaut pour les nouvelles exécutions.",
