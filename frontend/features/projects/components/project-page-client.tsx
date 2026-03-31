@@ -2,11 +2,12 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import { FolderSearch } from "lucide-react";
 
 import { useT } from "@/lib/i18n/client";
+import { Button } from "@/components/ui/button";
 
 import {
-  TaskEntrySection,
   type ComposerMode,
   type TaskSendOptions,
   submitScheduledTask,
@@ -16,12 +17,11 @@ import {
 import type { ProjectPreset } from "@/features/capabilities/presets";
 import type { ProjectItem, TaskHistoryItem } from "@/features/projects/types";
 
+import { ProjectDetailPanel } from "@/features/projects/components/project-detail-panel";
 import { ProjectHeader } from "@/features/projects/components/project-header";
-import { ProjectInfoSection } from "@/features/projects/components/project-info-section";
-import { ProjectSessionList } from "@/features/projects/components/project-session-list";
 import { ProjectSettingsDialog } from "@/features/projects/components/project-settings-dialog";
 import { getDefaultProjectPresetId } from "@/features/projects/lib/project-presets";
-import { CapabilityToggleProvider, ConnectorsBar } from "@/features/connectors";
+import { CapabilityToggleProvider } from "@/features/connectors";
 import { useAppShell } from "@/components/shell/app-shell-context";
 import { toast } from "sonner";
 import { projectPresetsService } from "@/features/projects/api/project-presets-api";
@@ -37,7 +37,7 @@ export function ProjectPageClient({ projectId }: ProjectPageClientProps) {
   const { lng, projects, taskHistory, addTask, updateProject, deleteProject } =
     useAppShell();
   const currentProject = React.useMemo(
-    () => projects.find((p: ProjectItem) => p.id === projectId) || projects[0],
+    () => projects.find((p: ProjectItem) => p.id === projectId),
     [projects, projectId],
   );
 
@@ -52,13 +52,6 @@ export function ProjectPageClient({ projectId }: ProjectPageClientProps) {
 
   useAutosizeTextarea(textareaRef, inputValue);
 
-  const projectTaskCount = React.useMemo(
-    () =>
-      taskHistory.filter(
-        (task: TaskHistoryItem) => task.projectId === projectId,
-      ).length,
-    [projectId, taskHistory],
-  );
   const projectTasks = React.useMemo(
     () =>
       taskHistory.filter(
@@ -72,6 +65,7 @@ export function ProjectPageClient({ projectId }: ProjectPageClientProps) {
       name: currentProject?.name || t("project.untitled", "Untitled Project"),
     });
   }, [currentProject?.name, t]);
+  const homePath = lng ? `/${lng}/home` : "/home";
 
   React.useEffect(() => {
     let active = true;
@@ -187,10 +181,10 @@ export function ProjectPageClient({ projectId }: ProjectPageClientProps) {
     async (targetProjectId: string) => {
       await deleteProject(targetProjectId);
       if (targetProjectId === projectId) {
-        router.push(`/${lng}/home`);
+        router.push(homePath);
       }
     },
-    [deleteProject, projectId, lng, router],
+    [deleteProject, homePath, projectId, router],
   );
 
   return (
@@ -204,41 +198,48 @@ export function ProjectPageClient({ projectId }: ProjectPageClientProps) {
         />
 
         {currentProject ? (
-          <div className="px-4 pt-6 sm:px-6">
-            <div className="mx-auto w-full max-w-5xl">
-              <ProjectInfoSection
-                project={currentProject}
-                sessionCount={projectTaskCount}
-                presetCount={projectPresets.length}
-                onUpdateProject={async (updates) => {
-                  await updateProject(projectId, { name: updates.name });
-                }}
-                onOpenSettings={() => setSettingsOpen(true)}
-              />
-            </div>
-          </div>
-        ) : null}
-
-        <TaskEntrySection
-          title={projectTitle}
-          mode={mode}
-          onModeChange={setMode}
-          footer={<ConnectorsBar />}
-          className="px-4 pt-8 sm:px-6"
-          bottomPanel={<ProjectSessionList tasks={projectTasks} />}
-          composerProps={{
-            textareaRef,
-            value: inputValue,
-            onChange: setInputValue,
-            onSend: handleSendTask,
-            isSubmitting,
-            allowProjectize: false,
-            initialPresetId: defaultPresetId,
-            onRepoDefaultsSave: async (payload) => {
+          <ProjectDetailPanel
+            project={currentProject}
+            projectTitle={projectTitle}
+            projectTasks={projectTasks}
+            projectPresets={projectPresets}
+            mode={mode}
+            onModeChange={setMode}
+            onUpdateProject={async (updates) => {
+              await updateProject(projectId, { name: updates.name });
+            }}
+            onOpenSettings={() => setSettingsOpen(true)}
+            textareaRef={textareaRef}
+            inputValue={inputValue}
+            onInputChange={setInputValue}
+            onSendTask={handleSendTask}
+            isSubmitting={isSubmitting}
+            initialPresetId={defaultPresetId}
+            onRepoDefaultsSave={async (payload) => {
               await updateProject(projectId, payload);
-            },
-          }}
-        />
+            }}
+          />
+        ) : (
+          <div className="flex flex-1 items-center justify-center px-4 py-10 sm:px-6">
+            <section className="w-full max-w-xl rounded-3xl border border-dashed border-border/70 bg-background px-6 py-10 text-center shadow-sm">
+              <div className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-muted/50 text-muted-foreground">
+                <FolderSearch className="size-7" />
+              </div>
+              <h1 className="mt-5 text-xl font-semibold text-foreground">
+                {t("project.detail.notFoundTitle")}
+              </h1>
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                {t("project.detail.notFoundDescription")}
+              </p>
+              <Button
+                className="mt-6"
+                onClick={() => router.push(homePath)}
+              >
+                {t("project.detail.backHome")}
+              </Button>
+            </section>
+          </div>
+        )}
 
         {currentProject ? (
           <ProjectSettingsDialog

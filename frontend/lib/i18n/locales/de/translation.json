@@ -1539,6 +1539,9 @@
       "emptyDescription": "Dieses Projekt hat noch keine Zusammenfassung. Starte eine neue Sitzung, um Kontext aufzubauen.",
       "unknownUpdatedAt": "Noch keine Aktivität",
       "composerTitle": "Neue Sitzung in {{name}} starten",
+      "notFoundTitle": "Projekt nicht gefunden",
+      "notFoundDescription": "Dieses Projekt ist nicht verfügbar oder du hast keinen Zugriff mehr darauf.",
+      "backHome": "Zur Startseite",
       "stats": {
         "sessions": "Sitzungen",
         "presets": "Vorlagen",

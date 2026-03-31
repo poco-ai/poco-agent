@@ -1539,6 +1539,9 @@
       "emptyDescription": "This project does not have a summary yet. Start with a new session to build context.",
       "unknownUpdatedAt": "No activity yet",
       "composerTitle": "Start a new session in {{name}}",
+      "notFoundTitle": "Project not found",
+      "notFoundDescription": "This project is unavailable or you no longer have access to it.",
+      "backHome": "Back to home",
       "stats": {
         "sessions": "Sessions",
         "presets": "Presets",

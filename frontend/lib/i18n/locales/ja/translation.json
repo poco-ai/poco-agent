@@ -1539,6 +1539,9 @@
       "emptyDescription": "このプロジェクトにはまだ概要がありません。新しいセッションを始めてコンテキストを作成してください。",
       "unknownUpdatedAt": "まだアクティビティはありません",
       "composerTitle": "{{name}} で新しいセッションを開始",
+      "notFoundTitle": "プロジェクトが見つかりません",
+      "notFoundDescription": "このプロジェクトは利用できないか、アクセス権がなくなっています。",
+      "backHome": "ホームに戻る",
       "stats": {
         "sessions": "セッション",
         "presets": "プリセット",

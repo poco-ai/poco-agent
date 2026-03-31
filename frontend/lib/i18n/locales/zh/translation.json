@@ -1539,6 +1539,9 @@
       "emptyDescription": "这个项目还没有补充说明，可以先从一次新对话开始。",
       "unknownUpdatedAt": "暂无记录",
       "composerTitle": "在 {{name}} 中开始新对话",
+      "notFoundTitle": "项目不存在",
+      "notFoundDescription": "这个项目不可用，或者你已经没有访问权限。",
+      "backHome": "返回首页",
       "stats": {
         "sessions": "会话",
         "presets": "预设",

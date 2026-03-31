@@ -1539,6 +1539,9 @@
       "emptyDescription": "Ce projet n’a pas encore de résumé. Démarrez une nouvelle session pour créer du contexte.",
       "unknownUpdatedAt": "Aucune activité pour le moment",
       "composerTitle": "Démarrer une nouvelle session dans {{name}}",
+      "notFoundTitle": "Projet introuvable",
+      "notFoundDescription": "Ce projet n’est pas disponible ou vous n’y avez plus accès.",
+      "backHome": "Retour à l’accueil",
       "stats": {
         "sessions": "Sessions",
         "presets": "Préréglages",
