@@ -98,6 +98,11 @@ export const API_ENDPOINTS = {
 
   // Runs
   runsBySession: (sessionId: string) => `/runs/session/${sessionId}`,
+  runMcpConnections: (runId: string) => `/runs/${runId}/mcp-connections`,
+
+  // Execution Settings
+  executionSettings: "/execution-settings",
+  executionSettingsCatalog: "/execution-settings/catalog",
 
   // Custom Instructions
   customInstructions: "/claude-md",
@@ -123,6 +128,8 @@ export const API_ENDPOINTS = {
   skills: "/skills",
   skill: (skillId: number) => `/skills/${skillId}`,
   skillFiles: (skillId: number) => `/skills/${skillId}/files`,
+  skillManifestValidate: (skillId: number) =>
+    `/skills/${skillId}/manifest/validate`,
   skillImportDiscover: "/skills/import/discover",
   skillImportCommit: "/skills/import/commit",
   skillImportJob: (jobId: string) => `/skills/import/jobs/${jobId}`,

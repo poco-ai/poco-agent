@@ -1420,6 +1420,9 @@
       "storagePathUnavailable": "No storage path available.",
       "readonlyHint": "Built-in skills are read-only. You can preview files here, but editing is disabled.",
       "nameConflict": "A skill with this name already exists.",
+      "manifestVersionLabel": "Manifest version",
+      "lifecycleStateLabel": "Lifecycle state",
+      "entryChecksumLabel": "Entry checksum",
       "toasts": {
         "saved": "Skill updated",
         "saveFailed": "Failed to update skill"
@@ -1498,6 +1501,7 @@
       "account": "Account",
       "settings": "Settings",
       "models": "Models",
+      "execution": "Execution",
       "other": "Other",
       "usage": "Usage",
       "shortcuts": "Shortcuts"
@@ -1571,6 +1575,19 @@
       "timezoneLabel": "Displayed in {{timezone}}",
       "previousMonth": "Previous month",
       "nextMonth": "Next month"
+    },
+    "execution": {
+      "title": "Execution defaults",
+      "description": "Configure the default hook pipeline and workspace strategy that Poco resolves for future runs.",
+      "loading": "Loading execution settings...",
+      "workspaceStrategy": "Workspace checkout strategy",
+      "hookPipeline": "Hook pipeline",
+      "hookPipelineHint": "These hooks are resolved in order and can be toggled per account.",
+      "save": "Save execution settings",
+      "toasts": {
+        "saved": "Execution settings saved",
+        "saveFailed": "Failed to save execution settings"
+      }
     },
     "getHelp": "Get Help",
     "getHelpUrl": "https://github.com/poco-ai/poco-agent/issues",

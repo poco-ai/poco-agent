@@ -343,6 +343,10 @@ class TestSkillServiceCreateSkill(unittest.TestCase):
         mock_repo.create.assert_called_once()
         self.db.commit.assert_called_once()
         self.assertEqual(result.name, "new-skill")
+        self.assertEqual(result.manifest_version, "v1")
+        self.assertEqual(result.lifecycle_state, "active")
+        self.assertEqual(result.manifest["name"], "new-skill")
+        self.assertEqual(result.manifest["entry"], {"key": "value"})
 
     @patch("app.services.skill_service.SkillRepository")
     def test_create_skill_already_exists(self, mock_repo: MagicMock) -> None:
@@ -398,6 +402,9 @@ class TestSkillServiceCreateSkill(unittest.TestCase):
         call_args = mock_repo.create.call_args
         skill = call_args[0][1]
         self.assertEqual(skill.scope, "user")
+        self.assertEqual(skill.manifest_version, "v1")
+        self.assertEqual(skill.lifecycle_state, "active")
+        self.assertEqual(skill.manifest["name"], "new-skill")
 
     @patch("app.services.skill_service.SkillRepository")
     @patch("app.services.skill_service.infer_capability_source")

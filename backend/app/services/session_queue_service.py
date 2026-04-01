@@ -115,9 +115,8 @@ class SessionQueueService:
     def get_effective_base_config(
         self, db: Session, db_session: AgentSession
     ) -> dict[str, Any] | None:
-        last_item = SessionQueueItemRepository.get_last_active_item(db, db_session.id)
-        if last_item and isinstance(last_item.run_config_snapshot, dict):
-            return self.extract_session_config(last_item.run_config_snapshot)
+        # Queued items may carry per-run overrides. They must not become the
+        # inherited session base config for later enqueues.
         return dict(db_session.config_snapshot or {}) or None
 
     def get_existing_enqueue_response(

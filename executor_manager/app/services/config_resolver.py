@@ -1,6 +1,7 @@
 import logging
 import re
 import time
+from inspect import isawaitable
 from typing import Any, TypedDict
 from urllib.parse import urlparse
 
@@ -13,6 +14,13 @@ from app.services.backend_client import BackendClient
 _ENV_PATTERN = re.compile(r"\$\{([^}]+)\}")
 logger = logging.getLogger(__name__)
 _GITHUB_HOSTS = {"github.com", "www.github.com"}
+_HOOK_PHASE_ORDER = {
+    "setup": 0,
+    "pre_query": 1,
+    "message": 2,
+    "error": 3,
+    "teardown": 4,
+}
 
 
 class ProviderRuntimeSpec(TypedDict):
@@ -145,6 +153,17 @@ class ConfigResolver:
         )
 
         step_started = time.perf_counter()
+        execution_settings = await self._resolve_execution_settings(user_id)
+        logger.info(
+            "timing",
+            extra={
+                "step": "config_resolve_execution_settings",
+                "duration_ms": int((time.perf_counter() - step_started) * 1000),
+                **ctx,
+            },
+        )
+
+        step_started = time.perf_counter()
         mcp_config = await self._resolve_effective_mcp_config(user_id, config_snapshot)
         logger.info(
             "timing",
@@ -234,6 +253,12 @@ class ConfigResolver:
         )
 
         resolved = dict(config_snapshot)
+        resolved["execution_settings"] = execution_settings
+        # Wire execution_settings.permissions into permission_policy for the executor
+        if "permission_policy" not in resolved:
+            permissions = execution_settings.get("permissions")
+            if isinstance(permissions, dict):
+                resolved["permission_policy"] = dict(permissions)
         resolved["mcp_config"] = resolved_mcp
         resolved["skill_files"] = resolved_skills
         resolved["plugin_files"] = resolved_plugins
@@ -256,6 +281,26 @@ class ConfigResolver:
         )
         if env_overrides:
             resolved["env_overrides"] = env_overrides
+        if "hook_specs" not in resolved:
+            resolved["hook_specs"] = self._build_hook_specs(execution_settings)
+        workspace_defaults = execution_settings.get("workspace")
+        if isinstance(workspace_defaults, dict):
+            if "workspace_strategy" not in resolved:
+                checkout_strategy = workspace_defaults.get("checkout_strategy")
+                if isinstance(checkout_strategy, str) and checkout_strategy.strip():
+                    resolved["workspace_strategy"] = checkout_strategy.strip()
+            if "workspace_sparse_paths" not in resolved:
+                sparse_paths = workspace_defaults.get("sparse_paths")
+                if isinstance(sparse_paths, list):
+                    resolved["workspace_sparse_paths"] = [
+                        item
+                        for item in sparse_paths
+                        if isinstance(item, str) and item.strip()
+                    ]
+            if "workspace_reference_branch" not in resolved:
+                reference_branch = workspace_defaults.get("reference_branch")
+                if isinstance(reference_branch, str) and reference_branch.strip():
+                    resolved["workspace_reference_branch"] = reference_branch.strip()
 
         logger.info(
             "timing",
@@ -322,9 +367,6 @@ class ConfigResolver:
             return {}
 
         spec = _PROVIDER_RUNTIME_SPECS.get(provider_id)
-        if not spec and explicit_provider_id and inferred_provider_id:
-            provider_id = inferred_provider_id
-            spec = _PROVIDER_RUNTIME_SPECS.get(provider_id)
         if not spec:
             return {}
 
@@ -413,6 +455,15 @@ class ConfigResolver:
     async def _get_env_map(self, user_id: str) -> dict[str, str]:
         return await self.backend_client.get_env_map(user_id=user_id)
 
+    async def _resolve_execution_settings(self, user_id: str) -> dict:
+        getter = getattr(self.backend_client, "get_execution_settings", None)
+        if getter is None:
+            return {}
+        settings = getter(user_id)
+        if isawaitable(settings):
+            settings = await settings
+        return settings if isinstance(settings, dict) else {}
+
     async def _resolve_effective_mcp_config(
         self, user_id: str, config_snapshot: dict
     ) -> dict:
@@ -423,8 +474,8 @@ class ConfigResolver:
         2) config_snapshot.mcp_config toggles (server_id -> bool) -> fetch via backend internal API
         3) legacy config_snapshot.mcp_config already contains full server configs
         """
-        server_ids = self._normalize_ids(config_snapshot.get("mcp_server_ids"))
-        if server_ids:
+        if "mcp_server_ids" in config_snapshot:
+            server_ids = self._normalize_ids(config_snapshot.get("mcp_server_ids"))
             return await self.backend_client.resolve_mcp_config(
                 user_id=user_id, server_ids=server_ids
             )
@@ -465,8 +516,8 @@ class ConfigResolver:
         1) config_snapshot.plugin_ids -> fetch entries via backend internal API
         2) legacy config_snapshot.plugin_files already contains entry configs
         """
-        plugin_ids = self._normalize_ids(config_snapshot.get("plugin_ids"))
-        if plugin_ids:
+        if "plugin_ids" in config_snapshot:
+            plugin_ids = self._normalize_ids(config_snapshot.get("plugin_ids"))
             return await self.backend_client.resolve_plugin_config(
                 user_id=user_id, plugin_ids=plugin_ids
             )
@@ -543,6 +594,51 @@ class ConfigResolver:
             seen.add(sid)
             ids.append(sid)
         return ids
+
+    @staticmethod
+    def _build_hook_specs(execution_settings: dict) -> list[dict]:
+        hooks = execution_settings.get("hooks")
+        if not isinstance(hooks, dict):
+            return []
+        pipeline = hooks.get("pipeline")
+        if not isinstance(pipeline, list):
+            return []
+
+        normalized: list[dict] = []
+        for raw_spec in pipeline:
+            if not isinstance(raw_spec, dict):
+                continue
+            key = raw_spec.get("key")
+            if not isinstance(key, str) or not key.strip():
+                continue
+            phase = raw_spec.get("phase")
+            if not isinstance(phase, str) or phase not in _HOOK_PHASE_ORDER:
+                phase = "message"
+            order = raw_spec.get("order")
+            if not isinstance(order, int):
+                order = 100
+            enabled = raw_spec.get("enabled")
+            if not isinstance(enabled, bool):
+                enabled = True
+            config = raw_spec.get("config")
+            normalized.append(
+                {
+                    "key": key.strip(),
+                    "phase": phase,
+                    "order": order,
+                    "enabled": enabled,
+                    "on_error": raw_spec.get("on_error", "continue"),
+                    "config": config if isinstance(config, dict) else {},
+                }
+            )
+        normalized.sort(
+            key=lambda item: (
+                _HOOK_PHASE_ORDER.get(str(item.get("phase")), 99),
+                int(item.get("order", 100)),
+                str(item.get("key", "")),
+            )
+        )
+        return normalized
 
     @staticmethod
     def _resolve_mcp(mcp_config: dict, env_map: dict[str, str]) -> dict:

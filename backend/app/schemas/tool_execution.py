@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 
 
 class ToolExecutionResponse(BaseModel):
@@ -16,10 +16,18 @@ class ToolExecutionResponse(BaseModel):
     tool_output: dict[str, Any] | None
     is_error: bool
     duration_ms: int | None
+    policy_action: str | None = None
+    policy_rule_id: str | None = None
+    policy_reason: str | None = None
     created_at: datetime
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+    @field_validator("policy_action", "policy_rule_id", "policy_reason", mode="before")
+    @classmethod
+    def _normalize_optional_str(cls, value: object) -> str | None:
+        return value if isinstance(value, str) else None
 
 
 class ToolExecutionDeltaResponse(BaseModel):

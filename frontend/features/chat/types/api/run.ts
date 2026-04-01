@@ -37,6 +37,10 @@ export interface RunResponse {
   schedule_mode: string;
   scheduled_task_id?: string | null;
   scheduled_at: string; // ISO datetime
+  config_snapshot?: Record<string, unknown> | null;
+  config_layers?: Record<string, unknown> | null;
+  resolved_hook_specs?: Record<string, unknown>[] | null;
+  permission_policy_snapshot?: Record<string, unknown> | null;
   usage?: UsageResponse | null;
   claimed_by: string | null;
   lease_expires_at: string | null;

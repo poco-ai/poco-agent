@@ -369,6 +369,33 @@
       opacity: 0.6;
     }
   }
+
+  /* Atmospheric mesh gradient */
+  .bg-mesh {
+    background-color: var(--background);
+    background-image:
+      radial-gradient(
+        at 0% 0%,
+        oklch(from var(--primary) l c h / 0.1) 0px,
+        transparent 50%
+      ),
+      radial-gradient(
+        at 100% 0%,
+        oklch(from var(--primary) l c h / 0.05) 0px,
+        transparent 50%
+      ),
+      radial-gradient(
+        at 100% 100%,
+        oklch(from var(--primary) l c h / 0.1) 0px,
+        transparent 50%
+      ),
+      radial-gradient(
+        at 0% 100%,
+        oklch(from var(--primary) l c h / 0.05) 0px,
+        transparent 50%
+      );
+    background-attachment: fixed;
+  }
 }
 
 /* =========================================================================

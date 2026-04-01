@@ -27,6 +27,7 @@ from app.core.memory import (
     MemoryClient,
     create_memory_mcp_server,
 )
+from app.core.permission_engine import PermissionEngine
 from app.core.observability.request_context import (
     generate_request_id,
     generate_trace_id,
@@ -164,6 +165,11 @@ class AgentExecutor:
             # - Phase 1 (planning): deny execution tools (Write/Bash/...) until ExitPlanMode is approved.
             # - Phase 2 (execution): allow tools normally.
             plan_approved = normalized_permission_mode != "plan"
+            permission_engine = PermissionEngine(
+                policy=config.permission_policy,
+                permission_mode=normalized_permission_mode,
+                plan_approved=plan_approved,
+            )
 
             async def can_use_tool(tool_name, input_data, context):
                 nonlocal plan_approved
@@ -173,23 +179,16 @@ class AgentExecutor:
                         message="User input client not configured"
                     )
 
-                # Enforce "plan" phase restrictions until the plan is approved.
-                if normalized_permission_mode == "plan" and not plan_approved:
-                    allowed_in_plan_phase = {
-                        "Read",
-                        "Grep",
-                        "Glob",
-                        "TodoWrite",
-                        "Task",
-                        "Skill",
-                        "AskUserQuestion",
-                        "ExitPlanMode",
-                    }
-                    if tool_name not in allowed_in_plan_phase:
-                        return PermissionResultDeny(
-                            message=f"Tool '{tool_name}' is not allowed in plan mode before approval",
-                            interrupt=False,
-                        )
+                decision = permission_engine.evaluate(
+                    tool_name,
+                    input_data if isinstance(input_data, dict) else {},
+                    {"session_id": self.session_id, "cwd": ctx.cwd},
+                )
+                if decision.action == "deny":
+                    return PermissionResultDeny(
+                        message=decision.reason,
+                        interrupt=False,
+                    )
 
                 if tool_name == "AskUserQuestion":
                     try:
@@ -274,6 +273,7 @@ class AgentExecutor:
                         )
 
                     plan_approved = True
+                    permission_engine.plan_approved = True
                     return PermissionResultAllow(updated_input=input_data)
 
                 return PermissionResultAllow(updated_input=input_data)

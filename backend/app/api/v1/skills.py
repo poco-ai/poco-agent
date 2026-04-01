@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.core.deps import get_current_user_id, get_db
 from app.schemas.response import Response, ResponseSchema
+from app.schemas.execution_settings import SkillManifestValidationResponse
 from app.schemas.skill import (
     SkillCreateRequest,
     SkillResponse,
@@ -75,3 +76,16 @@ async def delete_skill(
 ) -> JSONResponse:
     service.delete_skill(db, user_id, skill_id)
     return Response.success(data={"id": skill_id}, message="Skill deleted")
+
+
+@router.post(
+    "/{skill_id}/manifest/validate",
+    response_model=ResponseSchema[SkillManifestValidationResponse],
+)
+async def validate_skill_manifest(
+    skill_id: int,
+    user_id: str = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+) -> JSONResponse:
+    result = service.validate_manifest(db, user_id, skill_id)
+    return Response.success(data=result, message="Skill manifest validated")

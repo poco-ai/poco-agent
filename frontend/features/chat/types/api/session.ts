@@ -127,6 +127,9 @@ export interface ToolExecutionResponse {
   tool_output: Record<string, unknown> | null;
   is_error: boolean;
   duration_ms: number | null;
+  policy_action?: string | null;
+  policy_rule_id?: string | null;
+  policy_reason?: string | null;
   created_at: string; // ISO datetime
   updated_at: string; // ISO datetime
 }
@@ -183,5 +186,13 @@ export interface TaskConfig {
   plugin_config?: Record<string, boolean>;
   /** Optional explicit subagent selection (by id). */
   subagent_ids?: number[];
+  workspace_strategy?:
+    | "clone"
+    | "worktree"
+    | "sparse-clone"
+    | "sparse-worktree"
+    | null;
+  workspace_sparse_paths?: string[];
+  workspace_reference_branch?: string | null;
   input_files?: InputFile[];
 }

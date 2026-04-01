@@ -1,9 +1,10 @@
 """Tests for model provider validation in TaskService."""
 
 import unittest
+from unittest.mock import MagicMock, patch
 
-from app.services.task_service import TaskService
 from app.core.errors.exceptions import AppException
+from app.services.task_service import TaskService
 
 
 class TestTaskServiceModelProviderValidation(unittest.TestCase):
@@ -49,6 +50,40 @@ class TestTaskServiceModelProviderValidation(unittest.TestCase):
         with self.assertRaises(AppException) as ctx:
             TaskService._validate_and_normalize_model(config)
         self.assertIn("Invalid model provider", str(ctx.exception.message))
+
+    @patch("app.services.task_service.get_settings")
+    def test_preserves_default_model_when_explicit_provider_changes_runtime(
+        self, mock_settings: MagicMock
+    ) -> None:
+        """Default-model selections must keep explicit providers that change runtime."""
+        mock_settings.return_value.default_model = "claude-sonnet-4-6"
+
+        config = {
+            "model": "claude-sonnet-4-6",
+            "model_provider_id": "anthropic-authtoken",
+        }
+
+        TaskService._validate_and_normalize_model(config)
+
+        self.assertEqual(config["model"], "claude-sonnet-4-6")
+        self.assertEqual(config["model_provider_id"], "anthropic-authtoken")
+
+    @patch("app.services.task_service.get_settings")
+    def test_drops_default_model_when_provider_matches_default_runtime(
+        self, mock_settings: MagicMock
+    ) -> None:
+        """Redundant provider bindings for the default runtime should be normalized away."""
+        mock_settings.return_value.default_model = "claude-sonnet-4-6"
+
+        config = {
+            "model": "claude-sonnet-4-6",
+            "model_provider_id": "anthropic",
+        }
+
+        TaskService._validate_and_normalize_model(config)
+
+        self.assertNotIn("model", config)
+        self.assertNotIn("model_provider_id", config)
 
 
 if __name__ == "__main__":

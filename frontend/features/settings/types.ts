@@ -8,6 +8,7 @@ import type {
 export type SettingsTabId =
   | "account"
   | "models"
+  | "execution"
   | "usage"
   | "shortcuts"
   | "other";
@@ -43,6 +44,34 @@ export type ApiProviderConfig = {
   isSaving: boolean;
   enabled: boolean;
 };
+
+export interface ExecutionHookSpec {
+  key: string;
+  phase: "setup" | "pre_query" | "message" | "error" | "teardown";
+  order: number;
+  enabled: boolean;
+  on_error: "continue" | "fail";
+  config: Record<string, unknown>;
+}
+
+export interface ExecutionSettings {
+  schema_version: string;
+  hooks: {
+    pipeline: ExecutionHookSpec[];
+  };
+  permissions: Record<string, unknown>;
+  workspace: {
+    checkout_strategy?:
+      | "clone"
+      | "worktree"
+      | "sparse-clone"
+      | "sparse-worktree"
+      | null;
+    sparse_paths?: string[];
+    reference_branch?: string | null;
+  };
+  skills: Record<string, unknown>;
+}
 
 export interface UsageAnalyticsMetricSummary {
   input_tokens: number;

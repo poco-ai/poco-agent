@@ -1105,6 +1105,42 @@ class TestCallbackServiceProcessAgentCallback(unittest.TestCase):
                         )
                         self.assertEqual(db_session.workspace_export_status, "ready")
 
+    def test_syncs_mcp_connections_from_state_patch(self) -> None:
+        db = MagicMock()
+        db_session = create_mock_db_session()
+        db_run = MagicMock()
+        db_run.id = uuid.uuid4()
+        db_run.session_id = db_session.id
+
+        with patch(
+            "app.services.callback_service.McpConnectionService"
+        ) as mock_mcp_cls:
+            mock_mcp_service = MagicMock()
+            mock_mcp_cls.return_value = mock_mcp_service
+            service = CallbackService()
+
+            with patch.object(service, "_resolve_session_and_run") as mock_resolve:
+                mock_resolve.return_value = (db_session, db_run)
+
+                with patch(
+                    "app.services.deliverable_detection_service.S3StorageService"
+                ):
+                    callback = create_callback_request(
+                        status=CallbackStatus.RUNNING,
+                        state_patch={
+                            "mcp_status": [
+                                {
+                                    "server_name": "filesystem",
+                                    "status": "requested",
+                                    "message": "staged",
+                                }
+                            ]
+                        },
+                    )
+                    service.process_agent_callback(db, callback)
+
+            mock_mcp_service.sync_run_connections.assert_called_once()
+
     def test_run_completed(self) -> None:
         db = MagicMock()
         service = CallbackService()

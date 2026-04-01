@@ -284,25 +284,25 @@ PR 描述至少包含：
 
 ## 11. 当前治理执行矩阵
 
-| 主题              | 当前准绳                                                      | 当前状态 |
-| ----------------- | ------------------------------------------------------------- | -------- |
-| 项目入口          | `README.md`                                                   | 已落地   |
-| 贡献流程          | `CONTRIBUTING.md`                                             | 已落地   |
-| AI 代理约束       | `AGENTS.md`                                                   | 已落地   |
-| 仓库治理          | `docs/repository-governance.md`                               | 草案     |
-| Python 代码检查   | `ci-ruff.yml`、`ci-pyrefly.yml`、`ci-pytest.yml`、`.pre-commit-config.yaml` | fork 默认启用 |
-| Frontend 检查     | `ci-eslint.yml`、`ci-frontend-build.yml`、`ci-prettier.yml`、`.pre-commit-config.yaml` | fork 默认启用 |
-| Markdown 检查     | `ci-markdownlint.yml`                                         | fork 默认启用 |
-| PR 标题校验       | `ci-pr-title.yml`                                             | 仅上游默认启用 |
-| Workflow 静态检查 | `ci-actionlint.yml`                                           | 已落地   |
-| Secret scanning   | `ci-gitleaks.yml`                                             | fork 默认启用 |
-| Dependabot        | `.github/dependabot.yml`                                      | 已落地   |
-| Docker 发布       | `docker-images.yml`                                           | 仅上游默认启用 |
-| CODEOWNERS        | `.github/CODEOWNERS`                                          | 已落地   |
-| Labeler           | `.github/labeler.yml`、`.github/workflows/labeler.yml`        | 仅上游默认启用 |
-| GitHub labels     | repository labels                                             | 已落地   |
-| Merge strategy    | repository settings                                           | 已落地   |
-| Branch protection | repository settings                                           | 已落地   |
+| 主题              | 当前准绳                                                                               | 当前状态       |
+| ----------------- | -------------------------------------------------------------------------------------- | -------------- |
+| 项目入口          | `README.md`                                                                            | 已落地         |
+| 贡献流程          | `CONTRIBUTING.md`                                                                      | 已落地         |
+| AI 代理约束       | `AGENTS.md`                                                                            | 已落地         |
+| 仓库治理          | `docs/repository-governance.md`                                                        | 草案           |
+| Python 代码检查   | `ci-ruff.yml`, `ci-pyrefly.yml`, `ci-pytest.yml`, `.pre-commit-config.yaml`            | fork 默认启用  |
+| Frontend 检查     | `ci-eslint.yml`, `ci-frontend-build.yml`, `ci-prettier.yml`, `.pre-commit-config.yaml` | fork 默认启用  |
+| Markdown 检查     | `ci-markdownlint.yml`                                                                  | fork 默认启用  |
+| PR 标题校验       | `ci-pr-title.yml`                                                                      | 仅上游默认启用 |
+| Workflow 静态检查 | `ci-actionlint.yml`                                                                    | 已落地         |
+| Secret scanning   | `ci-gitleaks.yml`                                                                      | fork 默认启用  |
+| Dependabot        | `.github/dependabot.yml`                                                               | 已落地         |
+| Docker 发布       | `docker-images.yml`                                                                    | 仅上游默认启用 |
+| CODEOWNERS        | `.github/CODEOWNERS`                                                                   | 已落地         |
+| Labeler           | `.github/labeler.yml`, `.github/workflows/labeler.yml`                                 | 仅上游默认启用 |
+| GitHub labels     | repository labels                                                                      | 已落地         |
+| Merge strategy    | repository settings                                                                    | 已落地         |
+| Branch protection | repository settings                                                                    | 已落地         |
 
 ## 12. 下一步建议
 

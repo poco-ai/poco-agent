@@ -220,6 +220,19 @@ class BackendClient:
         data = response.json()
         return data.get("data", {}) or {}
 
+    async def get_execution_settings(self, user_id: str) -> dict:
+        response = await self._request(
+            "GET",
+            "/api/v1/internal/execution-settings/resolve",
+            headers={
+                "X-Internal-Token": self.settings.internal_api_token,
+                "X-User-Id": user_id,
+                **self._trace_headers(),
+            },
+        )
+        data = response.json()
+        return data.get("data", {}) or {}
+
     async def resolve_slash_commands(
         self,
         user_id: str,

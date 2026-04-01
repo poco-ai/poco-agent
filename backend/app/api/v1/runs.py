@@ -8,6 +8,7 @@ from app.core.deps import get_current_user_id, get_db
 from app.core.errors.error_codes import ErrorCode
 from app.core.errors.exceptions import AppException
 from app.schemas.response import Response, ResponseSchema
+from app.schemas.mcp_connection import McpConnectionResponse
 from app.schemas.run import (
     RunClaimRequest,
     RunClaimResponse,
@@ -16,11 +17,13 @@ from app.schemas.run import (
     RunStartRequest,
 )
 from app.services.run_service import RunService
+from app.services.mcp_connection_service import McpConnectionService
 from app.services.session_service import SessionService
 
 router = APIRouter(prefix="/runs", tags=["runs"])
 
 run_service = RunService()
+mcp_connection_service = McpConnectionService()
 session_service = SessionService()
 
 
@@ -90,3 +93,25 @@ async def list_runs_by_session(
         )
     runs = run_service.list_runs(db, session_id, limit=limit, offset=offset)
     return Response.success(data=runs, message="Runs retrieved successfully")
+
+
+@router.get(
+    "/{run_id}/mcp-connections",
+    response_model=ResponseSchema[list[McpConnectionResponse]],
+)
+async def list_run_mcp_connections(
+    run_id: uuid.UUID,
+    user_id: str = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+) -> JSONResponse:
+    result = run_service.get_run(db, run_id)
+    db_session = session_service.get_session(db, result.session_id)
+    if db_session.user_id != user_id:
+        raise AppException(
+            error_code=ErrorCode.FORBIDDEN,
+            message="Run does not belong to the user",
+        )
+    return Response.success(
+        data=mcp_connection_service.list_run_connections(db, run_id),
+        message="Run MCP connections retrieved successfully",
+    )

@@ -52,11 +52,15 @@ export function HomePageClient() {
   const [selectedModel, setSelectedModel] =
     React.useState<ModelSelection | null>(null);
   const { modelConfig, modelOptions } = useModelCatalog();
-  const selectableOptionKeys = React.useMemo(
+  const defaultOption = React.useMemo(
+    () => modelOptions.find((option) => option.isDefault) ?? null,
+    [modelOptions],
+  );
+  const availableOptionKeys = React.useMemo(
     () =>
       new Set(
         modelOptions
-          .filter((option) => option.isAvailable && !option.isDefault)
+          .filter((option) => option.isAvailable)
           .map((option) => option.optionKey),
       ),
     [modelOptions],
@@ -76,13 +80,18 @@ export function HomePageClient() {
       saved = null;
     }
 
-    if (!saved?.modelId || saved.modelId === defaultModel) {
+    if (!saved?.modelId) {
       setSelectedModel((prev) => (prev ? null : prev));
       return;
     }
 
     const resolvedProviderId =
       saved.providerId ||
+      modelOptions.find(
+        (option) =>
+          option.modelId === saved.modelId &&
+          (saved.modelId !== defaultModel || option.isDefault),
+      )?.providerId ||
       modelOptions.find((option) => option.modelId === saved.modelId)
         ?.providerId ||
       "";
@@ -90,8 +99,15 @@ export function HomePageClient() {
       modelId: saved.modelId,
       providerId: resolvedProviderId || null,
     };
+    const isDefaultSelection =
+      normalizedSaved.modelId === (defaultOption?.modelId || "") &&
+      (normalizedSaved.providerId || "") === (defaultOption?.providerId || "");
+    if (isDefaultSelection) {
+      setSelectedModel((prev) => (prev ? null : prev));
+      return;
+    }
     const selectionKey = `${resolvedProviderId}:${saved.modelId}`;
-    if (!selectableOptionKeys.has(selectionKey)) {
+    if (!availableOptionKeys.has(selectionKey)) {
       try {
         localStorage.removeItem(MODEL_STORAGE_KEY);
       } catch {
@@ -104,7 +120,7 @@ export function HomePageClient() {
     setSelectedModel((prev) =>
       isSameSelection(prev, normalizedSaved) ? prev : normalizedSaved,
     );
-  }, [modelConfig, modelOptions, selectableOptionKeys]);
+  }, [availableOptionKeys, defaultOption, modelConfig, modelOptions]);
 
   const handleSelectModel = React.useCallback(
     (selection: ModelSelection | null) => {

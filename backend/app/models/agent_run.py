@@ -70,6 +70,9 @@ class AgentRun(Base, TimestampMixin):
         index=True,
     )
     config_snapshot: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    config_layers: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    resolved_hook_specs: Mapped[list[dict] | None] = mapped_column(JSON, nullable=True)
+    permission_policy_snapshot: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     scheduled_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

@@ -1,0 +1,13 @@
+# Ephemeral workspace — never commit
+current/
+
+# Raw interaction logs — always local only
+**/session.log
+**/session.raw.log
+**/*.session.log
+**/*.raw.log
+
+# Editor / temp
+**/*.tmp
+**/*.bak
+**/*.swp

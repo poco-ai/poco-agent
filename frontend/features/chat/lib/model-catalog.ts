@@ -68,20 +68,30 @@ export function buildModelCatalogOptions(
 
   const defaultModel = (modelConfig.default_model || "").trim();
   const providerMap = buildProviderMap(modelConfig.providers);
+  const orderedModels = getOrderedModels(modelConfig);
+  const defaultModelOption =
+    orderedModels.find((model) => model.model_id === defaultModel) ?? null;
+  const defaultOptionKey = defaultModelOption
+    ? buildOptionKey(
+        defaultModelOption.provider_id,
+        defaultModelOption.model_id,
+      )
+    : "";
 
-  return getOrderedModels(modelConfig).map((model) => {
+  return orderedModels.map((model) => {
+    const optionKey = buildOptionKey(model.provider_id, model.model_id);
     const provider = providerMap.get(model.provider_id);
     const credentialState = provider?.credential_state ?? "none";
 
     return {
-      optionKey: buildOptionKey(model.provider_id, model.model_id),
+      optionKey,
       modelId: model.model_id,
       displayName: model.display_name,
       providerId: model.provider_id,
       providerName: provider?.display_name ?? model.provider_id,
       credentialState,
       isAvailable: !model.requires_credentials || credentialState !== "none",
-      isDefault: model.model_id === defaultModel,
+      isDefault: optionKey === defaultOptionKey,
     };
   });
 }

@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -27,6 +27,15 @@ class AgentDefinition(BaseModel):
     model: AgentModel | None = None
 
 
+class HookSpec(BaseModel):
+    key: str
+    phase: Literal["setup", "pre_query", "message", "error", "teardown"] = "message"
+    order: int = 100
+    enabled: bool = True
+    on_error: Literal["continue", "fail"] = "continue"
+    config: dict[str, Any] = Field(default_factory=dict)
+
+
 class TaskConfig(BaseModel):
     repo_url: str | None = None
     git_branch: str = "main"
@@ -50,6 +59,20 @@ class TaskConfig(BaseModel):
     plugin_ids: list[int] = Field(default_factory=list)
     agents: dict[str, AgentDefinition] = Field(default_factory=dict)
     input_files: list[InputFile] = Field(default_factory=list)
+    execution_settings: dict[str, Any] = Field(default_factory=dict)
+    hook_specs: list[HookSpec] = Field(default_factory=list)
+    permission_policy: dict[str, Any] = Field(default_factory=dict)
+    workspace_strategy: (
+        Literal[
+            "clone",
+            "worktree",
+            "sparse-clone",
+            "sparse-worktree",
+        ]
+        | None
+    ) = None
+    workspace_sparse_paths: list[str] = Field(default_factory=list)
+    workspace_reference_branch: str | None = None
 
 
 class TaskRun(BaseModel):

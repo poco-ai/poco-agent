@@ -1,21 +1,19 @@
 import logging
 import json
 from pathlib import Path
+from typing import Any
 
 from fastapi import APIRouter, BackgroundTasks
+from pydantic import BaseModel
 
 from app.core.callback import CallbackClient
 from app.core.computer import ComputerClient
-from app.core.memory import MemoryClient
-from app.core.user_input import UserInputClient
 from app.core.engine import AgentExecutor
-from app.hooks.base import AgentHook
-from app.hooks.callback import CallbackHook
-from app.hooks.computer import BrowserScreenshotHook
-from app.hooks.run_snapshot import RunSnapshotHook
-from app.hooks.todo import TodoHook
-from app.hooks.workspace import WorkspaceHook
+from app.core.memory import MemoryClient
 from app.core.observability.request_context import get_request_id, get_trace_id
+from app.core.user_input import UserInputClient
+from app.hooks.factory import HookDependencies
+from app.hooks.registry import HookRegistry
 from app.schemas.request import TaskRun
 
 router = APIRouter(prefix="/v1/tasks")
@@ -60,14 +58,22 @@ async def run_task(req: TaskRun, background_tasks: BackgroundTasks) -> dict:
         if req.config.memory_enabled
         else None
     )
-    hooks: list[AgentHook] = [
-        WorkspaceHook(),
-        TodoHook(),
-        CallbackHook(client=callback_client),
+    registry = HookRegistry()
+    hook_specs: list[dict[str, Any]] = [
+        spec.model_dump(mode="json") if isinstance(spec, BaseModel) else spec
+        for spec in (
+            req.config.hook_specs
+            or registry.default_specs(browser_enabled=req.config.browser_enabled)
+        )
     ]
-    if req.config.browser_enabled:
-        hooks.append(BrowserScreenshotHook(client=computer_client))
-    hooks.append(RunSnapshotHook(run_id=req.run_id))
+    hooks = registry.build(
+        hook_specs,
+        HookDependencies(
+            callback_client=callback_client,
+            computer_client=computer_client if req.config.browser_enabled else None,
+            run_id=req.run_id,
+        ),
+    )
     executor = AgentExecutor(
         req.session_id,
         hooks,

@@ -14,6 +14,7 @@ import type {
   SkillImportCommitInput,
   SkillImportCommitEnqueueResponse,
   SkillImportJobStatusResponse,
+  SkillManifestValidationResponse,
   SkillsMpImportDiscoverInput,
   SkillsMpMarketplaceStatusResponse,
   SkillsMpRecommendationsResponse,
@@ -86,6 +87,15 @@ export const skillsService = {
     );
     emitSlashCommandSuggestionsInvalidated();
     return removed;
+  },
+
+  validateManifest: async (
+    skillId: number,
+  ): Promise<SkillManifestValidationResponse> => {
+    return apiClient.post<SkillManifestValidationResponse>(
+      API_ENDPOINTS.skillManifestValidate(skillId),
+      {},
+    );
   },
 
   listInstalls: async (options?: {

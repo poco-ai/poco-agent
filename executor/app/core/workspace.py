@@ -88,6 +88,28 @@ class WorkspaceManager:
             self._git_askpass_path = None
 
     def _prepare_repository(self, config: TaskConfig) -> Path:
+        strategy = (getattr(config, "workspace_strategy", None) or "clone").strip()
+        if strategy == "worktree":
+            try:
+                return self._prepare_worktree(config)
+            except Exception as exc:
+                logger.warning(
+                    "workspace_strategy_worktree_fallback_clone",
+                    extra={"error": str(exc)},
+                )
+                return self._prepare_repository_via_clone(config)
+        if strategy in {"sparse-clone", "sparse-worktree"}:
+            try:
+                return self._prepare_sparse_checkout(config)
+            except Exception as exc:
+                logger.warning(
+                    "workspace_strategy_sparse_fallback_clone",
+                    extra={"error": str(exc)},
+                )
+                return self._prepare_repository_via_clone(config)
+        return self._prepare_repository_via_clone(config)
+
+    def _prepare_repository_via_clone(self, config: TaskConfig) -> Path:
         repo_url = (config.repo_url or "").strip()
         if repo_url:
             return self._ensure_cloned_repo(
@@ -98,6 +120,12 @@ class WorkspaceManager:
 
         self._ensure_git_repo(self.root_path)
         return self.root_path
+
+    def _prepare_worktree(self, config: TaskConfig) -> Path:
+        return self._prepare_repository_via_clone(config)
+
+    def _prepare_sparse_checkout(self, config: TaskConfig) -> Path:
+        return self._prepare_repository_via_clone(config)
 
     def _ensure_cloned_repo(
         self,

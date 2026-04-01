@@ -1,0 +1,3 @@
+# JSONL append-only: 'union' merge reduces conflicts
+history/commits.jsonl merge=union
+history/archives/*.jsonl merge=union

@@ -56,6 +56,9 @@ class ToolExecution(Base, TimestampMixin):
     )
     is_error: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     duration_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    policy_action: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    policy_rule_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    policy_reason: Mapped[str | None] = mapped_column(String(1000), nullable=True)
 
     session: Mapped["AgentSession"] = relationship(back_populates="tool_executions")
     message: Mapped["AgentMessage"] = relationship(

@@ -24,6 +24,9 @@ class TaskConfig(BaseModel):
     skill_config: dict[str, bool] = Field(default_factory=dict)
     plugin_config: dict[str, bool] = Field(default_factory=dict)
     subagent_ids: list[int] = Field(default_factory=list)
+    workspace_strategy: str | None = None
+    workspace_sparse_paths: list[str] = Field(default_factory=list)
+    workspace_reference_branch: str | None = None
     input_files: list[InputFile] = Field(default_factory=list)
 
 

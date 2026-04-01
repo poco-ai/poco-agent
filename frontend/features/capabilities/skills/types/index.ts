@@ -5,6 +5,10 @@ export interface Skill {
   name: string;
   description: string | null;
   entry: Record<string, unknown>;
+  manifest_version?: string | null;
+  manifest?: Record<string, unknown> | null;
+  entry_checksum?: string | null;
+  lifecycle_state?: string | null;
   source?: SourceInfo | null;
   scope: string;
   owner_user_id: string | null;
@@ -65,6 +69,11 @@ export interface SkillImportDiscoverResponse {
   candidates: SkillImportCandidate[];
   preselected_relative_path?: string | null;
   skillsmp_item?: SkillsMpSkillItem | null;
+}
+
+export interface SkillManifestValidationResponse {
+  valid: boolean;
+  errors: string[];
 }
 
 export interface SkillImportSelection {

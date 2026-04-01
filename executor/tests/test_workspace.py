@@ -484,6 +484,40 @@ class TestWorkspaceManagerEnsureGitExcludesExtra(unittest.TestCase):
                     # Should not raise, just log warning
                     manager._ensure_git_excludes(repo_path)
 
+
+class TestWorkspaceManagerStrategies(unittest.TestCase):
+    def test_prepare_repository_uses_worktree_strategy(self) -> None:
+        manager = WorkspaceManager(mount_path="/workspace")
+        config = MagicMock(spec=TaskConfig)
+        config.workspace_strategy = "worktree"
+
+        with patch.object(
+            manager, "_prepare_worktree", return_value=Path("/workspace/worktree")
+        ) as mock_prepare_worktree:
+            result = manager._prepare_repository(config)
+
+        assert result == Path("/workspace/worktree")
+        mock_prepare_worktree.assert_called_once_with(config)
+
+    def test_prepare_repository_falls_back_to_clone_when_worktree_fails(self) -> None:
+        manager = WorkspaceManager(mount_path="/workspace")
+        config = MagicMock(spec=TaskConfig)
+        config.workspace_strategy = "worktree"
+
+        with patch.object(
+            manager, "_prepare_worktree", side_effect=RuntimeError("boom")
+        ) as mock_prepare_worktree:
+            with patch.object(
+                manager,
+                "_prepare_repository_via_clone",
+                return_value=Path("/workspace/repo"),
+            ) as mock_prepare_clone:
+                result = manager._prepare_repository(config)
+
+        assert result == Path("/workspace/repo")
+        mock_prepare_worktree.assert_called_once_with(config)
+        mock_prepare_clone.assert_called_once_with(config)
+
     def test_failed_write(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             repo_path = Path(tmpdir)

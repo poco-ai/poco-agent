@@ -2,6 +2,7 @@ from app.core.database import Base, TimestampMixin
 
 from app.models.agent_message import AgentMessage
 from app.models.agent_run import AgentRun
+from app.models.agent_run_mcp_connection import AgentRunMcpConnection
 from app.models.agent_scheduled_task import AgentScheduledTask
 from app.models.agent_session import AgentSession
 from app.models.claude_md import UserClaudeMdSetting
@@ -31,6 +32,7 @@ from app.models.sub_agent import SubAgent
 from app.models.tool_execution import ToolExecution
 from app.models.usage_log import UsageLog
 from app.models.user_input_request import UserInputRequest
+from app.models.user_execution_setting import UserExecutionSetting
 from app.models.user_mcp_install import UserMcpInstall
 from app.models.user_plugin_install import UserPluginInstall
 from app.models.user_skill_install import UserSkillInstall
@@ -41,6 +43,7 @@ __all__ = [
     "ActiveSession",
     "AgentMessage",
     "AgentRun",
+    "AgentRunMcpConnection",
     "AgentScheduledTask",
     "AgentSession",
     "AgentSessionQueueItem",
@@ -66,6 +69,7 @@ __all__ = [
     "ToolExecution",
     "UsageLog",
     "UserInputRequest",
+    "UserExecutionSetting",
     "UserMcpInstall",
     "UserPluginInstall",
     "UserSkillInstall",

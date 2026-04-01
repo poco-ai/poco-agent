@@ -431,6 +431,33 @@ export function SkillSettingsDialog({
                     </code>
                   </div>
 
+                  <div className="grid gap-3 md:grid-cols-3">
+                    <div className="space-y-2">
+                      <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                        {t("library.skillSettings.manifestVersionLabel")}
+                      </div>
+                      <code className="block rounded-md border border-border/60 bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
+                        {skill?.manifest_version || "v1"}
+                      </code>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                        {t("library.skillSettings.lifecycleStateLabel")}
+                      </div>
+                      <code className="block rounded-md border border-border/60 bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
+                        {skill?.lifecycle_state || "active"}
+                      </code>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                        {t("library.skillSettings.entryChecksumLabel")}
+                      </div>
+                      <code className="block truncate rounded-md border border-border/60 bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
+                        {skill?.entry_checksum || "—"}
+                      </code>
+                    </div>
+                  </div>
+
                   {isSystemSkill ? (
                     <div className="rounded-md border border-border/60 bg-muted/20 px-3 py-2 text-sm text-muted-foreground">
                       {t("library.skillSettings.readonlyHint")}

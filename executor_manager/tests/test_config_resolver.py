@@ -421,6 +421,64 @@ class TestConfigResolverResolvePlugins(unittest.TestCase):
         assert result["plugin1"]["config"] == "test"
         assert result["plugin2"]["enabled"] is False
 
+
+@pytest.mark.asyncio
+class TestConfigResolverExecutionSettings:
+    async def test_resolve_includes_user_execution_settings_and_hook_specs(
+        self,
+    ) -> None:
+        mock_backend = MagicMock()
+        mock_backend.get_env_map = AsyncMock(return_value={})
+        mock_backend.resolve_mcp_config = AsyncMock(return_value={})
+        mock_backend.resolve_skill_config = AsyncMock(return_value={})
+        mock_backend.resolve_plugin_config = AsyncMock(return_value={})
+        mock_backend.resolve_subagents = AsyncMock(return_value={})
+        mock_backend.get_execution_settings = AsyncMock(
+            return_value={
+                "schema_version": "v1",
+                "hooks": {
+                    "pipeline": [
+                        {
+                            "key": "callback",
+                            "phase": "message",
+                            "order": 20,
+                            "enabled": True,
+                        },
+                        {
+                            "key": "workspace",
+                            "phase": "message",
+                            "order": 10,
+                            "enabled": True,
+                        },
+                    ]
+                },
+                "workspace": {"checkout_strategy": "worktree"},
+            }
+        )
+
+        with patch("app.services.config_resolver.get_settings") as mock_settings:
+            mock_settings_obj = MagicMock()
+            mock_settings_obj.default_model = None
+            mock_settings.return_value = mock_settings_obj
+
+            resolver = ConfigResolver(backend_client=mock_backend)
+            resolver.settings = mock_settings_obj
+
+            result = await resolver.resolve(
+                user_id="user-123",
+                config_snapshot={},
+            )
+
+        mock_backend.get_execution_settings.assert_awaited_once_with("user-123")
+        assert result["execution_settings"]["schema_version"] == "v1"
+        assert result["workspace_strategy"] == "worktree"
+        assert [spec["key"] for spec in result["hook_specs"]] == [
+            "workspace",
+            "callback",
+        ]
+
+
+class TestConfigResolverResolvePluginsExtended(unittest.TestCase):
     def test_non_dict_config(self) -> None:
         """Test that non-dict plugin configs are skipped."""
         plugins = {
@@ -582,6 +640,27 @@ class TestConfigResolverResolveEffectiveMcpConfig:
             assert "server1" in result
             mock_backend.resolve_mcp_config.assert_called_once()
 
+    async def test_with_explicit_empty_server_ids_disables_all(self) -> None:
+        mock_backend = MagicMock()
+        mock_backend.resolve_mcp_config = AsyncMock(return_value={})
+
+        resolver = ConfigResolver(backend_client=mock_backend)
+        with patch("app.services.config_resolver.get_settings"):
+            resolver.settings = MagicMock()
+
+            result = await resolver._resolve_effective_mcp_config(
+                "user-123",
+                {
+                    "mcp_server_ids": [],
+                    "mcp_config": {"legacy-server": {"command": "uvx"}},
+                },
+            )
+
+            assert result == {}
+            mock_backend.resolve_mcp_config.assert_called_once_with(
+                user_id="user-123", server_ids=[]
+            )
+
     async def test_with_toggles(self) -> None:
         mock_backend = MagicMock()
         mock_backend.resolve_mcp_config = AsyncMock(return_value={"server1": {}})
@@ -659,6 +738,27 @@ class TestConfigResolverResolveEffectivePluginFiles:
             )
 
             assert "plugin1" in result
+
+    async def test_with_explicit_empty_plugin_ids_disables_all(self) -> None:
+        mock_backend = MagicMock()
+        mock_backend.resolve_plugin_config = AsyncMock(return_value={})
+
+        resolver = ConfigResolver(backend_client=mock_backend)
+        with patch("app.services.config_resolver.get_settings"):
+            resolver.settings = MagicMock()
+
+            result = await resolver._resolve_effective_plugin_files(
+                "user-123",
+                {
+                    "plugin_ids": [],
+                    "plugin_files": {"legacy-plugin": {"config": "test"}},
+                },
+            )
+
+            assert result == {}
+            mock_backend.resolve_plugin_config.assert_called_once_with(
+                user_id="user-123", plugin_ids=[]
+            )
 
     async def test_with_legacy_config(self) -> None:
         mock_backend = MagicMock()
@@ -799,8 +899,8 @@ class TestConfigResolverResolveModelEnvOverrides(unittest.TestCase):
 
         assert "ANTHROPIC_API_KEY" in result
 
-    def test_explicit_provider_id_fallback_to_inferred(self) -> None:
-        """Test fallback when explicit provider_id not found but inferred is."""
+    def test_explicit_provider_id_does_not_fallback_to_inferred(self) -> None:
+        """Explicit providers should never be replaced by inferred runtime defaults."""
         mock_settings = MagicMock()
         mock_settings.default_model = None
         mock_settings.anthropic_api_key = "anthropic-key"
@@ -808,15 +908,13 @@ class TestConfigResolverResolveModelEnvOverrides(unittest.TestCase):
         resolver = ConfigResolver.__new__(ConfigResolver)
         resolver.settings = mock_settings
 
-        # Explicit provider_id "unknown" not in specs, but inferred "anthropic" is
         result = resolver._resolve_model_env_overrides(
             {"model": "claude-3-opus", "model_provider_id": "unknown-provider"},
             {},
             user_id="user-123",
         )
 
-        # Falls back to inferred anthropic provider
-        assert "ANTHROPIC_API_KEY" in result
+        assert result == {}
 
     def test_explicit_provider_not_in_specs_no_inferred(self) -> None:
         """Test when explicit provider_id not in specs and no inferred."""

@@ -19,6 +19,7 @@ from app.schemas.callback import (
     CallbackStatus,
 )
 from app.services.deliverable_detection_service import DeliverableDetectionService
+from app.services.mcp_connection_service import McpConnectionService
 from app.services.run_lifecycle_service import RunLifecycleService
 from app.services.im import ImEventService
 from app.services.pending_skill_creation_service import PendingSkillCreationService
@@ -43,6 +44,7 @@ class CallbackService:
         self._session_service = SessionService()
         self._im_events = ImEventService()
         self._deliverable_detection = DeliverableDetectionService()
+        self._mcp_connections = McpConnectionService()
 
     def _parse_run_id(self, raw_run_id: str | None) -> uuid.UUID | None:
         if not raw_run_id:
@@ -475,6 +477,16 @@ class CallbackService:
 
         if callback.state_patch is not None:
             db_session.state_patch = callback.state_patch.model_dump(mode="json")
+            if db_run is not None and callback.state_patch.mcp_status:
+                self._mcp_connections.sync_run_connections(
+                    db,
+                    session_id=db_session.id,
+                    run_id=db_run.id,
+                    mcp_statuses=[
+                        item.model_dump(mode="json")
+                        for item in callback.state_patch.mcp_status
+                    ],
+                )
         should_apply_workspace_export = self._should_apply_workspace_export(
             db,
             db_session,

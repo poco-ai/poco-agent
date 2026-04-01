@@ -5,6 +5,7 @@ from unittest.mock import MagicMock, patch
 
 from app.core.errors.error_codes import ErrorCode
 from app.core.errors.exceptions import AppException
+from app.services.session_queue_service import SessionQueueService
 from app.services.task_service import TaskService
 
 
@@ -880,6 +881,48 @@ class TestTaskServiceValidateModelExtended(unittest.TestCase):
         TaskService._validate_and_normalize_model(config)
         self.assertEqual(config["model"], "claude-3-opus")
         self.assertEqual(config["model_provider_id"], "anthropic")
+
+    @patch("app.services.task_service.get_settings")
+    def test_default_model_keeps_explicit_provider_when_it_changes_runtime(
+        self, mock_settings: MagicMock
+    ) -> None:
+        settings = MagicMock()
+        settings.default_model = "claude-sonnet-4-6"
+        mock_settings.return_value = settings
+
+        config = {
+            "model": "claude-sonnet-4-6",
+            "model_provider_id": "anthropic-authtoken",
+        }
+
+        TaskService._validate_and_normalize_model(config)
+
+        self.assertEqual(config["model"], "claude-sonnet-4-6")
+        self.assertEqual(config["model_provider_id"], "anthropic-authtoken")
+
+
+class TestSessionQueueServiceEffectiveBaseConfig(unittest.TestCase):
+    """Tests for base config inheritance while runs are queued."""
+
+    def test_uses_session_config_snapshot_instead_of_last_queued_run_snapshot(
+        self,
+    ) -> None:
+        service = SessionQueueService()
+        db = MagicMock()
+        db_session = MagicMock()
+        db_session.config_snapshot = {
+            "model": "claude-sonnet-4-6",
+            "model_provider_id": "anthropic",
+            "browser_enabled": False,
+        }
+
+        with patch(
+            "app.services.session_queue_service.SessionQueueItemRepository"
+        ) as mock_repo:
+            result = service.get_effective_base_config(db, db_session)
+
+        self.assertEqual(result, db_session.config_snapshot)
+        mock_repo.get_last_active_item.assert_not_called()
 
 
 class TestTaskServiceApplyProjectRepoDefaultsExtended(unittest.TestCase):

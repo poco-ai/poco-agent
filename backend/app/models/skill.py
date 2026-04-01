@@ -16,6 +16,12 @@ class Skill(Base, TimestampMixin):
     # Location info for staging the skill into workspace (e.g. {"s3_key": "...", "is_prefix": true}).
     entry: Mapped[dict] = mapped_column(JSON, nullable=False)
     source: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    manifest_version: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    manifest: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    entry_checksum: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    lifecycle_state: Mapped[str] = mapped_column(
+        String(32), default="active", nullable=False
+    )
 
     __table_args__ = (
         UniqueConstraint("name", "owner_user_id", name="uq_skill_name_owner"),

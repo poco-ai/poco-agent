@@ -9,3 +9,4 @@ tmp_workspace/
 
 im.db
 im/*.db
+.ace-tool/

@@ -17,6 +17,15 @@ export interface TaskSendOptions {
   memory_enabled?: boolean | null;
   mcp_config?: Record<string, boolean> | null;
   skill_config?: Record<string, boolean> | null;
+  plugin_config?: Record<string, boolean> | null;
+  workspace_strategy?:
+    | "clone"
+    | "worktree"
+    | "sparse-clone"
+    | "sparse-worktree"
+    | null;
+  workspace_sparse_paths?: string[] | null;
+  workspace_reference_branch?: string | null;
   run_schedule?: {
     schedule_mode: RunScheduleMode;
     timezone: string;

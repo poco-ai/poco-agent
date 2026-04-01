@@ -338,12 +338,8 @@ export function TaskComposer({
           : null,
       browser_enabled: browserEnabled,
       memory_enabled: memoryFeatureEnabled ? memoryEnabled : false,
-      mcp_config:
-        Object.keys(effectiveMcpConfig).length > 0 ? effectiveMcpConfig : null,
-      skill_config:
-        Object.keys(effectiveSkillConfig).length > 0
-          ? effectiveSkillConfig
-          : null,
+      mcp_config: capabilityToggle?.hasFetched ? effectiveMcpConfig : null,
+      skill_config: capabilityToggle?.hasFetched ? effectiveSkillConfig : null,
       run_schedule:
         mode === "scheduled"
           ? null
@@ -374,6 +370,7 @@ export function TaskComposer({
   }, [
     allowProjectize,
     browserEnabled,
+    capabilityToggle?.hasFetched,
     effectiveMcpConfig,
     effectiveSkillConfig,
     canSubmit,
@@ -463,7 +460,7 @@ export function TaskComposer({
   return (
     <>
       <div
-        className="relative rounded-2xl border border-border bg-card shadow-sm"
+        className="relative rounded-2xl border border-border bg-card/60 backdrop-blur-md shadow-sm transition-all duration-300 focus-within:shadow-md focus-within:border-primary/30"
         data-onboarding="home-task-composer"
       >
         {/* Hidden file input */}

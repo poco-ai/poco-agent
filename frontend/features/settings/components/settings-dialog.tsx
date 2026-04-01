@@ -46,6 +46,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useThemeMode, type ThemeMode } from "@/hooks/use-theme-mode";
 import { SettingsSidebar } from "@/features/settings/components/settings-sidebar";
 import { AccountSettingsTab } from "@/features/settings/components/tabs/account-settings-tab";
+import { ExecutionSettingsTab } from "@/features/settings/components/tabs/execution-settings-tab";
 import { ModelsSettingsTab } from "@/features/settings/components/tabs/models-settings-tab";
 import { OtherSettingsTab } from "@/features/settings/components/tabs/other-settings-tab";
 import { ShortcutsSettingsTab } from "@/features/settings/components/tabs/shortcuts-settings-tab";
@@ -213,6 +214,11 @@ export function SettingsDialog({
     () => [
       { icon: User, label: t("settings.sidebar.account"), id: "account" },
       { icon: Server, label: t("settings.sidebar.models"), id: "models" },
+      {
+        icon: Sparkles,
+        label: t("settings.sidebar.execution"),
+        id: "execution",
+      },
       { icon: KeyRound, label: t("settings.sidebar.other"), id: "other" },
       { icon: Activity, label: t("settings.sidebar.usage"), id: "usage" },
       {
@@ -318,6 +324,7 @@ export function SettingsDialog({
     if (
       view === "account" ||
       view === "models" ||
+      view === "execution" ||
       view === "other" ||
       view === "usage" ||
       view === "shortcuts"
@@ -360,6 +367,10 @@ export function SettingsDialog({
           onClearProvider={clearCustomProvider}
         />
       );
+    }
+
+    if (activeTab === "execution") {
+      return <ExecutionSettingsTab />;
     }
 
     if (activeTab === "usage") {
@@ -551,7 +562,10 @@ function MobileSettingsOverview({
   );
   const generalItems = sidebarItems.filter(
     (item) =>
-      item.id === "models" || item.id === "other" || item.id === "shortcuts",
+      item.id === "models" ||
+      item.id === "execution" ||
+      item.id === "other" ||
+      item.id === "shortcuts",
   );
 
   return (

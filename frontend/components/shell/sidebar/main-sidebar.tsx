@@ -133,7 +133,7 @@ export function MainSidebar({
     >
       <Sidebar
         collapsible="icon"
-        className="border-r-0 bg-sidebar overflow-hidden"
+        className="border-r-0 bg-sidebar/50 backdrop-blur-md overflow-hidden transition-all duration-300"
       >
         <SidebarHeaderSection
           onNewTask={onNewTask}

@@ -8,8 +8,10 @@ from app.api.v1 import (
     claude_md,
     deliverables,
     env_vars,
+    execution_settings,
     models,
     internal_claude_md,
+    internal_execution_settings,
     internal_env_vars,
     internal_memories,
     internal_skills,
@@ -67,12 +69,14 @@ api_v1_router.include_router(attachments.router)
 api_v1_router.include_router(audio.router)
 api_v1_router.include_router(capability_recommendations.router)
 api_v1_router.include_router(env_vars.router)
+api_v1_router.include_router(execution_settings.router)
 api_v1_router.include_router(claude_md.router)
 api_v1_router.include_router(models.router)
 api_v1_router.include_router(search.router)
 api_v1_router.include_router(im.router)
 api_v1_router.include_router(internal_claude_md.router)
 api_v1_router.include_router(internal_env_vars.router)
+api_v1_router.include_router(internal_execution_settings.router)
 api_v1_router.include_router(internal_memories.router)
 api_v1_router.include_router(internal_skills.router)
 api_v1_router.include_router(internal_mcp_config.router)

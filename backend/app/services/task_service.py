@@ -61,13 +61,6 @@ class TaskService:
             config.pop("model_provider_id", None)
             return
 
-        settings = get_settings()
-        default_model = (settings.default_model or "").strip()
-        if value == default_model:
-            config.pop("model", None)
-            config.pop("model_provider_id", None)
-            return
-
         raw_provider_id = config.get("model_provider_id")
         if raw_provider_id is None:
             provider_id = None
@@ -85,6 +78,17 @@ class TaskService:
                 error_code=ErrorCode.BAD_REQUEST,
                 message=f"Invalid model provider: {provider_id}",
             )
+
+        settings = get_settings()
+        default_model = (settings.default_model or "").strip()
+        if value == default_model:
+            if provider_id and provider_id != inferred_provider_id:
+                config["model"] = value
+                config["model_provider_id"] = provider_id
+                return
+            config.pop("model", None)
+            config.pop("model_provider_id", None)
+            return
 
         allowed = set(get_allowed_model_ids(settings))
         if value not in allowed and not provider_id and inferred_provider_id is None:

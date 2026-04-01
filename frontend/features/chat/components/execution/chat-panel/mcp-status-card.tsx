@@ -19,8 +19,15 @@ export function McpStatusCard({ mcpStatuses }: McpStatusCardProps) {
     switch (status) {
       case "connected":
         return <Check className="size-3 text-primary" />;
+      case "requested":
+      case "staged":
+      case "launching":
+        return <AlertTriangle className="size-3 text-chart-4" />;
+      case "terminated":
       case "disconnected":
         return <X className="size-3 text-muted-foreground" />;
+      case "degraded":
+        return <AlertTriangle className="size-3 text-amber-500" />;
       default:
         return <AlertTriangle className="size-3 text-chart-4" />;
     }
@@ -34,6 +41,8 @@ export function McpStatusCard({ mcpStatuses }: McpStatusCardProps) {
         return "outline";
       case "error":
         return "destructive";
+      case "degraded":
+        return "outline";
       default:
         return "secondary";
     }

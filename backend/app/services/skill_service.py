@@ -1,6 +1,8 @@
 import mimetypes
 import re
 import uuid
+import hashlib
+import json
 from pathlib import PurePosixPath
 from typing import Any
 
@@ -17,6 +19,7 @@ from app.schemas.skill import (
     SkillUpdateRequest,
 )
 from app.schemas.workspace import FileNode
+from app.schemas.execution_settings import SkillManifestValidationResponse
 from app.services.storage_service import S3StorageService
 from app.services.source_utils import infer_capability_source
 from app.utils.markdown_front_matter import update_yaml_front_matter
@@ -90,7 +93,9 @@ class SkillService:
             owner_user_id=user_id,
             entry=request.entry or {},
             source={"kind": "manual"},
+            lifecycle_state="active",
         )
+        self._apply_manifest_metadata(skill)
 
         SkillRepository.create(db, skill)
         db.commit()
@@ -158,9 +163,29 @@ class SkillService:
         if request.entry is not None:
             skill.entry = request.entry
 
+        self._apply_manifest_metadata(skill)
+
         db.commit()
         db.refresh(skill)
         return self._to_response(skill)
+
+    def validate_manifest(
+        self, db: Session, user_id: str, skill_id: int
+    ) -> SkillManifestValidationResponse:
+        skill = self._get_visible_skill(db, user_id, skill_id)
+        manifest = self._effective_manifest(skill)
+        errors: list[str] = []
+        if not isinstance(manifest, dict):
+            errors.append("manifest must be an object")
+        else:
+            if (
+                not isinstance(manifest.get("name"), str)
+                or not manifest["name"].strip()
+            ):
+                errors.append("manifest.name is required")
+            if not isinstance(manifest.get("entry"), dict):
+                errors.append("manifest.entry must be an object")
+        return SkillManifestValidationResponse(valid=not errors, errors=errors)
 
     def delete_skill(self, db: Session, user_id: str, skill_id: int) -> None:
         skill = SkillRepository.get_by_id(db, skill_id)
@@ -357,6 +382,41 @@ class SkillService:
         )
 
     @staticmethod
+    def _build_entry_checksum(entry: dict[str, Any]) -> str:
+        payload = json.dumps(
+            entry, sort_keys=True, ensure_ascii=True, separators=(",", ":")
+        )
+        return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+    @staticmethod
+    def _build_manifest(skill: Skill) -> dict[str, Any]:
+        entry = skill.entry if isinstance(skill.entry, dict) else {}
+        return {
+            "name": skill.name,
+            "description": skill.description,
+            "entry": entry,
+            "source": skill.source or {},
+            "scope": skill.scope,
+        }
+
+    @classmethod
+    def _apply_manifest_metadata(cls, skill: Skill) -> None:
+        entry = skill.entry if isinstance(skill.entry, dict) else {}
+        skill.manifest_version = "v1"
+        skill.manifest = cls._build_manifest(skill)
+        skill.entry_checksum = cls._build_entry_checksum(entry)
+        lifecycle_state = getattr(skill, "lifecycle_state", None)
+        if not isinstance(lifecycle_state, str) or not lifecycle_state.strip():
+            skill.lifecycle_state = "active"
+
+    @classmethod
+    def _effective_manifest(cls, skill: Skill) -> dict[str, Any]:
+        manifest = getattr(skill, "manifest", None)
+        if isinstance(manifest, dict):
+            return manifest
+        return cls._build_manifest(skill)
+
+    @staticmethod
     def _to_response(skill: Skill) -> SkillResponse:
         source_dict = infer_capability_source(
             scope=skill.scope,
@@ -368,6 +428,24 @@ class SkillService:
             name=skill.name,
             description=skill.description,
             entry=skill.entry,
+            manifest_version=(
+                getattr(skill, "manifest_version", None)
+                if isinstance(getattr(skill, "manifest_version", None), str)
+                else "v1"
+            ),
+            manifest=SkillService._effective_manifest(skill),
+            entry_checksum=(
+                getattr(skill, "entry_checksum", None)
+                if isinstance(getattr(skill, "entry_checksum", None), str)
+                else SkillService._build_entry_checksum(
+                    skill.entry if isinstance(skill.entry, dict) else {}
+                )
+            ),
+            lifecycle_state=str(
+                getattr(skill, "lifecycle_state", "active")
+                if isinstance(getattr(skill, "lifecycle_state", None), str)
+                else "active"
+            ),
             source=SourceInfo.model_validate(source_dict),
             scope=skill.scope,
             owner_user_id=skill.owner_user_id,

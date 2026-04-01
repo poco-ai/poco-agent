@@ -100,7 +100,7 @@ export function AppShell({
       <AppShellProvider value={contextValue}>
         <SidebarProvider defaultOpen={true}>
           <div
-            className="flex h-dvh w-full overflow-hidden bg-background"
+            className="flex h-dvh w-full overflow-hidden bg-background bg-mesh"
             data-onboarding="workspace-main"
           >
             <AppSidebar
@@ -118,7 +118,7 @@ export function AppShell({
               onStartOnboarding={onboarding.startTour}
             />
 
-            <SidebarInset className="flex flex-col bg-muted/30 min-h-0">
+            <SidebarInset className="flex flex-col bg-transparent min-h-0">
               {children}
             </SidebarInset>
 

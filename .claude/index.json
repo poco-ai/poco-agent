@@ -1,0 +1,317 @@
+{
+  "version": 1,
+  "timestamp": "2026-03-31T19:14:36+08:00",
+  "project": {
+    "name": "poco-claw",
+    "description": "Multi-service AI agent execution platform (Poco)",
+    "languages": {
+      "Python": {
+        "percentage": 55,
+        "modules": ["backend", "executor", "executor_manager"]
+      },
+      "TypeScript/TSX": {
+        "percentage": 40,
+        "modules": ["frontend"]
+      },
+      "Other (MDX, YAML, Dockerfile, CSS)": {
+        "percentage": 5,
+        "modules": ["docs", "docker", ".github"]
+      }
+    }
+  },
+  "modules": {
+    "backend": {
+      "path": "backend/",
+      "language": "Python 3.12+",
+      "framework": "FastAPI + SQLAlchemy 2.0 + PostgreSQL",
+      "entry": "backend/app/main.py",
+      "claudeMd": "backend/CLAUDE.md",
+      "interfaces": {
+        "apiPrefix": "/api/v1",
+        "routerFile": "backend/app/api/v1/__init__.py",
+        "endpointCount": "50+ endpoints across 30+ routers"
+      },
+      "models": {
+        "directory": "backend/app/models/",
+        "count": 24,
+        "keyModels": [
+          "AgentSession",
+          "AgentRun",
+          "AgentMessage",
+          "Project",
+          "ToolExecution",
+          "UsageLog",
+          "Skill",
+          "Plugin",
+          "McpServer",
+          "SlashCommand",
+          "SubAgent",
+          "UserEnvVar",
+          "AgentScheduledTask",
+          "Deliverable",
+          "UserInputRequest"
+        ]
+      },
+      "tests": {
+        "directory": "backend/tests/",
+        "fileCount": 28,
+        "framework": "pytest"
+      },
+      "migrations": {
+        "directory": "backend/alembic/",
+        "fileCount": 25
+      },
+      "importantPaths": [
+        "backend/app/core/settings.py",
+        "backend/app/core/database.py",
+        "backend/app/core/deps.py",
+        "backend/app/services/",
+        "backend/app/repositories/",
+        "backend/app/schemas/"
+      ],
+      "coverage": {
+        "scanned": true,
+        "entryScanned": true,
+        "apiScanned": true,
+        "modelsScanned": true,
+        "testsScanned": true,
+        "configScanned": true,
+        "gaps": []
+      }
+    },
+    "executor": {
+      "path": "executor/",
+      "language": "Python 3.12+",
+      "framework": "FastAPI + Claude Agent SDK",
+      "entry": "executor/app/main.py",
+      "claudeMd": "executor/CLAUDE.md",
+      "interfaces": {
+        "apiPrefix": "/api/v1",
+        "routerFile": "executor/app/api/__init__.py",
+        "endpointCount": "1 (task execution)"
+      },
+      "models": {
+        "directory": "executor/app/schemas/",
+        "count": 5,
+        "keyModels": ["TaskConfig", "AgentCurrentState", "BrowserState"]
+      },
+      "tests": {
+        "directory": "executor/tests/",
+        "fileCount": 3,
+        "framework": "pytest + pytest-asyncio"
+      },
+      "importantPaths": [
+        "executor/app/core/engine.py",
+        "executor/app/hooks/",
+        "executor/app/utils/git/",
+        "executor/app/prompts/",
+        "executor/app/schemas/"
+      ],
+      "coverage": {
+        "scanned": true,
+        "entryScanned": true,
+        "apiScanned": true,
+        "hooksScanned": true,
+        "testsScanned": true,
+        "configScanned": true,
+        "gaps": []
+      }
+    },
+    "executor_manager": {
+      "path": "executor_manager/",
+      "language": "Python 3.12+",
+      "framework": "FastAPI + APScheduler + Docker SDK",
+      "entry": "executor_manager/app/main.py",
+      "claudeMd": "executor_manager/CLAUDE.md",
+      "interfaces": {
+        "apiPrefix": "/api/v1",
+        "routerFile": "executor_manager/app/api/v1/__init__.py",
+        "endpointCount": "9 routers"
+      },
+      "models": {
+        "directory": "executor_manager/app/schemas/",
+        "count": 9,
+        "keyModels": ["TaskRequest", "CallbackPayload", "ScheduleConfig"]
+      },
+      "tests": {
+        "directory": "executor_manager/tests/",
+        "fileCount": 36,
+        "framework": "pytest + pytest-asyncio"
+      },
+      "importantPaths": [
+        "executor_manager/app/core/settings.py",
+        "executor_manager/app/core/lifespan.py",
+        "executor_manager/app/scheduler/task_dispatcher.py",
+        "executor_manager/app/services/run_pull_service.py",
+        "executor_manager/app/services/config_resolver.py",
+        "executor_manager/app/services/container_pool.py"
+      ],
+      "coverage": {
+        "scanned": true,
+        "entryScanned": true,
+        "apiScanned": true,
+        "servicesScanned": true,
+        "schedulerScanned": true,
+        "testsScanned": true,
+        "configScanned": true,
+        "gaps": []
+      }
+    },
+    "frontend": {
+      "path": "frontend/",
+      "language": "TypeScript / React 19",
+      "framework": "Next.js 16 (App Router) + Tailwind CSS v4",
+      "entry": "frontend/app/page.tsx",
+      "claudeMd": "frontend/CLAUDE.md",
+      "features": [
+        "chat",
+        "home",
+        "projects",
+        "capabilities",
+        "scheduled-tasks",
+        "memories",
+        "search",
+        "settings",
+        "onboarding",
+        "task-composer",
+        "user",
+        "voice",
+        "connectors",
+        "attachments"
+      ],
+      "routes": {
+        "proxyRoute": "frontend/app/api/v1/[...path]/route.ts",
+        "appRoutes": [
+          "home",
+          "chat/[id]",
+          "projects/[id]",
+          "capabilities",
+          "capabilities/scheduled-tasks",
+          "capabilities/scheduled-tasks/[taskId]",
+          "memories"
+        ]
+      },
+      "tests": {
+        "directory": null,
+        "fileCount": 0,
+        "framework": null,
+        "note": "No automated tests configured"
+      },
+      "i18n": {
+        "languages": ["en", "zh", "de", "fr", "ja", "ru"],
+        "directory": "frontend/lib/i18n/locales/"
+      },
+      "importantPaths": [
+        "frontend/app/layout.tsx",
+        "frontend/app/[lng]/(shell)/layout.tsx",
+        "frontend/app/api/v1/[...path]/route.ts",
+        "frontend/features/",
+        "frontend/components/",
+        "frontend/lib/i18n/",
+        "frontend/services/api-client.ts"
+      ],
+      "coverage": {
+        "scanned": true,
+        "entryScanned": true,
+        "routesScanned": true,
+        "featuresScanned": true,
+        "componentsScanned": true,
+        "configScanned": true,
+        "gaps": ["No automated test suite"]
+      }
+    }
+  },
+  "infrastructure": {
+    "docker": {
+      "composeFile": "docker-compose.yml",
+      "composeR2File": "docker-compose.r2.yml",
+      "dockerfiles": [
+        "docker/backend/Dockerfile",
+        "docker/executor/Dockerfile",
+        "docker/executor_manager/Dockerfile",
+        "docker/frontend/Dockerfile"
+      ],
+      "services": [
+        "postgres",
+        "mem0-postgres",
+        "mem0-neo4j",
+        "rustfs",
+        "backend",
+        "executor-manager",
+        "executor",
+        "frontend"
+      ]
+    },
+    "ci": {
+      "workflows": [
+        "ci-ruff",
+        "ci-pyrefly",
+        "ci-pytest",
+        "ci-eslint",
+        "ci-prettier",
+        "ci-frontend-build",
+        "ci-gitleaks",
+        "ci-actionlint",
+        "ci-markdownlint",
+        "ci-pr-title",
+        "docker-images",
+        "labeler",
+        "docs-sync",
+        "close-stale-issues"
+      ]
+    },
+    "docs": {
+      "languages": ["en", "zh"],
+      "sections": ["deployment", "development", "features"],
+      "path": "docs/"
+    }
+  },
+  "scanCoverage": {
+    "totalEstimatedFiles": {
+      "backend_app": 110,
+      "backend_tests": 28,
+      "executor_app": 32,
+      "executor_tests": 3,
+      "executor_manager_app": 58,
+      "executor_manager_tests": 36,
+      "frontend_app": 16,
+      "frontend_features": 120,
+      "frontend_components": 100,
+      "frontend_lib": 17,
+      "frontend_other": 15,
+      "docs": 80,
+      "infra": 25,
+      "total": 640
+    },
+    "scannedFiles": 580,
+    "coveragePercent": 91,
+    "truncated": false,
+    "truncationReason": null
+  },
+  "gaps": [
+    {
+      "module": "frontend",
+      "type": "missing_tests",
+      "description": "No automated test suite for frontend",
+      "priority": "medium"
+    }
+  ],
+  "ignoreStats": {
+    "rules": [
+      ".venv",
+      "node_modules",
+      ".git",
+      "__pycache__",
+      ".env",
+      ".factory",
+      "oss_data",
+      "tmp_workspace"
+    ],
+    "skippedDirectories": [
+      "backend/.venv",
+      "executor/.venv",
+      "executor_manager/.venv",
+      "frontend/node_modules"
+    ]
+  }
+}
