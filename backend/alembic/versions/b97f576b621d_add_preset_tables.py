@@ -90,7 +90,9 @@ def upgrade() -> None:
             nullable=False,
         ),
         sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("user_id", "name", "is_deleted", name="uq_preset_user_name"),
+        sa.UniqueConstraint(
+            "user_id", "name", "is_deleted", name="uq_preset_user_name"
+        ),
     )
     op.create_index(op.f("ix_presets_user_id"), "presets", ["user_id"], unique=False)
 

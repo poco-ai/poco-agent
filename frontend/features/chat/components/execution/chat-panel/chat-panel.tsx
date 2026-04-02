@@ -204,9 +204,9 @@ export function ChatPanel({
   const [persistedPreset, setPersistedPreset] = React.useState<Preset | null>(
     null,
   );
-  const [draftPreset, setDraftPreset] = React.useState<Preset | null | undefined>(
-    undefined,
-  );
+  const [draftPreset, setDraftPreset] = React.useState<
+    Preset | null | undefined
+  >(undefined);
   const [filesystemDialogOpen, setFilesystemDialogOpen] = React.useState(false);
   const [isSavingFilesystem, setIsSavingFilesystem] = React.useState(false);
 
@@ -990,13 +990,13 @@ export function ChatPanel({
   const hasConfigSnapshot =
     session?.config_snapshot &&
     (session.config_snapshot.preset_id != null ||
-    ((session.config_snapshot.mcp_server_ids &&
-      session.config_snapshot.mcp_server_ids.length > 0) ||
+      (session.config_snapshot.mcp_server_ids &&
+        session.config_snapshot.mcp_server_ids.length > 0) ||
       session.config_snapshot.browser_enabled === true ||
       (session.config_snapshot.plugin_ids &&
         session.config_snapshot.plugin_ids.length > 0) ||
       (session.config_snapshot.skill_ids &&
-        session.config_snapshot.skill_ids.length > 0)));
+        session.config_snapshot.skill_ids.length > 0));
   const hasSkills =
     statePatch?.skills_used && statePatch.skills_used.length > 0;
   const hasMcp = statePatch?.mcp_status && statePatch.mcp_status.length > 0;
@@ -1351,7 +1351,11 @@ export function ChatPanel({
       ) : null}
 
       {/* Status Bar - Skills and MCP */}
-      {(currentPreset || hasConfigSnapshot || hasSkills || hasMcp || hasBrowser) && (
+      {(currentPreset ||
+        hasConfigSnapshot ||
+        hasSkills ||
+        hasMcp ||
+        hasBrowser) && (
         <StatusBar
           configSnapshot={session?.config_snapshot}
           skills={statePatch?.skills_used}

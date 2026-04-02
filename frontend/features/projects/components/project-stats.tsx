@@ -69,7 +69,9 @@ export function ProjectStats({
                 {item.label}
               </span>
             </div>
-            <p className="text-lg font-semibold text-foreground">{item.value}</p>
+            <p className="text-lg font-semibold text-foreground">
+              {item.value}
+            </p>
           </div>
         );
       })}

@@ -57,7 +57,9 @@ export function FileCard({
     <BaseCard
       icon={<FileIcon file={file} />}
       title={file.name}
-      subtitle={file.size != null ? formatFileSize(file.size) : unknownSizeLabel}
+      subtitle={
+        file.size != null ? formatFileSize(file.size) : unknownSizeLabel
+      }
       onRemove={onRemove}
       showRemove={showRemove}
       className={className}

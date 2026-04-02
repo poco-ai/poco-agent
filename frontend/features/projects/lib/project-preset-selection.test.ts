@@ -73,7 +73,6 @@ test("getProjectPresetCardState falls back to primary tint when preset color is 
   assert.deepEqual(getProjectPresetCardState(preset, 5), {
     selected: true,
     iconTone: "accent",
-    cardBackgroundColor:
-      "color-mix(in srgb, var(--primary) 10%, transparent)",
+    cardBackgroundColor: "color-mix(in srgb, var(--primary) 10%, transparent)",
   });
 });

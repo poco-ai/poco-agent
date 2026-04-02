@@ -62,9 +62,7 @@ export function usePresetCatalog() {
         const updated = await presetsService.updatePreset(presetId, input);
         setPresets((prev) =>
           prev
-            .map((preset) =>
-              preset.preset_id === presetId ? updated : preset,
-            )
+            .map((preset) => (preset.preset_id === presetId ? updated : preset))
             .sort((a, b) => a.name.localeCompare(b.name)),
         );
         toast.success(t("library.presetsPage.toasts.updated"));

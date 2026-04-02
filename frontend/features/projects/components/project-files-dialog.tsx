@@ -120,7 +120,9 @@ export function ProjectFilesDialog({
               file_content_type: uploaded.content_type ?? null,
             });
             existingNames.add(normalizedName);
-            toast.success(t("project.detail.files.toasts.added", { name: file.name }));
+            toast.success(
+              t("project.detail.files.toasts.added", { name: file.name }),
+            );
           } catch (error) {
             console.error("[ProjectFilesDialog] Failed to add file", error);
             toast.error(t("project.detail.files.toasts.addFailed"));

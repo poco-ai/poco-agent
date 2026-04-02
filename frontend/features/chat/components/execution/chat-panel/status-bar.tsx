@@ -118,11 +118,11 @@ export function StatusBar({
       try {
         const [serversData, skillsData, pluginsData, presetsData] =
           await Promise.all([
-          mcpService.listServers(),
-          skillsService.listSkills(),
-          pluginsService.listPlugins(),
-          presetsService.listPresets({ revalidate: 0 }),
-        ]);
+            mcpService.listServers(),
+            skillsService.listSkills(),
+            pluginsService.listPlugins(),
+            presetsService.listPresets({ revalidate: 0 }),
+          ]);
         setMcpServers(serversData);
         setAllSkills(skillsData);
         setAllPlugins(pluginsData);
@@ -210,13 +210,20 @@ export function StatusBar({
       const nextPreset =
         presetId === null
           ? null
-          : availablePresets.find((item) => item.preset_id === presetId) ?? null;
+          : (availablePresets.find((item) => item.preset_id === presetId) ??
+            null);
       onPresetChange(nextPreset);
     },
     [availablePresets, onPresetChange],
   );
 
-  if (!hasCurrentPreset && !hasSkills && !hasMcp && !hasPresets && !hasBrowser) {
+  if (
+    !hasCurrentPreset &&
+    !hasSkills &&
+    !hasMcp &&
+    !hasPresets &&
+    !hasBrowser
+  ) {
     return null;
   }
 

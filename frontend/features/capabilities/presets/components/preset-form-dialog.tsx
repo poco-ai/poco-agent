@@ -76,7 +76,8 @@ export function PresetFormDialog({
     mcp: [],
     plugins: [],
   });
-  const [isLoadingCapabilities, setIsLoadingCapabilities] = React.useState(false);
+  const [isLoadingCapabilities, setIsLoadingCapabilities] =
+    React.useState(false);
 
   const [name, setName] = React.useState("");
   const [description, setDescription] = React.useState("");
@@ -106,7 +107,9 @@ export function PresetFormDialog({
       setSkillIds(initialPreset.skill_ids);
       setMcpServerIds(initialPreset.mcp_server_ids);
       setPluginIds(initialPreset.plugin_ids);
-      setSubagentConfigs(normalizeSubagentConfig(initialPreset.subagent_configs));
+      setSubagentConfigs(
+        normalizeSubagentConfig(initialPreset.subagent_configs),
+      );
       return;
     }
 
@@ -172,9 +175,13 @@ export function PresetFormDialog({
   }, [open]);
 
   const isSaving =
-    mode === "create" ? savingKey === "create" : savingKey === String(initialPreset?.preset_id);
+    mode === "create"
+      ? savingKey === "create"
+      : savingKey === String(initialPreset?.preset_id);
 
-  const isValidColor = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(color.trim());
+  const isValidColor = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(
+    color.trim(),
+  );
   const isValid = Boolean(name.trim()) && isValidColor;
   const formId = "preset-form-dialog";
 
@@ -287,7 +294,9 @@ export function PresetFormDialog({
                       id="preset-name"
                       value={name}
                       onChange={(event) => setName(event.target.value)}
-                      placeholder={t("library.presetsPage.form.namePlaceholder")}
+                      placeholder={t(
+                        "library.presetsPage.form.namePlaceholder",
+                      )}
                     />
                   </div>
                   <div className="space-y-2">
@@ -311,7 +320,9 @@ export function PresetFormDialog({
                     <Textarea
                       id="preset-prompt-template"
                       value={promptTemplate}
-                      onChange={(event) => setPromptTemplate(event.target.value)}
+                      onChange={(event) =>
+                        setPromptTemplate(event.target.value)
+                      }
                       placeholder={t(
                         "library.presetsPage.form.promptTemplatePlaceholder",
                       )}
@@ -368,7 +379,10 @@ export function PresetFormDialog({
               </div>
             </TabsContent>
 
-            <TabsContent value="capabilities" className="min-h-[30rem] space-y-4">
+            <TabsContent
+              value="capabilities"
+              className="min-h-[30rem] space-y-4"
+            >
               {isLoadingCapabilities ? (
                 <div className="flex min-h-40 items-center justify-center rounded-2xl border border-dashed border-border/60 text-sm text-muted-foreground">
                   <Loader2 className="mr-2 size-4 animate-spin" />
@@ -382,7 +396,9 @@ export function PresetFormDialog({
                     items={capabilityItems.skills}
                     selectedIds={skillIds}
                     onChange={setSkillIds}
-                    searchPlaceholder={t("library.skillsPage.searchPlaceholder")}
+                    searchPlaceholder={t(
+                      "library.skillsPage.searchPlaceholder",
+                    )}
                     emptyLabel={t("library.presetsPage.emptySkills")}
                   />
                   <CapabilitySelector
@@ -391,7 +407,9 @@ export function PresetFormDialog({
                     items={capabilityItems.mcp}
                     selectedIds={mcpServerIds}
                     onChange={setMcpServerIds}
-                    searchPlaceholder={t("library.mcpLibrary.searchPlaceholder")}
+                    searchPlaceholder={t(
+                      "library.mcpLibrary.searchPlaceholder",
+                    )}
                     emptyLabel={t("library.presetsPage.emptyMcp")}
                   />
                   <CapabilitySelector
@@ -400,7 +418,9 @@ export function PresetFormDialog({
                     items={capabilityItems.plugins}
                     selectedIds={pluginIds}
                     onChange={setPluginIds}
-                    searchPlaceholder={t("library.pluginsPage.searchPlaceholder")}
+                    searchPlaceholder={t(
+                      "library.pluginsPage.searchPlaceholder",
+                    )}
                     emptyLabel={t("library.presetsPage.emptyPlugins")}
                   />
                 </div>
@@ -461,7 +481,9 @@ export function PresetFormDialog({
                           size="icon"
                           onClick={() =>
                             setSubagentConfigs((prev) =>
-                              prev.filter((_, itemIndex) => itemIndex !== index),
+                              prev.filter(
+                                (_, itemIndex) => itemIndex !== index,
+                              ),
                             )
                           }
                         >
@@ -499,7 +521,8 @@ export function PresetFormDialog({
                                   itemIndex === index
                                     ? {
                                         ...item,
-                                        model: event.target.value as PresetSubAgentConfig["model"],
+                                        model: event.target
+                                          .value as PresetSubAgentConfig["model"],
                                       }
                                     : item,
                                 ),
@@ -518,7 +541,9 @@ export function PresetFormDialog({
 
                       <div className="space-y-2">
                         <Label>
-                          {t("library.presetsPage.subagents.fields.description")}
+                          {t(
+                            "library.presetsPage.subagents.fields.description",
+                          )}
                         </Label>
                         <Input
                           value={config.description ?? ""}

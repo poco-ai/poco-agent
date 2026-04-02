@@ -225,7 +225,9 @@ class ProjectService:
             git_branch=git_branch,
             git_token_env_key=git_token_env_key,
         )
-        project.project_local_mounts = self._build_project_local_mount_models(local_mounts)
+        project.project_local_mounts = self._build_project_local_mount_models(
+            local_mounts
+        )
         ProjectRepository.create(db, project)
         db.commit()
         db.refresh(project)

@@ -84,7 +84,10 @@ export function ProjectInfoDrawer({
         if (!active) return;
         setProjectFilesCount(items.length);
       } catch (error) {
-        console.error("[ProjectInfoDrawer] Failed to load project files", error);
+        console.error(
+          "[ProjectInfoDrawer] Failed to load project files",
+          error,
+        );
       }
     };
 
@@ -176,9 +179,7 @@ export function ProjectInfoDrawer({
             <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
               {t("project.detail.overview")}
             </p>
-            <p className="text-sm leading-6 text-muted-foreground">
-              {summary}
-            </p>
+            <p className="text-sm leading-6 text-muted-foreground">{summary}</p>
           </div>
 
           {project.repoUrl || project.gitBranch ? (
@@ -234,7 +235,9 @@ export function ProjectInfoDrawer({
                 <Button
                   key={action.key}
                   variant="ghost"
-                  className={cn("h-9 w-full justify-start gap-2.5 px-2 text-sm")}
+                  className={cn(
+                    "h-9 w-full justify-start gap-2.5 px-2 text-sm",
+                  )}
                   onClick={action.onClick}
                 >
                   <Icon className="size-4 text-primary" />
@@ -274,7 +277,10 @@ export function ProjectInfoDrawer({
         allowDescriptionEdit
         onRename={handleRename}
       />
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+      <AlertDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{t("project.delete")}</AlertDialogTitle>

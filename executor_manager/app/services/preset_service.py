@@ -7,8 +7,12 @@ class PresetResolver:
     def __init__(self, backend_client: BackendClient | None = None) -> None:
         self.backend_client = backend_client or BackendClient()
 
-    async def resolve_preset_config(self, user_id: str, preset_id: int) -> dict[str, Any]:
-        preset = await self.backend_client.get_preset(user_id=user_id, preset_id=preset_id)
+    async def resolve_preset_config(
+        self, user_id: str, preset_id: int
+    ) -> dict[str, Any]:
+        preset = await self.backend_client.get_preset(
+            user_id=user_id, preset_id=preset_id
+        )
         if not preset:
             return {}
         return {

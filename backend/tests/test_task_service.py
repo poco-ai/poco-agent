@@ -71,9 +71,9 @@ class TaskServiceTests(unittest.TestCase):
         get_project_by_id.assert_called_once_with(self.db, project_id)
         build_project_input_files.assert_called_once_with(self.db, project)
         self.assertEqual(
-            session_queue_service.materialize_run.call_args.kwargs["run_config_snapshot"][
-                "input_files"
-            ][0]["name"],
+            session_queue_service.materialize_run.call_args.kwargs[
+                "run_config_snapshot"
+            ]["input_files"][0]["name"],
             "guide.md",
         )
         self.assertEqual(result.accepted_type, "run")

@@ -1,5 +1,8 @@
 import type { LocalFilesystemDraft } from "@/features/task-composer/types";
-import type { LocalMountConfig, SessionUpdateRequest } from "@/features/chat/types";
+import type {
+  LocalMountConfig,
+  SessionUpdateRequest,
+} from "@/features/chat/types";
 
 interface PersistSessionLocalFilesystemArgs<TProjectResult = unknown> {
   sessionId: string;

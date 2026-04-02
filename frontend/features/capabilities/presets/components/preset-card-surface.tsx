@@ -54,14 +54,14 @@ export function PresetCardSurface({
 
   const getCountBadgeProps = (count: number) =>
     count > 0
-      ? ({
+      ? {
           variant: "secondary" as const,
           className: "gap-1.5",
-        })
-      : ({
+        }
+      : {
           variant: "outline" as const,
           className: "gap-1.5 text-muted-foreground/50",
-        });
+        };
 
   const handleKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
@@ -78,8 +78,8 @@ export function PresetCardSurface({
     <Card
       role={isInteractive ? "button" : undefined}
       tabIndex={isInteractive ? 0 : undefined}
-      onClick={isInteractive ? onClick ?? onActivate : undefined}
-      onKeyDown={isInteractive ? onKeyDown ?? handleKeyDown : undefined}
+      onClick={isInteractive ? (onClick ?? onActivate) : undefined}
+      onKeyDown={isInteractive ? (onKeyDown ?? handleKeyDown) : undefined}
       aria-pressed={isInteractive ? selected : undefined}
       className={cn(
         "overflow-hidden rounded-2xl border border-border/60 bg-card transition-all duration-200",

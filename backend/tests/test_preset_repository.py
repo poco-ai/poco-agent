@@ -6,7 +6,9 @@ from app.repositories.preset_repository import PresetRepository
 
 
 class PresetRepositoryTests(unittest.TestCase):
-    def test_count_projects_using_as_default_ignores_soft_deleted_projects(self) -> None:
+    def test_count_projects_using_as_default_ignores_soft_deleted_projects(
+        self,
+    ) -> None:
         session_db = MagicMock()
         query = session_db.query.return_value
         query.filter.return_value.count.return_value = 3

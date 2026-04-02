@@ -147,8 +147,7 @@ export function parseConfigSnapshot(
   };
 
   return {
-    preset_id:
-      typeof raw.preset_id === "number" ? raw.preset_id : undefined,
+    preset_id: typeof raw.preset_id === "number" ? raw.preset_id : undefined,
     mcp_server_ids: parseIds(raw.mcp_server_ids),
     skill_ids: parseIds(raw.skill_ids),
     plugin_ids: parseIds(raw.plugin_ids),

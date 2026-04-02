@@ -26,7 +26,7 @@ export type PresetIcon =
   | "bug"
   | "cloud"
   | "rocket"
-  | "target"
+  | "target";
 
 export type PresetSubAgentModel = "sonnet" | "opus" | "haiku" | "inherit";
 

@@ -225,7 +225,9 @@ export function ProjectPageClient({ projectId }: ProjectPageClientProps) {
             <div
               className={cn(
                 "row-span-2 min-h-0 overflow-hidden bg-background transition-[border-color] duration-200",
-                isDrawerOpen ? "border-r border-border/60" : "border-r border-transparent",
+                isDrawerOpen
+                  ? "border-r border-border/60"
+                  : "border-r border-transparent",
               )}
             >
               <div
@@ -308,10 +310,7 @@ export function ProjectPageClient({ projectId }: ProjectPageClientProps) {
               <p className="mt-2 text-sm leading-6 text-muted-foreground">
                 {t("project.detail.notFoundDescription")}
               </p>
-              <Button
-                className="mt-6"
-                onClick={() => router.push(homePath)}
-              >
+              <Button className="mt-6" onClick={() => router.push(homePath)}>
                 {t("project.detail.backHome")}
               </Button>
             </section>

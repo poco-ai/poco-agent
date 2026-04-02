@@ -1,9 +1,7 @@
 "use client";
 
 import * as React from "react";
-import {
-  ChevronDown,
-} from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { useT } from "@/lib/i18n/client";
 import {
@@ -91,11 +89,12 @@ export function RenameProjectDialog({
     [projectDefaultModel, projectDescription, projectLocalMounts, projectName],
   );
   const [name, setName] = React.useState(initialState.name);
-  const [description, setDescription] = React.useState(initialState.description);
-  const [advancedOpen, setAdvancedOpen] = React.useState(false);
-  const [modelSelection, setModelSelection] = React.useState<ModelSelection | null>(
-    initialState.modelSelection,
+  const [description, setDescription] = React.useState(
+    initialState.description,
   );
+  const [advancedOpen, setAdvancedOpen] = React.useState(false);
+  const [modelSelection, setModelSelection] =
+    React.useState<ModelSelection | null>(initialState.modelSelection);
   const [filesystemMode, setFilesystemMode] = React.useState(
     initialState.filesystemMode,
   );
@@ -341,9 +340,7 @@ export function RenameProjectDialog({
                   <div className="rounded-xl border border-border/60 bg-background px-4 py-3">
                     <div className="min-w-0">
                       <div className="min-w-0">
-                        <Label
-                          className="flex items-center gap-2 text-sm font-medium"
-                        >
+                        <Label className="flex items-center gap-2 text-sm font-medium">
                           {t("project.advanced.mountTitle")}
                         </Label>
                         <p className="mt-1 text-xs text-muted-foreground">

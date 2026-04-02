@@ -19,7 +19,9 @@ class PresetServiceTests(unittest.TestCase):
         self.now = datetime.now(UTC)
 
     @patch("app.services.preset_service.PresetRepository.exists_by_user_name")
-    def test_create_preset_rejects_duplicate_name(self, exists_by_user_name: MagicMock) -> None:
+    def test_create_preset_rejects_duplicate_name(
+        self, exists_by_user_name: MagicMock
+    ) -> None:
         exists_by_user_name.return_value = True
 
         with self.assertRaises(AppException) as context:
@@ -121,7 +123,9 @@ class PresetServiceTests(unittest.TestCase):
         self.assertEqual(context.exception.error_code, ErrorCode.BAD_REQUEST)
         validate_components.assert_not_called()
 
-    @patch("app.services.preset_service.PresetRepository.count_projects_using_as_default")
+    @patch(
+        "app.services.preset_service.PresetRepository.count_projects_using_as_default"
+    )
     @patch("app.services.preset_service.PresetRepository.get_by_id")
     def test_delete_preset_rejects_project_usage(
         self,

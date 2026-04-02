@@ -181,7 +181,8 @@ export function TaskComposer({
   const [filesystemDialogOpen, setFilesystemDialogOpen] = React.useState(false);
   const [localFilesystemDraft, setLocalFilesystemDraft] =
     React.useState<LocalFilesystemDraft>({
-      filesystem_mode: initialLocalFilesystemDraft?.filesystem_mode ?? "sandbox",
+      filesystem_mode:
+        initialLocalFilesystemDraft?.filesystem_mode ?? "sandbox",
       local_mounts: initialLocalFilesystemDraft?.local_mounts ?? [],
     });
   const [trackedCapabilityItems, setTrackedCapabilityItems] = React.useState<
@@ -745,17 +746,22 @@ export function TaskComposer({
                         }
                       >
                         {selectedPreset ? (
-                          React.createElement(getPresetIcon(selectedPreset.icon), {
-                            className: "size-4 shrink-0",
-                            style: selectedPreset.color
-                              ? { color: selectedPreset.color }
-                              : undefined,
-                          })
+                          React.createElement(
+                            getPresetIcon(selectedPreset.icon),
+                            {
+                              className: "size-4 shrink-0",
+                              style: selectedPreset.color
+                                ? { color: selectedPreset.color }
+                                : undefined,
+                            },
+                          )
                         ) : (
                           <Sparkles className="size-4 shrink-0" />
                         )}
                         {selectedPreset ? (
-                          <span className="truncate">{selectedPreset.name}</span>
+                          <span className="truncate">
+                            {selectedPreset.name}
+                          </span>
                         ) : null}
                       </Button>
                     </TooltipTrigger>

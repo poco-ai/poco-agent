@@ -102,12 +102,7 @@ export function ProjectSettingsDialog({
         setSavingKey(null);
       }
     },
-    [
-      activeDefaultPresetId,
-      onProjectDefaultPresetChange,
-      projectId,
-      t,
-    ],
+    [activeDefaultPresetId, onProjectDefaultPresetChange, projectId, t],
   );
 
   const handleSelectPreset = React.useCallback(
@@ -127,7 +122,8 @@ export function ProjectSettingsDialog({
     void persistDefaultPreset(null);
   }, [activeDefaultPresetId, persistDefaultPreset, savingKey]);
 
-  const showEmptySearch = !isLoading && allPresets.length > 0 && filteredPresets.length === 0;
+  const showEmptySearch =
+    !isLoading && allPresets.length > 0 && filteredPresets.length === 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

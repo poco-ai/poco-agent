@@ -28,7 +28,10 @@ export function CapabilitySelector({
   emptyLabel,
 }: CapabilitySelectorProps) {
   const [query, setQuery] = React.useState("");
-  const selectedIdSet = React.useMemo(() => new Set(selectedIds), [selectedIds]);
+  const selectedIdSet = React.useMemo(
+    () => new Set(selectedIds),
+    [selectedIds],
+  );
 
   const filteredItems = React.useMemo(() => {
     if (!query.trim()) return items;

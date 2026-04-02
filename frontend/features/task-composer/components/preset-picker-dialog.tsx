@@ -130,11 +130,7 @@ export function PresetPickerDialog({
                   icon={
                     <Icon
                       className="size-4"
-                      style={
-                        preset.color
-                          ? { color: preset.color }
-                          : undefined
-                      }
+                      style={preset.color ? { color: preset.color } : undefined}
                     />
                   }
                 />

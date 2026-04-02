@@ -30,7 +30,9 @@ def build_preset_response(preset_id: int = 1, name: str = "Frontend") -> PresetR
     )
 
 
-def build_project_response(project_id: str, *, default_preset_id: int | None) -> ProjectResponse:
+def build_project_response(
+    project_id: str, *, default_preset_id: int | None
+) -> ProjectResponse:
     now = datetime.now(UTC)
     return ProjectResponse(
         project_id=project_id,
@@ -110,9 +112,7 @@ class ProjectApiTests(unittest.TestCase):
         self.project_id = "f219f040-6ec9-4d2f-9cd3-7d2f93f75368"
 
     @patch("app.api.v1.projects.service.update_project")
-    def test_update_project_returns_default_preset_id(
-        self, update_project
-    ) -> None:
+    def test_update_project_returns_default_preset_id(self, update_project) -> None:
         update_project.return_value = build_project_response(
             self.project_id,
             default_preset_id=3,

@@ -1,9 +1,7 @@
 "use client";
 
 import { Input } from "@/components/ui/input";
-import {
-  PRESET_COLOR_OPTIONS,
-} from "@/features/capabilities/presets/lib/preset-visuals";
+import { PRESET_COLOR_OPTIONS } from "@/features/capabilities/presets/lib/preset-visuals";
 import { cn } from "@/lib/utils";
 
 interface ColorSelectorProps {

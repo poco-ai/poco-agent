@@ -21,9 +21,7 @@ interface ProjectDetailPanelProps {
   isSubmitting: boolean;
   initialPresetId: number | null;
   initialLocalFilesystemDraft?: LocalFilesystemDraft;
-  onLocalFilesystemDraftSave?: (
-    value: LocalFilesystemDraft,
-  ) => Promise<void>;
+  onLocalFilesystemDraftSave?: (value: LocalFilesystemDraft) => Promise<void>;
   onRepoDefaultsSave: (payload: {
     repo_url?: string | null;
     git_branch?: string | null;

@@ -70,21 +70,18 @@ export function useProjects(options: UseProjectsOptions = {}) {
     fetchProjects();
   }, [enableClientFetch, fetchProjects]);
 
-  const addProject = useCallback(
-    async (input: ProjectCreateInput) => {
-      try {
-        const newProject = await createProjectAction({
-          ...input,
-        });
-        setProjects((prev) => [...prev, newProject]);
-        return newProject;
-      } catch (error) {
-        console.error("Failed to create project", error);
-        return null;
-      }
-    },
-    [],
-  );
+  const addProject = useCallback(async (input: ProjectCreateInput) => {
+    try {
+      const newProject = await createProjectAction({
+        ...input,
+      });
+      setProjects((prev) => [...prev, newProject]);
+      return newProject;
+    } catch (error) {
+      console.error("Failed to create project", error);
+      return null;
+    }
+  }, []);
 
   const updateProject = useCallback(
     async (projectId: string, updates: ProjectUpdatesInput) => {

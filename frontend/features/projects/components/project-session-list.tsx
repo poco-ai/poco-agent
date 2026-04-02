@@ -39,7 +39,8 @@ export function ProjectSessionList({ tasks }: ProjectSessionListProps) {
     () =>
       [...tasks].sort(
         (left, right) =>
-          new Date(right.timestamp).getTime() - new Date(left.timestamp).getTime(),
+          new Date(right.timestamp).getTime() -
+          new Date(left.timestamp).getTime(),
       ),
     [tasks],
   );
@@ -88,7 +89,9 @@ export function ProjectSessionList({ tasks }: ProjectSessionListProps) {
               key={task.id}
               type="button"
               onClick={() =>
-                router.push(lng ? `/${lng}/chat/${task.id}` : `/chat/${task.id}`)
+                router.push(
+                  lng ? `/${lng}/chat/${task.id}` : `/chat/${task.id}`,
+                )
               }
               className={cn(
                 "group flex w-full items-start justify-between gap-4 rounded-2xl border px-4 py-4 text-left transition-colors",

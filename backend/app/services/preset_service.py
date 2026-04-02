@@ -202,7 +202,9 @@ class PresetService:
         user_id: str,
         mcp_server_ids: list[int],
     ) -> None:
-        servers = [McpServerRepository.get_by_id(db, server_id) for server_id in mcp_server_ids]
+        servers = [
+            McpServerRepository.get_by_id(db, server_id) for server_id in mcp_server_ids
+        ]
         PresetService._validate_component_ids(
             requested_ids=mcp_server_ids,
             items=[item for item in servers if item is not None],

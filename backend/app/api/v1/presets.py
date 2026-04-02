@@ -63,4 +63,6 @@ async def delete_preset(
     db: Session = Depends(get_db),
 ) -> JSONResponse:
     service.delete_preset(db, user_id, preset_id)
-    return Response.success(data={"id": preset_id}, message="Preset deleted successfully")
+    return Response.success(
+        data={"id": preset_id}, message="Preset deleted successfully"
+    )

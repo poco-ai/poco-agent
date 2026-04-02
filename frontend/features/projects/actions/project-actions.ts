@@ -80,8 +80,7 @@ export async function createProjectAction(input: CreateProjectInput) {
     repo_url,
     git_branch,
     git_token_env_key,
-  } =
-    createProjectSchema.parse(input);
+  } = createProjectSchema.parse(input);
   return projectsService.createProject({
     name,
     description,
@@ -115,8 +114,7 @@ export async function updateProjectAction(input: UpdateProjectInput) {
     repo_url,
     git_branch,
     git_token_env_key,
-  } =
-    updateProjectSchema.parse(input);
+  } = updateProjectSchema.parse(input);
   return projectsService.updateProject(projectId, {
     name,
     description,

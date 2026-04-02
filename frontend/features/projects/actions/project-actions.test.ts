@@ -1,10 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import {
-  createProjectAction,
-  updateProjectAction,
-} from "./project-actions.ts";
+import { createProjectAction, updateProjectAction } from "./project-actions.ts";
 import { projectsService } from "../api/projects-api.ts";
 
 test("createProjectAction preserves explicit null project defaults", async () => {

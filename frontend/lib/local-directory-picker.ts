@@ -32,7 +32,9 @@ export function supportsNativeDirectoryPicker(): boolean {
   if (typeof window === "undefined") {
     return false;
   }
-  return typeof (window as DirectoryPickerWindow).showDirectoryPicker === "function";
+  return (
+    typeof (window as DirectoryPickerWindow).showDirectoryPicker === "function"
+  );
 }
 
 export async function pickLocalDirectory(): Promise<PickedLocalDirectory | null> {
@@ -40,7 +42,9 @@ export async function pickLocalDirectory(): Promise<PickedLocalDirectory | null>
     return null;
   }
 
-  const handle = await (window as DirectoryPickerWindow).showDirectoryPicker?.();
+  const handle = await (
+    window as DirectoryPickerWindow
+  ).showDirectoryPicker?.();
   if (!handle) {
     return null;
   }
