@@ -129,7 +129,13 @@ export function ProjectInfoHeader({
         projectGitTokenEnvKey={project.gitTokenEnvKey}
         allowDescriptionEdit
         onRename={(name, description, defaultModel, localMounts, gitConfig) => {
-          void handleRename(name, description, defaultModel, localMounts, gitConfig);
+          void handleRename(
+            name,
+            description,
+            defaultModel,
+            localMounts,
+            gitConfig,
+          );
         }}
       />
     </>

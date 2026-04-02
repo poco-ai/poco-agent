@@ -224,7 +224,10 @@ interface SidebarContentSectionProps {
   onRenameTask?: (taskId: string, newName: string) => Promise<void> | void;
   onMoveTaskToProject?: (taskId: string, projectId: string | null) => void;
   onToggleTaskPin: (taskId: string) => void;
-  onRenameProject?: (projectId: string, updates: Record<string, unknown>) => void;
+  onRenameProject?: (
+    projectId: string,
+    updates: Record<string, unknown>,
+  ) => void;
   onDeleteProject?: (projectId: string) => Promise<void> | void;
   onOpenCreateProjectDialog?: () => void;
   // Selection state (from useSidebarSelection)

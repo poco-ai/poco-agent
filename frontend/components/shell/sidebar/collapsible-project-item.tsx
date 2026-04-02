@@ -58,7 +58,10 @@ interface CollapsibleProjectItemProps {
   onMoveTaskToProject?: (taskId: string, projectId: string | null) => void;
   onToggleTaskPin: (taskId: string) => void;
   allProjects: ProjectItem[];
-  onRenameProject?: (projectId: string, updates: Record<string, unknown>) => void;
+  onRenameProject?: (
+    projectId: string,
+    updates: Record<string, unknown>,
+  ) => void;
   onDeleteProject?: (projectId: string) => Promise<void> | void;
   isProjectSelectionMode?: boolean;
   isTaskSelectionMode?: boolean;

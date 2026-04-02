@@ -297,7 +297,13 @@ export function RenameProjectDialog({
         gitConfig,
       );
     } else {
-      onRename(trimmed, undefined, nextDefaultModel, nextLocalMounts, gitConfig);
+      onRename(
+        trimmed,
+        undefined,
+        nextDefaultModel,
+        nextLocalMounts,
+        gitConfig,
+      );
     }
     onOpenChange(false);
   };
@@ -429,7 +435,10 @@ export function RenameProjectDialog({
                           />
                         </div>
                         <div className="grid gap-1.5">
-                          <Label htmlFor="git-token-env-key" className="text-xs">
+                          <Label
+                            htmlFor="git-token-env-key"
+                            className="text-xs"
+                          >
                             {t("project.advanced.gitTokenEnvKeyLabel")}
                           </Label>
                           <Input
