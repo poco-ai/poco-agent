@@ -11,6 +11,7 @@ import {
   FileText,
   Command as CommandIcon,
   Bot,
+  ShieldCheck,
 } from "lucide-react";
 
 import { useT } from "@/lib/i18n/client";
@@ -22,6 +23,7 @@ import { EnvVarsPageClient } from "@/features/capabilities/env-vars/components/e
 import { PersonalizationPageClient } from "@/features/capabilities/personalization/components/personalization-page-client";
 import { SlashCommandsPageClient } from "@/features/capabilities/slash-commands/components/slash-commands-page-client";
 import { SubAgentsPageClient } from "@/features/capabilities/sub-agents/components/sub-agents-page-client";
+import { PermissionsPageClient } from "@/features/capabilities/permissions/components/permissions-page-client";
 
 export interface CapabilityView {
   id: string;
@@ -115,6 +117,17 @@ export function useCapabilityViews(): CapabilityView[] {
         group: "tertiary",
         icon: FileText,
         component: PersonalizationPageClient,
+      },
+      {
+        id: "permissions",
+        label: t("library.permissions.title", "Permissions"),
+        description: t(
+          "library.permissions.description",
+          "Configure tool permission rules and audit policy",
+        ),
+        group: "tertiary",
+        icon: ShieldCheck,
+        component: PermissionsPageClient,
       },
     ],
     [t],

@@ -233,6 +233,85 @@ class BackendClient:
         data = response.json()
         return data.get("data", {}) or {}
 
+    async def update_run_metadata(
+        self, run_id: str, metadata: dict
+    ) -> None:
+        await self._request(
+            "PATCH",
+            f"/api/v1/internal/runs/{run_id}/metadata",
+            headers={
+                "X-Internal-Token": self.settings.internal_api_token,
+                **self._trace_headers(),
+            },
+            json=metadata,
+        )
+
+    async def record_mcp_transition(
+        self,
+        *,
+        run_id: str,
+        session_id: str,
+        server_name: str,
+        to_state: str,
+        event_source: str = "executor_manager",
+        error_message: str | None = None,
+        metadata: dict | None = None,
+    ) -> None:
+        """Record an MCP connection state transition via backend internal API."""
+        await self._request(
+            "POST",
+            "/api/v1/internal/mcp-transitions",
+            headers={
+                "X-Internal-Token": self.settings.internal_api_token,
+                **self._trace_headers(),
+            },
+            json={
+                "run_id": run_id,
+                "session_id": session_id,
+                "server_name": server_name,
+                "to_state": to_state,
+                "event_source": event_source,
+                "error_message": error_message,
+                "metadata": metadata,
+            },
+            retry_connect_errors=1,
+        )
+
+    async def record_permission_audit(
+        self,
+        *,
+        run_id: str,
+        session_id: str,
+        tool_name: str,
+        tool_input: dict | None = None,
+        policy_action: str = "allow",
+        policy_rule_id: str | None = None,
+        policy_reason: str | None = None,
+        audit_mode: bool = True,
+        context: dict | None = None,
+    ) -> None:
+        """Record a permission audit event via backend internal API."""
+        await self._request(
+            "POST",
+            "/api/v1/internal/permission-audit",
+            headers={
+                "X-Internal-Token": self.settings.internal_api_token,
+                **self._trace_headers(),
+            },
+            json={
+                "run_id": run_id,
+                "session_id": session_id,
+                "tool_name": tool_name,
+                "tool_input": tool_input,
+                "policy_action": policy_action,
+                "policy_rule_id": policy_rule_id,
+                "policy_reason": policy_reason,
+                "audit_mode": audit_mode,
+                "context": context,
+            },
+            retry_connect_errors=1,
+        )
+
     async def resolve_slash_commands(
         self,
         user_id: str,

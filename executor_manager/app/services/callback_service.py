@@ -131,6 +131,27 @@ class CallbackService:
         from app.core.errors.error_codes import ErrorCode
         from app.core.errors.exceptions import AppException
 
+        # Handle special message types (mcp_transition, permission_audit)
+        new_message = callback.new_message
+        if isinstance(new_message, dict):
+            msg_type = new_message.get("type")
+            if msg_type == "mcp_transition":
+                await self._handle_mcp_transition(callback)
+                return CallbackReceiveResponse(
+                    status="received",
+                    session_id=callback.session_id,
+                    callback_status=callback.status,
+                    progress=callback.progress,
+                )
+            if msg_type == "permission_audit":
+                await self._handle_permission_audit(callback)
+                return CallbackReceiveResponse(
+                    status="received",
+                    session_id=callback.session_id,
+                    callback_status=callback.status,
+                    progress=callback.progress,
+                )
+
         # High-frequency callbacks: keep RUNNING as DEBUG; only completed/failed stay at INFO.
         summary_level = (
             logging.INFO
@@ -221,6 +242,56 @@ class CallbackService:
             raise AppException(
                 error_code=ErrorCode.CALLBACK_FORWARD_FAILED,
                 message="Failed to forward callback to backend",
+            )
+
+    async def _handle_mcp_transition(self, callback: AgentCallbackRequest) -> None:
+        """Forward MCP transition event to backend internal API."""
+        new_message = callback.new_message
+        if not isinstance(new_message, dict):
+            return
+        try:
+            await backend_client.record_mcp_transition(
+                run_id=callback.run_id or "",
+                session_id=callback.session_id,
+                server_name=str(new_message.get("server_name") or ""),
+                to_state=str(new_message.get("to_state") or ""),
+                event_source=str(new_message.get("event_source") or "executor"),
+                error_message=new_message.get("error_message"),
+                metadata=new_message.get("metadata"),
+            )
+        except Exception:
+            logger.debug(
+                "mcp_transition_forward_failed",
+                extra={
+                    "session_id": callback.session_id,
+                    "run_id": callback.run_id,
+                },
+            )
+
+    async def _handle_permission_audit(self, callback: AgentCallbackRequest) -> None:
+        """Forward permission audit event to backend internal API."""
+        new_message = callback.new_message
+        if not isinstance(new_message, dict):
+            return
+        try:
+            await backend_client.record_permission_audit(
+                run_id=callback.run_id or "",
+                session_id=callback.session_id,
+                tool_name=str(new_message.get("tool_name") or ""),
+                tool_input=new_message.get("tool_input"),
+                policy_action=str(new_message.get("policy_action") or "allow"),
+                policy_rule_id=new_message.get("policy_rule_id"),
+                policy_reason=new_message.get("policy_reason"),
+                audit_mode=bool(new_message.get("audit_mode", True)),
+                context=new_message.get("context"),
+            )
+        except Exception:
+            logger.debug(
+                "permission_audit_forward_failed",
+                extra={
+                    "session_id": callback.session_id,
+                    "run_id": callback.run_id,
+                },
             )
 
     async def _export_and_forward(self, callback: AgentCallbackRequest) -> None:

@@ -1,3 +1,4 @@
+import logging
 from typing import Any, Optional
 
 from claude_agent_sdk.types import ResultMessage, SystemMessage
@@ -7,6 +8,8 @@ from app.hooks.base import AgentHook, ExecutionContext
 from app.schemas.callback import AgentCallbackRequest
 from app.schemas.enums import CallbackStatus, TodoStatus
 from app.utils.serializer import serialize_message
+
+logger = logging.getLogger(__name__)
 
 
 class CallbackHook(AgentHook):
@@ -83,3 +86,64 @@ class CallbackHook(AgentHook):
 
     async def on_error(self, context: ExecutionContext, error: Exception):
         self.execution_error = error
+
+    async def record_permission_event(
+        self,
+        context: ExecutionContext,
+        *,
+        tool_name: str,
+        tool_input: dict[str, Any] | None = None,
+        policy_action: str = "allow",
+        policy_rule_id: str = "",
+        policy_reason: str = "",
+        audit_mode: bool = True,
+    ) -> None:
+        """Fire-and-forget permission audit event to executor-manager callback."""
+        payload = AgentCallbackRequest(
+            session_id=context.session_id,
+            run_id=context.run_id,
+            status=CallbackStatus.RUNNING,
+            progress=0,
+            new_message={
+                "type": "permission_audit",
+                "tool_name": tool_name,
+                "tool_input": tool_input,
+                "policy_action": policy_action,
+                "policy_rule_id": policy_rule_id,
+                "policy_reason": policy_reason,
+                "audit_mode": audit_mode,
+            },
+        )
+        try:
+            await self.client.send(payload)
+        except Exception:
+            logger.debug("Permission audit event send failed (fire-and-forget)")
+
+    async def on_mcp_state_change(
+        self,
+        context: ExecutionContext,
+        *,
+        server_name: str,
+        to_state: str,
+        error_message: str | None = None,
+        metadata: dict[str, Any] | None = None,
+    ) -> None:
+        """Fire-and-forget MCP transition event to executor-manager callback."""
+        payload = AgentCallbackRequest(
+            session_id=context.session_id,
+            run_id=context.run_id,
+            status=CallbackStatus.RUNNING,
+            progress=0,
+            new_message={
+                "type": "mcp_transition",
+                "server_name": server_name,
+                "to_state": to_state,
+                "event_source": "executor",
+                "error_message": error_message,
+                "metadata": metadata,
+            },
+        )
+        try:
+            await self.client.send(payload)
+        except Exception:
+            logger.debug("MCP transition event send failed (fire-and-forget)")

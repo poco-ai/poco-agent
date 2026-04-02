@@ -23,6 +23,9 @@ from app.api.v1 import (
     internal_skill_config,
     internal_subagents,
     internal_user_input_requests,
+    internal_mcp_transitions,
+    internal_permission_audit,
+    internal_runs,
     memories,
     mcp_servers,
     messages,
@@ -32,6 +35,7 @@ from app.api.v1 import (
     pending_skill_creations,
     projects,
     runs,
+    runs_mcp,
     schedules,
     search,
     scheduled_tasks,
@@ -57,6 +61,7 @@ api_v1_router.include_router(sessions.router)
 api_v1_router.include_router(session_queue.router)
 api_v1_router.include_router(tasks.router)
 api_v1_router.include_router(runs.router)
+api_v1_router.include_router(runs_mcp.router)
 api_v1_router.include_router(schedules.router)
 api_v1_router.include_router(callback.router)
 api_v1_router.include_router(deliverables.router)
@@ -86,6 +91,9 @@ api_v1_router.include_router(internal_user_input_requests.router)
 api_v1_router.include_router(internal_slash_commands.router)
 api_v1_router.include_router(internal_subagents.router)
 api_v1_router.include_router(internal_plugin_config.router)
+api_v1_router.include_router(internal_mcp_transitions.router)
+api_v1_router.include_router(internal_permission_audit.router)
+api_v1_router.include_router(internal_runs.router)
 api_v1_router.include_router(mcp_servers.router)
 api_v1_router.include_router(user_mcp_installs.router)
 api_v1_router.include_router(skills.router)

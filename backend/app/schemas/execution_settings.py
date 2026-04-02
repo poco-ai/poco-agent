@@ -1,6 +1,8 @@
-from typing import Any, Literal
+from typing import Any, Literal, Union
 
 from pydantic import BaseModel, Field
+
+from app.schemas.permission_policy import PermissionPolicy
 
 
 class HookSpec(BaseModel):
@@ -33,7 +35,9 @@ class WorkspaceExecutionSettings(BaseModel):
 class ExecutionSettings(BaseModel):
     schema_version: str = "v1"
     hooks: HookPipelineSettings = Field(default_factory=HookPipelineSettings)
-    permissions: dict[str, Any] = Field(default_factory=dict)
+    permissions: Union[PermissionPolicy, dict[str, Any]] = Field(
+        default_factory=PermissionPolicy
+    )
     workspace: WorkspaceExecutionSettings = Field(
         default_factory=WorkspaceExecutionSettings
     )

@@ -11,6 +11,7 @@ class McpConnectionResponse(BaseModel):
     server_id: int | None = None
     server_name: str
     state: str
+    health: str | None = "healthy"
     attempt_count: int
     last_error: str | None = None
     connection_metadata: dict | None = None

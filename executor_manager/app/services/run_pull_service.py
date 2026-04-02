@@ -434,6 +434,21 @@ class RunPullService:
             )
 
             step_started = time.perf_counter()
+            # Emit MCP "staged" transitions for each configured MCP server
+            mcp_config = resolved_config.get("mcp_config")
+            if isinstance(mcp_config, dict) and mcp_config:
+                for server_name in mcp_config:
+                    try:
+                        await self.backend_client.record_mcp_transition(
+                            run_id=str(run_id),
+                            session_id=session_id,
+                            server_name=server_name,
+                            to_state="staged",
+                            event_source="executor_manager",
+                        )
+                    except Exception:
+                        pass  # Best-effort, don't block dispatch
+
             await self.executor_client.execute_task(
                 executor_url=executor_url,
                 session_id=session_id,

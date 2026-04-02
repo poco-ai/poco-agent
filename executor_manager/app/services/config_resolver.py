@@ -310,6 +310,26 @@ class ConfigResolver:
                 **ctx,
             },
         )
+
+        # Write back resolved metadata to run for post-hoc audit
+        if run_id:
+            try:
+                metadata_writeback: dict[str, Any] = {}
+                if "permission_policy" in resolved:
+                    metadata_writeback["permission_policy_snapshot"] = resolved[
+                        "permission_policy"
+                    ]
+                if "hook_specs" in resolved:
+                    metadata_writeback["resolved_hook_specs"] = resolved["hook_specs"]
+                if metadata_writeback:
+                    await self.backend_client.update_run_metadata(
+                        run_id, metadata_writeback
+                    )
+            except Exception as exc:
+                logger.warning(
+                    "Failed to write back run metadata: %s", exc, extra=ctx
+                )
+
         return resolved
 
     @staticmethod

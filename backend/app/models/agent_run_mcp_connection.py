@@ -37,3 +37,4 @@ class AgentRunMcpConnection(Base, TimestampMixin):
     attempt_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     last_error: Mapped[str | None] = mapped_column(String(2000), nullable=True)
     connection_metadata: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    health: Mapped[str | None] = mapped_column(String(16), default="healthy", nullable=True)

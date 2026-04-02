@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import os
 import re
@@ -5,6 +6,7 @@ import time
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from urllib.parse import urlparse
 
 from claude_agent_sdk import ClaudeAgentOptions
 from claude_agent_sdk.client import ClaudeSDKClient
@@ -39,6 +41,7 @@ from app.core.observability.request_context import (
 from app.core.user_input import UserInputClient
 from app.core.workspace import WorkspaceManager
 from app.hooks.base import ExecutionContext
+from app.hooks.callback import CallbackHook
 from app.hooks.manager import HookManager
 from app.prompts import build_prompt_appendix
 from app.schemas.request import TaskConfig
@@ -91,6 +94,7 @@ class AgentExecutor:
         )
         self._request_id = request_id
         self._trace_id = trace_id
+        self._background_tasks: set[asyncio.Task[None]] = set()
         self.workspace = WorkspaceManager(
             mount_path=os.environ.get("WORKSPACE_PATH", "/workspace")
         )
@@ -184,6 +188,41 @@ class AgentExecutor:
                     input_data if isinstance(input_data, dict) else {},
                     {"session_id": self.session_id, "cwd": ctx.cwd},
                 )
+
+                audit_mode = permission_engine.policy.get("mode") == "audit"
+
+                # Fire-and-forget permission audit event via callback hook
+                callback_hook = next(
+                    (h for h in self.hooks.hooks if isinstance(h, CallbackHook)),
+                    None,
+                )
+                if callback_hook is not None:
+                    audit_input = input_data if isinstance(input_data, dict) else None
+
+                    async def _fire_and_forget_audit() -> None:
+                        try:
+                            await callback_hook.record_permission_event(
+                                ctx,
+                                tool_name=tool_name,
+                                tool_input=audit_input,
+                                policy_action=decision.action,
+                                policy_rule_id=decision.rule_id,
+                                policy_reason=decision.reason,
+                                audit_mode=audit_mode,
+                            )
+                        except Exception:
+                            pass
+
+                    task = asyncio.create_task(_fire_and_forget_audit())
+                    self._background_tasks.add(task)
+                    task.add_done_callback(self._background_tasks.discard)
+
+                # In audit-only mode, record but don't actually block (except plan mode)
+                is_audit_only = audit_mode
+                if is_audit_only and decision.action == "deny":
+                    if not decision.rule_id.startswith("preset:plan"):
+                        return PermissionResultAllow(updated_input=input_data)
+
                 if decision.action == "deny":
                     return PermissionResultDeny(
                         message=decision.reason,
@@ -435,6 +474,13 @@ class AgentExecutor:
             os.environ.get("POCO_BROWSER_CDP_ENDPOINT", "http://127.0.0.1:9222").strip()
             or "http://127.0.0.1:9222"
         )
+        # Security: validate scheme to prevent SSRF-like misconfiguration
+        parsed_endpoint = urlparse(cdp_endpoint)
+        if parsed_endpoint.scheme not in ("http", "https"):
+            raise ValueError(
+                f"Invalid CDP endpoint scheme: {parsed_endpoint.scheme}. "
+                "Only http/https are allowed."
+            )
 
         viewport_raw = (os.environ.get("POCO_BROWSER_VIEWPORT_SIZE") or "").strip()
         viewport = parse_viewport_size(viewport_raw) or (1366, 768)
@@ -468,7 +514,7 @@ url = {cdp_endpoint!r} + "/json/version"
 deadline = time.time() + 15
 while time.time() < deadline:
     try:
-        with urllib.request.urlopen(url, timeout=0.5) as resp:
+        with urllib.request.urlopen(url, timeout=3.0) as resp:
             resp.read()
         break
     except Exception:

@@ -568,7 +568,21 @@
     "title": "MCP Servers",
     "connected": "Connected",
     "disconnected": "Disconnected",
-    "error": "Error"
+    "error": "Error",
+    "requested": "Requested",
+    "staged": "Staged",
+    "launching": "Launching",
+    "failed": "Failed",
+    "terminated": "Terminated",
+    "degraded": "Degraded",
+    "stateMachine": {
+      "title": "MCP State History"
+    },
+    "source": {
+      "backend": "backend",
+      "executor_manager": "executor-mgr",
+      "executor": "executor"
+    }
   },
   "mobile": {
     "chat": "Chat",
