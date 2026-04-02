@@ -95,6 +95,10 @@ class WorkspaceManager:
             self._git_askpass_path = None
 
         # Clean up worktrees created during this session
+        self._cleanup_worktrees()
+
+    def _cleanup_worktrees(self) -> None:
+        """Remove worktrees created during this session and prune main repos."""
         for wt_path in self._worktree_paths:
             try:
                 if wt_path.exists():
@@ -105,13 +109,14 @@ class WorkspaceManager:
 
         # Prune stale worktree references in main repos
         cache_dir = self.root_path / ".cache" / "repos"
-        if cache_dir.exists():
-            for main_repo in cache_dir.iterdir():
-                if main_repo.is_dir() and is_repository(main_repo):
-                    try:
-                        worktree_prune(cwd=main_repo)
-                    except Exception:
-                        pass
+        if not cache_dir.exists():
+            return
+        for main_repo in cache_dir.iterdir():
+            if main_repo.is_dir() and is_repository(main_repo):
+                try:
+                    worktree_prune(cwd=main_repo)
+                except Exception:
+                    pass
 
     def _prepare_repository(self, config: TaskConfig) -> Path:
         strategy = (getattr(config, "workspace_strategy", None) or "clone").strip()

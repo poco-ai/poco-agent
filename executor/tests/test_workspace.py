@@ -1,4 +1,3 @@
-import asyncio
 import os
 import tempfile
 import unittest
@@ -655,7 +654,7 @@ class TestWorkspaceManagerCleanup(unittest.TestCase):
             manager._worktree_paths.append(wt_path)
 
             with patch("app.core.workspace.worktree_remove") as mock_remove:
-                asyncio.run(manager.cleanup())
+                manager._cleanup_worktrees()
 
             mock_remove.assert_called_once_with(wt_path, force=True)
 
@@ -671,7 +670,7 @@ class TestWorkspaceManagerCleanup(unittest.TestCase):
 
             with patch("app.core.workspace.is_repository", return_value=True):
                 with patch("app.core.workspace.worktree_prune") as mock_prune:
-                    asyncio.run(manager.cleanup())
+                    manager._cleanup_worktrees()
 
             mock_prune.assert_called_once_with(cwd=main_repo)
 
