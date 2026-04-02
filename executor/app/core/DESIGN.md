@@ -98,17 +98,32 @@ if parsed_endpoint.scheme not in ("http", "https"):
 - 防止配置错误
 - 消除 SAST 扫描警告
 
+## 已实现功能
+
+### Batch 3: Workspace 策略扩展 (2026-04-02)
+
+`WorkspaceManager` 现已支持多种 checkout 策略：
+
+| 策略 | 说明 | 适用场景 |
+|------|------|----------|
+| `clone` | 完整克隆（默认） | 小型仓库、首次克隆 |
+| `worktree` | 从缓存主仓库创建 worktree | 多分支并行开发 |
+| `sparse-clone` | 浅克隆 + sparse checkout | 大仓库、只需部分目录 |
+
+**核心实现**：
+
+- `_prepare_worktree()` - 基于 bare 仓库创建轻量 worktree
+- `_prepare_sparse_checkout()` - 浅克隆 + cone 模式 sparse checkout
+- `_ensure_main_repo()` - 管理缓存的 bare 主仓库
+- `cleanup()` - 自动清理 worktree 和 prune 主仓库
+
+**缓存路径**：`<workspace>/.cache/repos/<repo_hash>/`
+
 ## 未来规划
 
-### Batch 3: Workspace 策略扩展
+### Workspace 架构重构
 
-当前 `WorkspaceManager` 只支持 clone。计划支持：
-
-- `worktree` - 共享 `.git` 的轻量工作区
-- `sparse-clone` - 部分检出
-- `sparse-worktree` - 组合策略
-
-架构调整：
+当策略复杂度进一步增加时，可考虑子包化：
 
 ```
 executor/app/core/workspace/

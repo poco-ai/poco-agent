@@ -1,3 +1,4 @@
+import hashlib
 import logging
 import os
 import shutil
@@ -11,10 +12,15 @@ from app.utils.git.operations import (
     GitCommandError,
     GitError,
     clone,
+    fetch,
     init_repository,
     is_repository,
     checkout,
-    fetch,
+    sparse_checkout_init,
+    sparse_checkout_set,
+    worktree_add,
+    worktree_prune,
+    worktree_remove,
 )
 
 logger = logging.getLogger(__name__)
@@ -54,6 +60,7 @@ class WorkspaceManager:
         self.persistent_claude_data = self.root_path / ".claude_data"
         self.system_claude_home = Path.home() / ".claude"
         self._git_askpass_path: str | None = None
+        self._worktree_paths: list[Path] = []  # Track created worktrees for cleanup
 
     async def prepare(self, config: TaskConfig):
         if not self.root_path.exists():
@@ -86,6 +93,25 @@ class WorkspaceManager:
             except Exception:
                 pass
             self._git_askpass_path = None
+
+        # Clean up worktrees created during this session
+        for wt_path in self._worktree_paths:
+            try:
+                if wt_path.exists():
+                    worktree_remove(wt_path, force=True)
+            except Exception as exc:
+                logger.warning(f"Failed to remove worktree {wt_path}: {exc}")
+        self._worktree_paths.clear()
+
+        # Prune stale worktree references in main repos
+        cache_dir = self.root_path / ".cache" / "repos"
+        if cache_dir.exists():
+            for main_repo in cache_dir.iterdir():
+                if main_repo.is_dir() and is_repository(main_repo):
+                    try:
+                        worktree_prune(cwd=main_repo)
+                    except Exception:
+                        pass
 
     def _prepare_repository(self, config: TaskConfig) -> Path:
         strategy = (getattr(config, "workspace_strategy", None) or "clone").strip()
@@ -122,10 +148,106 @@ class WorkspaceManager:
         return self.root_path
 
     def _prepare_worktree(self, config: TaskConfig) -> Path:
-        return self._prepare_repository_via_clone(config)
+        """Prepare a worktree from a cached main repository.
+
+        Workflow:
+        1. Ensure main repo exists (clone --bare if needed)
+        2. Fetch target branch
+        3. Create worktree pointing to that branch
+        """
+        repo_url = (config.repo_url or "").strip()
+        if not repo_url:
+            return self._prepare_repository_via_clone(config)
+
+        # 1. Ensure main repo exists
+        main_repo = self._ensure_main_repo(
+            repo_url,
+            git_token=(config.git_token or "").strip() or None,
+        )
+
+        # 2. Fetch target branch
+        git_env = self._build_git_env(repo_url, config.git_token)
+        branch = config.git_branch or "main"
+        try:
+            fetch(remote="origin", branch=branch, cwd=main_repo, env=git_env)
+        except (GitCommandError, GitError) as exc:
+            logger.warning(f"Failed to fetch branch {branch}: {exc}")
+            # Try without specifying branch (fetch all)
+            fetch(remote="origin", cwd=main_repo, env=git_env)
+
+        # 3. Create unique worktree path
+        repo_hash = self._get_repo_hash(repo_url)
+        session_id = getattr(config, "session_id", None) or "default"
+        worktree_path = (
+            self.root_path / "worktrees" / repo_hash / str(session_id)
+        )
+        worktree_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # 4. Create worktree
+        try:
+            worktree_add(worktree_path, branch, cwd=main_repo, force=True)
+        except (GitCommandError, GitError) as exc:
+            # If branch doesn't exist locally, try creating it from remote
+            logger.warning(f"Worktree add failed, trying to create branch: {exc}")
+            # Fallback to clone strategy
+            raise RuntimeError(f"Failed to create worktree: {exc}") from exc
+
+        self._worktree_paths.append(worktree_path)
+        return worktree_path
 
     def _prepare_sparse_checkout(self, config: TaskConfig) -> Path:
-        return self._prepare_repository_via_clone(config)
+        """Prepare a sparse checkout repository.
+
+        Workflow:
+        1. Clone repository (shallow if possible)
+        2. Initialize sparse checkout
+        3. Set sparse paths
+        """
+        repo_url = (config.repo_url or "").strip()
+        if not repo_url:
+            return self._prepare_repository_via_clone(config)
+
+        repo_path = self._derive_repo_path(repo_url)
+        git_env = self._build_git_env(repo_url, config.git_token)
+
+        # 1. Clone if not exists
+        if not repo_path.exists() or not is_repository(repo_path):
+            try:
+                clone(
+                    repo_url,
+                    path=repo_path,
+                    branch=config.git_branch,
+                    depth=1,
+                    env=git_env,
+                )
+            except (GitCommandError, GitError, OSError) as exc:
+                detail = str(exc)
+                if len(detail) > 2000:
+                    detail = detail[:2000] + "…"
+                raise RuntimeError(
+                    f"Failed to clone repository for sparse checkout: {repo_url}. {detail}"
+                ) from exc
+        else:
+            # Repo exists, just checkout branch
+            self._checkout_branch(repo_path, config.git_branch, env=git_env)
+
+        # 2. Initialize sparse checkout
+        try:
+            sparse_checkout_init(cwd=repo_path, cone=True)
+        except (GitCommandError, GitError) as exc:
+            logger.warning(f"Failed to init sparse checkout: {exc}")
+            # Continue without sparse - still return valid repo
+            return repo_path
+
+        # 3. Set sparse paths
+        sparse_paths = config.workspace_sparse_paths or []
+        if sparse_paths:
+            try:
+                sparse_checkout_set(sparse_paths, cwd=repo_path)
+            except (GitCommandError, GitError) as exc:
+                logger.warning(f"Failed to set sparse paths: {exc}")
+
+        return repo_path
 
     def _ensure_cloned_repo(
         self,
@@ -309,3 +431,53 @@ esac
             link_path.symlink_to(self.inputs_root)
         except Exception as exc:
             logger.warning(f"Failed to link inputs directory {link_path}: {exc}")
+
+    # =========================================================================
+    # Worktree / Sparse Checkout Helpers
+    # =========================================================================
+
+    def _get_repo_hash(self, repo_url: str) -> str:
+        """Generate a unique hash for a repository URL."""
+        clean = repo_url.split("?", 1)[0].split("#", 1)[0].rstrip("/")
+        return hashlib.sha256(clean.encode("utf-8")).hexdigest()[:16]
+
+    def _get_main_repo_path(self, repo_url: str) -> Path:
+        """Get the path to the cached main repository (bare repo for worktrees)."""
+        repo_hash = self._get_repo_hash(repo_url)
+        return self.root_path / ".cache" / "repos" / repo_hash
+
+    def _ensure_main_repo(self, repo_url: str, git_token: str | None) -> Path:
+        """Ensure a bare main repository exists for worktree creation.
+
+        Returns the path to the main repository.
+        """
+        main_repo = self._get_main_repo_path(repo_url)
+        git_env = self._build_git_env(repo_url, git_token)
+
+        if main_repo.exists() and is_repository(main_repo):
+            # Already exists, just fetch latest
+            try:
+                fetch(remote="origin", cwd=main_repo, env=git_env)
+            except Exception as exc:
+                logger.warning(f"Failed to fetch main repo: {exc}")
+            return main_repo
+
+        # Clone as bare repository (better for worktrees)
+        main_repo.parent.mkdir(parents=True, exist_ok=True)
+
+        try:
+            clone(
+                repo_url,
+                path=main_repo,
+                bare=True,
+                env=git_env,
+            )
+        except (GitCommandError, GitError, OSError) as exc:
+            detail = str(exc)
+            if len(detail) > 2000:
+                detail = detail[:2000] + "…"
+            raise RuntimeError(
+                f"Failed to clone main repository: {repo_url}. {detail}"
+            ) from exc
+
+        return main_repo

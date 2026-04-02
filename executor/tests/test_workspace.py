@@ -1,3 +1,4 @@
+import asyncio
 import os
 import tempfile
 import unittest
@@ -534,6 +535,145 @@ class TestWorkspaceManagerStrategies(unittest.TestCase):
                     manager = WorkspaceManager(mount_path=tmpdir)
                     # Should not raise, just log warning
                     manager._ensure_git_excludes(repo_path)
+
+    def test_prepare_repository_uses_sparse_strategy(self) -> None:
+        manager = WorkspaceManager(mount_path="/workspace")
+        config = MagicMock(spec=TaskConfig)
+        config.workspace_strategy = "sparse-clone"
+
+        with patch.object(
+            manager,
+            "_prepare_sparse_checkout",
+            return_value=Path("/workspace/repo"),
+        ) as mock_prepare_sparse:
+            result = manager._prepare_repository(config)
+
+        assert result == Path("/workspace/repo")
+        mock_prepare_sparse.assert_called_once_with(config)
+
+    def test_prepare_repository_falls_back_to_clone_when_sparse_fails(self) -> None:
+        manager = WorkspaceManager(mount_path="/workspace")
+        config = MagicMock(spec=TaskConfig)
+        config.workspace_strategy = "sparse-worktree"
+
+        with patch.object(
+            manager,
+            "_prepare_sparse_checkout",
+            side_effect=RuntimeError("sparse error"),
+        ) as mock_prepare_sparse:
+            with patch.object(
+                manager,
+                "_prepare_repository_via_clone",
+                return_value=Path("/workspace/repo"),
+            ) as mock_prepare_clone:
+                result = manager._prepare_repository(config)
+
+        assert result == Path("/workspace/repo")
+        mock_prepare_sparse.assert_called_once_with(config)
+        mock_prepare_clone.assert_called_once_with(config)
+
+
+class TestWorkspaceManagerWorktreeImpl(unittest.TestCase):
+    """Tests for worktree implementation."""
+
+    def test_get_repo_hash_returns_consistent_hash(self) -> None:
+        manager = WorkspaceManager(mount_path="/workspace")
+        url = "https://github.com/user/repo.git"
+
+        hash1 = manager._get_repo_hash(url)
+        hash2 = manager._get_repo_hash(url)
+
+        assert hash1 == hash2
+        assert len(hash1) == 16
+
+    def test_get_repo_hash_different_urls_different_hashes(self) -> None:
+        manager = WorkspaceManager(mount_path="/workspace")
+
+        hash1 = manager._get_repo_hash("https://github.com/user/repo1.git")
+        hash2 = manager._get_repo_hash("https://github.com/user/repo2.git")
+
+        assert hash1 != hash2
+
+    def test_get_main_repo_path_uses_hash(self) -> None:
+        manager = WorkspaceManager(mount_path="/workspace")
+        url = "https://github.com/user/repo.git"
+
+        path = manager._get_main_repo_path(url)
+
+        assert path == Path("/workspace/.cache/repos") / manager._get_repo_hash(url)
+
+    def test_prepare_worktree_without_repo_url_falls_back(self) -> None:
+        manager = WorkspaceManager(mount_path="/workspace")
+        config = MagicMock(spec=TaskConfig)
+        config.repo_url = ""
+        config.git_branch = "main"
+        config.git_token = None
+
+        with patch.object(
+            manager,
+            "_prepare_repository_via_clone",
+            return_value=Path("/workspace/repo"),
+        ) as mock_clone:
+            result = manager._prepare_worktree(config)
+
+        assert result == Path("/workspace/repo")
+        mock_clone.assert_called_once_with(config)
+
+
+class TestWorkspaceManagerSparseImpl(unittest.TestCase):
+    """Tests for sparse checkout implementation."""
+
+    def test_prepare_sparse_without_repo_url_falls_back(self) -> None:
+        manager = WorkspaceManager(mount_path="/workspace")
+        config = MagicMock(spec=TaskConfig)
+        config.repo_url = ""
+        config.git_branch = "main"
+        config.git_token = None
+        config.workspace_sparse_paths = []
+
+        with patch.object(
+            manager,
+            "_prepare_repository_via_clone",
+            return_value=Path("/workspace/repo"),
+        ) as mock_clone:
+            result = manager._prepare_sparse_checkout(config)
+
+        assert result == Path("/workspace/repo")
+        mock_clone.assert_called_once_with(config)
+
+
+class TestWorkspaceManagerCleanup(unittest.TestCase):
+    """Tests for cleanup with worktrees."""
+
+    def test_cleanup_removes_tracked_worktrees(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            manager = WorkspaceManager(mount_path=tmpdir)
+            wt_path = Path(tmpdir) / "worktree_test"
+            wt_path.mkdir()  # Create the directory so it exists
+
+            # Track a fake worktree path
+            manager._worktree_paths.append(wt_path)
+
+            with patch("app.core.workspace.worktree_remove") as mock_remove:
+                asyncio.run(manager.cleanup())
+
+            mock_remove.assert_called_once_with(wt_path, force=True)
+
+    def test_cleanup_prunes_main_repos(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            manager = WorkspaceManager(mount_path=tmpdir)
+            cache_dir = Path(tmpdir) / ".cache" / "repos"
+            main_repo = cache_dir / "abc123"
+            main_repo.mkdir(parents=True)
+
+            # Create a fake .git to make it look like a repo
+            (main_repo / ".git").mkdir()
+
+            with patch("app.core.workspace.is_repository", return_value=True):
+                with patch("app.core.workspace.worktree_prune") as mock_prune:
+                    asyncio.run(manager.cleanup())
+
+            mock_prune.assert_called_once_with(cwd=main_repo)
 
 
 if __name__ == "__main__":
