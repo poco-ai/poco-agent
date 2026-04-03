@@ -25,7 +25,10 @@ class AgentRunMcpConnectionEvent(Base, TimestampMixin):
         ForeignKey("agent_run_mcp_connections.id", ondelete="CASCADE"),
         nullable=False,
     )
-    run_id: Mapped[uuid.UUID] = mapped_column(nullable=False)
+    run_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("agent_runs.id", ondelete="CASCADE"),
+        nullable=False,
+    )
     from_state: Mapped[str | None] = mapped_column(String(32), nullable=True)
     to_state: Mapped[str] = mapped_column(String(32), nullable=False)
     event_source: Mapped[str] = mapped_column(String(32), nullable=False)

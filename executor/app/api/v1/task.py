@@ -8,7 +8,7 @@ from pydantic import BaseModel
 
 from app.core.callback import CallbackClient
 from app.core.computer import ComputerClient
-from app.core.engine import AgentExecutor
+from app.core.engine import AgentExecutor, ExecutorConfig
 from app.core.memory import MemoryClient
 from app.core.observability.request_context import get_request_id, get_trace_id
 from app.core.user_input import UserInputClient
@@ -75,14 +75,16 @@ async def run_task(req: TaskRun, background_tasks: BackgroundTasks) -> dict:
         ),
     )
     executor = AgentExecutor(
-        req.session_id,
-        hooks,
-        req.sdk_session_id,
-        run_id=req.run_id,
-        user_input_client=user_input_client,
-        memory_client=memory_client,
-        request_id=get_request_id(),
-        trace_id=get_trace_id(),
+        config=ExecutorConfig(
+            session_id=req.session_id,
+            run_id=req.run_id,
+            sdk_session_id=req.sdk_session_id,
+            user_input_client=user_input_client,
+            memory_client=memory_client,
+            request_id=get_request_id(),
+            trace_id=get_trace_id(),
+        ),
+        hooks=hooks,
     )
 
     cfg = req.config

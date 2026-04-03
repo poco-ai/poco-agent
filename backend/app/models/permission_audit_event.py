@@ -1,7 +1,7 @@
 import uuid
 from typing import Any
 
-from sqlalchemy import JSON, Boolean, Index, String, text
+from sqlalchemy import JSON, Boolean, ForeignKey, Index, String, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models import Base, TimestampMixin
@@ -19,9 +19,11 @@ class PermissionAuditEvent(Base, TimestampMixin):
         server_default=text("gen_random_uuid()"),
     )
     run_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("agent_runs.id", ondelete="CASCADE"),
         nullable=False,
     )
     session_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("agent_sessions.id", ondelete="CASCADE"),
         nullable=False,
     )
     tool_name: Mapped[str] = mapped_column(String(128), nullable=False)

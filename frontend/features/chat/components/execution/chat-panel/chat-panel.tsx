@@ -16,6 +16,7 @@ import { StatusBar } from "./status-bar";
 import { PendingMessageList } from "./pending-message-list";
 import { ChatInput, type ChatInputRef } from "./chat-input";
 import { UserInputRequestCard } from "./user-input-request-card";
+import { McpHistorySection } from "./mcp-history-section";
 import { PlanApprovalCard } from "./plan-approval-card";
 import { EnterPlanModeCard } from "./enter-plan-mode-card";
 import { SkillCreationReviewCard } from "./skill-creation-review-card";
@@ -1323,6 +1324,13 @@ export function ChatPanel({
           className={isRightPanelCollapsed ? "px-[20%]" : undefined}
         />
       )}
+
+      <McpHistorySection
+        sessionId={session?.session_id}
+        sessionTime={session?.time}
+        show={Boolean(hasMcp)}
+        className={isRightPanelCollapsed ? "px-[20%]" : "px-4"}
+      />
 
       {/* Pending Messages Queue */}
       {queuedMessageCount > 0 && (

@@ -34,6 +34,8 @@ interface McpStateMachineCardProps {
   runId: string;
 }
 
+const POLL_INTERVAL_MS = 5_000;
+
 const STATE_COLORS: Record<string, string> = {
   requested: "bg-muted text-muted-foreground",
   staged: "bg-blue-500/10 text-blue-600",
@@ -64,8 +66,10 @@ export function McpStateMachineCard({ runId }: McpStateMachineCardProps) {
       }
     };
     void load();
+    const timer = setInterval(() => void load(), POLL_INTERVAL_MS);
     return () => {
       cancelled = true;
+      clearInterval(timer);
     };
   }, [runId]);
 
@@ -111,9 +115,17 @@ export function McpStateMachineCard({ runId }: McpStateMachineCardProps) {
               </div>
             </button>
 
-            {expanded === conn.id && conn.last_error && (
-              <div className="rounded-md bg-red-500/5 border border-red-500/20 px-3 py-2 text-xs text-red-600 font-mono">
-                {conn.last_error}
+            {expanded === conn.id && (
+              <div className="space-y-1">
+                {conn.last_error && (
+                  <div className="rounded-md bg-red-500/5 border border-red-500/20 px-3 py-2 text-xs text-red-600 font-mono">
+                    {conn.last_error}
+                  </div>
+                )}
+                <McpTransitionTimeline
+                  runId={runId}
+                  connectionId={conn.id}
+                />
               </div>
             )}
           </div>
@@ -125,12 +137,12 @@ export function McpStateMachineCard({ runId }: McpStateMachineCardProps) {
 
 interface McpTransitionTimelineProps {
   runId: string;
-  serverName: string;
+  connectionId: string;
 }
 
 export function McpTransitionTimeline({
   runId,
-  serverName,
+  connectionId,
 }: McpTransitionTimelineProps) {
   const { t } = useT("translation");
   const [events, setEvents] = React.useState<McpConnectionEvent[]>([]);
@@ -141,22 +153,26 @@ export function McpTransitionTimeline({
     const load = async () => {
       try {
         const res = await apiClient.get<McpConnectionEvent[]>(
-          API_ENDPOINTS.runMcpConnections(runId),
+          API_ENDPOINTS.runMcpConnectionEvents(runId),
           { cache: "no-store" },
         );
         if (!cancelled) {
-          // filter events for this server if available
-          setEvents(res ?? []);
+          const filtered = (res ?? []).filter(
+            (ev: McpConnectionEvent) => ev.connection_id === connectionId,
+          );
+          setEvents(filtered);
         }
       } catch {
         // silent
       }
     };
     void load();
+    const timer = setInterval(() => void load(), POLL_INTERVAL_MS);
     return () => {
       cancelled = true;
+      clearInterval(timer);
     };
-  }, [runId, serverName]);
+  }, [runId, connectionId]);
 
   if (events.length === 0) return null;
 

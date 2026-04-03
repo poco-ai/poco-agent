@@ -99,6 +99,8 @@ export const API_ENDPOINTS = {
   // Runs
   runsBySession: (sessionId: string) => `/runs/session/${sessionId}`,
   runMcpConnections: (runId: string) => `/runs/${runId}/mcp-connections`,
+  runMcpConnectionEvents: (runId: string) =>
+    `/runs/${runId}/mcp-connection-events`,
 
   // Execution Settings
   executionSettings: "/execution-settings",

@@ -601,6 +601,14 @@ class TestWorkspaceManagerWorktreeImpl(unittest.TestCase):
 
         assert path == Path("/workspace/.cache/repos") / manager._get_repo_hash(url)
 
+    def test_worktree_path_uses_run_id(self) -> None:
+        manager = WorkspaceManager(mount_path="/workspace", run_id="run-abc-123")
+        assert manager.run_id == "run-abc-123"
+
+    def test_worktree_path_fallback_without_run_id(self) -> None:
+        manager = WorkspaceManager(mount_path="/workspace")
+        assert manager.run_id is None
+
     def test_prepare_worktree_without_repo_url_falls_back(self) -> None:
         manager = WorkspaceManager(mount_path="/workspace")
         config = MagicMock(spec=TaskConfig)

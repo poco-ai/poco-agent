@@ -41,6 +41,39 @@ def list_mcp_connections(
     return Response.success(data=[c.model_dump(mode="json") for c in connections])
 
 
+@router.get("/{run_id}/mcp-connection-events")
+def list_mcp_connection_events(
+    run_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    user_id: str = Depends(get_current_user_id),
+) -> Response:
+    _ensure_run_belongs_to_user(db, run_id, user_id)
+    from app.models.agent_run_mcp_connection_event import AgentRunMcpConnectionEvent
+
+    events = (
+        db.query(AgentRunMcpConnectionEvent)
+        .filter(AgentRunMcpConnectionEvent.run_id == run_id)
+        .order_by(AgentRunMcpConnectionEvent.created_at.asc())
+        .all()
+    )
+    return Response.success(
+        data=[
+            {
+                "id": str(e.id),
+                "connection_id": str(e.connection_id),
+                "run_id": str(e.run_id),
+                "from_state": e.from_state,
+                "to_state": e.to_state,
+                "event_source": e.event_source,
+                "error_message": e.error_message,
+                "metadata": e.metadata_,
+                "created_at": e.created_at.isoformat() if e.created_at else None,
+            }
+            for e in events
+        ]
+    )
+
+
 @router.get("/{run_id}/permission-audit")
 def list_permission_audit(
     run_id: uuid.UUID,

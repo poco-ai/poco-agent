@@ -22,6 +22,8 @@ from claude_agent_sdk.types import (
     SdkPluginConfig,
     SyncHookJSONOutput,
 )
+from dataclasses import dataclass
+
 from dotenv import load_dotenv
 
 from app.core.memory import (
@@ -29,7 +31,7 @@ from app.core.memory import (
     MemoryClient,
     create_memory_mcp_server,
 )
-from app.core.permission_engine import PermissionEngine
+from app.core.permission_engine import PermissionDecision, PermissionEngine
 from app.core.observability.request_context import (
     generate_request_id,
     generate_trace_id,
@@ -47,6 +49,18 @@ from app.prompts import build_prompt_appendix
 from app.schemas.request import TaskConfig
 from app.schemas.state import BrowserState
 from app.utils.browser import format_viewport_size, parse_viewport_size
+
+from dataclasses import dataclass
+
+@dataclass
+class ExecutorConfig:
+    session_id: str
+    run_id: str | None = None
+    sdk_session_id: str | None = None
+    user_input_client: UserInputClient | None = None
+    memory_client: MemoryClient | None = None
+    request_id: str | None = None
+    trace_id: str | None = None
 
 load_dotenv()
 
@@ -73,31 +87,215 @@ def _temporary_env_overrides(overrides: dict[str, str]):
 class AgentExecutor:
     def __init__(
         self,
-        session_id: str,
+        config: ExecutorConfig,
         hooks: list,
-        sdk_session_id: str | None = None,
-        *,
-        run_id: str | None = None,
-        user_input_client: UserInputClient | None = None,
-        memory_client: MemoryClient | None = None,
-        request_id: str | None = None,
-        trace_id: str | None = None,
     ):
-        self.session_id = session_id
-        self.sdk_session_id = sdk_session_id
-        self.run_id = run_id
+        self.session_id = config.session_id
+        self.sdk_session_id = config.sdk_session_id
+        self.run_id = config.run_id
         self.hooks = HookManager(hooks)
-        self.user_input_client = user_input_client
-        self.memory_client = memory_client
+        self.user_input_client = config.user_input_client
+        self.memory_client = config.memory_client
         self.memory_mcp_server = (
-            create_memory_mcp_server(memory_client) if memory_client else None
+            create_memory_mcp_server(config.memory_client) if config.memory_client else None
         )
-        self._request_id = request_id
-        self._trace_id = trace_id
+        self._request_id = config.request_id
+        self._trace_id = config.trace_id
         self._background_tasks: set[asyncio.Task[None]] = set()
         self.workspace = WorkspaceManager(
-            mount_path=os.environ.get("WORKSPACE_PATH", "/workspace")
+            mount_path=os.environ.get("WORKSPACE_PATH", "/workspace"),
+            run_id=self.run_id,
         )
+
+    def _evaluate_permission(
+        self,
+        tool_name: str,
+        input_data: dict,
+        ctx: ExecutionContext,
+        permission_engine: PermissionEngine,
+    ):
+        decision = permission_engine.evaluate(
+            tool_name,
+            input_data,
+            {"session_id": self.session_id, "cwd": ctx.cwd},
+        )
+        audit_mode = permission_engine.policy.get("mode") == "audit"
+
+        callback_hook = next(
+            (h for h in self.hooks.hooks if isinstance(h, CallbackHook)),
+            None,
+        )
+        if callback_hook is not None:
+            audit_input = input_data
+
+            async def _fire_and_forget_audit() -> None:
+                try:
+                    await callback_hook.record_permission_event(
+                        ctx,
+                        tool_name=tool_name,
+                        tool_input=audit_input,
+                        policy_action=decision.action,
+                        policy_rule_id=decision.rule_id,
+                        policy_reason=decision.reason,
+                        audit_mode=audit_mode,
+                    )
+                except Exception:
+                    pass
+
+            task = asyncio.create_task(_fire_and_forget_audit())
+            self._background_tasks.add(task)
+            task.add_done_callback(self._background_tasks.discard)
+
+        return decision
+
+    def _check_audit_override(
+        self, decision, is_audit_only: bool, input_data: dict
+    ) -> PermissionResultAllow | PermissionResultDeny | None:
+        if is_audit_only and decision.action == "ask":
+            return PermissionResultAllow(updated_input=input_data)
+
+        if is_audit_only and decision.action == "deny":
+            if not decision.rule_id.startswith("preset:plan"):
+                return PermissionResultAllow(updated_input=input_data)
+
+        if decision.action == "deny":
+            return PermissionResultDeny(
+                message=decision.reason,
+                interrupt=False,
+            )
+        return None
+
+    async def _handle_ask_user_question(self, input_data: dict) -> PermissionResultAllow | PermissionResultDeny:
+        try:
+            request_payload = {
+                "session_id": self.session_id,
+                "tool_name": "AskUserQuestion",
+                "tool_input": input_data,
+            }
+            created = await self.user_input_client.create_request(request_payload)
+            request_id = created.get("id")
+            if not request_id:
+                return PermissionResultDeny(message="Failed to create user input request")
+            result = await self.user_input_client.wait_for_answer(
+                request_id=request_id,
+                timeout_seconds=60,
+            )
+        except Exception:
+            return PermissionResultDeny(message="User input handling failed")
+
+        if not result or result.get("answers") is None:
+            return PermissionResultDeny(message="User input timeout")
+
+        return PermissionResultAllow(
+            updated_input={
+                "questions": input_data.get("questions", []),
+                "answers": result.get("answers", {}),
+            }
+        )
+
+    async def _handle_exit_plan_mode(self, input_data: dict) -> PermissionResultAllow | PermissionResultDeny:
+        try:
+            plan_expires_at = (
+                datetime.now(timezone.utc) + timedelta(minutes=10)
+            ).isoformat()
+            request_payload = {
+                "session_id": self.session_id,
+                "tool_name": "ExitPlanMode",
+                "tool_input": input_data,
+                "expires_at": plan_expires_at,
+            }
+            created = await self.user_input_client.create_request(request_payload)
+            request_id = created.get("id")
+            if not request_id:
+                return PermissionResultDeny(message="Failed to create plan approval request")
+            result = await self.user_input_client.wait_for_answer(
+                request_id=request_id,
+                timeout_seconds=600,
+            )
+        except Exception:
+            return PermissionResultDeny(message="Plan approval handling failed")
+
+        if not result or result.get("answers") is None:
+            return PermissionResultDeny(
+                message="Plan approval timeout",
+                interrupt=True,
+            )
+
+        answers = result.get("answers") or {}
+        approved_raw = answers.get("approved")
+        approved = isinstance(approved_raw, str) and approved_raw.strip().lower() == "true"
+        if not approved:
+            return PermissionResultDeny(
+                message="Plan not approved",
+                interrupt=True,
+            )
+
+        return PermissionResultAllow(updated_input=input_data)
+
+    async def _handle_permission_ask(
+        self, tool_name: str, input_data: dict, decision: PermissionDecision
+    ) -> PermissionResultAllow | PermissionResultDeny:
+        """Request user approval for a tool use that matched an 'ask' permission rule."""
+        try:
+            preview = ""
+            if tool_name == "Bash":
+                preview = str(input_data.get("command") or "").strip()
+            elif input_data:
+                preview = str(input_data).strip()
+
+            request_payload = {
+                "session_id": self.session_id,
+                "tool_name": tool_name,
+                "tool_input": {
+                    "questions": [
+                        {
+                            "id": "approved",
+                            "header": "Permission required",
+                            "question": f"Allow tool '{tool_name}' to run?",
+                            "multiSelect": False,
+                            "options": [
+                                {
+                                    "label": "Approve",
+                                    "value": "true",
+                                    "description": decision.reason
+                                    or "Allow this tool call",
+                                },
+                                {
+                                    "label": "Reject",
+                                    "value": "false",
+                                    "description": "Deny this tool call",
+                                },
+                            ],
+                        }
+                    ],
+                    "original_tool_name": tool_name,
+                    "original_tool_input": input_data,
+                    "permission_rule_id": decision.rule_id,
+                    "permission_reason": decision.reason,
+                    "preview": preview,
+                },
+            }
+            created = await self.user_input_client.create_request(request_payload)
+            request_id = created.get("id")
+            if not request_id:
+                return PermissionResultDeny(message="Failed to create permission ask request")
+            result = await self.user_input_client.wait_for_answer(
+                request_id=request_id,
+                timeout_seconds=120,
+            )
+        except Exception:
+            return PermissionResultDeny(message="Permission ask handling failed")
+
+        if not result or result.get("answers") is None:
+            return PermissionResultDeny(message="Permission ask timeout")
+
+        answers = result.get("answers") or {}
+        approved_raw = answers.get("approved")
+        approved = isinstance(approved_raw, str) and approved_raw.strip().lower() == "true"
+        if not approved:
+            return PermissionResultDeny(message=f"User denied permission for tool '{tool_name}'")
+
+        return PermissionResultAllow(updated_input=input_data)
 
     async def execute(
         self, prompt: str, config: TaskConfig, *, permission_mode: str = "default"
@@ -183,137 +381,37 @@ class AgentExecutor:
                         message="User input client not configured"
                     )
 
-                decision = permission_engine.evaluate(
+                decision = self._evaluate_permission(
                     tool_name,
                     input_data if isinstance(input_data, dict) else {},
-                    {"session_id": self.session_id, "cwd": ctx.cwd},
+                    ctx,
+                    permission_engine,
                 )
 
                 audit_mode = permission_engine.policy.get("mode") == "audit"
+                override_result = self._check_audit_override(decision, audit_mode, input_data)
+                if override_result is not None:
+                    return override_result
 
-                # Fire-and-forget permission audit event via callback hook
-                callback_hook = next(
-                    (h for h in self.hooks.hooks if isinstance(h, CallbackHook)),
-                    None,
-                )
-                if callback_hook is not None:
-                    audit_input = input_data if isinstance(input_data, dict) else None
-
-                    async def _fire_and_forget_audit() -> None:
-                        try:
-                            await callback_hook.record_permission_event(
-                                ctx,
-                                tool_name=tool_name,
-                                tool_input=audit_input,
-                                policy_action=decision.action,
-                                policy_rule_id=decision.rule_id,
-                                policy_reason=decision.reason,
-                                audit_mode=audit_mode,
-                            )
-                        except Exception:
-                            pass
-
-                    task = asyncio.create_task(_fire_and_forget_audit())
-                    self._background_tasks.add(task)
-                    task.add_done_callback(self._background_tasks.discard)
-
-                # In audit-only mode, record but don't actually block (except plan mode)
-                is_audit_only = audit_mode
-                if is_audit_only and decision.action == "deny":
-                    if not decision.rule_id.startswith("preset:plan"):
-                        return PermissionResultAllow(updated_input=input_data)
-
-                if decision.action == "deny":
-                    return PermissionResultDeny(
-                        message=decision.reason,
-                        interrupt=False,
-                    )
+                if decision.action == "ask":
+                    if self.user_input_client:
+                        return await self._handle_permission_ask(
+                            tool_name, input_data, decision
+                        )
+                    else:
+                        return PermissionResultDeny(
+                            message=f"Permission ask required but no user input client configured for tool '{tool_name}'"
+                        )
 
                 if tool_name == "AskUserQuestion":
-                    try:
-                        request_payload = {
-                            "session_id": self.session_id,
-                            "tool_name": tool_name,
-                            "tool_input": input_data,
-                        }
-                        created = await self.user_input_client.create_request(
-                            request_payload
-                        )
-                        request_id = created.get("id")
-                        if not request_id:
-                            return PermissionResultDeny(
-                                message="Failed to create user input request"
-                            )
-                        result = await self.user_input_client.wait_for_answer(
-                            request_id=request_id,
-                            timeout_seconds=60,
-                        )
-                    except Exception:
-                        return PermissionResultDeny(
-                            message="User input handling failed"
-                        )
-
-                    if not result or result.get("answers") is None:
-                        return PermissionResultDeny(message="User input timeout")
-
-                    return PermissionResultAllow(
-                        updated_input={
-                            "questions": input_data.get("questions", []),
-                            "answers": result.get("answers", {}),
-                        }
-                    )
+                    return await self._handle_ask_user_question(input_data)
 
                 if tool_name == "ExitPlanMode":
-                    # Ask the user to approve the plan (UX shows a dedicated card in the frontend).
-                    try:
-                        plan_expires_at = (
-                            datetime.now(timezone.utc) + timedelta(minutes=10)
-                        ).isoformat()
-                        request_payload = {
-                            "session_id": self.session_id,
-                            "tool_name": tool_name,
-                            "tool_input": input_data,
-                            "expires_at": plan_expires_at,
-                        }
-                        created = await self.user_input_client.create_request(
-                            request_payload
-                        )
-                        request_id = created.get("id")
-                        if not request_id:
-                            return PermissionResultDeny(
-                                message="Failed to create plan approval request"
-                            )
-                        result = await self.user_input_client.wait_for_answer(
-                            request_id=request_id,
-                            timeout_seconds=600,
-                        )
-                    except Exception:
-                        return PermissionResultDeny(
-                            message="Plan approval handling failed"
-                        )
-
-                    if not result or result.get("answers") is None:
-                        return PermissionResultDeny(
-                            message="Plan approval timeout",
-                            interrupt=True,
-                        )
-
-                    # Strict protocol: only treat answers["approved"] == "true" as approved.
-                    answers = result.get("answers") or {}
-                    approved_raw = answers.get("approved")
-                    approved = (
-                        isinstance(approved_raw, str)
-                        and approved_raw.strip().lower() == "true"
-                    )
-                    if not approved:
-                        return PermissionResultDeny(
-                            message="Plan not approved",
-                            interrupt=True,
-                        )
-
-                    plan_approved = True
-                    permission_engine.plan_approved = True
-                    return PermissionResultAllow(updated_input=input_data)
+                    res = await self._handle_exit_plan_mode(input_data)
+                    if isinstance(res, PermissionResultAllow):
+                        plan_approved = True
+                        permission_engine.plan_approved = True
+                    return res
 
                 return PermissionResultAllow(updated_input=input_data)
 

@@ -1,9 +1,11 @@
 export interface UserInputQuestionOption {
   label: string;
+  value?: string;
   description: string;
 }
 
 export interface UserInputQuestion {
+  id?: string;
   question: string;
   header: string;
   options: UserInputQuestionOption[];

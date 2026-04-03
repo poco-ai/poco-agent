@@ -1,9 +1,11 @@
+import asyncio
 import hashlib
 import logging
 import os
 import shutil
 import stat
 import tempfile
+import uuid
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -51,9 +53,10 @@ DEFAULT_GIT_EXCLUDES = [
 
 
 class WorkspaceManager:
-    def __init__(self, mount_path: str = "/workspace"):
+    def __init__(self, mount_path: str = "/workspace", run_id: str | None = None):
         self.root_path = Path(mount_path)
         self.work_path = self.root_path
+        self.run_id = run_id
         self.claude_config_path = self.root_path / ".claude"
         self.inputs_root = self.root_path / "inputs"
 
@@ -67,9 +70,9 @@ class WorkspaceManager:
             self.root_path.mkdir(parents=True, exist_ok=True)
 
         await self._setup_session_persistence()
-        self.work_path = self._prepare_repository(config)
-        self._ensure_inputs_dir(self.work_path)
-        self._ensure_git_excludes(self.work_path)
+        self.work_path = await asyncio.to_thread(self._prepare_repository, config)
+        await asyncio.to_thread(self._ensure_inputs_dir, self.work_path)
+        await asyncio.to_thread(self._ensure_git_excludes, self.work_path)
 
     async def _setup_session_persistence(self):
         self.persistent_claude_data.mkdir(exist_ok=True)
@@ -78,7 +81,7 @@ class WorkspaceManager:
             if self.system_claude_home.is_symlink():
                 self.system_claude_home.unlink()
             else:
-                shutil.rmtree(self.system_claude_home)
+                await asyncio.to_thread(shutil.rmtree, self.system_claude_home)
 
         self.system_claude_home.symlink_to(self.persistent_claude_data)
 
@@ -95,7 +98,7 @@ class WorkspaceManager:
             self._git_askpass_path = None
 
         # Clean up worktrees created during this session
-        self._cleanup_worktrees()
+        await asyncio.to_thread(self._cleanup_worktrees)
 
     def _cleanup_worktrees(self) -> None:
         """Remove worktrees created during this session and prune main repos."""
@@ -182,10 +185,8 @@ class WorkspaceManager:
 
         # 3. Create unique worktree path
         repo_hash = self._get_repo_hash(repo_url)
-        session_id = getattr(config, "session_id", None) or "default"
-        worktree_path = (
-            self.root_path / "worktrees" / repo_hash / str(session_id)
-        )
+        unique_id = self.run_id or str(uuid.uuid4())
+        worktree_path = self.root_path / "worktrees" / repo_hash / unique_id
         worktree_path.parent.mkdir(parents=True, exist_ok=True)
 
         # 4. Create worktree
@@ -200,22 +201,7 @@ class WorkspaceManager:
         self._worktree_paths.append(worktree_path)
         return worktree_path
 
-    def _prepare_sparse_checkout(self, config: TaskConfig) -> Path:
-        """Prepare a sparse checkout repository.
-
-        Workflow:
-        1. Clone repository (shallow if possible)
-        2. Initialize sparse checkout
-        3. Set sparse paths
-        """
-        repo_url = (config.repo_url or "").strip()
-        if not repo_url:
-            return self._prepare_repository_via_clone(config)
-
-        repo_path = self._derive_repo_path(repo_url)
-        git_env = self._build_git_env(repo_url, config.git_token)
-
-        # 1. Clone if not exists
+    def _clone_or_checkout(self, repo_url: str, repo_path: Path, config: TaskConfig, git_env: dict[str, str]) -> None:
         if not repo_path.exists() or not is_repository(repo_path):
             try:
                 clone(
@@ -233,24 +219,38 @@ class WorkspaceManager:
                     f"Failed to clone repository for sparse checkout: {repo_url}. {detail}"
                 ) from exc
         else:
-            # Repo exists, just checkout branch
             self._checkout_branch(repo_path, config.git_branch, env=git_env)
 
-        # 2. Initialize sparse checkout
+    def _init_sparse_checkout(self, repo_path: Path, sparse_paths: list[str]) -> None:
         try:
             sparse_checkout_init(cwd=repo_path, cone=True)
         except (GitCommandError, GitError) as exc:
             logger.warning(f"Failed to init sparse checkout: {exc}")
-            # Continue without sparse - still return valid repo
-            return repo_path
+            return
 
-        # 3. Set sparse paths
-        sparse_paths = config.workspace_sparse_paths or []
         if sparse_paths:
             try:
                 sparse_checkout_set(sparse_paths, cwd=repo_path)
             except (GitCommandError, GitError) as exc:
                 logger.warning(f"Failed to set sparse paths: {exc}")
+
+    def _prepare_sparse_checkout(self, config: TaskConfig) -> Path:
+        """Prepare a sparse checkout repository.
+
+        Workflow:
+        1. Clone repository (shallow if possible)
+        2. Initialize sparse checkout
+        3. Set sparse paths
+        """
+        repo_url = (config.repo_url or "").strip()
+        if not repo_url:
+            return self._prepare_repository_via_clone(config)
+
+        repo_path = self._derive_repo_path(repo_url)
+        git_env = self._build_git_env(repo_url, config.git_token)
+
+        self._clone_or_checkout(repo_url, repo_path, config, git_env)
+        self._init_sparse_checkout(repo_path, config.workspace_sparse_paths or [])
 
         return repo_path
 
@@ -373,10 +373,7 @@ esac
                 f"Failed to checkout branch '{branch}' for repo at {path}. {detail}"
             ) from exc
 
-    def _ensure_git_excludes(self, repo_path: Path) -> None:
-        if not is_repository(repo_path):
-            return
-
+    def _collect_exclude_patterns(self) -> list[str]:
         extra = os.environ.get("WORKSPACE_GIT_IGNORE", "")
         patterns = list(DEFAULT_GIT_EXCLUDES)
         if extra:
@@ -384,38 +381,50 @@ esac
                 value = raw.strip()
                 if value:
                     patterns.append(value)
+        return patterns
 
+    def _read_existing_excludes(self, exclude_path: Path) -> set[str]:
+        if not exclude_path.exists():
+            return set()
+        try:
+            return {
+                line.strip()
+                for line in exclude_path.read_text(encoding="utf-8").splitlines()
+                if line.strip()
+            }
+        except Exception as exc:
+            logger.warning(f"Failed to read git exclude file {exclude_path}: {exc}")
+            return set()
+
+    def _append_excludes(self, exclude_path: Path, patterns: list[str]) -> None:
         if not patterns:
             return
-
-        exclude_path = repo_path / ".git" / "info" / "exclude"
-        exclude_path.parent.mkdir(parents=True, exist_ok=True)
-        existing: set[str] = set()
-        if exclude_path.exists():
-            try:
-                existing = {
-                    line.strip()
-                    for line in exclude_path.read_text(encoding="utf-8").splitlines()
-                    if line.strip()
-                }
-            except Exception as exc:
-                logger.warning(f"Failed to read git exclude file {exclude_path}: {exc}")
-                existing = set()
-
-        to_add = [p for p in patterns if p not in existing]
-        if not to_add:
-            return
-
         try:
             content = ""
             if exclude_path.exists():
                 content = exclude_path.read_text(encoding="utf-8")
                 if content and not content.endswith("\n"):
                     content += "\n"
-            content += "\n".join(to_add) + "\n"
+            content += "\n".join(patterns) + "\n"
             exclude_path.write_text(content, encoding="utf-8")
         except Exception as exc:
             logger.warning(f"Failed to update git exclude file {exclude_path}: {exc}")
+
+    def _ensure_git_excludes(self, repo_path: Path) -> None:
+        if not is_repository(repo_path):
+            return
+
+        patterns = self._collect_exclude_patterns()
+        if not patterns:
+            return
+
+        exclude_path = repo_path / ".git" / "info" / "exclude"
+        exclude_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        existing = self._read_existing_excludes(exclude_path)
+        to_add = [p for p in patterns if p not in existing]
+        
+        self._append_excludes(exclude_path, to_add)
 
     def _ensure_inputs_dir(self, repo_path: Path) -> None:
         try:

@@ -1,4 +1,4 @@
-from app.core.permission_engine import PermissionEngine
+from app.core.permission_engine import PermissionContextBuilder, PermissionEngine
 
 
 def test_plan_mode_denies_write_before_approval() -> None:
@@ -175,3 +175,201 @@ def test_invalid_priority_falls_back_to_default_order() -> None:
     decision = engine.evaluate("Bash", {}, {})
     assert decision.action == "deny"
     assert decision.rule_id == "deny-bash-invalid-priority"
+
+
+def test_path_pattern_match_deny() -> None:
+    engine = PermissionEngine(
+        policy={
+            "default_action": "allow",
+            "rules": [
+                {
+                    "id": "deny-py-files",
+                    "priority": 10,
+                    "match": {"path_patterns": ["*.py"]},
+                    "action": "deny",
+                    "reason": "Python files denied",
+                },
+            ],
+        },
+        plan_approved=True,
+    )
+
+    decision = engine.evaluate("Edit", {"file_path": "test.py"}, {"cwd": "/workspace"})
+    assert decision.action == "deny"
+    assert decision.rule_id == "deny-py-files"
+
+
+def test_path_pattern_no_match_skipped() -> None:
+    engine = PermissionEngine(
+        policy={
+            "default_action": "allow",
+            "rules": [
+                {
+                    "id": "deny-py-files",
+                    "priority": 10,
+                    "match": {"path_patterns": ["*.py"]},
+                    "action": "deny",
+                    "reason": "Python files denied",
+                },
+            ],
+        },
+        plan_approved=True,
+    )
+
+    decision = engine.evaluate(
+        "Edit", {"file_path": "test.txt"}, {"cwd": "/workspace"}
+    )
+    assert decision.action == "allow"
+
+
+def test_path_traversal_blocked() -> None:
+    engine = PermissionEngine(
+        policy={
+            "default_action": "allow",
+            "rules": [
+                {
+                    "id": "deny-all-paths",
+                    "priority": 10,
+                    "match": {"path_patterns": ["*"]},
+                    "action": "deny",
+                    "reason": "All file access denied",
+                },
+            ],
+        },
+        plan_approved=True,
+    )
+
+    decision = engine.evaluate(
+        "Read", {"file_path": "../../etc/passwd"}, {"cwd": "/workspace"}
+    )
+    assert decision.action == "deny"
+    assert decision.rule_id == "preset:path:outside_cwd"
+
+    ctx = PermissionContextBuilder.build(
+        "Read", {"file_path": "../../etc/passwd"}, {"cwd": "/workspace"}
+    )
+    assert not ctx.normalized_paths
+    assert ctx.invalid_paths == ["../../etc/passwd"]
+
+
+def test_network_pattern_match() -> None:
+    engine = PermissionEngine(
+        policy={
+            "default_action": "allow",
+            "rules": [
+                {
+                    "id": "deny-evil",
+                    "priority": 10,
+                    "match": {"network_patterns": ["*.evil.com"]},
+                    "action": "deny",
+                    "reason": "Evil domain denied",
+                },
+            ],
+        },
+        plan_approved=True,
+    )
+
+    decision = engine.evaluate(
+        "Bash",
+        {"command": "curl https://api.evil.com/data"},
+        {},
+    )
+    assert decision.action == "deny"
+    assert decision.rule_id == "deny-evil"
+
+
+def test_mcp_server_match() -> None:
+    engine = PermissionEngine(
+        policy={
+            "default_action": "allow",
+            "rules": [
+                {
+                    "id": "deny-dangerous-mcp",
+                    "priority": 10,
+                    "match": {"mcp_servers": ["dangerous-server"]},
+                    "action": "deny",
+                    "reason": "Dangerous MCP server denied",
+                },
+            ],
+        },
+        plan_approved=True,
+    )
+
+    decision = engine.evaluate(
+        "mcp__dangerous-server__run", {}, {}
+    )
+    assert decision.action == "deny"
+    assert decision.rule_id == "deny-dangerous-mcp"
+
+
+def test_deny_wins_same_priority() -> None:
+    engine = PermissionEngine(
+        policy={
+            "default_action": "allow",
+            "rules": [
+                {
+                    "id": "allow-bash",
+                    "priority": 10,
+                    "tools": ["Bash"],
+                    "action": "allow",
+                    "reason": "Allow Bash",
+                },
+                {
+                    "id": "deny-bash",
+                    "priority": 10,
+                    "tools": ["Bash"],
+                    "action": "deny",
+                    "reason": "Deny Bash",
+                },
+            ],
+        },
+        plan_approved=True,
+    )
+
+    decision = engine.evaluate("Bash", {}, {})
+    assert decision.action == "deny"
+    assert decision.rule_id == "deny-bash"
+
+
+def test_ask_action_returned() -> None:
+    engine = PermissionEngine(
+        policy={
+            "default_action": "deny",
+            "rules": [
+                {
+                    "id": "ask-bash",
+                    "priority": 10,
+                    "tools": ["Bash"],
+                    "action": "ask",
+                    "reason": "Ask before running Bash",
+                },
+            ],
+        },
+        plan_approved=True,
+    )
+
+    decision = engine.evaluate("Bash", {}, {})
+    assert decision.action == "ask"
+    assert decision.rule_id == "ask-bash"
+
+
+def test_path_escape_denied_even_without_matching_rule() -> None:
+    engine = PermissionEngine(
+        policy={
+            "default_action": "allow",
+            "rules": [],
+        },
+        plan_approved=True,
+    )
+
+    traversal = engine.evaluate(
+        "Read", {"file_path": "../../etc/passwd"}, {"cwd": "/workspace"}
+    )
+    outside_root = engine.evaluate(
+        "Read", {"file_path": "/workspace-private/secret.txt"}, {"cwd": "/workspace"}
+    )
+
+    assert traversal.action == "deny"
+    assert traversal.rule_id == "preset:path:outside_cwd"
+    assert outside_root.action == "deny"
+    assert outside_root.rule_id == "preset:path:outside_cwd"

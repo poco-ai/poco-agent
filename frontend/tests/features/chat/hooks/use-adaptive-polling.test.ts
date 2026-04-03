@@ -47,7 +47,7 @@ describe("useAdaptivePolling", () => {
   describe("polling start and stop", () => {
     it("should start polling when isActive becomes true", () => {
       const callback = vi.fn();
-      const { result, rerender } = renderHook(
+      const { rerender } = renderHook(
         ({ isActive }) => useAdaptivePolling({ callback, isActive }),
         { initialProps: { isActive: false } },
       );
@@ -65,7 +65,7 @@ describe("useAdaptivePolling", () => {
 
     it("should stop polling when isActive becomes false", () => {
       const callback = vi.fn();
-      const { result, rerender } = renderHook(
+      const { rerender } = renderHook(
         ({ isActive }) => useAdaptivePolling({ callback, isActive }),
         { initialProps: { isActive: true } },
       );

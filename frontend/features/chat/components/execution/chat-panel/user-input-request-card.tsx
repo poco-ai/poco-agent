@@ -59,28 +59,27 @@ function normalizeQuestions(rawQuestions: unknown[]): UserInputQuestion[] {
         (raw.options as unknown[] | undefined) ??
         (raw.choices as unknown[] | undefined) ??
         [];
-      const options = Array.isArray(rawOptions)
-        ? rawOptions
-            .map((opt) => {
-              if (!opt || typeof opt !== "object") return null;
-              const option = opt as Record<string, unknown>;
-              const label =
-                typeof option.label === "string"
-                  ? option.label
-                  : typeof option.value === "string"
-                    ? option.value
-                    : "";
-              if (!label) return null;
-              return {
-                label,
-                description:
-                  typeof option.description === "string"
-                    ? option.description
-                    : "",
-              };
-            })
-            .filter((opt): opt is UserInputQuestion["options"][number] => !!opt)
-        : [];
+      const options: UserInputQuestion["options"] = [];
+      if (Array.isArray(rawOptions)) {
+        for (const opt of rawOptions) {
+          if (!opt || typeof opt !== "object") continue;
+          const option = opt as Record<string, unknown>;
+          const label =
+            typeof option.label === "string"
+              ? option.label
+              : typeof option.value === "string"
+                ? option.value
+                : "";
+          if (!label) continue;
+
+          options.push({
+            ...(typeof option.value === "string" ? { value: option.value } : {}),
+            label,
+            description:
+              typeof option.description === "string" ? option.description : "",
+          });
+        }
+      }
 
       const question =
         typeof raw.question === "string"
@@ -101,6 +100,7 @@ function normalizeQuestions(rawQuestions: unknown[]): UserInputQuestion[] {
       );
 
       return {
+        ...(typeof raw.id === "string" ? { id: raw.id } : {}),
         question,
         header,
         options,
@@ -161,6 +161,14 @@ function resolveQuestions(
   return [];
 }
 
+function getQuestionKey(question: UserInputQuestion): string {
+  return question.id ?? question.question;
+}
+
+function getOptionValue(option: UserInputQuestion["options"][number]): string {
+  return option.value ?? option.label;
+}
+
 function CompletionBar({ steps }: { steps: number }) {
   return (
     <div className="w-full">
@@ -216,7 +224,7 @@ export function UserInputRequestCard({
     () =>
       Object.fromEntries(
         questions.map((q) => [
-          q.question,
+          getQuestionKey(q),
           { selected: [], otherText: "", otherSelected: false },
         ]),
       ) as Record<string, QuestionState>,
@@ -246,10 +254,10 @@ export function UserInputRequestCard({
   const currentQuestion = questions[currentIndex];
 
   const isOtherSelected = (q: UserInputQuestion) =>
-    questionState[q.question]?.otherSelected ?? false;
+    questionState[getQuestionKey(q)]?.otherSelected ?? false;
 
   const isQuestionAnswered = (q: UserInputQuestion) => {
-    const state = questionState[q.question];
+    const state = questionState[getQuestionKey(q)];
     if (!state) return false;
     if (state.selected.length > 0) return true;
     return state.otherSelected && state.otherText.trim().length > 0;
@@ -301,7 +309,7 @@ export function UserInputRequestCard({
   const buildAnswers = React.useCallback((): Record<string, string> | null => {
     const result: Record<string, string> = {};
     for (const q of questions) {
-      const state = questionState[q.question];
+      const state = questionState[getQuestionKey(q)];
       if (!state) return null;
 
       const otherText = state.otherSelected ? state.otherText.trim() : "";
@@ -310,7 +318,7 @@ export function UserInputRequestCard({
         : otherText || state.selected[0] || "";
 
       if (!answer) return null;
-      result[q.question] = answer;
+      result[getQuestionKey(q)] = answer;
     }
     return result;
   }, [questionState, questions]);
@@ -433,21 +441,22 @@ export function UserInputRequestCard({
                 {question.multiSelect ? (
                   <div className="space-y-2">
                     {question.options.map((opt) => {
-                      const questionKey = question.question;
+                      const questionKey = getQuestionKey(question);
                       const selected =
                         questionState[questionKey]?.selected || [];
-                      const checked = selected.includes(opt.label);
+                      const optionValue = getOptionValue(opt);
+                      const checked = selected.includes(optionValue);
                       return (
                         <label
-                          key={opt.label}
+                          key={optionValue}
                           className="flex items-start gap-2 text-sm cursor-pointer"
                         >
                           <Checkbox
                             checked={checked}
                             onCheckedChange={(value) => {
                               const next = value
-                                ? [...selected, opt.label]
-                                : selected.filter((v) => v !== opt.label);
+                                ? [...selected, optionValue]
+                                : selected.filter((v) => v !== optionValue);
                               setSelected(questionKey, next);
                             }}
                             className="mt-0.5 size-5 [&_[data-slot=checkbox-indicator]_svg]:size-4"
@@ -497,25 +506,25 @@ export function UserInputRequestCard({
                     value={
                       isOtherSelected(question)
                         ? "other"
-                        : questionState[question.question]?.selected[0] || ""
+                        : questionState[getQuestionKey(question)]?.selected[0] || ""
                     }
                     onValueChange={(value) => {
                       if (value === "other") {
-                        toggleOtherSelected(question.question, true);
-                        setSelected(question.question, []);
+                        toggleOtherSelected(getQuestionKey(question), true);
+                        setSelected(getQuestionKey(question), []);
                       } else {
-                        setSelected(question.question, [value]);
-                        toggleOtherSelected(question.question, false);
+                        setSelected(getQuestionKey(question), [value]);
+                        toggleOtherSelected(getQuestionKey(question), false);
                       }
                     }}
                   >
                     {question.options.map((opt) => (
                       <label
-                        key={opt.label}
+                        key={getOptionValue(opt)}
                         className="flex items-start gap-2 text-sm cursor-pointer"
                       >
                         <RadioGroupItem
-                          value={opt.label}
+                          value={getOptionValue(opt)}
                           className="mt-0.5 size-5 [&_[data-slot=radio-group-indicator]_svg]:size-2.5"
                         />
                         <div className="flex-1">
@@ -539,10 +548,10 @@ export function UserInputRequestCard({
                         {isOtherSelected(question) && (
                           <Input
                             value={
-                              questionState[question.question]?.otherText || ""
+                              questionState[getQuestionKey(question)]?.otherText || ""
                             }
                             onChange={(e) =>
-                              setOtherText(question.question, e.target.value)
+                              setOtherText(getQuestionKey(question), e.target.value)
                             }
                             placeholder={t("chat.askUserOtherPlaceholder")}
                             className="mt-2"
