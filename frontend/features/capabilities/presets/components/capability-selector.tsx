@@ -114,7 +114,7 @@ export function CapabilitySelector({
                     ) : null}
                   </span>
                   {item.description ? (
-                    <span className="mt-1 block text-xs text-muted-foreground">
+                    <span className="mt-1 line-clamp-2 block overflow-hidden text-xs text-muted-foreground">
                       {item.description}
                     </span>
                   ) : null}

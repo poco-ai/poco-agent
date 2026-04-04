@@ -1,4 +1,5 @@
 from collections.abc import Callable, Sequence
+from pathlib import Path
 
 from sqlalchemy.orm import Session
 
@@ -18,9 +19,13 @@ from app.schemas.preset import (
     PresetCreateRequest,
     PresetResponse,
     PresetSubAgentConfig,
+    PresetVisualSummary,
     PresetUpdateRequest,
 )
 from app.services.storage_service import S3StorageService
+
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+_ASSETS_ROOT = _REPO_ROOT / "assets"
 
 
 class PresetService:
@@ -30,6 +35,18 @@ class PresetService:
     def list_presets(self, db: Session, user_id: str) -> list[PresetResponse]:
         presets = PresetRepository.list_by_user(db, user_id)
         return [self._to_response(db, item) for item in presets]
+
+    def list_preset_visuals(self, db: Session) -> list[PresetVisualSummary]:
+        visuals = PresetVisualRepository.list_active(db)
+        return [
+            PresetVisualSummary(
+                key=visual.key,
+                name=visual.name,
+                version=visual.version,
+                url=self._build_visual_url(visual),
+            )
+            for visual in visuals
+        ]
 
     def get_preset(self, db: Session, user_id: str, preset_id: int) -> PresetResponse:
         preset = PresetRepository.get_by_id(db, preset_id, user_id)
@@ -158,6 +175,30 @@ class PresetService:
         PresetRepository.soft_delete(db, preset)
         db.commit()
 
+    def get_preset_visual_content(self, db: Session, visual_key: str) -> str:
+        visual = PresetVisualRepository.get_by_key(db, visual_key)
+        if visual is None or not visual.is_active:
+            raise AppException(
+                error_code=ErrorCode.NOT_FOUND,
+                message=f"Preset visual not found: {visual_key}",
+            )
+
+        storage_service = self._storage_service()
+        if storage_service is not None:
+            try:
+                return storage_service.get_text(visual.storage_key)
+            except AppException:
+                pass
+
+        local_path = self._resolve_local_visual_path(visual)
+        if local_path is not None and local_path.exists():
+            return local_path.read_text(encoding="utf-8")
+
+        raise AppException(
+            error_code=ErrorCode.NOT_FOUND,
+            message=f"Preset visual content not found: {visual_key}",
+        )
+
     def _validate_components(
         self,
         db: Session,
@@ -200,14 +241,8 @@ class PresetService:
             )
         return visual
 
-    def _build_visual_url(self, visual: PresetVisual) -> str | None:
-        storage_service = self._storage_service()
-        if storage_service is None:
-            return None
-        return storage_service.presign_get(
-            visual.storage_key,
-            response_content_type="image/svg+xml",
-        )
+    def _build_visual_url(self, visual: PresetVisual) -> str:
+        return f"/api/v1/presets/visuals/{visual.key}/content"
 
     def _storage_service(self) -> S3StorageService | None:
         if self.storage_service is not None:
@@ -217,6 +252,18 @@ class PresetService:
         except Exception:
             self.storage_service = None
         return self.storage_service
+
+    @staticmethod
+    def _resolve_local_visual_path(visual: PresetVisual) -> Path | None:
+        source = (visual.source or "").strip().lstrip("/")
+        if not source:
+            return None
+        path = (_ASSETS_ROOT / source).resolve()
+        try:
+            path.relative_to(_ASSETS_ROOT.resolve())
+        except ValueError:
+            return None
+        return path
 
     @staticmethod
     def _validate_visible_skills(

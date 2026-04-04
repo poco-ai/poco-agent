@@ -1,5 +1,7 @@
 "use client";
 
+import Image from "next/image";
+
 import type { Preset } from "@/features/capabilities/presets/lib/preset-types";
 import type { PresetGlyphVariant } from "@/features/capabilities/presets/lib/preset-visuals";
 import {
@@ -25,9 +27,12 @@ export function PresetGlyph({ preset, variant }: PresetGlyphProps) {
   return (
     <div className={getPresetGlyphFrameClassName(variant)} aria-hidden="true">
       {preset.visual_url ? (
-        <img
+        <Image
           src={preset.visual_url}
           alt=""
+          width={68}
+          height={68}
+          unoptimized
           className={getPresetGlyphImageClassName(variant)}
         />
       ) : (

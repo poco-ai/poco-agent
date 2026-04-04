@@ -156,6 +156,7 @@ export const API_ENDPOINTS = {
 
   // Presets
   presets: "/presets",
+  presetVisuals: "/presets/visuals",
   preset: (presetId: number) => `/presets/${presetId}`,
 
   // Sub Agents

@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends
+from fastapi.responses import Response as FastApiResponse
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
@@ -6,6 +7,7 @@ from app.core.deps import get_current_user_id, get_db
 from app.schemas.preset import (
     PresetCreateRequest,
     PresetResponse,
+    PresetVisualSummary,
     PresetUpdateRequest,
 )
 from app.schemas.response import Response, ResponseSchema
@@ -23,6 +25,26 @@ async def list_presets(
 ) -> JSONResponse:
     result = service.list_presets(db, user_id)
     return Response.success(data=result, message="Presets retrieved successfully")
+
+
+@router.get("/visuals", response_model=ResponseSchema[list[PresetVisualSummary]])
+async def list_preset_visuals(
+    db: Session = Depends(get_db),
+) -> JSONResponse:
+    result = service.list_preset_visuals(db)
+    return Response.success(
+        data=result,
+        message="Preset visuals retrieved successfully",
+    )
+
+
+@router.get("/visuals/{visual_key}/content")
+async def get_preset_visual_content(
+    visual_key: str,
+    db: Session = Depends(get_db),
+) -> FastApiResponse:
+    content = service.get_preset_visual_content(db, visual_key)
+    return FastApiResponse(content=content, media_type="image/svg+xml")
 
 
 @router.get("/{preset_id}", response_model=ResponseSchema[PresetResponse])

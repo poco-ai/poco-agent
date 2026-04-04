@@ -8,6 +8,13 @@ export interface PresetSubAgentConfig {
   tools?: string[] | null;
 }
 
+export interface PresetVisualOption {
+  key: string;
+  name?: string | null;
+  url?: string | null;
+  version?: string | null;
+}
+
 export interface Preset {
   preset_id: number;
   user_id: string;

@@ -18,6 +18,15 @@ class PresetVisualRepository:
         )
 
     @staticmethod
+    def list_active(session_db: Session) -> list[PresetVisual]:
+        return (
+            session_db.query(PresetVisual)
+            .filter(PresetVisual.is_active.is_(True))
+            .order_by(PresetVisual.key.asc())
+            .all()
+        )
+
+    @staticmethod
     def list_managed(session_db: Session, *, managed_by: str) -> list[PresetVisual]:
         return (
             session_db.query(PresetVisual)

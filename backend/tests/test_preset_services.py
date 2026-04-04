@@ -1,5 +1,5 @@
-from datetime import UTC, datetime
 import unittest
+from datetime import UTC, datetime
 from unittest.mock import MagicMock, patch
 
 from app.core.errors.error_codes import ErrorCode
@@ -64,8 +64,6 @@ class PresetServiceTests(unittest.TestCase):
             created_at=self.now,
             updated_at=self.now,
         )
-        self.storage_service.presign_get.return_value = "https://example.com/preset.svg"
-
         created_preset: Preset | None = None
 
         def capture_create(_db: MagicMock, preset: Preset) -> Preset:
@@ -106,7 +104,10 @@ class PresetServiceTests(unittest.TestCase):
         self.assertEqual(result.name, "Frontend Delivery")
         self.assertEqual(result.description, "Reusable flow")
         self.assertEqual(result.visual_key, "preset-visual-01")
-        self.assertEqual(result.visual_url, "https://example.com/preset.svg")
+        self.assertEqual(
+            result.visual_url,
+            "/api/v1/presets/visuals/preset-visual-01/content",
+        )
         self.assertEqual(result.visual_version, "abc123")
 
     @patch.object(PresetService, "_validate_components")
@@ -204,6 +205,36 @@ class PresetServiceTests(unittest.TestCase):
 
         self.assertEqual(context.exception.error_code, ErrorCode.BAD_REQUEST)
         self.assertIn("Invalid preset visual key", context.exception.message)
+
+    @patch("app.services.preset_service.PresetVisualRepository.list_active")
+    def test_list_preset_visuals_uses_backend_visual_content_urls(
+        self,
+        list_active: MagicMock,
+    ) -> None:
+        list_active.return_value = [
+            PresetVisual(
+                id=1,
+                key="preset-visual-01",
+                name="Preset Visual 01",
+                storage_key="builtin/preset-visuals/preset-visual-01/asset.svg",
+                hash="abc123",
+                version="abc123",
+                source="icons/presets/preset-visual-01.svg",
+                managed_by="lifecycle",
+                is_active=True,
+                created_at=self.now,
+                updated_at=self.now,
+            )
+        ]
+
+        result = self.service.list_preset_visuals(self.db)
+
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0].key, "preset-visual-01")
+        self.assertEqual(
+            result[0].url,
+            "/api/v1/presets/visuals/preset-visual-01/content",
+        )
 
 
 class SessionPresetConfigTests(unittest.TestCase):

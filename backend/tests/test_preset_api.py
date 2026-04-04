@@ -6,19 +6,19 @@ from unittest.mock import patch
 from fastapi.testclient import TestClient
 
 from app.main import create_app
-from app.schemas.preset import PresetResponse
+from app.schemas.preset import PresetResponse, PresetVisualSummary
 from app.schemas.project import ProjectResponse
 
 
 def build_preset_response(preset_id: int = 1, name: str = "Frontend") -> PresetResponse:
     now = datetime.now(UTC)
     return PresetResponse(
-        id=preset_id,
+        preset_id=preset_id,
         user_id="user-1",
         name=name,
         description="Reusable preset",
         visual_key="preset-visual-01",
-        visual_url="https://example.com/preset.svg",
+        visual_url="/api/v1/presets/visuals/preset-visual-01/content",
         visual_version="abc123",
         prompt_template=None,
         browser_enabled=True,
@@ -95,6 +95,32 @@ class PresetApiTests(unittest.TestCase):
         self.assertEqual(body["data"]["name"], "Backend")
         self.assertEqual(body["data"]["visual_key"], "preset-visual-01")
         create_preset.assert_called_once()
+
+    @patch("app.api.v1.presets.service.list_preset_visuals")
+    def test_list_preset_visuals_returns_response_envelope(
+        self,
+        list_preset_visuals,
+    ) -> None:
+        list_preset_visuals.return_value = [
+            PresetVisualSummary(
+                key="preset-visual-01",
+                name="Preset Visual 01",
+                version="abc123",
+                url="/api/v1/presets/visuals/preset-visual-01/content",
+            )
+        ]
+
+        response = self.client.get("/api/v1/presets/visuals", headers=self.headers)
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["code"], 0)
+        self.assertEqual(body["data"][0]["key"], "preset-visual-01")
+        self.assertEqual(
+            body["data"][0]["url"],
+            "/api/v1/presets/visuals/preset-visual-01/content",
+        )
+        list_preset_visuals.assert_called_once()
 
     @patch("app.api.v1.presets.service.delete_preset")
     def test_delete_preset_returns_deleted_id(self, delete_preset) -> None:

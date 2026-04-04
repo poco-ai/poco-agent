@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import { Loader2, Plus, Save, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -14,6 +15,7 @@ import { CapabilityDialogContent } from "@/features/capabilities/components/capa
 import { pluginsService } from "@/features/capabilities/plugins/api/plugins-api";
 import { skillsService } from "@/features/capabilities/skills/api/skills-api";
 import { mcpService } from "@/features/capabilities/mcp/api/mcp-api";
+import { presetsService } from "@/features/capabilities/presets/api/presets-api";
 import { CapabilitySelector } from "@/features/capabilities/presets/components/capability-selector";
 import {
   getPresetFormInitialVisualKey,
@@ -24,6 +26,7 @@ import type {
   PresetCapabilityItem,
   PresetCreateInput,
   PresetSubAgentConfig,
+  PresetVisualOption,
   PresetUpdateInput,
 } from "@/features/capabilities/presets/lib/preset-types";
 import { useT } from "@/lib/i18n/client";
@@ -80,7 +83,12 @@ export function PresetFormDialog({
     mcp: [],
     plugins: [],
   });
+  const [visualOptions, setVisualOptions] = React.useState<
+    PresetVisualOption[]
+  >([]);
   const [isLoadingCapabilities, setIsLoadingCapabilities] =
+    React.useState(false);
+  const [isLoadingVisualOptions, setIsLoadingVisualOptions] =
     React.useState(false);
 
   const [name, setName] = React.useState("");
@@ -133,13 +141,15 @@ export function PresetFormDialog({
     if (!open) return;
     let active = true;
 
-    const loadCapabilities = async () => {
+    const loadDialogData = async () => {
       setIsLoadingCapabilities(true);
+      setIsLoadingVisualOptions(true);
       try {
-        const [skills, servers, plugins] = await Promise.all([
+        const [skills, servers, plugins, visuals] = await Promise.all([
           skillsService.listSkills({ revalidate: 0 }),
           mcpService.listServers({ revalidate: 0 }),
           pluginsService.listPlugins({ revalidate: 0 }),
+          presetsService.listPresetVisuals({ revalidate: 0 }),
         ]);
         if (!active) return;
         setCapabilityItems({
@@ -162,16 +172,21 @@ export function PresetFormDialog({
             scope: plugin.scope,
           })),
         });
+        setVisualOptions(visuals);
       } catch (error) {
-        console.error("[PresetFormDialog] Failed to load capabilities", error);
+        console.error(
+          "[PresetFormDialog] Failed to load preset dialog data",
+          error,
+        );
       } finally {
         if (active) {
           setIsLoadingCapabilities(false);
+          setIsLoadingVisualOptions(false);
         }
       }
     };
 
-    void loadCapabilities();
+    void loadDialogData();
     return () => {
       active = false;
     };
@@ -307,7 +322,7 @@ export function PresetFormDialog({
             </div>
 
             <TabsContent value="general" className="min-h-[30rem] space-y-4">
-              <div className="grid gap-4 md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+              <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="preset-name">
@@ -356,21 +371,49 @@ export function PresetFormDialog({
 
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="preset-visual-key">
-                      {t("library.presetsPage.form.visualKey")}
-                    </Label>
-                    <Input
-                      id="preset-visual-key"
-                      value={visualKey}
-                      onChange={(event) => setVisualKey(event.target.value)}
-                      placeholder={t(
-                        "library.presetsPage.form.visualKeyPlaceholder",
+                    <Label>{t("library.presetsPage.form.visual")}</Label>
+                    <div className="max-h-[22rem] overflow-y-auto rounded-2xl border border-border/60 bg-muted/10 p-4">
+                      {isLoadingVisualOptions ? (
+                        <div className="flex min-h-32 items-center justify-center text-sm text-muted-foreground">
+                          <Loader2 className="mr-2 size-4 animate-spin" />
+                          {t("common.loading")}
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-5 gap-3">
+                          {visualOptions.map((option) => {
+                            const selected = option.key === visualKey;
+                            return (
+                              <button
+                                key={option.key}
+                                type="button"
+                                onClick={() => setVisualKey(option.key)}
+                                aria-pressed={selected}
+                                className={
+                                  selected
+                                    ? "flex aspect-square items-center justify-center rounded-2xl border border-primary/30 bg-primary/10 p-3 shadow-sm transition-colors"
+                                    : "flex aspect-square items-center justify-center rounded-2xl border border-border/60 bg-card p-3 transition-colors hover:border-border hover:bg-accent/40"
+                                }
+                              >
+                                {option.url ? (
+                                  <Image
+                                    src={option.url}
+                                    alt=""
+                                    width={64}
+                                    height={64}
+                                    unoptimized
+                                    className="size-16 object-contain object-center"
+                                  />
+                                ) : (
+                                  <span className="text-xs font-semibold tracking-[0.18em] text-muted-foreground">
+                                    {option.key}
+                                  </span>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
                       )}
-                      className="font-mono"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      {t("library.presetsPage.form.visualKeyHint")}
-                    </p>
+                    </div>
                   </div>
                   <div className="space-y-3 rounded-2xl border border-border/60 p-4">
                     <div className="flex items-center justify-between gap-4">
