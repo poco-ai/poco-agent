@@ -48,7 +48,7 @@ export function PresetCardSurface({
       if (!isInteractive) return;
       if (event.key === "Enter" || event.key === " ") {
         event.preventDefault();
-        onActivate();
+        onActivate?.();
       }
     },
     [isInteractive, onActivate],

@@ -93,8 +93,8 @@ export const projectsService = {
     default_model?: string | null;
     default_preset_id?: number | null;
     local_mounts?: LocalMountConfig[] | null;
-    repo_url?: string;
-    git_branch?: string;
+    repo_url?: string | null;
+    git_branch?: string | null;
     git_token_env_key?: string | null;
   }): Promise<ProjectItem> => {
     const project = await apiClient.post<ProjectApiResponse>(

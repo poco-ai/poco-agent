@@ -13,6 +13,7 @@ interface ProjectHeaderProps {
   project?: ProjectItem;
   isDrawerOpen?: boolean;
   onToggleDrawer?: () => void;
+  onOpenSettings?: () => void;
 }
 
 export function ProjectHeader({

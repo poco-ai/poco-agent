@@ -62,6 +62,7 @@ function toExecutionSession(
 ): ExecutionSession {
   return {
     session_id: session.session_id,
+    project_id: session.project_id ?? null,
     time: session.updated_at,
     status: session.status as ExecutionSession["status"],
     progress,
@@ -78,6 +79,7 @@ function toExecutionSession(
 function createDefaultSession(sessionId: string): ExecutionSession {
   return {
     session_id: sessionId,
+    project_id: null,
     time: new Date().toISOString(),
     status: "pending",
     progress: 0,

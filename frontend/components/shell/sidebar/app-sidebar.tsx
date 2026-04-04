@@ -24,7 +24,10 @@ interface AppSidebarProps {
   onMoveTaskToProject?: (taskId: string, projectId: string | null) => void;
   onToggleTaskPin?: (taskId: string) => void;
   onCreateProject?: (input: ProjectCreateInput) => void;
-  onRenameProject?: (projectId: string, newName: string) => void;
+  onRenameProject?: (
+    projectId: string,
+    updates: Record<string, unknown>,
+  ) => void;
   onDeleteProject?: (projectId: string) => Promise<void> | void;
   onOpenSettings?: (tab?: SettingsTabId) => void;
   onStartOnboarding?: () => void;

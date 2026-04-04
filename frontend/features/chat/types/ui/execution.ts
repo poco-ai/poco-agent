@@ -82,6 +82,7 @@ export interface StatePatch extends ApiStatePatch {
  */
 export interface ExecutionSession {
   session_id: string;
+  project_id?: string | null;
   time: string;
   status: ExecutionStatus;
   progress: number;
