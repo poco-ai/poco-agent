@@ -41,6 +41,7 @@ interface PresetFormDialogProps {
     presetId: number,
     input: PresetUpdateInput,
   ) => Promise<Preset | null>;
+  onDelete?: (presetId: number) => Promise<void>;
 }
 
 const SUBAGENT_MODELS = ["inherit", "sonnet", "opus", "haiku"] as const;
@@ -67,6 +68,7 @@ export function PresetFormDialog({
   savingKey,
   onCreate,
   onUpdate,
+  onDelete,
 }: PresetFormDialogProps) {
   const { t } = useT("translation");
   const [capabilityItems, setCapabilityItems] = React.useState<{
@@ -183,6 +185,14 @@ export function PresetFormDialog({
   const isValid = isPresetFormValid({ name, visualKey });
   const formId = "preset-form-dialog";
 
+  const handleDelete = React.useCallback(async () => {
+    if (!initialPreset || !onDelete) {
+      return;
+    }
+    await onDelete(initialPreset.preset_id);
+    onOpenChange(false);
+  }, [initialPreset, onDelete, onOpenChange]);
+
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!isValid) return;
@@ -268,17 +278,33 @@ export function PresetFormDialog({
       >
         <form id={formId} onSubmit={handleSubmit}>
           <Tabs defaultValue="general" className="flex flex-col gap-4">
-            <TabsList>
-              <TabsTrigger value="general">
-                {t("library.presetsPage.tabs.general")}
-              </TabsTrigger>
-              <TabsTrigger value="capabilities">
-                {t("library.presetsPage.tabs.capabilities")}
-              </TabsTrigger>
-              <TabsTrigger value="subagents">
-                {t("library.presetsPage.tabs.subagents")}
-              </TabsTrigger>
-            </TabsList>
+            <div className="flex items-center justify-between gap-3">
+              <TabsList>
+                <TabsTrigger value="general">
+                  {t("library.presetsPage.tabs.general")}
+                </TabsTrigger>
+                <TabsTrigger value="capabilities">
+                  {t("library.presetsPage.tabs.capabilities")}
+                </TabsTrigger>
+                <TabsTrigger value="subagents">
+                  {t("library.presetsPage.tabs.subagents")}
+                </TabsTrigger>
+              </TabsList>
+              {mode === "edit" && initialPreset && onDelete ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={isSaving}
+                  onClick={() => {
+                    void handleDelete();
+                  }}
+                  className="shrink-0 text-destructive hover:text-destructive"
+                >
+                  <Trash2 className="mr-2 size-4" />
+                  {t("common.delete")}
+                </Button>
+              ) : null}
+            </div>
 
             <TabsContent value="general" className="min-h-[30rem] space-y-4">
               <div className="grid gap-4 md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">

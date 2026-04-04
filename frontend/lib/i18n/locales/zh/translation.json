@@ -1411,6 +1411,7 @@
       "empty": "还没有预设",
       "emptySearch": "没有匹配的预设",
       "emptyDescription": "暂无描述",
+      "emptyBadgesHint": "让您的预设学习一些技能吧",
       "emptySkills": "暂无 Skill",
       "emptyMcp": "暂无 MCP 服务",
       "emptyPlugins": "暂无插件",

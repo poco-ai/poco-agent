@@ -8,8 +8,11 @@ import { HeaderSearchInput } from "@/components/shared/header-search-input";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogFooter } from "@/components/ui/dialog";
 import { CapabilityDialogContent } from "@/features/capabilities/components/capability-dialog-content";
+import { mcpService } from "@/features/capabilities/mcp/api/mcp-api";
 import { PresetCardSurface } from "@/features/capabilities/presets/components/preset-card-surface";
 import { presetsService } from "@/features/capabilities/presets/api/presets-api";
+import { skillsService } from "@/features/capabilities/skills/api/skills-api";
+import { buildPresetCardBadgeLabels } from "@/features/capabilities/presets/lib/preset-card-badges";
 import type { Preset } from "@/features/capabilities/presets/lib/preset-types";
 import {
   filterProjectPresets,
@@ -41,6 +44,12 @@ export function ProjectSettingsDialog({
   const [activeDefaultPresetId, setActiveDefaultPresetId] = React.useState<
     number | null
   >(projectDefaultPresetId);
+  const [skillNamesById, setSkillNamesById] = React.useState<Map<number, string>>(
+    () => new Map(),
+  );
+  const [mcpNamesById, setMcpNamesById] = React.useState<Map<number, string>>(
+    () => new Map(),
+  );
   const [isLoading, setIsLoading] = React.useState(false);
   const [savingKey, setSavingKey] = React.useState<string | null>(null);
 
@@ -72,6 +81,29 @@ export function ProjectSettingsDialog({
     setActiveDefaultPresetId(projectDefaultPresetId);
     void refresh();
   }, [open, projectDefaultPresetId, refresh]);
+
+  React.useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    let active = true;
+
+    void Promise.all([
+      skillsService.listSkills({ revalidate: 0 }),
+      mcpService.listServers({ revalidate: 0 }),
+    ]).then(([skills, servers]) => {
+      if (!active) return;
+      setSkillNamesById(new Map(skills.map((skill) => [skill.id, skill.name])));
+      setMcpNamesById(
+        new Map(servers.map((server) => [server.id, server.name])),
+      );
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [open]);
 
   React.useEffect(() => {
     if (!open) return;
@@ -181,7 +213,7 @@ export function ProjectSettingsDialog({
               {t("project.settingsPanel.presets.emptySearch")}
             </div>
           ) : (
-            <div className="grid justify-items-center gap-4 md:grid-cols-2">
+            <div className="grid justify-items-center gap-4">
               {filteredPresets.map((preset) => {
                 const cardState = getProjectPresetCardState(
                   preset,
@@ -193,6 +225,11 @@ export function ProjectSettingsDialog({
                     key={preset.preset_id}
                     preset={preset}
                     selected={cardState.selected}
+                    selectedVariant="primary"
+                    badgeLabels={buildPresetCardBadgeLabels(preset, {
+                      skillNamesById,
+                      mcpNamesById,
+                    })}
                     disabled={savingKey !== null}
                     onActivate={() => handleSelectPreset(preset.preset_id)}
                     className="w-full max-w-[34rem]"

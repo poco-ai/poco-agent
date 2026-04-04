@@ -1411,6 +1411,7 @@
       "empty": "No presets yet",
       "emptySearch": "No presets match your search",
       "emptyDescription": "No description yet",
+      "emptyBadgesHint": "Teach your preset a few skills to make it more capable.",
       "emptySkills": "No skills available",
       "emptyMcp": "No MCP servers available",
       "emptyPlugins": "No plugins available",

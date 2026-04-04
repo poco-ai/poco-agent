@@ -1411,6 +1411,7 @@
       "empty": "Aucun préréglage pour le moment",
       "emptySearch": "Aucun préréglage ne correspond à votre recherche",
       "emptyDescription": "Aucune description pour le moment",
+      "emptyBadgesHint": "Ajoutez quelques compétences à votre préréglage pour le rendre plus utile.",
       "emptySkills": "Aucune compétence disponible",
       "emptyMcp": "Aucun serveur MCP disponible",
       "emptyPlugins": "Aucun plugin disponible",

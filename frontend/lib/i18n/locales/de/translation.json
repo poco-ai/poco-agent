@@ -1411,6 +1411,7 @@
       "empty": "Noch keine Vorlagen",
       "emptySearch": "Keine Vorlagen entsprechen deiner Suche",
       "emptyDescription": "Noch keine Beschreibung",
+      "emptyBadgesHint": "Bringe deiner Vorlage ein paar Skills bei, damit sie mehr kann.",
       "emptySkills": "Keine Skills verfügbar",
       "emptyMcp": "Keine MCP-Server verfügbar",
       "emptyPlugins": "Keine Plugins verfuegbar",

@@ -1,12 +1,15 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { HeaderSearchInput } from "@/components/shared/header-search-input";
 import { PullToRefresh } from "@/components/ui/pull-to-refresh";
 import { CapabilityContentShell } from "@/features/capabilities/components/capability-content-shell";
 import { CapabilityCreateCard } from "@/features/capabilities/components/capability-create-card";
+import { mcpService } from "@/features/capabilities/mcp/api/mcp-api";
 import { PresetCard } from "@/features/capabilities/presets/components/preset-card";
+import { skillsService } from "@/features/capabilities/skills/api/skills-api";
+import { buildPresetCardBadgeLabels } from "@/features/capabilities/presets/lib/preset-card-badges";
 import {
   PresetFormDialog,
   type PresetDialogMode,
@@ -22,6 +25,31 @@ export function PresetsPageClient() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogMode, setDialogMode] = useState<PresetDialogMode>("create");
   const [editing, setEditing] = useState<Preset | null>(null);
+  const [skillNamesById, setSkillNamesById] = useState<Map<number, string>>(
+    () => new Map(),
+  );
+  const [mcpNamesById, setMcpNamesById] = useState<Map<number, string>>(
+    () => new Map(),
+  );
+
+  useEffect(() => {
+    let active = true;
+
+    void Promise.all([
+      skillsService.listSkills({ revalidate: 0 }),
+      mcpService.listServers({ revalidate: 0 }),
+    ]).then(([skills, servers]) => {
+      if (!active) return;
+      setSkillNamesById(new Map(skills.map((skill) => [skill.id, skill.name])));
+      setMcpNamesById(
+        new Map(servers.map((server) => [server.id, server.name])),
+      );
+    });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const filteredPresets = useMemo(() => {
     if (!searchQuery.trim()) return store.presets;
@@ -82,15 +110,15 @@ export function PresetsPageClient() {
                       <PresetCard
                         key={preset.preset_id}
                         preset={preset}
-                        isBusy={store.savingKey === String(preset.preset_id)}
+                        badgeLabels={buildPresetCardBadgeLabels(preset, {
+                          skillNamesById,
+                          mcpNamesById,
+                        })}
                         onEdit={(targetPreset) => {
                           setDialogMode("edit");
                           setEditing(targetPreset);
                           setDialogOpen(true);
                         }}
-                        onDelete={(targetPreset) =>
-                          store.deletePreset(targetPreset.preset_id)
-                        }
                       />
                     ))}
                   </div>
@@ -109,6 +137,7 @@ export function PresetsPageClient() {
         savingKey={store.savingKey}
         onCreate={store.createPreset}
         onUpdate={store.updatePreset}
+        onDelete={store.deletePreset}
       />
     </>
   );

@@ -1411,6 +1411,7 @@
       "empty": "まだプリセットがありません",
       "emptySearch": "検索条件に一致するプリセットはありません",
       "emptyDescription": "説明はまだありません",
+      "emptyBadgesHint": "プリセットにいくつかスキルを追加して、もっと役立つものにしましょう。",
       "emptySkills": "利用可能なスキルがありません",
       "emptyMcp": "利用可能な MCP サーバーがありません",
       "emptyPlugins": "利用可能なプラグインがありません",
