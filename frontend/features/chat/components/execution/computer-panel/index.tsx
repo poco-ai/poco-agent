@@ -52,7 +52,13 @@ import {
 
 interface ComputerPanelProps {
   sessionId: string;
-  sessionStatus?: "pending" | "running" | "completed" | "failed" | "canceled";
+  sessionStatus?:
+    | "pending"
+    | "running"
+    | "canceling"
+    | "completed"
+    | "failed"
+    | "canceled";
   browserEnabled?: boolean;
   headerAction?: React.ReactNode;
   hideHeader?: boolean;

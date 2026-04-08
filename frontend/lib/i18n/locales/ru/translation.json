@@ -541,6 +541,7 @@
   "status": {
     "pending": "Ожидает",
     "running": "Выполняется",
+    "canceling": "Отмена",
     "completed": "Завершено",
     "failed": "Ошибка",
     "canceled": "Отменено",
@@ -977,6 +978,7 @@
         "queued": "В очереди",
         "claimed": "Занято",
         "running": "Выполняется",
+        "canceling": "Отмена",
         "completed": "Завершено",
         "failed": "Ошибка",
         "canceled": "Отменено",

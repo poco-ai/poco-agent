@@ -541,6 +541,7 @@
   "status": {
     "pending": "En attente",
     "running": "En cours",
+    "canceling": "Annulation en cours",
     "completed": "Terminé",
     "failed": "Échoué",
     "canceled": "Annulé",
@@ -977,6 +978,7 @@
         "queued": "En file d'attente",
         "claimed": "Réclamé",
         "running": "En cours",
+        "canceling": "Annulation en cours",
         "completed": "Terminé",
         "failed": "Échoué",
         "canceled": "Annulé",

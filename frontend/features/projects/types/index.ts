@@ -38,7 +38,13 @@ export interface TaskHistoryItem {
   id: string;
   title: string;
   timestamp: string;
-  status: "pending" | "running" | "completed" | "failed" | "canceled";
+  status:
+    | "pending"
+    | "running"
+    | "canceling"
+    | "completed"
+    | "failed"
+    | "canceled";
   projectId?: string;
   isPinned?: boolean;
   pinnedAt?: string | null;

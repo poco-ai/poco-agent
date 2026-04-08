@@ -12,6 +12,10 @@ export const TASK_STATUS_META: Record<
     dotClassName: "bg-primary ring-1 ring-primary/45",
     labelKey: "status.running",
   },
+  canceling: {
+    dotClassName: "bg-chart-3/70 ring-1 ring-chart-3/35",
+    labelKey: "status.canceling",
+  },
   completed: { dotClassName: "bg-primary", labelKey: "status.completed" },
   failed: { dotClassName: "bg-destructive", labelKey: "status.failed" },
   canceled: {

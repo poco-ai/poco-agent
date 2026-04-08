@@ -53,6 +53,8 @@ export interface SessionCancelResponse {
   canceled_runs: number;
   canceled_queued_queries: number;
   expired_user_input_requests: number;
+  executor_cancel_status: "not_required" | "pending" | "completed";
+  executor_cancel_target_worker_id?: string | null;
   executor_cancelled: boolean;
 }
 

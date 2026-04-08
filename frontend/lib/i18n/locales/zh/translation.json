@@ -541,6 +541,7 @@
   "status": {
     "pending": "待处理",
     "running": "进行中",
+    "canceling": "取消中",
     "completed": "已完成",
     "failed": "失败",
     "canceled": "已取消",
@@ -977,6 +978,7 @@
         "queued": "排队中",
         "claimed": "已领取",
         "running": "运行中",
+        "canceling": "取消中",
         "completed": "成功",
         "failed": "失败",
         "canceled": "已取消",
@@ -1231,11 +1233,11 @@
         "descriptionLabel": "描述",
         "setupTitle": "连接 SkillsMP，发现更多技能",
         "setupDescription": "SkillsMP 是一个技能市场，你可以按热门或搜索方式发现可复用的 agent skill。",
-        "setupHint": "请先前往 设置 > 其他 填写 SkillsMP API Key，然后再回到这里浏览市场结果。",
+        "setupHint": "SkillsMP 市场由服务端统一配置；如果这里不可用，请联系管理员检查服务端配置。",
         "openSettings": "前往设置",
-        "invalidKeyTitle": "当前 SkillsMP API Key 无效",
-        "invalidKeyDescription": "SkillsMP 拒绝了当前的 API Key，因此暂时无法加载技能市场的搜索和推荐结果。",
-        "invalidKeyHint": "请前往 设置 > 其他 更新 SkillsMP API Key，保存后再返回重试。"
+        "invalidKeyTitle": "当前 SkillsMP 服务配置无效",
+        "invalidKeyDescription": "SkillsMP 拒绝了当前的服务端凭据，因此暂时无法加载技能市场的搜索和推荐结果。",
+        "invalidKeyHint": "SkillsMP 市场由服务端统一配置；请联系管理员检查服务端凭据。"
       }
     },
     "pluginsManager": {

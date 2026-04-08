@@ -8,6 +8,7 @@ import type { FilesystemMode, LocalMountConfig } from "../api/session";
 export type ExecutionStatus =
   | "pending"
   | "running"
+  | "canceling"
   | "completed"
   | "failed"
   | "canceled";

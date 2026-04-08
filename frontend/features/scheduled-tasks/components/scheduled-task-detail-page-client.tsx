@@ -99,6 +99,7 @@ export function ScheduledTaskDetailPageClient({ taskId }: { taskId: string }) {
         "queued",
         "claimed",
         "running",
+        "canceling",
         "completed",
         "failed",
         "canceled",

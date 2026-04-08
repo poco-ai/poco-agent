@@ -75,7 +75,13 @@ export type ChatSession = {
   taskId: string;
   title: string;
   messages: ChatMessage[];
-  status: "pending" | "running" | "completed" | "failed" | "canceled";
+  status:
+    | "pending"
+    | "running"
+    | "canceling"
+    | "completed"
+    | "failed"
+    | "canceled";
   model: string;
   createdAt: string;
   updatedAt: string;

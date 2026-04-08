@@ -136,7 +136,7 @@ export function useExecutionSession({
   // Poll only when session is active (or initial load)
   const isSessionActive =
     !!sessionId &&
-    (!session || ["pending", "running"].includes(session.status));
+    (!session || ["pending", "running", "canceling"].includes(session.status));
 
   // Trigger callback when polling stops.
   const hasStoppedRef = useRef(false);
@@ -173,7 +173,10 @@ export function useExecutionSession({
 
         onPollingStop();
       }
-    } else if (session && ["pending", "running"].includes(session.status)) {
+    } else if (
+      session &&
+      ["pending", "running", "canceling"].includes(session.status)
+    ) {
       // Reset ref when session becomes active again
       hasStoppedRef.current = false;
     }

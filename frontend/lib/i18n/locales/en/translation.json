@@ -541,6 +541,7 @@
   "status": {
     "pending": "Pending",
     "running": "Running",
+    "canceling": "Canceling",
     "completed": "Completed",
     "failed": "Failed",
     "canceled": "Canceled",
@@ -977,6 +978,7 @@
         "queued": "Queued",
         "claimed": "Claimed",
         "running": "Running",
+        "canceling": "Canceling",
         "completed": "Completed",
         "failed": "Failed",
         "canceled": "Canceled",
@@ -1231,11 +1233,11 @@
         "descriptionLabel": "Description",
         "setupTitle": "Connect SkillsMP to explore more skills",
         "setupDescription": "SkillsMP is a skill marketplace where you can discover reusable agent skills by popularity or search.",
-        "setupHint": "Add your SkillsMP API key in Settings > Other, then return here to browse marketplace results.",
+        "setupHint": "SkillsMP is managed by the server configuration. If it is unavailable here, ask an administrator to check the service setup.",
         "openSettings": "Open Settings",
-        "invalidKeyTitle": "Your SkillsMP API key is invalid",
-        "invalidKeyDescription": "SkillsMP rejected the current API key, so marketplace search and recommendations are unavailable.",
-        "invalidKeyHint": "Open Settings > Other, update the SkillsMP API key, then come back here to try again."
+        "invalidKeyTitle": "The current SkillsMP service credentials are invalid",
+        "invalidKeyDescription": "SkillsMP rejected the server-managed credentials, so marketplace search and recommendations are unavailable.",
+        "invalidKeyHint": "SkillsMP is managed by the server configuration. Ask an administrator to check the service credentials."
       }
     },
     "pluginsManager": {

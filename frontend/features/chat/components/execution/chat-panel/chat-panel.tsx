@@ -535,8 +535,7 @@ export function ChatPanel({
 
     const prevStatus = session.status;
     setIsCancelling(true);
-    // Optimistically mark as terminal so polling/streaming stops immediately.
-    updateSession({ status: "canceled" });
+    updateSession({ status: "canceling" });
 
     try {
       await cancelSessionAction({ sessionId: session.session_id });
@@ -1386,7 +1385,12 @@ export function ChatPanel({
         onCancel={handleCancel}
         canCancel={isSessionCancelable || isCancelling}
         isCancelling={isCancelling}
-        disabled={!session?.session_id || hasActiveUserInput || isCancelling}
+        disabled={
+          !session?.session_id ||
+          hasActiveUserInput ||
+          isCancelling ||
+          session?.status === "canceling"
+        }
         history={userPromptHistory}
         className={isRightPanelCollapsed ? "px-[20%]" : undefined}
       />

@@ -541,6 +541,7 @@
   "status": {
     "pending": "待機中",
     "running": "実行中",
+    "canceling": "キャンセル中",
     "completed": "完了",
     "failed": "失敗",
     "canceled": "キャンセル済み",
@@ -977,6 +978,7 @@
         "queued": "キュー待ち",
         "claimed": "取得済み",
         "running": "実行中",
+        "canceling": "キャンセル中",
         "completed": "完了",
         "failed": "失敗",
         "canceled": "キャンセル済み",

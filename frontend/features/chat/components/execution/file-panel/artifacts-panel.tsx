@@ -18,7 +18,13 @@ import { chatService } from "@/features/chat/api/chat-api";
 interface ArtifactsPanelProps {
   fileChanges?: FileChange[];
   sessionId?: string;
-  sessionStatus?: "pending" | "running" | "completed" | "failed" | "canceled";
+  sessionStatus?:
+    | "pending"
+    | "running"
+    | "canceling"
+    | "completed"
+    | "failed"
+    | "canceled";
   headerAction?: React.ReactNode;
   hideHeader?: boolean;
 }

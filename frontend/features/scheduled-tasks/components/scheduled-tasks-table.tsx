@@ -52,6 +52,7 @@ export function ScheduledTasksTable({
       "queued",
       "claimed",
       "running",
+      "canceling",
       "completed",
       "failed",
       "canceled",
@@ -67,6 +68,7 @@ export function ScheduledTasksTable({
     if (normalized === "completed") return "default" as const;
     if (
       normalized === "running" ||
+      normalized === "canceling" ||
       normalized === "claimed" ||
       normalized === "queued"
     ) {

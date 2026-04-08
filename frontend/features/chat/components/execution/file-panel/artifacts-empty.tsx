@@ -5,7 +5,13 @@ import { useT } from "@/lib/i18n/client";
  * Empty state component for artifacts panel
  */
 interface ArtifactsEmptyProps {
-  sessionStatus?: "pending" | "running" | "completed" | "failed" | "canceled";
+  sessionStatus?:
+    | "pending"
+    | "running"
+    | "canceling"
+    | "completed"
+    | "failed"
+    | "canceled";
 }
 
 /**

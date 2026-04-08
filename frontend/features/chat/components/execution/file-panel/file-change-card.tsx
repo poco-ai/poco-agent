@@ -18,7 +18,13 @@ import { cn } from "@/lib/utils";
 
 interface FileChangeCardProps {
   change: FileChange;
-  sessionStatus?: "pending" | "running" | "completed" | "failed" | "canceled";
+  sessionStatus?:
+    | "pending"
+    | "running"
+    | "canceling"
+    | "completed"
+    | "failed"
+    | "canceled";
   onFileClick?: () => void;
 }
 
