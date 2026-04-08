@@ -14,6 +14,7 @@ description: Core environment variables for the FastAPI backend service. Handles
 - `S3_ACCESS_KEY` / `S3_SECRET_KEY`: S3 credentials
 - `S3_BUCKET`: S3 bucket name (must exist; local rustfs can create it via `rustfs-init`; create in R2 console in advance)
 - `S3_KEY_PREFIX`: optional object key prefix. When set, Backend reads and writes objects under `<S3_KEY_PREFIX>/...` while business records keep logical keys without that prefix.
+- `S3_PUBLIC_READ`: when `true`, browser-facing file URLs are returned as direct public URLs under `S3_PUBLIC_ENDPOINT` instead of presigned URLs. Useful for public-read buckets or bucket-bound custom domains/CDNs.
 - `S3_SIGNATURE_VERSION`: optional boto3 signature version (default `s3v4`). For Aliyun OSS AWS-SDK compatibility, `s3` is usually preferred together with `S3_FORCE_PATH_STYLE=false`.
 
 ## Common

@@ -3,6 +3,7 @@ import logging
 import mimetypes
 from pathlib import Path
 from pathlib import PurePosixPath
+from urllib.parse import quote
 from typing import Any, Iterable
 
 import boto3
@@ -38,6 +39,7 @@ class S3StorageService:
         self.bucket = settings.s3_bucket
         self.presign_expires = settings.s3_presign_expires
         self.key_prefix = self._normalize_prefix(settings.s3_key_prefix)
+        self.public_read = settings.s3_public_read
 
         endpoint = settings.s3_endpoint.rstrip("/")
         public_endpoint = (settings.s3_public_endpoint or "").strip()
@@ -119,9 +121,13 @@ class S3StorageService:
         response_content_disposition: str | None = None,
         response_content_type: str | None = None,
     ) -> str:
+        normalized_key = self._apply_key_prefix(key)
+        if self.public_read:
+            return self._build_public_url(normalized_key)
+
         params: dict[str, Any] = {
             "Bucket": self.bucket,
-            "Key": self._apply_key_prefix(key),
+            "Key": normalized_key,
         }
         if response_content_disposition:
             params["ResponseContentDisposition"] = response_content_disposition
@@ -545,3 +551,11 @@ class S3StorageService:
         if normalized_key == self.key_prefix:
             return ""
         return normalized_key
+
+    def _build_public_url(self, key: str) -> str:
+        encoded_segments = [quote(segment, safe="") for segment in key.split("/") if segment]
+        path = "/".join(encoded_segments)
+        if not path:
+            return self.presign_client.meta.endpoint_url.rstrip("/")
+        endpoint = self.presign_client.meta.endpoint_url.rstrip("/")
+        return f"{endpoint}/{path}"
