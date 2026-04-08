@@ -4,6 +4,7 @@ from app.models.agent_message import AgentMessage
 from app.models.agent_run import AgentRun
 from app.models.agent_scheduled_task import AgentScheduledTask
 from app.models.agent_session import AgentSession
+from app.models.auth_identity import AuthIdentity
 from app.models.claude_md import UserClaudeMdSetting
 from app.models.env_var import UserEnvVar
 from app.models.im import (
@@ -32,7 +33,9 @@ from app.models.slash_command import SlashCommand
 from app.models.sub_agent import SubAgent
 from app.models.tool_execution import ToolExecution
 from app.models.usage_log import UsageLog
+from app.models.user import User
 from app.models.user_input_request import UserInputRequest
+from app.models.user_session import UserSession
 from app.models.user_mcp_install import UserMcpInstall
 from app.models.user_plugin_install import UserPluginInstall
 from app.models.user_skill_install import UserSkillInstall
@@ -46,6 +49,7 @@ __all__ = [
     "AgentScheduledTask",
     "AgentSession",
     "AgentSessionQueueItem",
+    "AuthIdentity",
     "Channel",
     "ChannelDelivery",
     "DedupEvent",
@@ -69,7 +73,9 @@ __all__ = [
     "SubAgent",
     "ToolExecution",
     "UsageLog",
+    "User",
     "UserInputRequest",
+    "UserSession",
     "UserMcpInstall",
     "UserPluginInstall",
     "UserSkillInstall",
