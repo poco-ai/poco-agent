@@ -9,12 +9,6 @@ Frontend 现在默认通过 Next.js 的 **同源 API 代理**（`/api/v1/* -> Ba
 
 - `BACKEND_URL`：Next.js 服务器侧用于转发 `/api/v1/*` 的 Backend base URL（Docker Compose 默认：`http://backend:8000`；本地开发可用：`http://localhost:8000`；兼容旧变量：`POCO_BACKEND_URL`）
 
-## 可选
-
-构建期 build-time，仅当你希望浏览器直接访问后端、或前端做静态部署时才需要
-
-- `NEXT_PUBLIC_API_URL`：浏览器侧访问 Backend 的 base URL（示例：`http://localhost:8000`）。注意该变量会被 Next.js 内联进产物。
-
 注意：以下变量仍是构建期（build-time）生效，会被 Next.js 内联进产物（见 `docker/frontend/Dockerfile` 的 build args）。
 
 - `NEXT_PUBLIC_SESSION_POLLING_INTERVAL`：session 轮询间隔（毫秒，默认 `2500`）

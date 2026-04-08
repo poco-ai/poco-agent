@@ -38,7 +38,6 @@ Useful variables:
 - `BACKEND_URL`
 - `POCO_BACKEND_URL`
 - `POCO_API_URL`
-- `NEXT_PUBLIC_API_URL`
 
 ## Architecture
 

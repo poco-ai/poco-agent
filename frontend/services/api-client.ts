@@ -200,7 +200,6 @@ export const API_ENDPOINTS = {
 // Base URL resolution
 // ---------------------------------------------------------------------------
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 const AUTH_SESSION_COOKIE_NAME =
   process.env.NEXT_PUBLIC_AUTH_COOKIE_NAME || "poco_session";
 
@@ -211,20 +210,23 @@ function normalizeBaseUrl(baseUrl: string): string {
 /**
  * Resolve the API base URL for the current environment.
  *
- * - **Browser**: uses `NEXT_PUBLIC_API_URL` or falls back to same-origin proxy.
- * - **Server**: requires `BACKEND_URL` / `POCO_BACKEND_URL` for absolute URLs.
+ * - **Browser**: always uses the same-origin Next.js proxy.
+ * - **Server**: requires `BACKEND_URL` / `POCO_BACKEND_URL` / `POCO_API_URL`
+ *   for absolute backend URLs.
  */
 export function getApiBaseUrl(): string {
   if (typeof window !== "undefined") {
-    return API_BASE_URL ? normalizeBaseUrl(API_BASE_URL) : "";
+    return "";
   }
 
   const serverBaseUrl =
-    process.env.BACKEND_URL || process.env.POCO_BACKEND_URL || API_BASE_URL;
+    process.env.BACKEND_URL ||
+    process.env.POCO_BACKEND_URL ||
+    process.env.POCO_API_URL;
 
   if (!serverBaseUrl) {
     throw new ApiError(
-      "API base URL is not configured (set BACKEND_URL for server-side calls)",
+      "API base URL is not configured (set BACKEND_URL, POCO_BACKEND_URL, or POCO_API_URL for server-side calls)",
       500,
     );
   }

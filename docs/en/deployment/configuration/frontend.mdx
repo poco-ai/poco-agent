@@ -9,12 +9,6 @@ The frontend now uses the Next.js **same-origin API proxy** (`/api/v1/* -> Backe
 
 - `BACKEND_URL`: backend base URL used by Next.js server side to proxy `/api/v1/*` (Docker Compose default: `http://backend:8000`; local dev: `http://localhost:8000`; legacy alias: `POCO_BACKEND_URL`)
 
-## Optional
-
-Build-time only, needed only if you want browser-direct backend access or static frontend deployment.
-
-- `NEXT_PUBLIC_API_URL`: browser-side backend base URL (example: `http://localhost:8000`). This value is inlined into Next.js output.
-
 Note: The following are still build-time variables and are inlined into artifacts (see build args in `docker/frontend/Dockerfile`).
 
 - `NEXT_PUBLIC_SESSION_POLLING_INTERVAL`: session polling interval in milliseconds (default `2500`)
