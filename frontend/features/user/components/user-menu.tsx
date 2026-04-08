@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import { Home, LogOut, Settings } from "lucide-react";
-import { useRouter } from "next/navigation";
 
 import { useT } from "@/lib/i18n/client";
 import {
@@ -17,7 +16,8 @@ import {
 } from "@/components/ui/hover-card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useUserAccount } from "@/features/user/hooks/use-user-account";
 import type { SettingsTabId } from "@/features/settings/types";
 
 interface UserMenuProps {
@@ -27,7 +27,7 @@ interface UserMenuProps {
 
 export function UserMenu({ trigger, onOpenSettings }: UserMenuProps) {
   const { t } = useT("translation");
-  const router = useRouter();
+  const { profile, logout } = useUserAccount();
   const [isDesktop, setIsDesktop] = React.useState(false);
 
   React.useEffect(() => {
@@ -39,15 +39,17 @@ export function UserMenu({ trigger, onOpenSettings }: UserMenuProps) {
     return () => mediaQuery.removeEventListener("change", updateMatches);
   }, []);
 
-  const handleLogout = () => {
-    // Mock logout logic
-    router.push("/login");
-  };
+  const displayName =
+    profile?.displayName || profile?.email || t("sidebar.defaultUserName");
+  const avatarInitial = displayName.charAt(0).toUpperCase() || "U";
 
   const triggerNode = trigger || (
     <Avatar className="size-8 cursor-pointer">
+      {profile?.avatar ? (
+        <AvatarImage src={profile.avatar} alt={displayName} />
+      ) : null}
       <AvatarFallback className="bg-muted text-xs text-muted-foreground">
-        U
+        {avatarInitial}
       </AvatarFallback>
     </Avatar>
   );
@@ -57,7 +59,7 @@ export function UserMenu({ trigger, onOpenSettings }: UserMenuProps) {
       <Button
         variant="ghost"
         size="sm"
-        className="justify-start h-8 font-normal px-2"
+        className="h-8 justify-start px-2 font-normal"
         onClick={() => window.open("https://poco-ai.com", "_blank")}
       >
         <Home className="mr-2 size-4" />
@@ -66,7 +68,7 @@ export function UserMenu({ trigger, onOpenSettings }: UserMenuProps) {
       <Button
         variant="ghost"
         size="sm"
-        className="justify-start h-8 font-normal px-2"
+        className="h-8 justify-start px-2 font-normal"
         onClick={() => onOpenSettings()}
       >
         <Settings className="mr-2 size-4" />
@@ -76,8 +78,8 @@ export function UserMenu({ trigger, onOpenSettings }: UserMenuProps) {
       <Button
         variant="ghost"
         size="sm"
-        className="justify-start h-8 font-normal px-2 text-destructive hover:text-destructive hover:bg-destructive/10"
-        onClick={handleLogout}
+        className="h-8 justify-start px-2 font-normal text-destructive hover:bg-destructive/10 hover:text-destructive"
+        onClick={() => void logout()}
       >
         <LogOut className="mr-2 size-4" />
         {t("userMenu.logout")}

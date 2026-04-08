@@ -1,33 +1,54 @@
-import type { UserProfile, UserCredits } from "@/features/user/types";
+import { ApiError } from "@/lib/errors";
+import { API_ENDPOINTS, apiClient } from "@/services/api-client";
+import type { UserCredits, UserProfile } from "@/features/user/types";
 
-// Mock user profile - TODO: Replace with real API call
-// Note: planName and credits values should be translated by the caller using i18n keys:
-// - user.plan.free / user.plan.pro / user.plan.team
-// - user.credits.unlimited
-const DEFAULT_USER_PROFILE: UserProfile = {
-  id: "default-user",
-  email: "user@poco.com",
-  avatar: "",
-  plan: "free",
-  planName: "user.plan.free", // Translation key, should be resolved by caller
-};
+interface CurrentUserApiResponse {
+  id: string;
+  email: string | null;
+  display_name: string | null;
+  avatar_url: string | null;
+  created_at: string;
+}
 
 const DEFAULT_USER_CREDITS: UserCredits = {
-  total: "user.credits.unlimited", // Translation key, should be resolved by caller
-  free: "user.credits.unlimited", // Translation key, should be resolved by caller
+  total: "user.credits.unlimited",
+  free: "user.credits.unlimited",
   dailyRefreshCurrent: 9999,
   dailyRefreshMax: 9999,
   refreshTime: "08:00",
 };
 
+function mapUserProfile(payload: CurrentUserApiResponse): UserProfile {
+  return {
+    id: payload.id,
+    email: payload.email,
+    displayName: payload.display_name,
+    avatar: payload.avatar_url,
+    plan: "free",
+    planName: "user.plan.free",
+  };
+}
+
 export const userService = {
-  getProfile: async (): Promise<UserProfile> => {
-    // TODO: Replace with real API call
-    return DEFAULT_USER_PROFILE;
+  async getProfile(): Promise<UserProfile | null> {
+    try {
+      const profile = await apiClient.get<CurrentUserApiResponse>(
+        API_ENDPOINTS.authMe,
+      );
+      return mapUserProfile(profile);
+    } catch (error) {
+      if (error instanceof ApiError && error.statusCode === 401) {
+        return null;
+      }
+      throw error;
+    }
   },
 
-  getCredits: async (): Promise<UserCredits> => {
-    // TODO: Replace with real API call
+  async getCredits(): Promise<UserCredits> {
     return DEFAULT_USER_CREDITS;
+  },
+
+  async logout(): Promise<void> {
+    await apiClient.post(API_ENDPOINTS.authLogout);
   },
 };

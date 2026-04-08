@@ -96,9 +96,8 @@ function MobileFooter({ onOpenSettings }: MobileFooterProps) {
   const { t } = useT("translation");
   const { profile } = useUserAccount();
 
-  const userName = profile?.email
-    ? profile.email.split("@")[0] || profile.email
-    : t("sidebar.defaultUserName");
+  const userName =
+    profile?.displayName || profile?.email || t("sidebar.defaultUserName");
   const avatarInitial = userName.charAt(0).toUpperCase() || "U";
 
   return (

@@ -1,7 +1,8 @@
 export interface UserProfile {
   id: string;
-  email: string;
-  avatar?: string;
+  email: string | null;
+  displayName?: string | null;
+  avatar?: string | null;
   plan: "free" | "pro" | "team";
   planName: string;
 }

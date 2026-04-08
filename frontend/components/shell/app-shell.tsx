@@ -12,6 +12,7 @@ import {
   useProjects,
   useTaskHistory,
 } from "@/features/projects";
+import { UserAccountProvider } from "@/features/user";
 
 import { AppShellProvider } from "./app-shell-context";
 import { OnboardingTour, useOnboardingTour } from "@/features/onboarding";
@@ -96,48 +97,50 @@ export function AppShell({
   );
 
   return (
-    <TaskHistoryProvider value={{ refreshTasks, touchTask }}>
-      <AppShellProvider value={contextValue}>
-        <SidebarProvider defaultOpen={true}>
-          <div
-            className="flex h-dvh w-full overflow-hidden bg-background"
-            data-onboarding="workspace-main"
-          >
-            <AppSidebar
-              projects={projects}
-              taskHistory={taskHistory}
-              pinnedTaskIds={pinnedTaskIds}
-              onDeleteTask={removeTask}
-              onRenameTask={renameTask}
-              onMoveTaskToProject={moveTask}
-              onToggleTaskPin={toggleTaskPin}
-              onCreateProject={addProject}
-              onRenameProject={handleEditProject}
-              onDeleteProject={handleDeleteProject}
-              onOpenSettings={openSettings}
-              onStartOnboarding={onboarding.startTour}
-            />
+    <UserAccountProvider lng={lng}>
+      <TaskHistoryProvider value={{ refreshTasks, touchTask }}>
+        <AppShellProvider value={contextValue}>
+          <SidebarProvider defaultOpen={true}>
+            <div
+              className="flex h-dvh w-full overflow-hidden bg-background"
+              data-onboarding="workspace-main"
+            >
+              <AppSidebar
+                projects={projects}
+                taskHistory={taskHistory}
+                pinnedTaskIds={pinnedTaskIds}
+                onDeleteTask={removeTask}
+                onRenameTask={renameTask}
+                onMoveTaskToProject={moveTask}
+                onToggleTaskPin={toggleTaskPin}
+                onCreateProject={addProject}
+                onRenameProject={handleEditProject}
+                onDeleteProject={handleDeleteProject}
+                onOpenSettings={openSettings}
+                onStartOnboarding={onboarding.startTour}
+              />
 
-            <SidebarInset className="flex flex-col bg-muted/30 min-h-0">
-              {children}
-            </SidebarInset>
+              <SidebarInset className="flex flex-col bg-muted/30 min-h-0">
+                {children}
+              </SidebarInset>
 
-            <SettingsDialog
-              open={isSettingsOpen}
-              onOpenChange={handleSettingsOpenChange}
-              tabRequest={settingsTabRequest ?? undefined}
-              onStartOnboarding={onboarding.startTour}
-            />
+              <SettingsDialog
+                open={isSettingsOpen}
+                onOpenChange={handleSettingsOpenChange}
+                tabRequest={settingsTabRequest ?? undefined}
+                onStartOnboarding={onboarding.startTour}
+              />
 
-            <OnboardingTour
-              open={onboarding.isOpen}
-              runId={onboarding.runId}
-              lng={lng}
-              onClose={onboarding.closeTour}
-            />
-          </div>
-        </SidebarProvider>
-      </AppShellProvider>
-    </TaskHistoryProvider>
+              <OnboardingTour
+                open={onboarding.isOpen}
+                runId={onboarding.runId}
+                lng={lng}
+                onClose={onboarding.closeTour}
+              />
+            </div>
+          </SidebarProvider>
+        </AppShellProvider>
+      </TaskHistoryProvider>
+    </UserAccountProvider>
   );
 }

@@ -8,7 +8,7 @@ import {
   UserCog,
 } from "lucide-react";
 
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { useT } from "@/lib/i18n/client";
 import type { UserCredits, UserProfile } from "@/features/user/types";
@@ -26,12 +26,18 @@ export function AccountSettingsTab({
 }: AccountSettingsTabProps) {
   const { t } = useT("translation");
 
+  const displayName =
+    profile?.displayName || profile?.email || profile?.id || "U";
+
   return (
     <div className="flex-1 overflow-y-auto p-5">
       <div className="mb-6 flex items-center gap-4">
         <Avatar className="size-14 bg-primary">
+          {profile?.avatar ? (
+            <AvatarImage src={profile.avatar} alt={displayName} />
+          ) : null}
           <AvatarFallback className="bg-primary text-xl text-primary-foreground">
-            {profile?.email?.[0]?.toUpperCase() || "U"}
+            {displayName[0]?.toUpperCase() || "U"}
           </AvatarFallback>
         </Avatar>
 
@@ -44,10 +50,10 @@ export function AccountSettingsTab({
           ) : (
             <>
               <div className="truncate text-base font-medium">
-                {profile?.email}
+                {displayName}
               </div>
               <div className="truncate text-sm text-muted-foreground">
-                {profile?.id}
+                {profile?.email || profile?.id}
               </div>
             </>
           )}

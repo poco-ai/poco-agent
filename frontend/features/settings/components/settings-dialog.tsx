@@ -18,8 +18,6 @@ import {
   X,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { useRouter } from "next/navigation";
-
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -93,11 +91,10 @@ export function SettingsDialog({
 }: SettingsDialogProps) {
   const { t, i18n } = useT("translation");
   const isMobile = useIsMobile();
-  const router = useRouter();
   const { mode, setMode } = useThemeMode();
   const { backend, setBackend } = useBackendPreference();
   const { currentLanguage, changeLanguage } = useSettingsLanguage();
-  const { profile, credits, isLoading } = useUserAccount();
+  const { profile, credits, isLoading, logout } = useUserAccount();
 
   const [activeTab, setActiveTab] = React.useState<SettingsTabId>(
     tabRequest?.tab ?? "account",
@@ -305,9 +302,9 @@ export function SettingsDialog({
   }, [open, tabRequest, isMobile]);
 
   const handleLogout = React.useCallback(() => {
-    router.push("/login");
     handleClose();
-  }, [router, handleClose]);
+    void logout();
+  }, [handleClose, logout]);
 
   const handleMobileNavigate = (view: MobileView) => {
     if (view === "overview") {
