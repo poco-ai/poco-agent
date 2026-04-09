@@ -33,8 +33,10 @@ class S3StorageService:
             )
 
         self.bucket = settings.s3_bucket
+        self.key_prefix = self._normalize_prefix(settings.s3_key_prefix)
 
         config_kwargs: dict[str, Any] = {
+            "signature_version": settings.s3_signature_version or "s3v4",
             "connect_timeout": settings.s3_connect_timeout_seconds,
             "read_timeout": settings.s3_read_timeout_seconds,
             "retries": {
@@ -44,6 +46,8 @@ class S3StorageService:
         }
         if settings.s3_force_path_style:
             config_kwargs["s3"] = {"addressing_style": "path"}
+        else:
+            config_kwargs["s3"] = {"addressing_style": "virtual"}
         config = Config(**config_kwargs) if config_kwargs else None
 
         self.client = boto3.client(
@@ -61,13 +65,14 @@ class S3StorageService:
         extra_args: dict[str, Any] = {}
         if content_type:
             extra_args["ContentType"] = content_type
+        normalized_key = self._apply_key_prefix(key)
         try:
             if extra_args:
                 self.client.upload_file(
-                    file_path, self.bucket, key, ExtraArgs=extra_args
+                    file_path, self.bucket, normalized_key, ExtraArgs=extra_args
                 )
             else:
-                self.client.upload_file(file_path, self.bucket, key)
+                self.client.upload_file(file_path, self.bucket, normalized_key)
         except (ClientError, BotoCoreError) as exc:
             logger.error(f"Failed to upload {file_path} to {key}: {exc}")
             raise AppException(
@@ -83,7 +88,11 @@ class S3StorageService:
         body: bytes,
         content_type: str | None = None,
     ) -> None:
-        kwargs: dict[str, Any] = {"Bucket": self.bucket, "Key": key, "Body": body}
+        kwargs: dict[str, Any] = {
+            "Bucket": self.bucket,
+            "Key": self._apply_key_prefix(key),
+            "Body": body,
+        }
         if content_type:
             kwargs["ContentType"] = content_type
         try:
@@ -97,13 +106,17 @@ class S3StorageService:
             ) from exc
 
     def list_objects(self, prefix: str) -> Iterable[str]:
+        normalized_prefix = self._apply_prefix(prefix)
         try:
             paginator = self.client.get_paginator("list_objects_v2")
-            for page in paginator.paginate(Bucket=self.bucket, Prefix=prefix):
+            for page in paginator.paginate(
+                Bucket=self.bucket,
+                Prefix=normalized_prefix,
+            ):
                 for item in page.get("Contents", []) or []:
                     key = item.get("Key")
                     if key:
-                        yield key
+                        yield self._remove_key_prefix(str(key))
         except (ClientError, BotoCoreError) as exc:
             logger.error(f"Failed to list objects for {prefix}: {exc}")
             raise AppException(
@@ -113,9 +126,10 @@ class S3StorageService:
             ) from exc
 
     def download_file(self, *, key: str, destination: Path) -> None:
+        normalized_key = self._apply_key_prefix(key)
         try:
             destination.parent.mkdir(parents=True, exist_ok=True)
-            self.client.download_file(self.bucket, key, str(destination))
+            self.client.download_file(self.bucket, normalized_key, str(destination))
         except (ClientError, BotoCoreError) as exc:
             logger.error(f"Failed to download {key}: {exc}")
             raise AppException(
@@ -152,3 +166,38 @@ class S3StorageService:
                 details={"relative": relative},
             )
         return target
+
+    @staticmethod
+    def _normalize_prefix(prefix: str | None) -> str:
+        if not prefix:
+            return ""
+        return prefix.strip().strip("/")
+
+    def _apply_key_prefix(self, key: str) -> str:
+        normalized_key = key.strip().lstrip("/")
+        if not self.key_prefix:
+            return normalized_key
+        if normalized_key == self.key_prefix or normalized_key.startswith(
+            f"{self.key_prefix}/"
+        ):
+            return normalized_key
+        if not normalized_key:
+            return self.key_prefix
+        return f"{self.key_prefix}/{normalized_key}"
+
+    def _apply_prefix(self, prefix: str) -> str:
+        normalized_prefix = prefix.strip().lstrip("/")
+        if not normalized_prefix:
+            return f"{self.key_prefix}/" if self.key_prefix else ""
+        return self._apply_key_prefix(normalized_prefix)
+
+    def _remove_key_prefix(self, key: str) -> str:
+        normalized_key = key.strip().lstrip("/")
+        if not self.key_prefix:
+            return normalized_key
+        prefix_with_slash = f"{self.key_prefix}/"
+        if normalized_key.startswith(prefix_with_slash):
+            return normalized_key[len(prefix_with_slash) :]
+        if normalized_key == self.key_prefix:
+            return ""
+        return normalized_key

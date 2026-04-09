@@ -3,6 +3,7 @@ import logging
 import mimetypes
 from pathlib import Path
 from pathlib import PurePosixPath
+from urllib.parse import quote, urlsplit, urlunsplit
 from typing import Any, Iterable
 
 import boto3
@@ -37,6 +38,9 @@ class S3StorageService:
 
         self.bucket = settings.s3_bucket
         self.presign_expires = settings.s3_presign_expires
+        self.key_prefix = self._normalize_prefix(settings.s3_key_prefix)
+        self.public_read = settings.s3_public_read
+        self.public_endpoint_bucket_bound = settings.s3_public_endpoint_bucket_bound
 
         endpoint = settings.s3_endpoint.rstrip("/")
         public_endpoint = (settings.s3_public_endpoint or "").strip()
@@ -46,7 +50,7 @@ class S3StorageService:
             public_endpoint = endpoint
 
         config_kwargs: dict[str, Any] = {
-            "signature_version": "s3v4",
+            "signature_version": settings.s3_signature_version or "s3v4",
             "connect_timeout": settings.s3_connect_timeout_seconds,
             "read_timeout": settings.s3_read_timeout_seconds,
             "retries": {
@@ -56,6 +60,8 @@ class S3StorageService:
         }
         if settings.s3_force_path_style:
             config_kwargs["s3"] = {"addressing_style": "path"}
+        else:
+            config_kwargs["s3"] = {"addressing_style": "virtual"}
 
         config = Config(**config_kwargs) if config_kwargs else None
 
@@ -81,8 +87,9 @@ class S3StorageService:
         )
 
     def get_manifest(self, key: str) -> dict[str, Any]:
+        normalized_key = self._apply_key_prefix(key)
         try:
-            response = self.client.get_object(Bucket=self.bucket, Key=key)
+            response = self.client.get_object(Bucket=self.bucket, Key=normalized_key)
             body = response["Body"].read()
             return json.loads(body.decode("utf-8"))
         except (ClientError, BotoCoreError, json.JSONDecodeError) as exc:
@@ -94,8 +101,9 @@ class S3StorageService:
             ) from exc
 
     def get_text(self, key: str, *, encoding: str = "utf-8") -> str:
+        normalized_key = self._apply_key_prefix(key)
         try:
-            response = self.client.get_object(Bucket=self.bucket, Key=key)
+            response = self.client.get_object(Bucket=self.bucket, Key=normalized_key)
             body = response["Body"].read()
             return body.decode(encoding)
         except (ClientError, BotoCoreError, UnicodeDecodeError) as exc:
@@ -114,7 +122,14 @@ class S3StorageService:
         response_content_disposition: str | None = None,
         response_content_type: str | None = None,
     ) -> str:
-        params: dict[str, Any] = {"Bucket": self.bucket, "Key": key}
+        normalized_key = self._apply_key_prefix(key)
+        if self.public_read:
+            return self._build_public_url(normalized_key)
+
+        params: dict[str, Any] = {
+            "Bucket": self.bucket,
+            "Key": normalized_key,
+        }
         if response_content_disposition:
             params["ResponseContentDisposition"] = response_content_disposition
         if response_content_type:
@@ -135,8 +150,9 @@ class S3StorageService:
 
     def exists(self, key: str) -> bool:
         """Return whether the object exists in storage."""
+        normalized_key = self._apply_key_prefix(key)
         try:
-            self.client.head_object(Bucket=self.bucket, Key=key)
+            self.client.head_object(Bucket=self.bucket, Key=normalized_key)
             return True
         except ClientError as exc:
             error = exc.response.get("Error", {}) if hasattr(exc, "response") else {}
@@ -167,13 +183,14 @@ class S3StorageService:
         extra_args: dict[str, Any] = {}
         if content_type:
             extra_args["ContentType"] = content_type
+        normalized_key = self._apply_key_prefix(key)
         try:
             if extra_args:
                 self.client.upload_fileobj(
-                    fileobj, self.bucket, key, ExtraArgs=extra_args
+                    fileobj, self.bucket, normalized_key, ExtraArgs=extra_args
                 )
             else:
-                self.client.upload_fileobj(fileobj, self.bucket, key)
+                self.client.upload_fileobj(fileobj, self.bucket, normalized_key)
         except (ClientError, BotoCoreError) as exc:
             logger.error(f"Failed to upload object {key}: {exc}")
             raise AppException(
@@ -188,13 +205,14 @@ class S3StorageService:
         extra_args: dict[str, Any] = {}
         if content_type:
             extra_args["ContentType"] = content_type
+        normalized_key = self._apply_key_prefix(key)
         try:
             if extra_args:
                 self.client.upload_file(
-                    file_path, self.bucket, key, ExtraArgs=extra_args
+                    file_path, self.bucket, normalized_key, ExtraArgs=extra_args
                 )
             else:
-                self.client.upload_file(file_path, self.bucket, key)
+                self.client.upload_file(file_path, self.bucket, normalized_key)
         except (ClientError, BotoCoreError) as exc:
             logger.error(f"Failed to upload object {key}: {exc}")
             raise AppException(
@@ -210,7 +228,11 @@ class S3StorageService:
         body: bytes,
         content_type: str | None = None,
     ) -> None:
-        kwargs: dict[str, Any] = {"Bucket": self.bucket, "Key": key, "Body": body}
+        kwargs: dict[str, Any] = {
+            "Bucket": self.bucket,
+            "Key": self._apply_key_prefix(key),
+            "Body": body,
+        }
         if content_type:
             kwargs["ContentType"] = content_type
         try:
@@ -224,13 +246,17 @@ class S3StorageService:
             ) from exc
 
     def list_objects(self, prefix: str) -> Iterable[str]:
+        normalized_prefix = self._apply_prefix(prefix)
         try:
             paginator = self.client.get_paginator("list_objects_v2")
-            for page in paginator.paginate(Bucket=self.bucket, Prefix=prefix):
+            for page in paginator.paginate(
+                Bucket=self.bucket,
+                Prefix=normalized_prefix,
+            ):
                 for item in page.get("Contents", []) or []:
                     key = item.get("Key")
                     if key:
-                        yield key
+                        yield self._remove_key_prefix(str(key))
         except (ClientError, BotoCoreError) as exc:
             logger.error(f"Failed to list objects under {prefix}: {exc}")
             raise AppException(
@@ -240,9 +266,10 @@ class S3StorageService:
             ) from exc
 
     def download_file(self, *, key: str, destination: Path) -> None:
+        normalized_key = self._apply_key_prefix(key)
         try:
             destination.parent.mkdir(parents=True, exist_ok=True)
-            self.client.download_file(self.bucket, key, str(destination))
+            self.client.download_file(self.bucket, normalized_key, str(destination))
         except (ClientError, BotoCoreError) as exc:
             logger.error(f"Failed to download object {key}: {exc}")
             raise AppException(
@@ -273,7 +300,9 @@ class S3StorageService:
                 self.client.delete_objects(
                     Bucket=self.bucket,
                     Delete={
-                        "Objects": [{"Key": key} for key in chunk],
+                        "Objects": [
+                            {"Key": self._apply_key_prefix(key)} for key in chunk
+                        ],
                         "Quiet": True,
                     },
                 )
@@ -289,8 +318,9 @@ class S3StorageService:
         return deleted
 
     def delete_object(self, *, key: str) -> None:
+        normalized_key = self._apply_key_prefix(key)
         try:
-            self.client.delete_object(Bucket=self.bucket, Key=key)
+            self.client.delete_object(Bucket=self.bucket, Key=normalized_key)
         except (ClientError, BotoCoreError) as exc:
             logger.error(f"Failed to delete object {key}: {exc}")
             raise AppException(
@@ -361,13 +391,17 @@ class S3StorageService:
                         self.client.delete_objects(
                             Bucket=self.bucket,
                             Delete={
-                                "Objects": [{"Key": key} for key in chunk],
+                                "Objects": [
+                                    {"Key": self._apply_key_prefix(key)}
+                                    for key in chunk
+                                ],
                                 "Quiet": True,
                             },
                         )
                 except (ClientError, BotoCoreError) as exc:
                     logger.error(
-                        f"Failed to delete stale objects under {normalized_prefix}: {exc}"
+                        "Failed to delete stale objects under "
+                        f"{normalized_prefix}: {exc}"
                     )
                     raise AppException(
                         error_code=ErrorCode.EXTERNAL_SERVICE_ERROR,
@@ -407,15 +441,19 @@ class S3StorageService:
                     continue
                 destination_key = f"{normalized_destination}{relative}"
                 self.client.copy(
-                    {"Bucket": self.bucket, "Key": source_key},
+                    {
+                        "Bucket": self.bucket,
+                        "Key": self._apply_key_prefix(source_key),
+                    },
                     self.bucket,
-                    destination_key,
+                    self._apply_key_prefix(destination_key),
                 )
                 desired_keys.add(destination_key)
                 copied += 1
         except (ClientError, BotoCoreError) as exc:
             logger.error(
-                f"Failed to copy objects from {normalized_source} to {normalized_destination}: {exc}"
+                "Failed to copy objects from "
+                f"{normalized_source} to {normalized_destination}: {exc}"
             )
             raise AppException(
                 error_code=ErrorCode.EXTERNAL_SERVICE_ERROR,
@@ -438,13 +476,17 @@ class S3StorageService:
                         self.client.delete_objects(
                             Bucket=self.bucket,
                             Delete={
-                                "Objects": [{"Key": key} for key in chunk],
+                                "Objects": [
+                                    {"Key": self._apply_key_prefix(key)}
+                                    for key in chunk
+                                ],
                                 "Quiet": True,
                             },
                         )
                 except (ClientError, BotoCoreError) as exc:
                     logger.error(
-                        f"Failed to delete stale copied objects under {normalized_destination}: {exc}"
+                        "Failed to delete stale copied objects under "
+                        f"{normalized_destination}: {exc}"
                     )
                     raise AppException(
                         error_code=ErrorCode.EXTERNAL_SERVICE_ERROR,
@@ -475,3 +517,62 @@ class S3StorageService:
                 details={"relative": relative},
             )
         return target
+
+    @staticmethod
+    def _normalize_prefix(prefix: str | None) -> str:
+        if not prefix:
+            return ""
+        return prefix.strip().strip("/")
+
+    def _apply_key_prefix(self, key: str) -> str:
+        normalized_key = key.strip().lstrip("/")
+        if not self.key_prefix:
+            return normalized_key
+        if normalized_key == self.key_prefix or normalized_key.startswith(
+            f"{self.key_prefix}/"
+        ):
+            return normalized_key
+        if not normalized_key:
+            return self.key_prefix
+        return f"{self.key_prefix}/{normalized_key}"
+
+    def _apply_prefix(self, prefix: str) -> str:
+        normalized_prefix = prefix.strip().lstrip("/")
+        if not normalized_prefix:
+            return f"{self.key_prefix}/" if self.key_prefix else ""
+        return self._apply_key_prefix(normalized_prefix)
+
+    def _remove_key_prefix(self, key: str) -> str:
+        normalized_key = key.strip().lstrip("/")
+        if not self.key_prefix:
+            return normalized_key
+        prefix_with_slash = f"{self.key_prefix}/"
+        if normalized_key.startswith(prefix_with_slash):
+            return normalized_key[len(prefix_with_slash) :]
+        if normalized_key == self.key_prefix:
+            return ""
+        return normalized_key
+
+    def _build_public_url(self, key: str) -> str:
+        encoded_segments = [
+            quote(segment, safe="") for segment in key.split("/") if segment
+        ]
+        path = "/".join(encoded_segments)
+        if not path:
+            return self.presign_client.meta.endpoint_url.rstrip("/")
+        endpoint = self.presign_client.meta.endpoint_url.rstrip("/")
+        if self.public_endpoint_bucket_bound:
+            return f"{endpoint}/{path}"
+
+        if self.client.meta.config.s3.get("addressing_style") == "path":
+            bucket = quote(self.bucket, safe="")
+            return f"{endpoint}/{bucket}/{path}"
+
+        parts = urlsplit(endpoint)
+        hostname = parts.hostname or ""
+        if hostname.startswith(f"{self.bucket}."):
+            netloc = parts.netloc
+        else:
+            bucket_host = f"{self.bucket}.{hostname}" if hostname else self.bucket
+            netloc = f"{bucket_host}:{parts.port}" if parts.port else bucket_host
+        return urlunsplit((parts.scheme, netloc, f"/{path}", "", ""))

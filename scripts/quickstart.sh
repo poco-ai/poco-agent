@@ -17,8 +17,22 @@ S3_ACCESS_KEY=""
 S3_ACCESS_KEY_SET=false
 S3_SECRET_KEY=""
 S3_SECRET_KEY_SET=false
+S3_ENDPOINT=""
+S3_ENDPOINT_SET=false
 S3_PUBLIC_ENDPOINT=""
 S3_PUBLIC_ENDPOINT_SET=false
+S3_REGION=""
+S3_REGION_SET=false
+S3_KEY_PREFIX=""
+S3_KEY_PREFIX_SET=false
+S3_PUBLIC_READ=""
+S3_PUBLIC_READ_SET=false
+S3_PUBLIC_ENDPOINT_BUCKET_BOUND=""
+S3_PUBLIC_ENDPOINT_BUCKET_BOUND_SET=false
+S3_FORCE_PATH_STYLE=""
+S3_FORCE_PATH_STYLE_SET=false
+S3_SIGNATURE_VERSION=""
+S3_SIGNATURE_VERSION_SET=false
 CORS_ORIGINS=""
 CORS_ORIGINS_SET=false
 DOCKER_GID=""
@@ -167,7 +181,14 @@ usage() {
   --s3-bucket NAME          存储桶名称（写入环境文件）
   --s3-access-key KEY       S3 访问密钥（写入环境文件）
   --s3-secret-key KEY       S3 密钥（写入环境文件）
+  --s3-endpoint URL         S3 服务端点（写入环境文件）
   --s3-public-endpoint URL  用于访问构件的 S3 公共端点（写入环境文件）
+  --s3-region REGION        S3 区域（写入环境文件）
+  --s3-key-prefix PREFIX    S3 对象 key 前缀（写入环境文件）
+  --s3-public-read BOOL     S3 公共读模式（写入环境文件）
+  --s3-public-endpoint-bucket-bound BOOL  公共端点是否已绑定到单个 bucket（写入环境文件）
+  --s3-force-path-style BOOL  是否启用 path-style（写入环境文件）
+  --s3-signature-version VER  S3 签名版本（如 s3 或 s3v4，写入环境文件）
   --cors-origins CSV|JSON   允许的来源（写入环境文件）
   --docker-gid GID          Docker 套接字组 ID（如省略则自动检测）
   --env-file PATH           目标环境文件（默认: ./.env）
@@ -185,7 +206,14 @@ ADVANCED
   --s3-bucket NAME          Bucket name (writes to env)
   --s3-access-key KEY       S3 access key (writes to env)
   --s3-secret-key KEY       S3 secret key (writes to env)
+  --s3-endpoint URL         S3 endpoint (writes to env)
   --s3-public-endpoint URL  S3 public endpoint for artifact access (writes to env)
+  --s3-region REGION        S3 region (writes to env)
+  --s3-key-prefix PREFIX    S3 object key prefix (writes to env)
+  --s3-public-read BOOL     S3 public-read mode (writes to env)
+  --s3-public-endpoint-bucket-bound BOOL  Whether the public endpoint is already bound to a single bucket (writes to env)
+  --s3-force-path-style BOOL  Enable path-style access (writes to env)
+  --s3-signature-version VER  S3 signature version, e.g. s3 or s3v4 (writes to env)
   --cors-origins CSV|JSON   Allowed origins (writes to env)
   --docker-gid GID          Docker socket group id (auto-detect if omitted)
   --env-file PATH           Target env file (default: ./.env)
@@ -676,12 +704,28 @@ interactive_setup() {
   local existing_anthropic_base_url
   local existing_default_model
   local existing_s3_endpoint
+  local existing_s3_service_endpoint
+  local existing_s3_region
+  local existing_s3_key_prefix
+  local existing_s3_public_read
+  local existing_s3_public_endpoint_bucket_bound
+  local existing_s3_force_path_style
+  local existing_s3_signature_version
   local existing_deployment_mode
 
   existing_anthropic="$(read_env_key "ANTHROPIC_API_KEY" || true)"
   existing_anthropic_base_url="$(read_env_key "ANTHROPIC_BASE_URL" || true)"
   existing_default_model="$(read_env_key "DEFAULT_MODEL" || true)"
   existing_s3_endpoint="$(read_env_key "S3_PUBLIC_ENDPOINT" || true)"
+  existing_s3_service_endpoint="$(read_env_key "S3_ENDPOINT" || true)"
+  existing_s3_region="$(read_env_key "S3_REGION" || true)"
+  existing_s3_key_prefix="$(read_env_key "S3_KEY_PREFIX" || true)"
+  existing_s3_public_read="$(read_env_key "S3_PUBLIC_READ" || true)"
+  existing_s3_public_endpoint_bucket_bound="$(
+    read_env_key "S3_PUBLIC_ENDPOINT_BUCKET_BOUND" || true
+  )"
+  existing_s3_force_path_style="$(read_env_key "S3_FORCE_PATH_STYLE" || true)"
+  existing_s3_signature_version="$(read_env_key "S3_SIGNATURE_VERSION" || true)"
   existing_deployment_mode="$(read_env_key "DEPLOYMENT_MODE" || true)"
 
   # Allow CLI args to override .env defaults during interactive setup.
@@ -837,8 +881,24 @@ while [[ $# -gt 0 ]]; do
       S3_ACCESS_KEY="$2"; S3_ACCESS_KEY_SET=true; shift 2 ;;
     --s3-secret-key)
       S3_SECRET_KEY="$2"; S3_SECRET_KEY_SET=true; shift 2 ;;
+    --s3-endpoint)
+      S3_ENDPOINT="$2"; S3_ENDPOINT_SET=true; shift 2 ;;
     --s3-public-endpoint)
       S3_PUBLIC_ENDPOINT="$2"; S3_PUBLIC_ENDPOINT_SET=true; shift 2 ;;
+    --s3-region)
+      S3_REGION="$2"; S3_REGION_SET=true; shift 2 ;;
+    --s3-key-prefix)
+      S3_KEY_PREFIX="$2"; S3_KEY_PREFIX_SET=true; shift 2 ;;
+    --s3-public-read)
+      S3_PUBLIC_READ="$2"; S3_PUBLIC_READ_SET=true; shift 2 ;;
+    --s3-public-endpoint-bucket-bound)
+      S3_PUBLIC_ENDPOINT_BUCKET_BOUND="$2"
+      S3_PUBLIC_ENDPOINT_BUCKET_BOUND_SET=true
+      shift 2 ;;
+    --s3-force-path-style)
+      S3_FORCE_PATH_STYLE="$2"; S3_FORCE_PATH_STYLE_SET=true; shift 2 ;;
+    --s3-signature-version)
+      S3_SIGNATURE_VERSION="$2"; S3_SIGNATURE_VERSION_SET=true; shift 2 ;;
     --cors-origins)
       CORS_ORIGINS="$2"; CORS_ORIGINS_SET=true; shift 2 ;;
     --docker-gid)
@@ -944,9 +1004,32 @@ fi
 if [[ "$S3_BUCKET_SET" = true ]]; then
   write_env_key "S3_BUCKET" "$S3_BUCKET"
 fi
+if [[ "$S3_ENDPOINT_SET" = true ]]; then
+  write_env_key "S3_ENDPOINT" "$S3_ENDPOINT"
+fi
 if [[ "$S3_PUBLIC_ENDPOINT_SET" = true ]]; then
   write_env_key "S3_PUBLIC_ENDPOINT" "$S3_PUBLIC_ENDPOINT"
   print_success "S3 public endpoint configured"
+fi
+if [[ "$S3_REGION_SET" = true ]]; then
+  write_env_key "S3_REGION" "$S3_REGION"
+fi
+if [[ "$S3_KEY_PREFIX_SET" = true ]]; then
+  write_env_key "S3_KEY_PREFIX" "$S3_KEY_PREFIX"
+fi
+if [[ "$S3_PUBLIC_READ_SET" = true ]]; then
+  write_env_key "S3_PUBLIC_READ" "$S3_PUBLIC_READ"
+fi
+if [[ "$S3_PUBLIC_ENDPOINT_BUCKET_BOUND_SET" = true ]]; then
+  write_env_key \
+    "S3_PUBLIC_ENDPOINT_BUCKET_BOUND" \
+    "$S3_PUBLIC_ENDPOINT_BUCKET_BOUND"
+fi
+if [[ "$S3_FORCE_PATH_STYLE_SET" = true ]]; then
+  write_env_key "S3_FORCE_PATH_STYLE" "$S3_FORCE_PATH_STYLE"
+fi
+if [[ "$S3_SIGNATURE_VERSION_SET" = true ]]; then
+  write_env_key "S3_SIGNATURE_VERSION" "$S3_SIGNATURE_VERSION"
 fi
 if [[ "$CORS_ORIGINS_SET" = true ]]; then
   write_env_key "CORS_ORIGINS" "$CORS_ORIGINS_JSON"
