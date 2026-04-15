@@ -186,6 +186,24 @@ export const API_ENDPOINTS = {
   projectFile: (projectId: string, fileId: number) =>
     `/projects/${projectId}/files/${fileId}`,
 
+  // Workspaces
+  workspaces: "/workspaces",
+  workspace: (workspaceId: string) => `/workspaces/${workspaceId}`,
+  workspaceMembers: (workspaceId: string) =>
+    `/workspaces/${workspaceId}/members`,
+  workspaceMember: (workspaceId: string, membershipId: number) =>
+    `/workspaces/${workspaceId}/members/${membershipId}`,
+  workspaceMemberRole: (workspaceId: string, membershipId: number) =>
+    `/workspaces/${workspaceId}/members/${membershipId}/role`,
+  workspaceLeave: (workspaceId: string) =>
+    `/workspaces/${workspaceId}/members/leave`,
+  workspaceInvites: (workspaceId: string) =>
+    `/workspaces/${workspaceId}/invites`,
+  workspaceInviteRevoke: (workspaceId: string, inviteId: string) =>
+    `/workspaces/${workspaceId}/invites/${inviteId}/revoke`,
+  workspaceActivity: (workspaceId: string) =>
+    `/workspaces/${workspaceId}/activity`,
+
   // Auth
   authConfig: "/auth/config",
   authMe: "/auth/me",

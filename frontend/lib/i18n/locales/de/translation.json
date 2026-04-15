@@ -11,6 +11,7 @@
     "presets": "Voreinstellungen",
     "openMain": "Hauptseitenleiste öffnen",
     "scheduledTasks": "Geplante Aufgaben",
+    "team": "Team",
     "memories": "Erinnerungen",
     "projects": "Projekte",
     "newProject": "Neues Projekt",
@@ -46,6 +47,86 @@
     "more": "Mehr",
     "repoLink": "Projekt-Repository",
     "repoName": "poco-ai/poco-agent"
+  },
+  "workspaces": {
+    "currentWorkspace": "Aktueller Workspace: {{name}}",
+    "noWorkspace": "Kein Workspace ausgewählt",
+    "emptyValue": "Nicht verfügbar",
+    "refresh": "Aktualisieren",
+    "switcher": {
+      "placeholder": "Workspace auswählen"
+    },
+    "create": {
+      "placeholder": "Neuer Workspace-Name",
+      "action": "Erstellen"
+    },
+    "pages": {
+      "overview": {
+        "title": "Team"
+      },
+      "members": {
+        "title": "Teammitglieder"
+      },
+      "invites": {
+        "title": "Teameinladungen"
+      }
+    },
+    "summary": {
+      "kind": "Workspace-Typ",
+      "members": "Mitglieder",
+      "invites": "Aktive Einladungen"
+    },
+    "kinds": {
+      "personal": "Persönlich",
+      "shared": "Geteilt"
+    },
+    "roles": {
+      "owner": "Besitzer",
+      "admin": "Admin",
+      "member": "Mitglied"
+    },
+    "activity": {
+      "title": "Aktivität",
+      "description": "Kürzlich protokollierte Workspace-Aktionen.",
+      "empty": "Noch keine Aktivität.",
+      "actions": {
+        "workspace.created": "Workspace erstellt",
+        "workspace.deleted": "Workspace gelöscht",
+        "workspace.ownership_transferred": "Besitz übertragen",
+        "workspace.member_joined": "Mitglied beigetreten",
+        "workspace.member_left": "Mitglied ausgetreten",
+        "workspace.member_removed": "Mitglied entfernt",
+        "workspace.member_role_changed": "Mitgliedsrolle geändert",
+        "workspace.invite_created": "Einladung erstellt",
+        "workspace.invite_accepted": "Einladung angenommen",
+        "workspace.invite_revoked": "Einladung widerrufen"
+      }
+    },
+    "members": {
+      "title": "Mitglieder",
+      "description": "Workspace-Mitglieder und Rollen prüfen.",
+      "empty": "Keine Mitglieder gefunden.",
+      "joinedAt": "Beigetreten {{date}}"
+    },
+    "invites": {
+      "createTitle": "Einladung erstellen",
+      "createDescription": "Erstelle eine kurzlebige Einladung für diesen Workspace.",
+      "createAction": "Einladung erstellen",
+      "title": "Einladungen",
+      "description": "Ausstehende und widerrufene Workspace-Einladungen prüfen.",
+      "empty": "Noch keine Einladungen.",
+      "expiresAt": "Läuft ab {{date}}",
+      "revoked": "Widerrufen",
+      "copy": "Kopieren"
+    },
+    "toasts": {
+      "loadFailed": "Workspace-Daten konnten nicht geladen werden",
+      "created": "Workspace erstellt",
+      "createFailed": "Workspace konnte nicht erstellt werden",
+      "inviteCreated": "Einladung erstellt",
+      "inviteFailed": "Einladung konnte nicht erstellt werden",
+      "inviteCopied": "Einladungstoken kopiert"
+    }
   },
   "hero": {
     "title": "Was kann ich für dich tun?",

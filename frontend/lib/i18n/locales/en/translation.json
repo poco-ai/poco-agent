@@ -11,6 +11,7 @@
     "presets": "Presets",
     "openMain": "Open main sidebar",
     "scheduledTasks": "Scheduled Tasks",
+    "team": "Team",
     "memories": "Memories",
     "projects": "Projects",
     "newProject": "New Project",
@@ -46,6 +47,86 @@
     "more": "More",
     "repoLink": "Project repository",
     "repoName": "poco-ai/poco-agent"
+  },
+  "workspaces": {
+    "currentWorkspace": "Current workspace: {{name}}",
+    "noWorkspace": "No workspace selected",
+    "emptyValue": "Not available",
+    "refresh": "Refresh",
+    "switcher": {
+      "placeholder": "Select workspace"
+    },
+    "create": {
+      "placeholder": "New workspace name",
+      "action": "Create"
+    },
+    "pages": {
+      "overview": {
+        "title": "Team"
+      },
+      "members": {
+        "title": "Team Members"
+      },
+      "invites": {
+        "title": "Team Invites"
+      }
+    },
+    "summary": {
+      "kind": "Workspace type",
+      "members": "Members",
+      "invites": "Active invites"
+    },
+    "kinds": {
+      "personal": "Personal",
+      "shared": "Shared"
+    },
+    "roles": {
+      "owner": "Owner",
+      "admin": "Admin",
+      "member": "Member"
+    },
+    "activity": {
+      "title": "Activity",
+      "description": "Recent audited workspace operations.",
+      "empty": "No activity yet.",
+      "actions": {
+        "workspace.created": "Workspace created",
+        "workspace.deleted": "Workspace deleted",
+        "workspace.ownership_transferred": "Ownership transferred",
+        "workspace.member_joined": "Member joined",
+        "workspace.member_left": "Member left",
+        "workspace.member_removed": "Member removed",
+        "workspace.member_role_changed": "Member role changed",
+        "workspace.invite_created": "Invite created",
+        "workspace.invite_accepted": "Invite accepted",
+        "workspace.invite_revoked": "Invite revoked"
+      }
+    },
+    "members": {
+      "title": "Members",
+      "description": "Review workspace membership and role assignments.",
+      "empty": "No members found.",
+      "joinedAt": "Joined {{date}}"
+    },
+    "invites": {
+      "createTitle": "Create Invite",
+      "createDescription": "Generate a short-lived invite for this workspace.",
+      "createAction": "Create Invite",
+      "title": "Invites",
+      "description": "Review pending and revoked workspace invites.",
+      "empty": "No invites yet.",
+      "expiresAt": "Expires {{date}}",
+      "revoked": "Revoked",
+      "copy": "Copy"
+    },
+    "toasts": {
+      "loadFailed": "Failed to load workspace data",
+      "created": "Workspace created",
+      "createFailed": "Failed to create workspace",
+      "inviteCreated": "Invite created",
+      "inviteFailed": "Failed to create invite",
+      "inviteCopied": "Invite token copied"
+    }
   },
   "hero": {
     "title": "What can I do for you?",

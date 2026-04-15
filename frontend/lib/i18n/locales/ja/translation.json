@@ -11,6 +11,7 @@
     "presets": "プリセット",
     "openMain": "メインサイドバーを開く",
     "scheduledTasks": "スケジュールタスク",
+    "team": "チーム",
     "memories": "メモリ",
     "projects": "プロジェクト",
     "newProject": "新しいプロジェクト",
@@ -46,6 +47,86 @@
     "more": "その他",
     "repoLink": "プロジェクトリポジトリ",
     "repoName": "poco-ai/poco-agent"
+  },
+  "workspaces": {
+    "currentWorkspace": "現在のワークスペース: {{name}}",
+    "noWorkspace": "ワークスペースが選択されていません",
+    "emptyValue": "利用不可",
+    "refresh": "更新",
+    "switcher": {
+      "placeholder": "ワークスペースを選択"
+    },
+    "create": {
+      "placeholder": "新しいワークスペース名",
+      "action": "作成"
+    },
+    "pages": {
+      "overview": {
+        "title": "チーム"
+      },
+      "members": {
+        "title": "チームメンバー"
+      },
+      "invites": {
+        "title": "チーム招待"
+      }
+    },
+    "summary": {
+      "kind": "ワークスペース種別",
+      "members": "メンバー",
+      "invites": "有効な招待"
+    },
+    "kinds": {
+      "personal": "個人",
+      "shared": "共有"
+    },
+    "roles": {
+      "owner": "オーナー",
+      "admin": "管理者",
+      "member": "メンバー"
+    },
+    "activity": {
+      "title": "アクティビティ",
+      "description": "最近監査されたワークスペース操作です。",
+      "empty": "アクティビティはまだありません。",
+      "actions": {
+        "workspace.created": "ワークスペースを作成",
+        "workspace.deleted": "ワークスペースを削除",
+        "workspace.ownership_transferred": "所有権を移管",
+        "workspace.member_joined": "メンバーが参加",
+        "workspace.member_left": "メンバーが退出",
+        "workspace.member_removed": "メンバーを削除",
+        "workspace.member_role_changed": "メンバーのロールを変更",
+        "workspace.invite_created": "招待を作成",
+        "workspace.invite_accepted": "招待を承諾",
+        "workspace.invite_revoked": "招待を取り消し"
+      }
+    },
+    "members": {
+      "title": "メンバー",
+      "description": "ワークスペースのメンバーとロールを確認します。",
+      "empty": "メンバーが見つかりません。",
+      "joinedAt": "{{date}} に参加"
+    },
+    "invites": {
+      "createTitle": "招待を作成",
+      "createDescription": "このワークスペース用の短期招待を生成します。",
+      "createAction": "招待を作成",
+      "title": "招待",
+      "description": "保留中および取り消し済みの招待を確認します。",
+      "empty": "招待はまだありません。",
+      "expiresAt": "{{date}} に期限切れ",
+      "revoked": "取り消し済み",
+      "copy": "コピー"
+    },
+    "toasts": {
+      "loadFailed": "ワークスペースデータの読み込みに失敗しました",
+      "created": "ワークスペースを作成しました",
+      "createFailed": "ワークスペースの作成に失敗しました",
+      "inviteCreated": "招待を作成しました",
+      "inviteFailed": "招待の作成に失敗しました",
+      "inviteCopied": "招待トークンをコピーしました"
+    }
   },
   "hero": {
     "title": "何かお手伝いできることはありますか？",

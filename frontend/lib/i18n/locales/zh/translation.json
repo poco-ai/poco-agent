@@ -11,6 +11,7 @@
     "presets": "预设",
     "openMain": "打开主侧边栏",
     "scheduledTasks": "定时任务",
+    "team": "团队",
     "memories": "记忆",
     "projects": "项目",
     "newProject": "新建项目",
@@ -46,6 +47,86 @@
     "more": "更多",
     "repoLink": "项目仓库",
     "repoName": "poco-ai/poco-agent"
+  },
+  "workspaces": {
+    "currentWorkspace": "当前空间：{{name}}",
+    "noWorkspace": "未选择空间",
+    "emptyValue": "暂无",
+    "refresh": "刷新",
+    "switcher": {
+      "placeholder": "选择空间"
+    },
+    "create": {
+      "placeholder": "新空间名称",
+      "action": "创建"
+    },
+    "pages": {
+      "overview": {
+        "title": "团队"
+      },
+      "members": {
+        "title": "团队成员"
+      },
+      "invites": {
+        "title": "团队邀请"
+      }
+    },
+    "summary": {
+      "kind": "空间类型",
+      "members": "成员",
+      "invites": "有效邀请"
+    },
+    "kinds": {
+      "personal": "个人",
+      "shared": "共享"
+    },
+    "roles": {
+      "owner": "所有者",
+      "admin": "管理员",
+      "member": "成员"
+    },
+    "activity": {
+      "title": "活动",
+      "description": "最近记录的空间操作。",
+      "empty": "暂无活动。",
+      "actions": {
+        "workspace.created": "已创建空间",
+        "workspace.deleted": "已删除空间",
+        "workspace.ownership_transferred": "已转移所有权",
+        "workspace.member_joined": "成员已加入",
+        "workspace.member_left": "成员已离开",
+        "workspace.member_removed": "成员已移除",
+        "workspace.member_role_changed": "成员角色已变更",
+        "workspace.invite_created": "已创建邀请",
+        "workspace.invite_accepted": "已接受邀请",
+        "workspace.invite_revoked": "已撤销邀请"
+      }
+    },
+    "members": {
+      "title": "成员",
+      "description": "查看空间成员与角色分配。",
+      "empty": "暂无成员。",
+      "joinedAt": "加入时间 {{date}}"
+    },
+    "invites": {
+      "createTitle": "创建邀请",
+      "createDescription": "为当前空间生成短期有效邀请。",
+      "createAction": "创建邀请",
+      "title": "邀请",
+      "description": "查看待处理和已撤销的空间邀请。",
+      "empty": "暂无邀请。",
+      "expiresAt": "过期时间 {{date}}",
+      "revoked": "已撤销",
+      "copy": "复制"
+    },
+    "toasts": {
+      "loadFailed": "加载空间数据失败",
+      "created": "空间已创建",
+      "createFailed": "创建空间失败",
+      "inviteCreated": "邀请已创建",
+      "inviteFailed": "创建邀请失败",
+      "inviteCopied": "邀请令牌已复制"
+    }
   },
   "hero": {
     "title": "我能为你做什么？",

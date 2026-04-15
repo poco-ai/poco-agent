@@ -11,6 +11,7 @@
     "presets": "Пресеты",
     "openMain": "Открыть основную боковую панель",
     "scheduledTasks": "Запланированные задачи",
+    "team": "Команда",
     "memories": "Память",
     "projects": "Проекты",
     "newProject": "Новый проект",
@@ -46,6 +47,86 @@
     "more": "Ещё",
     "repoLink": "Репозиторий проекта",
     "repoName": "poco-ai/poco-agent"
+  },
+  "workspaces": {
+    "currentWorkspace": "Текущее пространство: {{name}}",
+    "noWorkspace": "Пространство не выбрано",
+    "emptyValue": "Недоступно",
+    "refresh": "Обновить",
+    "switcher": {
+      "placeholder": "Выберите пространство"
+    },
+    "create": {
+      "placeholder": "Название нового пространства",
+      "action": "Создать"
+    },
+    "pages": {
+      "overview": {
+        "title": "Команда"
+      },
+      "members": {
+        "title": "Участники команды"
+      },
+      "invites": {
+        "title": "Приглашения команды"
+      }
+    },
+    "summary": {
+      "kind": "Тип пространства",
+      "members": "Участники",
+      "invites": "Активные приглашения"
+    },
+    "kinds": {
+      "personal": "Личное",
+      "shared": "Общее"
+    },
+    "roles": {
+      "owner": "Владелец",
+      "admin": "Админ",
+      "member": "Участник"
+    },
+    "activity": {
+      "title": "Активность",
+      "description": "Недавние аудируемые операции пространства.",
+      "empty": "Активности пока нет.",
+      "actions": {
+        "workspace.created": "Пространство создано",
+        "workspace.deleted": "Пространство удалено",
+        "workspace.ownership_transferred": "Владение передано",
+        "workspace.member_joined": "Участник присоединился",
+        "workspace.member_left": "Участник вышел",
+        "workspace.member_removed": "Участник удалён",
+        "workspace.member_role_changed": "Роль участника изменена",
+        "workspace.invite_created": "Приглашение создано",
+        "workspace.invite_accepted": "Приглашение принято",
+        "workspace.invite_revoked": "Приглашение отозвано"
+      }
+    },
+    "members": {
+      "title": "Участники",
+      "description": "Просматривайте участников пространства и их роли.",
+      "empty": "Участники не найдены.",
+      "joinedAt": "Присоединился {{date}}"
+    },
+    "invites": {
+      "createTitle": "Создать приглашение",
+      "createDescription": "Создайте краткосрочное приглашение для этого пространства.",
+      "createAction": "Создать приглашение",
+      "title": "Приглашения",
+      "description": "Просматривайте ожидающие и отозванные приглашения.",
+      "empty": "Приглашений пока нет.",
+      "expiresAt": "Истекает {{date}}",
+      "revoked": "Отозвано",
+      "copy": "Копировать"
+    },
+    "toasts": {
+      "loadFailed": "Не удалось загрузить данные пространства",
+      "created": "Пространство создано",
+      "createFailed": "Не удалось создать пространство",
+      "inviteCreated": "Приглашение создано",
+      "inviteFailed": "Не удалось создать приглашение",
+      "inviteCopied": "Токен приглашения скопирован"
+    }
   },
   "hero": {
     "title": "Чем я могу вам помочь?",

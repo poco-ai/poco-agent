@@ -11,6 +11,7 @@
     "presets": "Préréglages",
     "openMain": "Ouvrir la barre latérale principale",
     "scheduledTasks": "Tâches planifiées",
+    "team": "Équipe",
     "memories": "Mémoires",
     "projects": "Projets",
     "newProject": "Nouveau projet",
@@ -46,6 +47,86 @@
     "more": "Plus",
     "repoLink": "Dépôt du projet",
     "repoName": "poco-ai/poco-agent"
+  },
+  "workspaces": {
+    "currentWorkspace": "Espace actuel : {{name}}",
+    "noWorkspace": "Aucun espace sélectionné",
+    "emptyValue": "Non disponible",
+    "refresh": "Actualiser",
+    "switcher": {
+      "placeholder": "Sélectionner un espace"
+    },
+    "create": {
+      "placeholder": "Nom du nouvel espace",
+      "action": "Créer"
+    },
+    "pages": {
+      "overview": {
+        "title": "Équipe"
+      },
+      "members": {
+        "title": "Membres de l’équipe"
+      },
+      "invites": {
+        "title": "Invitations d’équipe"
+      }
+    },
+    "summary": {
+      "kind": "Type d’espace",
+      "members": "Membres",
+      "invites": "Invitations actives"
+    },
+    "kinds": {
+      "personal": "Personnel",
+      "shared": "Partagé"
+    },
+    "roles": {
+      "owner": "Propriétaire",
+      "admin": "Admin",
+      "member": "Membre"
+    },
+    "activity": {
+      "title": "Activité",
+      "description": "Opérations d’espace récemment auditées.",
+      "empty": "Aucune activité pour le moment.",
+      "actions": {
+        "workspace.created": "Espace créé",
+        "workspace.deleted": "Espace supprimé",
+        "workspace.ownership_transferred": "Propriété transférée",
+        "workspace.member_joined": "Membre ajouté",
+        "workspace.member_left": "Membre parti",
+        "workspace.member_removed": "Membre retiré",
+        "workspace.member_role_changed": "Rôle du membre modifié",
+        "workspace.invite_created": "Invitation créée",
+        "workspace.invite_accepted": "Invitation acceptée",
+        "workspace.invite_revoked": "Invitation révoquée"
+      }
+    },
+    "members": {
+      "title": "Membres",
+      "description": "Consultez les membres et les rôles de l’espace.",
+      "empty": "Aucun membre trouvé.",
+      "joinedAt": "A rejoint le {{date}}"
+    },
+    "invites": {
+      "createTitle": "Créer une invitation",
+      "createDescription": "Générez une invitation de courte durée pour cet espace.",
+      "createAction": "Créer une invitation",
+      "title": "Invitations",
+      "description": "Consultez les invitations en attente et révoquées.",
+      "empty": "Aucune invitation pour le moment.",
+      "expiresAt": "Expire le {{date}}",
+      "revoked": "Révoquée",
+      "copy": "Copier"
+    },
+    "toasts": {
+      "loadFailed": "Échec du chargement des données d’espace",
+      "created": "Espace créé",
+      "createFailed": "Échec de la création de l’espace",
+      "inviteCreated": "Invitation créée",
+      "inviteFailed": "Échec de la création de l’invitation",
+      "inviteCopied": "Jeton d’invitation copié"
+    }
   },
   "hero": {
     "title": "Que puis-je faire pour vous ?",

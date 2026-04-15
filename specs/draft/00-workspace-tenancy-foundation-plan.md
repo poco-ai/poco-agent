@@ -8,7 +8,7 @@
 | **预期改动范围** | backend auth / backend tenancy model / backend audit logging / backend API / frontend shell context / frontend workspaces feature |
 | **改动类型** | feat |
 | **优先级** | P0 |
-| **状态** | in_progress |
+| **状态** | completed |
 
 ## 实施阶段
 
@@ -17,7 +17,7 @@
 - [x] Phase 2: 建立 workspace、member、invite 基础模型
 - [x] Phase 3: 定义团队角色与基础权限语义
 - [x] Phase 4: 建立声明式审计日志基础设施
-- [ ] Phase 5: 建立前端 workspace 上下文与导航入口
+- [x] Phase 5: 建立前端 workspace 上下文与导航入口
 
 ---
 
@@ -407,8 +407,8 @@
 - `frontend/services/api-client.ts`
 
 **验收标准：**
-- [ ] spec 中明确新 feature 的目录结构
-- [ ] spec 中明确 API 调用在 `api/`，状态和上下文在 `model/`
+- [x] spec 中明确新 feature 的目录结构
+- [x] spec 中明确 API 调用在 `api/`，状态和上下文在 `model/`
 
 #### 5.2 设计 shell 入口与 route 组织
 
@@ -426,8 +426,8 @@
 - `frontend/features/workspaces/`
 
 **验收标准：**
-- [ ] spec 中明确 route 文件保持薄
-- [ ] spec 中明确 tenancy UI 复用现有 shell 导航体系
+- [x] spec 中明确 route 文件保持薄
+- [x] spec 中明确 tenancy UI 复用现有 shell 导航体系
 
 #### 5.3 明确 i18n 与展示要求
 
@@ -439,8 +439,8 @@
 - `frontend/components/shell/`
 
 **验收标准：**
-- [ ] spec 中明确新增 Team/workspace 文案进入 i18n
-- [ ] spec 中明确 shell 入口和设置页都遵循现有设计系统变量
+- [x] spec 中明确新增 Team/workspace 文案进入 i18n
+- [x] spec 中明确 shell 入口和设置页都遵循现有设计系统变量
 
 ---
 
