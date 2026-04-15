@@ -8,16 +8,16 @@
 | **预期改动范围** | backend issue execution / backend agent assignment / executor_manager scheduled trigger / executor persistent sandbox / frontend issues feature |
 | **改动类型** | feat |
 | **优先级** | P1 |
-| **状态** | drafting |
+| **状态** | completed |
 
 ## 实施阶段
 
-- [ ] Phase 0: 明确 issue → agent 执行的架构边界
-- [ ] Phase 1: 设计 issue 的 AI assignee 模型与分配流程
-- [ ] Phase 2: 设计持久化 sandbox 执行模式
-- [ ] Phase 3: 设计定时任务触发执行模式
-- [ ] Phase 4: 建立执行状态同步与生命周期管理
-- [ ] Phase 5: 接入审计日志
+- [x] Phase 0: 明确 issue → agent 执行的架构边界
+- [x] Phase 1: 设计 issue 的 AI assignee 模型与分配流程
+- [x] Phase 2: 设计持久化 sandbox 执行模式
+- [x] Phase 3: 设计定时任务触发执行模式
+- [x] Phase 4: 建立执行状态同步与生命周期管理
+- [x] Phase 5: 接入审计日志
 
 ---
 
@@ -106,8 +106,8 @@ Backend: 更新 issue 状态（status → in_progress/done 等）
 - `executor/app/core/engine.py` — agent 执行
 
 **验收标准：**
-- [ ] spec 中明确各层职责边界
-- [ ] spec 中明确执行层不感知 workspace
+- [x] spec 中明确各层职责边界
+- [x] spec 中明确执行层不感知 workspace
 
 #### 0.2 定义 agent_assignment 数据模型
 
@@ -136,9 +136,9 @@ Backend: 更新 issue 状态（status → in_progress/done 等）
 - `backend/alembic/versions/*`
 
 **验收标准：**
-- [ ] spec 中明确 assignment 与 issue 的 1:1 关系
-- [ ] spec 中明确两种 trigger_mode 的区分
-- [ ] spec 中明确 status 状态机
+- [x] spec 中明确 assignment 与 issue 的 1:1 关系
+- [x] spec 中明确两种 trigger_mode 的区分
+- [x] spec 中明确 status 状态机
 
 ---
 
@@ -170,9 +170,9 @@ Backend: 更新 issue 状态（status → in_progress/done 等）
 - `frontend/features/issues/api/`
 
 **验收标准：**
-- [ ] spec 中明确双模 assignee 的 API 契约
-- [ ] spec 中明确分配 AI preset 时需要指定 trigger_mode
-- [ ] spec 中明确 prompt 自动生成策略
+- [x] spec 中明确双模 assignee 的 API 契约
+- [x] spec 中明确分配 AI preset 时需要指定 trigger_mode
+- [x] spec 中明确 prompt 自动生成策略
 
 #### 1.2 定义 prompt 生成策略
 
@@ -188,8 +188,8 @@ Backend: 更新 issue 状态（status → in_progress/done 等）
 - `backend/app/lib/prompt_builder.py`（新建，可选）
 
 **验收标准：**
-- [ ] spec 中明确 prompt 模板的组成要素
-- [ ] spec 中明确 prompt 可在执行前编辑
+- [x] spec 中明确 prompt 模板的组成要素
+- [x] spec 中明确 prompt 可在执行前编辑
 
 ---
 
@@ -220,9 +220,9 @@ Backend: 更新 issue 状态（status → in_progress/done 等）
 - `backend/app/services/session_service.py`
 
 **验收标准：**
-- [ ] spec 中明确 sandbox 的 7 个生命周期阶段
-- [ ] spec 中明确容器复用现有 `container_mode: "persistent"`
-- [ ] spec 中明确超时回收策略
+- [x] spec 中明确 sandbox 的 7 个生命周期阶段
+- [x] spec 中明确容器复用现有 `container_mode: "persistent"`
+- [x] spec 中明确超时回收策略
 
 #### 2.2 设计 sandbox 容器配置
 
@@ -241,8 +241,8 @@ Backend: 更新 issue 状态（status → in_progress/done 等）
 - `backend/app/services/preset_service.py`
 
 **验收标准：**
-- [ ] spec 中明确 sandbox 容器的配置来源
-- [ ] spec 中明确 preset 配置如何映射到 TaskConfig
+- [x] spec 中明确 sandbox 容器的配置来源
+- [x] spec 中明确 preset 配置如何映射到 TaskConfig
 
 ---
 
@@ -272,9 +272,9 @@ Backend: 更新 issue 状态（status → in_progress/done 等）
 - `backend/app/api/v1/agent_assignments.py`（新建）— 提供轮询查询接口
 
 **验收标准：**
-- [ ] spec 中明确轮询间隔和查询条件
-- [ ] spec 中明确首次触发和周期触发的区分
-- [ ] spec 中明确轮询接口的认证方式（复用现有 callback_token）
+- [x] spec 中明确轮询间隔和查询条件
+- [x] spec 中明确首次触发和周期触发的区分
+- [x] spec 中明确轮询接口的认证方式（复用现有 internal_api_token）
 
 #### 3.2 设计 scheduled_task 的容器策略
 
@@ -289,8 +289,8 @@ Backend: 更新 issue 状态（status → in_progress/done 等）
 - `executor_manager/app/services/config_resolver.py`
 
 **验收标准：**
-- [ ] spec 中明确默认使用 ephemeral 容器
-- [ ] spec 中明确 preset 可覆盖容器策略
+- [x] spec 中明确默认使用 ephemeral 容器
+- [x] spec 中明确 preset 可覆盖容器策略
 
 ---
 
@@ -322,8 +322,8 @@ Backend: 更新 issue 状态（status → in_progress/done 等）
 - `backend/app/services/workspace_issue_service.py`
 
 **验收标准：**
-- [ ] spec 中明确三方状态映射关系
-- [ ] spec 中明确 callback 驱动的状态流转链路
+- [x] spec 中明确三方状态映射关系
+- [x] spec 中明确 callback 驱动的状态流转链路
 
 #### 4.2 设计执行结果回写
 
@@ -340,9 +340,9 @@ Backend: 更新 issue 状态（status → in_progress/done 等）
 - `frontend/features/issues/ui/`
 
 **验收标准：**
-- [ ] spec 中明确执行结果不自动创建 PR
-- [ ] spec 中明确结果保留在 sandbox workspace 中
-- [ ] spec 中明确前端可查看执行 session
+- [x] spec 中明确执行结果不自动创建 PR
+- [x] spec 中明确结果保留在 sandbox workspace 中
+- [x] spec 中明确前端可查看执行 session
 
 #### 4.3 设计前端执行状态展示
 
@@ -358,8 +358,8 @@ Backend: 更新 issue 状态（status → in_progress/done 等）
 - `frontend/features/issues/api/`
 
 **验收标准：**
-- [ ] spec 中明确前端展示的执行状态信息
-- [ ] spec 中明确用户可执行的操作（重试/取消/释放）
+- [x] spec 中明确前端展示的执行状态信息
+- [x] spec 中明确用户可执行的操作（重试/取消/释放）
 
 ---
 
@@ -386,8 +386,8 @@ Backend: 更新 issue 状态（status → in_progress/done 等）
 - `backend/app/services/agent_assignment_service.py`
 
 **验收标准：**
-- [ ] spec 中明确 assignment 全生命周期审计点
-- [ ] spec 中明确 metadata 包含 trigger_mode、preset_id、issue_id 等关键信息
+- [x] spec 中明确 assignment 全生命周期审计点
+- [x] spec 中明确 metadata 包含 trigger_mode、preset_id、issue_id 等关键信息
 
 ---
 

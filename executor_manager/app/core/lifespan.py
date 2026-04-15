@@ -66,6 +66,26 @@ async def lifespan(app: FastAPI):
         )
         logger.info("Scheduled task dispatch service initialized")
 
+    if settings.agent_assignments_dispatch_enabled:
+        from app.services.agent_assignment_dispatch_service import (
+            AgentAssignmentDispatchService,
+        )
+
+        interval = max(10, int(settings.agent_assignments_dispatch_interval_seconds))
+        logger.info(
+            "Initializing agent assignment dispatch service...",
+            extra={"interval_seconds": interval},
+        )
+        agent_assignment_dispatch_service = AgentAssignmentDispatchService()
+        scheduler.add_job(
+            agent_assignment_dispatch_service.dispatch_due,
+            trigger="interval",
+            seconds=interval,
+            id="dispatch-agent-assignments",
+            replace_existing=True,
+        )
+        logger.info("Agent assignment dispatch service initialized")
+
     yield
 
     if pull_service:

@@ -14,10 +14,14 @@ from app.schemas.workspace_issue import (
     WorkspaceIssueResponse,
     WorkspaceIssueUpdateRequest,
 )
+from app.services.agent_assignment_service import AgentAssignmentService
 from app.services.workspace_member_service import require_workspace_member
 
 
 class WorkspaceIssueService:
+    def __init__(self) -> None:
+        self._assignment_service = AgentAssignmentService()
+
     @staticmethod
     def _to_response(issue: WorkspaceIssue) -> WorkspaceIssueResponse:
         return WorkspaceIssueResponse.model_validate(issue)
@@ -61,6 +65,18 @@ class WorkspaceIssueService:
             updated_by=current_user.id,
         )
         issue = WorkspaceIssueRepository.create(db, issue)
+        db.flush()
+        if request.assignee_preset_id is not None:
+            self._assignment_service.sync_issue_assignment(
+                db,
+                current_user=current_user,
+                issue=issue,
+                preset_id=request.assignee_preset_id,
+                trigger_mode=request.trigger_mode,
+                schedule_cron=request.schedule_cron,
+                prompt_override=request.assignment_prompt,
+                auto_trigger=True,
+            )
         db.commit()
         db.refresh(issue)
         return self._to_response(issue)
@@ -82,6 +98,21 @@ class WorkspaceIssueService:
             self._to_response(issue)
             for issue in WorkspaceIssueRepository.list_by_board(db, board_id)
         ]
+
+    def get_issue(
+        self,
+        db: Session,
+        current_user: User,
+        issue_id: uuid.UUID,
+    ) -> WorkspaceIssueResponse:
+        issue = WorkspaceIssueRepository.get_by_id(db, issue_id)
+        if issue is None:
+            raise AppException(
+                error_code=ErrorCode.NOT_FOUND,
+                message=f"Workspace issue not found: {issue_id}",
+            )
+        require_workspace_member(db, issue.workspace_id, current_user.id)
+        return self._to_response(issue)
 
     @auditable(
         action="issue.updated",
@@ -165,9 +196,29 @@ class WorkspaceIssueService:
 
         update = request.model_dump(exclude_unset=True)
         for field, value in update.items():
+            if field in {"trigger_mode", "schedule_cron", "assignment_prompt"}:
+                continue
             setattr(issue, field, value)
         if request.assignee_preset_id is not None:
             issue.assignee_user_id = None
+        if (
+            "assignee_preset_id" in request.model_fields_set
+            or "assignee_user_id" in request.model_fields_set
+            or "trigger_mode" in request.model_fields_set
+            or "schedule_cron" in request.model_fields_set
+            or "assignment_prompt" in request.model_fields_set
+        ):
+            self._assignment_service.sync_issue_assignment(
+                db,
+                current_user=current_user,
+                issue=issue,
+                preset_id=issue.assignee_preset_id,
+                trigger_mode=request.trigger_mode,
+                schedule_cron=request.schedule_cron,
+                prompt_override=request.assignment_prompt,
+                auto_trigger=issue.assignee_preset_id is not None
+                and request.trigger_mode == "persistent_sandbox",
+            )
         issue.updated_by = current_user.id
         db.commit()
         db.refresh(issue)

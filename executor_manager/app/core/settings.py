@@ -52,6 +52,15 @@ class Settings(BaseSettings):
     scheduled_tasks_dispatch_batch_size: int = Field(
         default=50, alias="SCHEDULED_TASKS_DISPATCH_BATCH_SIZE"
     )
+    agent_assignments_dispatch_enabled: bool = Field(
+        default=True, alias="AGENT_ASSIGNMENTS_DISPATCH_ENABLED"
+    )
+    agent_assignments_dispatch_interval_seconds: int = Field(
+        default=60, alias="AGENT_ASSIGNMENTS_DISPATCH_INTERVAL_SECONDS"
+    )
+    agent_assignments_dispatch_batch_size: int = Field(
+        default=50, alias="AGENT_ASSIGNMENTS_DISPATCH_BATCH_SIZE"
+    )
 
     # Queue-based scheduling (AgentRun.schedule_mode)
     task_pull_immediate_enabled: bool = Field(

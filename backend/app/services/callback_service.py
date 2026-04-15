@@ -20,6 +20,7 @@ from app.schemas.callback import (
 )
 from app.services.run_lifecycle_service import RunLifecycleService
 from app.services.im import ImEventService
+from app.services.agent_assignment_service import AgentAssignmentService
 from app.services.pending_skill_creation_service import PendingSkillCreationService
 from app.services.session_queue_service import SessionQueueService
 from app.services.session_service import SessionService
@@ -41,6 +42,7 @@ class CallbackService:
         self._session_queue = SessionQueueService()
         self._session_service = SessionService()
         self._im_events = ImEventService()
+        self._assignment_service = AgentAssignmentService()
 
     def _parse_run_id(self, raw_run_id: str | None) -> uuid.UUID | None:
         if not raw_run_id:
@@ -568,6 +570,13 @@ class CallbackService:
                 db,
                 session=db_session,
             )
+
+        self._assignment_service.sync_callback_status(
+            db,
+            session_id=db_session.id,
+            callback_status=callback.status.value,
+            error_message=callback.error_message,
+        )
 
         db.commit()
         return CallbackResponse(

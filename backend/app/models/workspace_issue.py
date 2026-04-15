@@ -8,6 +8,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models import Base, TimestampMixin
 
 if TYPE_CHECKING:
+    from app.models.agent_assignment import AgentAssignment
     from app.models.workspace_board import WorkspaceBoard
 
 
@@ -68,3 +69,7 @@ class WorkspaceIssue(Base, TimestampMixin):
     updated_by: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     board: Mapped["WorkspaceBoard"] = relationship(back_populates="issues")
+    agent_assignment: Mapped["AgentAssignment | None"] = relationship(
+        uselist=False,
+        viewonly=True,
+    )

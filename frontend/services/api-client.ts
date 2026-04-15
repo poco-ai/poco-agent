@@ -208,6 +208,17 @@ export const API_ENDPOINTS = {
   workspaceIssues: (boardId: string) => `/workspace-boards/${boardId}/issues`,
   workspaceIssue: (boardId: string, issueId: string) =>
     `/workspace-boards/${boardId}/issues/${issueId}`,
+  workspaceIssueDetail: (issueId: string) => `/workspace-issues/${issueId}`,
+  workspaceIssueAgentAssignment: (issueId: string) =>
+    `/workspace-issues/${issueId}/agent-assignment`,
+  workspaceIssueAgentTrigger: (issueId: string) =>
+    `/workspace-issues/${issueId}/agent-assignment/trigger`,
+  workspaceIssueAgentRetry: (issueId: string) =>
+    `/workspace-issues/${issueId}/agent-assignment/retry`,
+  workspaceIssueAgentCancel: (issueId: string) =>
+    `/workspace-issues/${issueId}/agent-assignment/cancel`,
+  workspaceIssueAgentRelease: (issueId: string) =>
+    `/workspace-issues/${issueId}/agent-assignment/release`,
   presetCopy: (presetId: number) => `/presets/${presetId}/copy`,
   projectCopy: (projectId: string) => `/projects/${projectId}/copy`,
 

@@ -133,19 +133,58 @@
     "subtitle": "Track workspace boards and issue assignments.",
     "boardsTitle": "Boards",
     "listTitle": "Issues",
+    "executionTitle": "Execution",
+    "refresh": "Refresh",
     "boardNamePlaceholder": "New board name",
     "issueTitlePlaceholder": "New issue title",
     "emptyBoards": "No boards yet.",
     "emptyIssues": "No issues yet.",
+    "emptyDescription": "No description yet.",
+    "none": "None",
+    "unassigned": "Unassigned",
     "detailTitle": "Issue Detail",
     "detailSubtitle": "Issue ID: {{issueId}}",
     "detailPlaceholder": "Issue detail view will expand with board metadata and audit history.",
+    "fields": {
+      "project": "Related project",
+      "agentPreset": "AI preset",
+      "triggerMode": "Trigger mode",
+      "schedule": "Schedule",
+      "prompt": "Prompt",
+      "assignmentStatus": "Assignment status",
+      "session": "Execution session",
+      "container": "Sandbox container"
+    },
+    "placeholders": {
+      "project": "Select a project",
+      "preset": "Select a preset",
+      "prompt": "Review or edit the generated agent prompt"
+    },
+    "triggerModes": {
+      "persistent_sandbox": "Persistent sandbox",
+      "scheduled_task": "Scheduled task"
+    },
+    "actions": {
+      "saveAssignment": "Save assignment",
+      "trigger": "Trigger now",
+      "retry": "Retry",
+      "cancel": "Cancel assignment",
+      "release": "Release sandbox",
+      "openSession": "Open session"
+    },
     "toasts": {
       "loadFailed": "Failed to load issue data",
       "boardCreated": "Board created",
       "boardCreateFailed": "Failed to create board",
       "issueCreated": "Issue created",
-      "issueCreateFailed": "Failed to create issue"
+      "issueCreateFailed": "Failed to create issue",
+      "assignmentSaved": "Assignment saved",
+      "assignmentSaveFailed": "Failed to save assignment",
+      "triggered": "Execution triggered",
+      "retried": "Execution retried",
+      "cancelled": "Assignment cancelled",
+      "released": "Sandbox released",
+      "actionFailed": "Action failed"
     }
   },
   "hero": {

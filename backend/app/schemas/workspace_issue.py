@@ -4,6 +4,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from app.schemas.agent_assignment import AgentAssignmentResponse
+
 IssueStatus = Literal["todo", "in_progress", "done", "canceled"]
 IssueType = Literal["task", "bug", "idea"]
 IssuePriority = Literal["low", "medium", "high", "urgent"]
@@ -18,6 +20,9 @@ class WorkspaceIssueCreateRequest(BaseModel):
     due_date: datetime | None = None
     assignee_user_id: str | None = None
     assignee_preset_id: int | None = None
+    trigger_mode: Literal["persistent_sandbox", "scheduled_task"] | None = None
+    schedule_cron: str | None = None
+    assignment_prompt: str | None = None
     reporter_user_id: str | None = None
     related_project_id: UUID | None = None
 
@@ -37,6 +42,9 @@ class WorkspaceIssueUpdateRequest(BaseModel):
     due_date: datetime | None = None
     assignee_user_id: str | None = None
     assignee_preset_id: int | None = None
+    trigger_mode: Literal["persistent_sandbox", "scheduled_task"] | None = None
+    schedule_cron: str | None = None
+    assignment_prompt: str | None = None
     reporter_user_id: str | None = None
     related_project_id: UUID | None = None
 
@@ -63,6 +71,7 @@ class WorkspaceIssueResponse(BaseModel):
     related_project_id: UUID | None = None
     creator_user_id: str
     updated_by: str | None = None
+    agent_assignment: AgentAssignmentResponse | None = None
     created_at: datetime
     updated_at: datetime
 

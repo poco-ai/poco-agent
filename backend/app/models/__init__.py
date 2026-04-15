@@ -1,5 +1,6 @@
 from app.core.database import Base, TimestampMixin
 
+from app.models.agent_assignment import AgentAssignment
 from app.models.agent_message import AgentMessage
 from app.models.agent_run import AgentRun
 from app.models.agent_scheduled_task import AgentScheduledTask
@@ -52,6 +53,7 @@ __all__ = [
     "TimestampMixin",
     "ActiveSession",
     "ActivityLog",
+    "AgentAssignment",
     "AgentMessage",
     "AgentRun",
     "AgentScheduledTask",

@@ -191,6 +191,10 @@ class WorkspaceIssueServiceTests(unittest.TestCase):
                 return_value=MagicMock(role="member", status="active"),
             ),
             patch(
+                "app.services.workspace_issue_service.AgentAssignmentService.sync_issue_assignment",
+                return_value=None,
+            ),
+            patch(
                 "app.services.workspace_issue_service.WorkspaceBoardRepository.get_by_id",
                 return_value=board,
             ),
@@ -207,6 +211,7 @@ class WorkspaceIssueServiceTests(unittest.TestCase):
                     title="Investigate flaky tests",
                     assignee_user_id="user-2",
                     assignee_preset_id=9,
+                    trigger_mode="persistent_sandbox",
                 ),
             )
 

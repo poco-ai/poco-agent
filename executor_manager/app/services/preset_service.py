@@ -20,6 +20,7 @@ class PresetResolver:
             "prompt_template": preset.get("prompt_template"),
             "browser_enabled": bool(preset.get("browser_enabled")),
             "memory_enabled": bool(preset.get("memory_enabled")),
+            "container_mode": preset.get("container_mode") or "ephemeral",
             "skill_ids": self._normalize_int_list(preset.get("skill_ids")),
             "mcp_server_ids": self._normalize_int_list(preset.get("mcp_server_ids")),
             "plugin_ids": self._normalize_int_list(preset.get("plugin_ids")),

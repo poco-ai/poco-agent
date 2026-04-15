@@ -114,6 +114,21 @@ class BackendClient:
         result = data.get("data", {})
         return result if isinstance(result, dict) else {}
 
+    async def dispatch_due_agent_assignments(self, *, limit: int) -> dict[str, Any]:
+        response = await self._request(
+            "POST",
+            "/api/v1/internal/agent-assignments/dispatch-due",
+            json={"limit": limit},
+            headers={
+                "X-Internal-Token": self.settings.internal_api_token,
+                **self._trace_headers(),
+            },
+            retry_connect_errors=2,
+        )
+        data = response.json()
+        result = data.get("data", {})
+        return result if isinstance(result, dict) else {}
+
     async def claim_run(
         self,
         worker_id: str,

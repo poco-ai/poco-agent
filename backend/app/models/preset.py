@@ -77,6 +77,12 @@ class Preset(Base, TimestampMixin):
         default=False,
         server_default=text("false"),
     )
+    container_mode: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+        default="ephemeral",
+        server_default=text("'ephemeral'"),
+    )
 
     skill_ids: Mapped[list[int]] = mapped_column(
         ARRAY(Integer),

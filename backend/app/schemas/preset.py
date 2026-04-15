@@ -29,6 +29,7 @@ class PresetBase(BaseModel):
     prompt_template: str | None = None
     browser_enabled: bool = False
     memory_enabled: bool = False
+    container_mode: Literal["ephemeral", "persistent"] = "ephemeral"
     skill_ids: list[int] = Field(default_factory=list)
     mcp_server_ids: list[int] = Field(default_factory=list)
     plugin_ids: list[int] = Field(default_factory=list)
@@ -50,6 +51,7 @@ class PresetUpdateRequest(BaseModel):
     prompt_template: str | None = None
     browser_enabled: bool | None = None
     memory_enabled: bool | None = None
+    container_mode: Literal["ephemeral", "persistent"] | None = None
     skill_ids: list[int] | None = None
     mcp_server_ids: list[int] | None = None
     plugin_ids: list[int] | None = None
@@ -84,6 +86,7 @@ class PresetResponse(BaseModel):
     prompt_template: str | None = None
     browser_enabled: bool
     memory_enabled: bool
+    container_mode: Literal["ephemeral", "persistent"] = "ephemeral"
     skill_ids: list[int]
     mcp_server_ids: list[int]
     plugin_ids: list[int]

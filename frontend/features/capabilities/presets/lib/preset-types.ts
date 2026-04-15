@@ -34,6 +34,7 @@ export interface Preset {
   prompt_template?: string | null;
   browser_enabled: boolean;
   memory_enabled: boolean;
+  container_mode?: "ephemeral" | "persistent";
   skill_ids: number[];
   mcp_server_ids: number[];
   plugin_ids: number[];
@@ -49,6 +50,7 @@ export interface PresetCreateInput {
   prompt_template?: string | null;
   browser_enabled?: boolean;
   memory_enabled?: boolean;
+  container_mode?: "ephemeral" | "persistent";
   skill_ids?: number[];
   mcp_server_ids?: number[];
   plugin_ids?: number[];
@@ -62,6 +64,7 @@ export interface PresetUpdateInput {
   prompt_template?: string | null;
   browser_enabled?: boolean | null;
   memory_enabled?: boolean | null;
+  container_mode?: "ephemeral" | "persistent" | null;
   skill_ids?: number[] | null;
   mcp_server_ids?: number[] | null;
   plugin_ids?: number[] | null;

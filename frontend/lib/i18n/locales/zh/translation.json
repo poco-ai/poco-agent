@@ -133,19 +133,58 @@
     "subtitle": "跟踪空间看板和事项分配。",
     "boardsTitle": "看板",
     "listTitle": "事项",
+    "executionTitle": "执行状态",
+    "refresh": "刷新",
     "boardNamePlaceholder": "新看板名称",
     "issueTitlePlaceholder": "新事项标题",
     "emptyBoards": "暂无看板。",
     "emptyIssues": "暂无事项。",
+    "emptyDescription": "暂无描述。",
+    "none": "无",
+    "unassigned": "未分配",
     "detailTitle": "事项详情",
     "detailSubtitle": "事项 ID：{{issueId}}",
     "detailPlaceholder": "事项详情页后续会补充看板元数据和审计历史。",
+    "fields": {
+      "project": "关联项目",
+      "agentPreset": "AI preset",
+      "triggerMode": "触发方式",
+      "schedule": "调度表达式",
+      "prompt": "执行提示词",
+      "assignmentStatus": "分配状态",
+      "session": "执行会话",
+      "container": "Sandbox 容器"
+    },
+    "placeholders": {
+      "project": "选择项目",
+      "preset": "选择 preset",
+      "prompt": "查看或编辑系统生成的执行提示词"
+    },
+    "triggerModes": {
+      "persistent_sandbox": "持久化 sandbox",
+      "scheduled_task": "定时任务"
+    },
+    "actions": {
+      "saveAssignment": "保存分配",
+      "trigger": "立即触发",
+      "retry": "重新执行",
+      "cancel": "取消分配",
+      "release": "释放 sandbox",
+      "openSession": "打开会话"
+    },
     "toasts": {
       "loadFailed": "加载事项数据失败",
       "boardCreated": "看板已创建",
       "boardCreateFailed": "创建看板失败",
       "issueCreated": "事项已创建",
-      "issueCreateFailed": "创建事项失败"
+      "issueCreateFailed": "创建事项失败",
+      "assignmentSaved": "分配已保存",
+      "assignmentSaveFailed": "保存分配失败",
+      "triggered": "已触发执行",
+      "retried": "已重新执行",
+      "cancelled": "已取消分配",
+      "released": "已释放 sandbox",
+      "actionFailed": "操作失败"
     }
   },
   "hero": {

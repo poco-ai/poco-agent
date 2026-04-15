@@ -133,19 +133,58 @@
     "subtitle": "Отслеживайте доски пространства и назначения задач.",
     "boardsTitle": "Доски",
     "listTitle": "Issues",
+    "executionTitle": "Execution",
+    "refresh": "Refresh",
     "boardNamePlaceholder": "Название новой доски",
     "issueTitlePlaceholder": "Заголовок новой issue",
     "emptyBoards": "Досок пока нет.",
     "emptyIssues": "Issues пока нет.",
+    "emptyDescription": "No description yet.",
+    "none": "None",
+    "unassigned": "Unassigned",
     "detailTitle": "Детали issue",
     "detailSubtitle": "ID issue: {{issueId}}",
     "detailPlaceholder": "Экран деталей позже будет дополнен метаданными доски и историей аудита.",
+    "fields": {
+      "project": "Related project",
+      "agentPreset": "AI preset",
+      "triggerMode": "Trigger mode",
+      "schedule": "Schedule",
+      "prompt": "Prompt",
+      "assignmentStatus": "Assignment status",
+      "session": "Execution session",
+      "container": "Sandbox container"
+    },
+    "placeholders": {
+      "project": "Select a project",
+      "preset": "Select a preset",
+      "prompt": "Review or edit the generated agent prompt"
+    },
+    "triggerModes": {
+      "persistent_sandbox": "Persistent sandbox",
+      "scheduled_task": "Scheduled task"
+    },
+    "actions": {
+      "saveAssignment": "Save assignment",
+      "trigger": "Trigger now",
+      "retry": "Retry",
+      "cancel": "Cancel assignment",
+      "release": "Release sandbox",
+      "openSession": "Open session"
+    },
     "toasts": {
       "loadFailed": "Не удалось загрузить данные issues",
       "boardCreated": "Доска создана",
       "boardCreateFailed": "Не удалось создать доску",
       "issueCreated": "Issue создана",
-      "issueCreateFailed": "Не удалось создать issue"
+      "issueCreateFailed": "Не удалось создать issue",
+      "assignmentSaved": "Assignment saved",
+      "assignmentSaveFailed": "Failed to save assignment",
+      "triggered": "Execution triggered",
+      "retried": "Execution retried",
+      "cancelled": "Assignment cancelled",
+      "released": "Sandbox released",
+      "actionFailed": "Action failed"
     }
   },
   "hero": {

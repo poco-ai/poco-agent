@@ -36,6 +36,7 @@ class TaskConfig(BaseModel):
     plugin_config: dict[str, bool] = Field(default_factory=dict)
     subagent_ids: list[int] = Field(default_factory=list)
     subagent_configs: list[TaskSubAgentConfig] = Field(default_factory=list)
+    container_mode: Literal["ephemeral", "persistent"] = "ephemeral"
     filesystem_mode: FilesystemMode = "sandbox"
     local_mounts: list[LocalMountConfig] = Field(default_factory=list)
     input_files: list[InputFile] = Field(default_factory=list)

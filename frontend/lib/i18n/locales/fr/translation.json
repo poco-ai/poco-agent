@@ -133,19 +133,58 @@
     "subtitle": "Suivez les tableaux d’équipe et les affectations.",
     "boardsTitle": "Tableaux",
     "listTitle": "Issues",
+    "executionTitle": "Execution",
+    "refresh": "Refresh",
     "boardNamePlaceholder": "Nom du nouveau tableau",
     "issueTitlePlaceholder": "Titre de la nouvelle issue",
     "emptyBoards": "Aucun tableau pour le moment.",
     "emptyIssues": "Aucune issue pour le moment.",
+    "emptyDescription": "No description yet.",
+    "none": "None",
+    "unassigned": "Unassigned",
     "detailTitle": "Détail de l’issue",
     "detailSubtitle": "ID de l’issue : {{issueId}}",
     "detailPlaceholder": "La vue détaillée sera étendue avec les métadonnées du tableau et l’historique d’audit.",
+    "fields": {
+      "project": "Related project",
+      "agentPreset": "AI preset",
+      "triggerMode": "Trigger mode",
+      "schedule": "Schedule",
+      "prompt": "Prompt",
+      "assignmentStatus": "Assignment status",
+      "session": "Execution session",
+      "container": "Sandbox container"
+    },
+    "placeholders": {
+      "project": "Select a project",
+      "preset": "Select a preset",
+      "prompt": "Review or edit the generated agent prompt"
+    },
+    "triggerModes": {
+      "persistent_sandbox": "Persistent sandbox",
+      "scheduled_task": "Scheduled task"
+    },
+    "actions": {
+      "saveAssignment": "Save assignment",
+      "trigger": "Trigger now",
+      "retry": "Retry",
+      "cancel": "Cancel assignment",
+      "release": "Release sandbox",
+      "openSession": "Open session"
+    },
     "toasts": {
       "loadFailed": "Échec du chargement des données d’issue",
       "boardCreated": "Tableau créé",
       "boardCreateFailed": "Échec de la création du tableau",
       "issueCreated": "Issue créée",
-      "issueCreateFailed": "Échec de la création de l’issue"
+      "issueCreateFailed": "Échec de la création de l’issue",
+      "assignmentSaved": "Assignment saved",
+      "assignmentSaveFailed": "Failed to save assignment",
+      "triggered": "Execution triggered",
+      "retried": "Execution retried",
+      "cancelled": "Assignment cancelled",
+      "released": "Sandbox released",
+      "actionFailed": "Action failed"
     }
   },
   "hero": {

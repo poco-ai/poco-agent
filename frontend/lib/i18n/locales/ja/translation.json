@@ -133,19 +133,58 @@
     "subtitle": "ワークスペースのボードと担当を追跡します。",
     "boardsTitle": "ボード",
     "listTitle": "Issues",
+    "executionTitle": "Execution",
+    "refresh": "Refresh",
     "boardNamePlaceholder": "新しいボード名",
     "issueTitlePlaceholder": "新しい Issue タイトル",
     "emptyBoards": "ボードはまだありません。",
     "emptyIssues": "Issue はまだありません。",
+    "emptyDescription": "No description yet.",
+    "none": "None",
+    "unassigned": "Unassigned",
     "detailTitle": "Issue 詳細",
     "detailSubtitle": "Issue ID: {{issueId}}",
     "detailPlaceholder": "詳細ビューには今後ボード情報と監査履歴が追加されます。",
+    "fields": {
+      "project": "Related project",
+      "agentPreset": "AI preset",
+      "triggerMode": "Trigger mode",
+      "schedule": "Schedule",
+      "prompt": "Prompt",
+      "assignmentStatus": "Assignment status",
+      "session": "Execution session",
+      "container": "Sandbox container"
+    },
+    "placeholders": {
+      "project": "Select a project",
+      "preset": "Select a preset",
+      "prompt": "Review or edit the generated agent prompt"
+    },
+    "triggerModes": {
+      "persistent_sandbox": "Persistent sandbox",
+      "scheduled_task": "Scheduled task"
+    },
+    "actions": {
+      "saveAssignment": "Save assignment",
+      "trigger": "Trigger now",
+      "retry": "Retry",
+      "cancel": "Cancel assignment",
+      "release": "Release sandbox",
+      "openSession": "Open session"
+    },
     "toasts": {
       "loadFailed": "Issue データの読み込みに失敗しました",
       "boardCreated": "ボードを作成しました",
       "boardCreateFailed": "ボードの作成に失敗しました",
       "issueCreated": "Issue を作成しました",
-      "issueCreateFailed": "Issue の作成に失敗しました"
+      "issueCreateFailed": "Issue の作成に失敗しました",
+      "assignmentSaved": "Assignment saved",
+      "assignmentSaveFailed": "Failed to save assignment",
+      "triggered": "Execution triggered",
+      "retried": "Execution retried",
+      "cancelled": "Assignment cancelled",
+      "released": "Sandbox released",
+      "actionFailed": "Action failed"
     }
   },
   "hero": {
