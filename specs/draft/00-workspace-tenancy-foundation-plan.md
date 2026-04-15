@@ -14,7 +14,7 @@
 
 - [x] Phase 0: 明确术语、命名和架构边界
 - [x] Phase 1: 建立 auth mode 与本地部署兼容策略
-- [ ] Phase 2: 建立 workspace、member、invite 基础模型
+- [x] Phase 2: 建立 workspace、member、invite 基础模型
 - [ ] Phase 3: 定义团队角色与基础权限语义
 - [ ] Phase 4: 建立声明式审计日志基础设施
 - [ ] Phase 5: 建立前端 workspace 上下文与导航入口
@@ -198,9 +198,9 @@
 - `backend/alembic/versions/*`
 
 **验收标准：**
-- [ ] spec 中明确 personal/shared workspace 的区分方式
-- [ ] spec 中明确 workspace service 不直接返回 `dict[str, Any]`
-- [ ] spec 中明确 migration 采用 `alembic revision --autogenerate`
+- [x] spec 中明确 personal/shared workspace 的区分方式
+- [x] spec 中明确 workspace service 不直接返回 `dict[str, Any]`
+- [x] spec 中明确 migration 采用 `alembic revision --autogenerate`
 
 #### 2.2 新增 membership 模型
 
@@ -223,8 +223,8 @@
 - `backend/alembic/versions/*`
 
 **验收标准：**
-- [ ] spec 中明确 membership 负责表示团队关系
-- [ ] spec 中明确角色存放位置在 membership
+- [x] spec 中明确 membership 负责表示团队关系
+- [x] spec 中明确角色存放位置在 membership
 
 #### 2.3 新增 invite 模型
 
@@ -247,9 +247,9 @@
 - `backend/alembic/versions/*`
 
 **验收标准：**
-- [ ] spec 中明确邀请可过期、可撤销
-- [ ] spec 中明确邀请可指定加入角色
-- [ ] spec 中明确不是永久通用邀请码
+- [x] spec 中明确邀请可过期、可撤销
+- [x] spec 中明确邀请可指定加入角色
+- [x] spec 中明确不是永久通用邀请码
 
 ---
 

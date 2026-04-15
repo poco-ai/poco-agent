@@ -38,6 +38,9 @@ from app.models.user_session import UserSession
 from app.models.user_mcp_install import UserMcpInstall
 from app.models.user_plugin_install import UserPluginInstall
 from app.models.user_skill_install import UserSkillInstall
+from app.models.workspace import Workspace
+from app.models.workspace_invite import WorkspaceInvite
+from app.models.workspace_member import WorkspaceMember
 
 __all__ = [
     "Base",
@@ -78,4 +81,7 @@ __all__ = [
     "UserPluginInstall",
     "UserSkillInstall",
     "WatchedSession",
+    "Workspace",
+    "WorkspaceInvite",
+    "WorkspaceMember",
 ]
