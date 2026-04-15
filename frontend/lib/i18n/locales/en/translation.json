@@ -1985,6 +1985,20 @@
     "fileChanges": "File changes",
     "totalFiles": "files"
   },
+  "runTimeline": {
+    "runLabel": "Run {{number}}",
+    "selectRun": "Select run {{number}}",
+    "node": {
+      "action": "Execution",
+      "chat": "Conversation"
+    },
+    "preview": {
+      "executionSummary": "{{count}} file changes or replay steps",
+      "conversationOnly": "Conversation-only turn",
+      "execution": "{{count}} file changes or replay steps",
+      "duration": "Duration {{duration}}"
+    }
+  },
   "mcpGrid": {
     "availableServers": "Available servers: {{count}}",
     "enabledServers": "Enabled: {{count}}",

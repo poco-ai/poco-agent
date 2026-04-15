@@ -22,6 +22,7 @@ export function useToolExecutions({
 }: UseToolExecutionsOptions) {
   const [executions, setExecutions] = useState<ToolExecutionResponse[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSwitchingRun, setIsSwitchingRun] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -30,6 +31,16 @@ export function useToolExecutions({
   const requestSeqRef = useRef(0);
   const prevIsActiveRef = useRef(isActive);
   const cursorRef = useRef<{ afterCreatedAt?: string; afterId?: string }>({});
+  const cacheRef = useRef<
+    Map<
+      string,
+      {
+        executions: ToolExecutionResponse[];
+        hasMore: boolean;
+        cursor: { afterCreatedAt?: string; afterId?: string };
+      }
+    >
+  >(new Map());
 
   const mergeById = useCallback(
     (base: ToolExecutionResponse[], incoming: ToolExecutionResponse[]) => {
@@ -106,7 +117,36 @@ export function useToolExecutions({
           updateCursor(merged);
         }
 
-        setHasMore(data.length === limit);
+        const nextHasMore = data.length === limit;
+        setHasMore(nextHasMore);
+        const cachedExecutions = replace ? data : mergeById(executions, data);
+        cacheRef.current.set(runId, {
+          executions: cachedExecutions,
+          hasMore: nextHasMore,
+          cursor: replace
+            ? (() => {
+                if (data.length === 0) return {};
+                let latest = data[0];
+                for (let i = 1; i < data.length; i += 1) {
+                  const current = data[i];
+                  if (current.updated_at > latest.updated_at) {
+                    latest = current;
+                    continue;
+                  }
+                  if (
+                    current.updated_at === latest.updated_at &&
+                    current.id.localeCompare(latest.id) > 0
+                  ) {
+                    latest = current;
+                  }
+                }
+                return {
+                  afterCreatedAt: latest.updated_at,
+                  afterId: latest.id,
+                };
+              })()
+            : cursorRef.current,
+        });
         setError(null);
       } catch (err) {
         if (seq !== requestSeqRef.current) return;
@@ -114,6 +154,7 @@ export function useToolExecutions({
       } finally {
         if (seq !== requestSeqRef.current) return;
         setIsLoading(false);
+        setIsSwitchingRun(false);
         setIsLoadingMore(false);
         hasLoadedOnceRef.current = true;
       }
@@ -164,7 +205,16 @@ export function useToolExecutions({
         afterId: currentId,
       };
       setExecutions((prev) => {
-        return mergeById(prev, appended);
+        const merged = mergeById(prev, appended);
+        cacheRef.current.set(runId, {
+          executions: merged,
+          hasMore,
+          cursor: {
+            afterCreatedAt: currentCreatedAt,
+            afterId: currentId,
+          },
+        });
+        return merged;
       });
       setError(null);
     } catch (err) {
@@ -183,15 +233,26 @@ export function useToolExecutions({
   useEffect(() => {
     if (!runId) return;
     if (lastRunIdRef.current === runId) return;
+    const previousRunId = lastRunIdRef.current;
     lastRunIdRef.current = runId;
     hasLoadedOnceRef.current = false;
     requestSeqRef.current += 1;
-    setExecutions([]);
     setError(null);
-    setIsLoading(false);
     setIsLoadingMore(false);
-    setHasMore(true);
-    cursorRef.current = {};
+    setIsSwitchingRun(previousRunId !== null);
+    const cached = cacheRef.current.get(runId);
+    if (cached) {
+      setExecutions(cached.executions);
+      setHasMore(cached.hasMore);
+      cursorRef.current = cached.cursor;
+      setIsLoading(false);
+      setIsSwitchingRun(false);
+      hasLoadedOnceRef.current = true;
+    } else {
+      setHasMore(true);
+      cursorRef.current = {};
+      setIsLoading(previousRunId === null);
+    }
     void fetchSnapshot(true);
   }, [fetchSnapshot, runId]);
 
@@ -222,6 +283,7 @@ export function useToolExecutions({
     isLoadingMore,
     hasMore,
     error,
+    isSwitchingRun,
     refetch: () => fetchSnapshot(true),
     loadMore,
   };

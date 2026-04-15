@@ -1985,6 +1985,20 @@
     "fileChanges": "文件变更",
     "totalFiles": "个文件"
   },
+  "runTimeline": {
+    "runLabel": "Run {{number}}",
+    "selectRun": "切换到 Run {{number}}",
+    "node": {
+      "action": "执行型",
+      "chat": "对话型"
+    },
+    "preview": {
+      "executionSummary": "{{count}} 个文件变更或回放步骤",
+      "conversationOnly": "纯对话轮次",
+      "execution": "{{count}} 个文件变更或回放步骤",
+      "duration": "耗时 {{duration}}"
+    }
+  },
   "mcpGrid": {
     "availableServers": "可用服务器: {{count}}",
     "enabledServers": "已启用: {{count}}",

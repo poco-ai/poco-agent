@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { ComputerPanel } from "@/features/chat/components/execution/computer-panel/computer-panel";
 import { ArtifactsPanel } from "@/features/chat/components/execution/file-panel/artifacts-panel";
+import { RunEvolutionTimeline } from "@/features/chat/components/layout/run-evolution-timeline";
 import type {
   ExecutionSession,
   FileChange,
@@ -118,21 +119,6 @@ export function DesktopExecutionLayout({
                     content={
                       <div className="flex min-w-0 items-center gap-2 overflow-hidden">
                         {tabsSwitch}
-                        {runs.length > 0 ? (
-                          <select
-                            value={selectedRunId}
-                            onChange={(event) =>
-                              onSelectRun(event.target.value)
-                            }
-                            className="h-9 max-w-[220px] rounded-md border border-border bg-background px-3 text-sm"
-                          >
-                            {runs.map((run, index) => (
-                              <option key={run.run_id} value={run.run_id}>
-                                {`Run ${index + 1} · ${run.status}`}
-                              </option>
-                            ))}
-                          </select>
-                        ) : null}
                       </div>
                     }
                     action={
@@ -173,6 +159,11 @@ export function DesktopExecutionLayout({
                         ) : null}
                       </div>
                     }
+                  />
+                  <RunEvolutionTimeline
+                    runs={runs}
+                    selectedRunId={selectedRunId}
+                    onSelectRun={onSelectRun}
                   />
                   <div className="flex-1 min-h-0 overflow-hidden">
                     {showComputerTab ? (

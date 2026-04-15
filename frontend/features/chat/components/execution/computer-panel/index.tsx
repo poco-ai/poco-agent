@@ -104,13 +104,19 @@ export function ComputerPanel({
   const { t } = useT("translation");
   const isActive = sessionStatus === "running" || sessionStatus === "pending";
 
-  const { executions, isLoading, isLoadingMore, hasMore, loadMore } =
-    useToolExecutions({
-      runId,
-      isActive,
-      pollingIntervalMs: 2000,
-      limit: 100,
-    });
+  const {
+    executions,
+    isLoading,
+    isSwitchingRun,
+    isLoadingMore,
+    hasMore,
+    loadMore,
+  } = useToolExecutions({
+    runId,
+    isActive,
+    pollingIntervalMs: 2000,
+    limit: 100,
+  });
 
   // --- Screenshot caching (persists across tab switches) ---
   const screenshotCacheRef = React.useRef(new Map<string, string | null>());
@@ -229,6 +235,26 @@ export function ComputerPanel({
     null,
   );
   const [sliderProgress, setSliderProgress] = React.useState(0);
+  const replayStateCacheRef = React.useRef(
+    new Map<
+      string,
+      {
+        replayFilter: ReplayFilter;
+        selectedFrameId: string | null;
+        followLatest: boolean;
+      }
+    >(),
+  );
+  const lastRunIdRef = React.useRef<string | null>(null);
+  const liveReplayStateRef = React.useRef<{
+    replayFilter: ReplayFilter;
+    selectedFrameId: string | null;
+    followLatest: boolean;
+  }>({
+    replayFilter: "all",
+    selectedFrameId: null,
+    followLatest: true,
+  });
 
   const replayFrames: ReplayFrame[] = React.useMemo(() => {
     if (replayFilter === "browser") {
@@ -250,6 +276,50 @@ export function ComputerPanel({
     if (toolCount > 0) kinds.push("tool");
     return kinds;
   }, [browserCount, terminalCount, toolCount]);
+
+  React.useEffect(() => {
+    liveReplayStateRef.current = {
+      replayFilter,
+      selectedFrameId,
+      followLatest,
+    };
+  }, [followLatest, replayFilter, selectedFrameId]);
+
+  React.useEffect(() => {
+    const previousRunId = lastRunIdRef.current;
+    if (previousRunId && previousRunId !== runId) {
+      replayStateCacheRef.current.set(previousRunId, {
+        ...liveReplayStateRef.current,
+      });
+    }
+
+    lastRunIdRef.current = runId ?? null;
+
+    if (!runId) {
+      setReplayFilter("all");
+      setSelectedFrameId(null);
+      setFollowLatest(true);
+      setIsPlaying(false);
+      setIsRealtimePlaying(false);
+      return;
+    }
+
+    const cached = replayStateCacheRef.current.get(runId);
+    setReplayFilter(cached?.replayFilter ?? "all");
+    setSelectedFrameId(cached?.selectedFrameId ?? null);
+    setFollowLatest(cached?.followLatest ?? true);
+    setIsPlaying(false);
+    setIsRealtimePlaying(false);
+  }, [runId]);
+
+  React.useEffect(() => {
+    if (!runId) return;
+    replayStateCacheRef.current.set(runId, {
+      replayFilter,
+      selectedFrameId,
+      followLatest,
+    });
+  }, [followLatest, replayFilter, runId, selectedFrameId]);
 
   React.useEffect(() => {
     if (replayFilter === "all") return;
@@ -821,6 +891,13 @@ export function ComputerPanel({
         <div className="h-full min-h-0 flex flex-col gap-3">
           <div className="relative flex-1 min-h-0 overflow-hidden rounded-xl border bg-card shadow-sm">
             {viewer}
+            {isSwitchingRun ? (
+              <div className="absolute inset-0 flex items-center justify-center bg-background/55 backdrop-blur-[1px]">
+                <div className="rounded-full border border-border/60 bg-background/95 px-3 py-1 text-xs text-muted-foreground shadow-sm">
+                  {t("common.loading")}
+                </div>
+              </div>
+            ) : null}
           </div>
 
           {!isLiveSession ? controls : null}
@@ -833,7 +910,12 @@ export function ComputerPanel({
               </div>
             ) : (
               <div className="h-[220px] min-w-0 overflow-hidden rounded-xl border bg-card">
-                {timelineList}
+                <div className="relative h-full">
+                  {timelineList}
+                  {isSwitchingRun ? (
+                    <div className="absolute inset-0 bg-background/35" />
+                  ) : null}
+                </div>
               </div>
             )
           ) : null}

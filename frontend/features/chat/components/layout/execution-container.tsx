@@ -72,7 +72,6 @@ export function ExecutionContainer({ sessionId }: ExecutionContainerProps) {
     limit: 1,
   });
   const hasComputerRecords = executions.length > 0 || runs.length > 0;
-  const isRightPanelReady = !isLoadingToolExecutions;
   const selectedRunFileChanges =
     selectedRun?.state_patch?.workspace_state?.file_changes ?? [];
   const hasSelectedRunWorkspace = Boolean(
@@ -96,8 +95,7 @@ export function ExecutionContainer({ sessionId }: ExecutionContainerProps) {
     hasSelectedRunWorkspace ||
     hasLocalMountArtifacts;
   const showArtifactsTab =
-    isRightPanelReady &&
-    (hasSelectedRunArtifacts || hasArtifacts || hasAnyRunArtifacts);
+    hasSelectedRunArtifacts || hasArtifacts || hasAnyRunArtifacts;
   const legacySessionArtifactsAvailable = Boolean(
     !hasSelectedRunArtifacts &&
     (fileChanges.length > 0 ||
@@ -107,7 +105,7 @@ export function ExecutionContainer({ sessionId }: ExecutionContainerProps) {
   const legacySessionReplayAvailable = Boolean(
     effectiveSelectedRunId && executions.length === 0 && hasLegacySessionReplay,
   );
-  const showComputerTab = isRightPanelReady && hasComputerRecords;
+  const showComputerTab = hasComputerRecords || isLoadingToolExecutions;
   const showFilePanel = showArtifactsTab || showComputerTab;
 
   const defaultRightTab = React.useMemo(() => {
