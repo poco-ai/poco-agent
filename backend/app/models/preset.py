@@ -1,8 +1,10 @@
+import uuid
 from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import (
     ARRAY,
     Boolean,
+    ForeignKey,
     Integer,
     JSON,
     String,
@@ -26,6 +28,33 @@ class Preset(Base, TimestampMixin):
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     user_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    scope: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+        default="personal",
+        server_default=text("'personal'"),
+        index=True,
+    )
+    workspace_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("workspaces.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+    )
+    owner_user_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    created_by: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    updated_by: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    access_policy: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+        default="private",
+        server_default=text("'private'"),
+    )
+    forked_from_preset_id: Mapped[int | None] = mapped_column(
+        Integer,
+        ForeignKey("presets.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     visual_key: Mapped[str] = mapped_column(

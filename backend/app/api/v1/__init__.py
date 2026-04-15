@@ -51,7 +51,9 @@ from app.api.v1 import (
     usage,
     user_input_requests,
     user_mcp_installs,
+    workspace_boards,
     workspace_invites,
+    workspace_issues,
     workspace_members,
     workspaces,
 )
@@ -110,6 +112,8 @@ api_v1_router.include_router(subagents.router)
 api_v1_router.include_router(user_input_requests.router)
 api_v1_router.include_router(scheduled_tasks.router)
 api_v1_router.include_router(workspaces.router)
+api_v1_router.include_router(workspace_boards.router)
+api_v1_router.include_router(workspace_issues.router)
 api_v1_router.include_router(workspace_members.router)
 api_v1_router.include_router(workspace_invites.router)
 api_v1_router.include_router(workspace_invites.accept_router)

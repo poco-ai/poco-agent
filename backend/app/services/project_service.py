@@ -4,6 +4,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from app.core.audit import auditable
 from app.core.errors.error_codes import ErrorCode
 from app.core.errors.exceptions import AppException
 from app.models.project import Project
@@ -14,10 +15,12 @@ from app.repositories.project_repository import ProjectRepository
 from app.repositories.session_repository import SessionRepository
 from app.schemas.filesystem import LocalMountConfig
 from app.schemas.project import (
+    ProjectCopyRequest,
     ProjectCreateRequest,
     ProjectResponse,
     ProjectUpdateRequest,
 )
+from app.services.workspace_member_service import require_workspace_member
 from app.services.storage_service import S3StorageService
 
 _GITHUB_HOSTS = {"github.com", "www.github.com"}
@@ -154,6 +157,13 @@ class ProjectService:
         return ProjectResponse(
             id=project.id,
             user_id=project.user_id,
+            scope=project.scope,
+            workspace_id=project.workspace_id,
+            owner_user_id=project.owner_user_id,
+            created_by=project.created_by,
+            updated_by=project.updated_by,
+            access_policy=project.access_policy,
+            forked_from_project_id=project.forked_from_project_id,
             name=project.name,
             description=project.description,
             default_model=project.default_model,
@@ -176,7 +186,7 @@ class ProjectService:
         if default_preset_id is None:
             return None
 
-        preset = PresetRepository.get_by_id(db, default_preset_id, user_id)
+        preset = PresetRepository.get_visible_by_id(db, default_preset_id, user_id)
         if preset is None:
             raise AppException(
                 error_code=ErrorCode.PRESET_NOT_FOUND,
@@ -185,14 +195,14 @@ class ProjectService:
         return preset.id
 
     def list_projects(self, db: Session, user_id: str) -> list[ProjectResponse]:
-        projects = ProjectRepository.list_by_user(db, user_id)
+        projects = ProjectRepository.list_visible_by_user(db, user_id)
         return [self._build_project_response(p) for p in projects]
 
     def get_project(
         self, db: Session, user_id: str, project_id: UUID
     ) -> ProjectResponse:
-        project = ProjectRepository.get_by_id(db, project_id)
-        if not project or project.user_id != user_id:
+        project = ProjectRepository.get_visible_by_id(db, project_id, user_id)
+        if not project:
             raise AppException(
                 error_code=ErrorCode.PROJECT_NOT_FOUND,
                 message=f"Project not found: {project_id}",
@@ -215,8 +225,26 @@ class ProjectService:
             git_branch=request.git_branch,
             git_token_env_key=request.git_token_env_key,
         )
+        workspace_id = request.workspace_id if request.scope == "workspace" else None
+        if request.scope == "workspace":
+            if workspace_id is None:
+                raise AppException(
+                    error_code=ErrorCode.BAD_REQUEST,
+                    message="workspace_id is required for workspace projects",
+                )
+            require_workspace_member(db, workspace_id, user_id)
         project = Project(
             user_id=user_id,
+            scope=request.scope,
+            workspace_id=workspace_id,
+            owner_user_id=user_id,
+            created_by=user_id,
+            updated_by=user_id,
+            access_policy=(
+                "workspace_write"
+                if request.scope == "workspace"
+                else request.access_policy
+            ),
             name=request.name,
             description=description,
             default_model=default_model,
@@ -233,6 +261,16 @@ class ProjectService:
         db.refresh(project)
         return self._build_project_response(project)
 
+    @auditable(
+        action="project.updated",
+        target_type="project",
+        target_id=lambda args, _result: args["project_id"],
+        workspace_id=lambda _args, result: result.workspace_id,
+        metadata_fn=lambda args, _result: args["request"].model_dump(
+            exclude_unset=True,
+            mode="json",
+        ),
+    )
     def update_project(
         self,
         db: Session,
@@ -240,8 +278,8 @@ class ProjectService:
         project_id: UUID,
         request: ProjectUpdateRequest,
     ) -> ProjectResponse:
-        project = ProjectRepository.get_by_id(db, project_id)
-        if not project or project.user_id != user_id:
+        project = ProjectRepository.get_visible_by_id(db, project_id, user_id)
+        if not project or project.owner_user_id not in (None, user_id):
             raise AppException(
                 error_code=ErrorCode.PROJECT_NOT_FOUND,
                 message=f"Project not found: {project_id}",
@@ -254,6 +292,8 @@ class ProjectService:
             project.description = self._normalize_optional_str(request.description)
         if "default_model" in update:
             project.default_model = self._normalize_optional_str(request.default_model)
+        if "access_policy" in update and request.access_policy is not None:
+            project.access_policy = request.access_policy
         if "default_preset_id" in update:
             project.default_preset_id = self._validate_default_preset(
                 db,
@@ -303,13 +343,83 @@ class ProjectService:
                     request.git_token_env_key
                 )
 
+        project.updated_by = user_id
         db.commit()
         db.refresh(project)
         return self._build_project_response(project)
 
+    @auditable(
+        action=lambda args, _result: (
+            "project.shared"
+            if args["request"].target_scope == "workspace"
+            else "project.forked"
+        ),
+        target_type="project",
+        target_id=lambda _args, result: result.project_id,
+        workspace_id=lambda _args, result: result.workspace_id,
+        metadata_fn=lambda args, _result: {
+            "source_project_id": str(args["project_id"]),
+            "target_scope": args["request"].target_scope,
+        },
+    )
+    def copy_project(
+        self,
+        db: Session,
+        user_id: str,
+        project_id: UUID,
+        request: ProjectCopyRequest,
+    ) -> ProjectResponse:
+        source = ProjectRepository.get_visible_by_id(db, project_id, user_id)
+        if source is None:
+            raise AppException(
+                error_code=ErrorCode.PROJECT_NOT_FOUND,
+                message=f"Project not found: {project_id}",
+            )
+
+        workspace_id = (
+            request.workspace_id if request.target_scope == "workspace" else None
+        )
+        if request.target_scope == "workspace":
+            if workspace_id is None:
+                raise AppException(
+                    error_code=ErrorCode.BAD_REQUEST,
+                    message="workspace_id is required for workspace projects",
+                )
+            require_workspace_member(db, workspace_id, user_id)
+
+        copied = Project(
+            user_id=user_id,
+            scope=request.target_scope,
+            workspace_id=workspace_id,
+            owner_user_id=user_id,
+            created_by=user_id,
+            updated_by=user_id,
+            access_policy=request.access_policy
+            or ("workspace_write" if request.target_scope == "workspace" else "private"),
+            forked_from_project_id=source.id,
+            name=(request.name or source.name).strip(),
+            description=source.description,
+            default_model=source.default_model,
+            default_preset_id=source.default_preset_id,
+            repo_url=source.repo_url,
+            git_branch=source.git_branch,
+            git_token_env_key=source.git_token_env_key,
+        )
+        copied.project_local_mounts = []
+        copied = ProjectRepository.create(db, copied)
+        db.commit()
+        db.refresh(copied)
+        return self._build_project_response(copied)
+
+    @auditable(
+        action="project.deleted",
+        target_type="project",
+        target_id=lambda args, _result: args["project_id"],
+        workspace_id=lambda _args, _result: None,
+    )
     def delete_project(self, db: Session, user_id: str, project_id: UUID) -> None:
-        project = ProjectRepository.get_by_id(db, project_id)
-        if not project or project.user_id != user_id:
+        project = ProjectRepository.get_visible_by_id(db, project_id, user_id)
+        if not project or project.owner_user_id not in (None, user_id):
             raise AppException(
                 error_code=ErrorCode.PROJECT_NOT_FOUND,
                 message=f"Project not found: {project_id}",

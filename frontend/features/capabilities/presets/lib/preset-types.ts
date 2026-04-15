@@ -18,6 +18,13 @@ export interface PresetVisualOption {
 export interface Preset {
   preset_id: number;
   user_id: string;
+  scope?: "personal" | "workspace" | "system";
+  workspace_id?: string | null;
+  owner_user_id?: string | null;
+  created_by?: string | null;
+  updated_by?: string | null;
+  access_policy?: string | null;
+  forked_from_preset_id?: number | null;
   name: string;
   description?: string | null;
   visual_key: string;
@@ -59,6 +66,18 @@ export interface PresetUpdateInput {
   mcp_server_ids?: number[] | null;
   plugin_ids?: number[] | null;
   subagent_configs?: PresetSubAgentConfig[] | null;
+}
+
+export interface PresetCopyInput {
+  target_scope: "personal" | "workspace";
+  workspace_id?: string | null;
+  name?: string | null;
+  access_policy?:
+    | "private"
+    | "workspace_read"
+    | "workspace_write"
+    | "admins_only"
+    | null;
 }
 
 export interface PresetCapabilityItem {

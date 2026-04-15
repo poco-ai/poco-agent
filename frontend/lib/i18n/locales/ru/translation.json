@@ -128,6 +128,26 @@
       "inviteCopied": "Токен приглашения скопирован"
     }
   },
+  "issues": {
+    "title": "Issues",
+    "subtitle": "Отслеживайте доски пространства и назначения задач.",
+    "boardsTitle": "Доски",
+    "listTitle": "Issues",
+    "boardNamePlaceholder": "Название новой доски",
+    "issueTitlePlaceholder": "Заголовок новой issue",
+    "emptyBoards": "Досок пока нет.",
+    "emptyIssues": "Issues пока нет.",
+    "detailTitle": "Детали issue",
+    "detailSubtitle": "ID issue: {{issueId}}",
+    "detailPlaceholder": "Экран деталей позже будет дополнен метаданными доски и историей аудита.",
+    "toasts": {
+      "loadFailed": "Не удалось загрузить данные issues",
+      "boardCreated": "Доска создана",
+      "boardCreateFailed": "Не удалось создать доску",
+      "issueCreated": "Issue создана",
+      "issueCreateFailed": "Не удалось создать issue"
+    }
+  },
   "hero": {
     "title": "Чем я могу вам помочь?",
     "rotatingWords": [

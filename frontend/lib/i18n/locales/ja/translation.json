@@ -128,6 +128,26 @@
       "inviteCopied": "招待トークンをコピーしました"
     }
   },
+  "issues": {
+    "title": "Issues",
+    "subtitle": "ワークスペースのボードと担当を追跡します。",
+    "boardsTitle": "ボード",
+    "listTitle": "Issues",
+    "boardNamePlaceholder": "新しいボード名",
+    "issueTitlePlaceholder": "新しい Issue タイトル",
+    "emptyBoards": "ボードはまだありません。",
+    "emptyIssues": "Issue はまだありません。",
+    "detailTitle": "Issue 詳細",
+    "detailSubtitle": "Issue ID: {{issueId}}",
+    "detailPlaceholder": "詳細ビューには今後ボード情報と監査履歴が追加されます。",
+    "toasts": {
+      "loadFailed": "Issue データの読み込みに失敗しました",
+      "boardCreated": "ボードを作成しました",
+      "boardCreateFailed": "ボードの作成に失敗しました",
+      "issueCreated": "Issue を作成しました",
+      "issueCreateFailed": "Issue の作成に失敗しました"
+    }
+  },
   "hero": {
     "title": "何かお手伝いできることはありますか？",
     "rotatingWords": [

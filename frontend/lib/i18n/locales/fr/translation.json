@@ -128,6 +128,26 @@
       "inviteCopied": "Jeton d’invitation copié"
     }
   },
+  "issues": {
+    "title": "Issues",
+    "subtitle": "Suivez les tableaux d’équipe et les affectations.",
+    "boardsTitle": "Tableaux",
+    "listTitle": "Issues",
+    "boardNamePlaceholder": "Nom du nouveau tableau",
+    "issueTitlePlaceholder": "Titre de la nouvelle issue",
+    "emptyBoards": "Aucun tableau pour le moment.",
+    "emptyIssues": "Aucune issue pour le moment.",
+    "detailTitle": "Détail de l’issue",
+    "detailSubtitle": "ID de l’issue : {{issueId}}",
+    "detailPlaceholder": "La vue détaillée sera étendue avec les métadonnées du tableau et l’historique d’audit.",
+    "toasts": {
+      "loadFailed": "Échec du chargement des données d’issue",
+      "boardCreated": "Tableau créé",
+      "boardCreateFailed": "Échec de la création du tableau",
+      "issueCreated": "Issue créée",
+      "issueCreateFailed": "Échec de la création de l’issue"
+    }
+  },
   "hero": {
     "title": "Que puis-je faire pour vous ?",
     "rotatingWords": [

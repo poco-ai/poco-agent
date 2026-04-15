@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.core.deps import get_current_user_id, get_db
 from app.schemas.project import (
+    ProjectCopyRequest,
     ProjectCreateRequest,
     ProjectResponse,
     ProjectUpdateRequest,
@@ -45,6 +46,17 @@ async def create_project(
 ) -> JSONResponse:
     result = service.create_project(db, user_id, request)
     return Response.success(data=result, message="Project created successfully")
+
+
+@router.post("/{project_id}/copy", response_model=ResponseSchema[ProjectResponse])
+async def copy_project(
+    project_id: uuid.UUID,
+    request: ProjectCopyRequest,
+    user_id: str = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+) -> JSONResponse:
+    result = service.copy_project(db, user_id, project_id, request)
+    return Response.success(data=result, message="Project copied successfully")
 
 
 @router.patch("/{project_id}", response_model=ResponseSchema[ProjectResponse])

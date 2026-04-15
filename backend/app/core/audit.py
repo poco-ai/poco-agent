@@ -53,11 +53,12 @@ def _resolve(value: Resolver | Any, bound_args: dict[str, Any], result: Any) -> 
 
 def auditable(
     *,
-    action: str,
+    action: Resolver | str,
     target_type: str,
     target_id: Resolver | Any,
     workspace_id: Resolver | Any,
     metadata_fn: Resolver | None = None,
+    condition: Resolver | None = None,
 ) -> Callable:
     def decorator(func: Callable) -> Callable:
         signature = inspect.signature(func)
@@ -72,9 +73,11 @@ def auditable(
             db = bound_args.get("db")
             if not isinstance(db, Session):
                 return result
+            if condition is not None and not _resolve(condition, bound_args, result):
+                return result
 
             current_user = bound_args.get("current_user")
-            actor_user_id = getattr(current_user, "id", None)
+            actor_user_id = getattr(current_user, "id", None) or bound_args.get("user_id")
             if not actor_user_id:
                 return result
 
@@ -83,7 +86,7 @@ def auditable(
             event = AuditEvent(
                 workspace_id=_resolve(workspace_id, bound_args, result),
                 actor_user_id=actor_user_id,
-                action=action,
+                action=str(_resolve(action, bound_args, result)),
                 target_type=target_type,
                 target_id=str(_resolve(target_id, bound_args, result)),
                 metadata=(

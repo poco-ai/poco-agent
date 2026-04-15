@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import {
   Activity,
   Building2,
@@ -34,6 +35,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { useT } from "@/lib/i18n/client";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/hooks/use-language";
 import { workspacesApi } from "@/features/workspaces/api/workspaces-api";
 import {
   formatActivityAction,
@@ -141,11 +143,27 @@ function TeamContentShell({
   activePage: "overview" | "members" | "invites";
   children: React.ReactNode;
 }) {
+  const { t } = useT("translation");
+  const lng = useLanguage();
+  const links = [
+    { id: "overview", href: `/${lng}/team`, label: t("workspaces.pages.overview.title") },
+    { id: "members", href: `/${lng}/team/members`, label: t("workspaces.pages.members.title") },
+    { id: "invites", href: `/${lng}/team/invites`, label: t("workspaces.pages.invites.title") },
+    { id: "issues", href: `/${lng}/team/issues`, label: t("issues.title") },
+  ];
+
   return (
     <>
       <TeamHeader activePage={activePage} />
       <main className="flex-1 overflow-auto p-4 sm:p-6">
         <div className="mx-auto flex w-full max-w-6xl flex-col gap-5">
+          <div className="flex flex-wrap gap-2">
+            {links.map((link) => (
+              <Button key={link.id} asChild variant={link.id === activePage ? "default" : "outline"} size="sm">
+                <Link href={link.href}>{link.label}</Link>
+              </Button>
+            ))}
+          </div>
           {children}
         </div>
       </main>

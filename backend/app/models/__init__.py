@@ -40,7 +40,11 @@ from app.models.user_mcp_install import UserMcpInstall
 from app.models.user_plugin_install import UserPluginInstall
 from app.models.user_skill_install import UserSkillInstall
 from app.models.workspace import Workspace
+from app.models.workspace_board import WorkspaceBoard
+from app.models.workspace_board_field import WorkspaceBoardField
 from app.models.workspace_invite import WorkspaceInvite
+from app.models.workspace_issue import WorkspaceIssue
+from app.models.workspace_issue_field_value import WorkspaceIssueFieldValue
 from app.models.workspace_member import WorkspaceMember
 
 __all__ = [
@@ -84,6 +88,10 @@ __all__ = [
     "UserSkillInstall",
     "WatchedSession",
     "Workspace",
+    "WorkspaceBoard",
+    "WorkspaceBoardField",
     "WorkspaceInvite",
+    "WorkspaceIssue",
+    "WorkspaceIssueFieldValue",
     "WorkspaceMember",
 ]

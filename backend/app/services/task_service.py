@@ -324,8 +324,8 @@ class TaskService:
         project_id = request.project_id
         project = None
         if project_id is not None:
-            project = ProjectRepository.get_by_id(db, project_id)
-            if not project or project.user_id != user_id:
+            project = ProjectRepository.get_visible_by_id(db, project_id, user_id)
+            if not project:
                 raise AppException(
                     error_code=ErrorCode.PROJECT_NOT_FOUND,
                     message=f"Project not found: {project_id}",

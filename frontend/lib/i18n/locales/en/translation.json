@@ -128,6 +128,26 @@
       "inviteCopied": "Invite token copied"
     }
   },
+  "issues": {
+    "title": "Issues",
+    "subtitle": "Track workspace boards and issue assignments.",
+    "boardsTitle": "Boards",
+    "listTitle": "Issues",
+    "boardNamePlaceholder": "New board name",
+    "issueTitlePlaceholder": "New issue title",
+    "emptyBoards": "No boards yet.",
+    "emptyIssues": "No issues yet.",
+    "detailTitle": "Issue Detail",
+    "detailSubtitle": "Issue ID: {{issueId}}",
+    "detailPlaceholder": "Issue detail view will expand with board metadata and audit history.",
+    "toasts": {
+      "loadFailed": "Failed to load issue data",
+      "boardCreated": "Board created",
+      "boardCreateFailed": "Failed to create board",
+      "issueCreated": "Issue created",
+      "issueCreateFailed": "Failed to create issue"
+    }
+  },
   "hero": {
     "title": "What can I do for you?",
     "rotatingWords": [

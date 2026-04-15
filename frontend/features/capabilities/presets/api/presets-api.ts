@@ -1,6 +1,7 @@
 import { apiClient, API_ENDPOINTS } from "@/services/api-client";
 import type {
   Preset,
+  PresetCopyInput,
   PresetCreateInput,
   PresetVisualOption,
   PresetUpdateInput,
@@ -45,6 +46,10 @@ export const presetsService = {
     return apiClient.delete<Record<string, unknown>>(
       API_ENDPOINTS.preset(presetId),
     );
+  },
+
+  copyPreset: async (presetId: number, input: PresetCopyInput): Promise<Preset> => {
+    return apiClient.post<Preset>(API_ENDPOINTS.presetCopy(presetId), input);
   },
 
   list: async (options?: { revalidate?: number }) =>

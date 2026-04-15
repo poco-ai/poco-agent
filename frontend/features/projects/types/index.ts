@@ -18,6 +18,13 @@ export interface ProjectItem {
   description?: string | null;
   /** Owning user identifier */
   userId?: string;
+  scope?: "personal" | "workspace";
+  workspaceId?: string | null;
+  ownerUserId?: string | null;
+  createdBy?: string | null;
+  updatedBy?: string | null;
+  accessPolicy?: string | null;
+  forkedFromProjectId?: string | null;
   createdAt?: string;
   updatedAt?: string;
 }

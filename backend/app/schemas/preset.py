@@ -1,4 +1,6 @@
 from datetime import datetime
+from typing import Literal
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -34,7 +36,11 @@ class PresetBase(BaseModel):
 
 
 class PresetCreateRequest(PresetBase):
-    pass
+    scope: Literal["personal", "workspace", "system"] = "personal"
+    workspace_id: UUID | None = None
+    access_policy: Literal[
+        "private", "workspace_read", "workspace_write", "admins_only"
+    ] = "private"
 
 
 class PresetUpdateRequest(BaseModel):
@@ -50,9 +56,25 @@ class PresetUpdateRequest(BaseModel):
     subagent_configs: list[PresetSubAgentConfig] | None = None
 
 
+class PresetCopyRequest(BaseModel):
+    target_scope: Literal["personal", "workspace"]
+    workspace_id: UUID | None = None
+    name: str | None = Field(default=None, min_length=1, max_length=255)
+    access_policy: Literal[
+        "private", "workspace_read", "workspace_write", "admins_only"
+    ] | None = None
+
+
 class PresetResponse(BaseModel):
     preset_id: int = Field(validation_alias="id")
     user_id: str
+    scope: str = "personal"
+    workspace_id: UUID | None = None
+    owner_user_id: str | None = None
+    created_by: str | None = None
+    updated_by: str | None = None
+    access_policy: str = "private"
+    forked_from_preset_id: int | None = None
     name: str
     description: str | None = None
     visual_key: str

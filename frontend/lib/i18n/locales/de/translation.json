@@ -128,6 +128,26 @@
       "inviteCopied": "Einladungstoken kopiert"
     }
   },
+  "issues": {
+    "title": "Issues",
+    "subtitle": "Workspace-Boards und Zuweisungen verfolgen.",
+    "boardsTitle": "Boards",
+    "listTitle": "Issues",
+    "boardNamePlaceholder": "Neuer Board-Name",
+    "issueTitlePlaceholder": "Neuer Issue-Titel",
+    "emptyBoards": "Noch keine Boards.",
+    "emptyIssues": "Noch keine Issues.",
+    "detailTitle": "Issue-Details",
+    "detailSubtitle": "Issue-ID: {{issueId}}",
+    "detailPlaceholder": "Die Detailansicht wird später um Board-Metadaten und Audit-Verlauf erweitert.",
+    "toasts": {
+      "loadFailed": "Issue-Daten konnten nicht geladen werden",
+      "boardCreated": "Board erstellt",
+      "boardCreateFailed": "Board konnte nicht erstellt werden",
+      "issueCreated": "Issue erstellt",
+      "issueCreateFailed": "Issue konnte nicht erstellt werden"
+    }
+  },
   "hero": {
     "title": "Was kann ich für dich tun?",
     "rotatingWords": [

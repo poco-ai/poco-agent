@@ -1,0 +1,227 @@
+import unittest
+import uuid
+from datetime import UTC, datetime
+from unittest.mock import MagicMock, patch
+
+from app.models.preset import Preset
+from app.models.project import Project
+from app.models.user import User
+from app.models.workspace_board import WorkspaceBoard
+from app.schemas.preset import PresetCopyRequest
+from app.schemas.project import ProjectCopyRequest
+from app.schemas.workspace_issue import WorkspaceIssueCreateRequest
+from app.services.preset_service import PresetService
+from app.services.project_service import ProjectService
+from app.services.workspace_issue_service import WorkspaceIssueService
+
+
+class CollaborationPresetServiceTests(unittest.TestCase):
+    def test_copy_preset_to_workspace_creates_independent_shared_copy(self) -> None:
+        db = MagicMock()
+        workspace_id = uuid.uuid4()
+        source = Preset(
+            id=7,
+            user_id="user-1",
+            name="Personal Helper",
+            description="Source",
+            visual_key="preset-visual-01",
+            prompt_template="Help",
+            browser_enabled=True,
+            memory_enabled=False,
+            skill_ids=[1],
+            mcp_server_ids=[],
+            plugin_ids=[],
+            subagent_configs=[],
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
+        )
+        created = Preset(
+            id=8,
+            user_id="user-1",
+            name="Team Helper",
+            description="Source",
+            visual_key="preset-visual-01",
+            prompt_template="Help",
+            browser_enabled=True,
+            memory_enabled=False,
+            skill_ids=[1],
+            mcp_server_ids=[],
+            plugin_ids=[],
+            subagent_configs=[],
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
+        )
+
+        with (
+            patch(
+                "app.services.preset_service.PresetRepository.get_visible_by_id",
+                return_value=source,
+            ),
+            patch(
+                "app.services.preset_service.require_workspace_member",
+                return_value=MagicMock(role="member", status="active"),
+            ),
+            patch(
+                "app.services.preset_service.PresetRepository.exists_by_scope_name",
+                return_value=False,
+            ),
+            patch(
+                "app.services.preset_service.PresetRepository.create",
+                side_effect=lambda _db, preset: created,
+            ) as create_preset,
+            patch.object(PresetService, "_to_response") as to_response,
+        ):
+            to_response.side_effect = lambda _db, preset: preset
+            result = PresetService().copy_preset(
+                db,
+                "user-1",
+                7,
+                PresetCopyRequest(
+                    target_scope="workspace",
+                    workspace_id=workspace_id,
+                    name="Team Helper",
+                ),
+            )
+
+        create_preset.assert_called_once()
+        copied = create_preset.call_args.args[1]
+        self.assertEqual(copied.scope, "workspace")
+        self.assertEqual(copied.workspace_id, workspace_id)
+        self.assertEqual(copied.forked_from_preset_id, 7)
+        self.assertEqual(copied.created_by, "user-1")
+        self.assertIs(result, created)
+
+
+class CollaborationProjectServiceTests(unittest.TestCase):
+    def test_copy_workspace_project_to_personal_omits_local_mounts(self) -> None:
+        db = MagicMock()
+        project_id = uuid.uuid4()
+        workspace_id = uuid.uuid4()
+        source = Project(
+            id=project_id,
+            user_id="user-2",
+            name="Shared Project",
+            description="Source",
+            default_model="claude",
+            default_preset_id=None,
+            repo_url="https://github.com/acme/repo",
+            git_branch="main",
+            git_token_env_key=None,
+            scope="workspace",
+            workspace_id=workspace_id,
+            owner_user_id="user-2",
+            created_by="user-2",
+            updated_by="user-2",
+            access_policy="workspace_write",
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
+        )
+        source.project_local_mounts = [MagicMock()]
+        created = Project(
+            id=uuid.uuid4(),
+            user_id="user-1",
+            scope="personal",
+            workspace_id=None,
+            owner_user_id="user-1",
+            created_by="user-1",
+            updated_by="user-1",
+            access_policy="private",
+            forked_from_project_id=project_id,
+            name="Personal Copy",
+            description="Source",
+            default_model="claude",
+            default_preset_id=None,
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
+        )
+        created.project_local_mounts = []
+
+        with (
+            patch(
+                "app.services.project_service.ProjectRepository.get_visible_by_id",
+                return_value=source,
+            ),
+            patch(
+                "app.services.project_service.ProjectRepository.create",
+                side_effect=lambda _db, project: created,
+            ) as create_project,
+        ):
+            result = ProjectService().copy_project(
+                db,
+                "user-1",
+                project_id,
+                ProjectCopyRequest(target_scope="personal", name="Personal Copy"),
+            )
+
+        create_project.assert_called_once()
+        copied = create_project.call_args.args[1]
+        self.assertEqual(copied.scope, "personal")
+        self.assertIsNone(copied.workspace_id)
+        self.assertEqual(copied.forked_from_project_id, project_id)
+        self.assertEqual(copied.project_local_mounts, [])
+        self.assertEqual(result.project_id, created.id)
+
+
+class WorkspaceIssueServiceTests(unittest.TestCase):
+    def test_create_issue_clears_human_assignee_when_preset_assignee_is_set(
+        self,
+    ) -> None:
+        db = MagicMock()
+        workspace_id = uuid.uuid4()
+        board = WorkspaceBoard(
+            id=uuid.uuid4(),
+            workspace_id=workspace_id,
+            name="Team Board",
+            description=None,
+            created_by="user-1",
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
+        )
+        current_user = User(
+            id="user-1",
+            primary_email="alice@example.com",
+            display_name="Alice",
+            avatar_url=None,
+            status="active",
+        )
+
+        with (
+            patch(
+                "app.services.workspace_issue_service.require_workspace_member",
+                return_value=MagicMock(role="member", status="active"),
+            ),
+            patch(
+                "app.services.workspace_issue_service.WorkspaceBoardRepository.get_by_id",
+                return_value=board,
+            ),
+            patch(
+                "app.services.workspace_issue_service.WorkspaceIssueRepository.create",
+                side_effect=lambda _db, issue: self._stamp_issue(issue),
+            ) as create_issue,
+        ):
+            WorkspaceIssueService().create_issue(
+                db,
+                current_user,
+                board.id,
+                WorkspaceIssueCreateRequest(
+                    title="Investigate flaky tests",
+                    assignee_user_id="user-2",
+                    assignee_preset_id=9,
+                ),
+            )
+
+        issue = create_issue.call_args.args[1]
+        self.assertIsNone(issue.assignee_user_id)
+        self.assertEqual(issue.assignee_preset_id, 9)
+
+    @staticmethod
+    def _stamp_issue(issue):
+        now = datetime.now(UTC)
+        issue.id = uuid.uuid4()
+        issue.created_at = now
+        issue.updated_at = now
+        return issue
+
+
+if __name__ == "__main__":
+    unittest.main()

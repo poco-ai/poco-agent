@@ -128,6 +128,26 @@
       "inviteCopied": "邀请令牌已复制"
     }
   },
+  "issues": {
+    "title": "事项",
+    "subtitle": "跟踪空间看板和事项分配。",
+    "boardsTitle": "看板",
+    "listTitle": "事项",
+    "boardNamePlaceholder": "新看板名称",
+    "issueTitlePlaceholder": "新事项标题",
+    "emptyBoards": "暂无看板。",
+    "emptyIssues": "暂无事项。",
+    "detailTitle": "事项详情",
+    "detailSubtitle": "事项 ID：{{issueId}}",
+    "detailPlaceholder": "事项详情页后续会补充看板元数据和审计历史。",
+    "toasts": {
+      "loadFailed": "加载事项数据失败",
+      "boardCreated": "看板已创建",
+      "boardCreateFailed": "创建看板失败",
+      "issueCreated": "事项已创建",
+      "issueCreateFailed": "创建事项失败"
+    }
+  },
   "hero": {
     "title": "我能为你做什么？",
     "rotatingWords": [

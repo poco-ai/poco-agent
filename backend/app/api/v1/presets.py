@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from app.core.deps import get_current_user_id, get_db
 from app.schemas.preset import (
     PresetCreateRequest,
+    PresetCopyRequest,
     PresetResponse,
     PresetVisualSummary,
     PresetUpdateRequest,
@@ -65,6 +66,17 @@ async def create_preset(
 ) -> JSONResponse:
     result = service.create_preset(db, user_id, request)
     return Response.success(data=result, message="Preset created successfully")
+
+
+@router.post("/{preset_id}/copy", response_model=ResponseSchema[PresetResponse])
+async def copy_preset(
+    preset_id: int,
+    request: PresetCopyRequest,
+    user_id: str = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+) -> JSONResponse:
+    result = service.copy_preset(db, user_id, preset_id, request)
+    return Response.success(data=result, message="Preset copied successfully")
 
 
 @router.put("/{preset_id}", response_model=ResponseSchema[PresetResponse])

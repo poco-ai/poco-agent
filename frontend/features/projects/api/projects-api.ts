@@ -7,6 +7,13 @@ import type { ProjectItem, TaskHistoryItem } from "@/features/projects/types";
 interface ProjectApiResponse {
   project_id: string;
   user_id?: string;
+  scope?: "personal" | "workspace";
+  workspace_id?: string | null;
+  owner_user_id?: string | null;
+  created_by?: string | null;
+  updated_by?: string | null;
+  access_policy?: string | null;
+  forked_from_project_id?: string | null;
   name: string;
   description?: string | null;
   default_model?: string | null;
@@ -25,6 +32,13 @@ function mapProject(project: ProjectApiResponse): ProjectItem {
     id: project.project_id,
     name: project.name,
     userId: project.user_id,
+    scope: project.scope,
+    workspaceId: project.workspace_id ?? null,
+    ownerUserId: project.owner_user_id ?? null,
+    createdBy: project.created_by ?? null,
+    updatedBy: project.updated_by ?? null,
+    accessPolicy: project.access_policy ?? null,
+    forkedFromProjectId: project.forked_from_project_id ?? null,
     description: project.description ?? null,
     defaultModel: project.default_model ?? null,
     defaultPresetId: project.default_preset_id ?? null,
@@ -126,6 +140,27 @@ export const projectsService = {
 
   deleteProject: async (projectId: string): Promise<void> => {
     await apiClient.delete(API_ENDPOINTS.project(projectId));
+  },
+
+  copyProject: async (
+    projectId: string,
+    payload: {
+      target_scope: "personal" | "workspace";
+      workspace_id?: string | null;
+      name?: string | null;
+      access_policy?:
+        | "private"
+        | "workspace_read"
+        | "workspace_write"
+        | "admins_only"
+        | null;
+    },
+  ): Promise<ProjectItem> => {
+    const project = await apiClient.post<ProjectApiResponse>(
+      API_ENDPOINTS.projectCopy(projectId),
+      payload,
+    );
+    return mapProject(project);
   },
 };
 

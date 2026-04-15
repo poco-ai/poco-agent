@@ -203,6 +203,13 @@ export const API_ENDPOINTS = {
     `/workspaces/${workspaceId}/invites/${inviteId}/revoke`,
   workspaceActivity: (workspaceId: string) =>
     `/workspaces/${workspaceId}/activity`,
+  workspaceBoards: (workspaceId: string) =>
+    `/workspaces/${workspaceId}/boards`,
+  workspaceIssues: (boardId: string) => `/workspace-boards/${boardId}/issues`,
+  workspaceIssue: (boardId: string, issueId: string) =>
+    `/workspace-boards/${boardId}/issues/${issueId}`,
+  presetCopy: (presetId: number) => `/presets/${presetId}/copy`,
+  projectCopy: (projectId: string) => `/projects/${projectId}/copy`,
 
   // Auth
   authConfig: "/auth/config",
