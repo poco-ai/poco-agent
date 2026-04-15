@@ -4,6 +4,7 @@ from app.models.agent_message import AgentMessage
 from app.models.agent_run import AgentRun
 from app.models.agent_scheduled_task import AgentScheduledTask
 from app.models.agent_session import AgentSession
+from app.models.activity_log import ActivityLog
 from app.models.auth_identity import AuthIdentity
 from app.models.claude_md import UserClaudeMdSetting
 from app.models.env_var import UserEnvVar
@@ -46,6 +47,7 @@ __all__ = [
     "Base",
     "TimestampMixin",
     "ActiveSession",
+    "ActivityLog",
     "AgentMessage",
     "AgentRun",
     "AgentScheduledTask",

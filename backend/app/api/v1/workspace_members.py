@@ -53,3 +53,30 @@ async def update_workspace_member_role(
         data=result,
         message="Workspace member role updated successfully",
     )
+
+
+@router.delete("/{membership_id}", response_model=ResponseSchema[dict])
+async def remove_workspace_member(
+    workspace_id: uuid.UUID,
+    membership_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> JSONResponse:
+    service.remove_member(db, current_user, workspace_id, membership_id)
+    return Response.success(
+        data={"id": membership_id},
+        message="Workspace member removed successfully",
+    )
+
+
+@router.post("/leave", response_model=ResponseSchema[dict])
+async def leave_workspace(
+    workspace_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> JSONResponse:
+    service.leave_workspace(db, current_user, workspace_id)
+    return Response.success(
+        data={"workspace_id": workspace_id},
+        message="Workspace left successfully",
+    )

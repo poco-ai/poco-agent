@@ -3,6 +3,9 @@ import uuid
 from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock, patch
 
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
 from app.core.errors.exceptions import AppException
 from app.models.user import User
 from app.models.workspace import Workspace
@@ -13,7 +16,10 @@ from app.schemas.workspace_invite import (
     WorkspaceInviteRevokeRequest,
 )
 from app.schemas.workspace_member import WorkspaceMemberRoleUpdateRequest
-from app.schemas.workspace_tenancy import WorkspaceCreateRequest
+from app.schemas.workspace_tenancy import (
+    WorkspaceCreateRequest,
+    WorkspaceOwnershipTransferRequest,
+)
 from app.services.workspace_invite_service import WorkspaceInviteService
 from app.services.workspace_member_service import WorkspaceMemberService
 from app.services.workspace_service import WorkspaceService
@@ -130,6 +136,74 @@ class WorkspaceServiceTests(unittest.TestCase):
         self.assertEqual(result.kind, "shared")
         self.assertEqual(result.slug, "poco-core-team")
 
+    def test_owner_can_transfer_shared_workspace_ownership(self) -> None:
+        shared_workspace = self._build_workspace(
+            name="Poco Core Team",
+            slug="poco-core-team",
+            kind="shared",
+        )
+        current_owner = MagicMock(
+            workspace_id=shared_workspace.id,
+            user_id="user-1",
+            role="owner",
+            status="active",
+        )
+        next_owner = MagicMock(
+            workspace_id=shared_workspace.id,
+            user_id="user-2",
+            role="member",
+            status="active",
+        )
+        service = WorkspaceService()
+
+        with (
+            patch(
+                "app.services.workspace_service.WorkspaceMemberRepository.get_by_workspace_and_user",
+                side_effect=[current_owner, next_owner, current_owner],
+            ),
+            patch(
+                "app.services.workspace_service.WorkspaceRepository.get_by_id",
+                return_value=shared_workspace,
+            ),
+        ):
+            result = service.transfer_ownership(
+                self.db,
+                self.user,
+                shared_workspace.id,
+                WorkspaceOwnershipTransferRequest(new_owner_user_id="user-2"),
+            )
+
+        self.db.commit.assert_called_once()
+        self.db.refresh.assert_called_once_with(shared_workspace)
+        self.assertEqual(shared_workspace.owner_user_id, "user-2")
+        self.assertEqual(current_owner.role, "admin")
+        self.assertEqual(next_owner.role, "owner")
+        self.assertEqual(result.owner_user_id, "user-2")
+
+    def test_owner_can_soft_delete_shared_workspace(self) -> None:
+        shared_workspace = self._build_workspace(
+            name="Poco Core Team",
+            slug="poco-core-team",
+            kind="shared",
+        )
+        owner_membership = MagicMock(role="owner", status="active")
+        service = WorkspaceService()
+
+        with (
+            patch(
+                "app.services.workspace_service.WorkspaceMemberRepository.get_by_workspace_and_user",
+                return_value=owner_membership,
+            ),
+            patch(
+                "app.services.workspace_service.WorkspaceRepository.get_by_id",
+                return_value=shared_workspace,
+            ),
+        ):
+            service.delete_workspace(self.db, self.user, shared_workspace.id)
+
+        self.db.commit.assert_called_once()
+        self.assertTrue(shared_workspace.is_deleted)
+
 
 class WorkspaceMemberServiceTests(unittest.TestCase):
     def setUp(self) -> None:
@@ -221,6 +295,41 @@ class WorkspaceMemberServiceTests(unittest.TestCase):
         self.db.commit.assert_called_once()
         self.assertEqual(self.member_membership.role, "admin")
         self.assertEqual(result.role, "admin")
+
+    def test_owner_can_remove_non_owner_member(self) -> None:
+        service = WorkspaceMemberService()
+
+        with (
+            patch(
+                "app.services.workspace_member_service.WorkspaceMemberRepository.get_by_workspace_and_user",
+                return_value=self.owner_membership,
+            ),
+            patch(
+                "app.services.workspace_member_service.WorkspaceMemberRepository.get_by_id",
+                return_value=self.member_membership,
+            ),
+        ):
+            service.remove_member(
+                self.db,
+                self.current_user,
+                self.workspace_id,
+                self.member_membership.id,
+            )
+
+        self.db.delete.assert_called_once_with(self.member_membership)
+        self.db.commit.assert_called_once()
+
+    def test_member_can_leave_workspace(self) -> None:
+        service = WorkspaceMemberService()
+
+        with patch(
+            "app.services.workspace_member_service.WorkspaceMemberRepository.get_by_workspace_and_user",
+            return_value=self.member_membership,
+        ):
+            service.leave_workspace(self.db, self.current_user, self.workspace_id)
+
+        self.db.delete.assert_called_once_with(self.member_membership)
+        self.db.commit.assert_called_once()
 
 
 class WorkspaceInviteServiceTests(unittest.TestCase):
@@ -361,6 +470,70 @@ class WorkspaceInviteServiceTests(unittest.TestCase):
         self.assertEqual(invite.used_count, 1)
         self.assertEqual(result.workspace_id, self.workspace.id)
         self.assertEqual(result.user_id, "user-2")
+
+    def test_accept_invite_emits_invite_accepted_and_member_joined_audit_events(
+        self,
+    ) -> None:
+        db = sessionmaker(bind=create_engine("sqlite:///:memory:"))()
+        service = WorkspaceInviteService()
+        invite = WorkspaceInvite(
+            id=uuid.uuid4(),
+            workspace_id=self.workspace.id,
+            token="invite-token",
+            role="member",
+            expires_at=datetime.now(UTC) + timedelta(days=7),
+            created_by="user-1",
+            max_uses=1,
+            used_count=0,
+            revoked_at=None,
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
+        )
+        membership = MagicMock(
+            id=1,
+            workspace_id=self.workspace.id,
+            user_id="user-2",
+            role="member",
+            joined_at=datetime.now(UTC),
+            invited_by="user-1",
+            status="active",
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
+        )
+
+        with (
+            patch(
+                "app.services.workspace_invite_service.WorkspaceInviteRepository.get_by_token",
+                return_value=invite,
+            ),
+            patch(
+                "app.services.workspace_invite_service.WorkspaceRepository.get_by_id",
+                return_value=self.workspace,
+            ),
+            patch(
+                "app.services.workspace_invite_service.WorkspaceMemberRepository.get_by_workspace_and_user",
+                return_value=None,
+            ),
+            patch(
+                "app.services.workspace_invite_service.WorkspaceMemberRepository.create",
+                return_value=membership,
+            ),
+            patch(
+                "app.services.activity_logger.ActivityLogger.log_activity",
+                return_value=None,
+            ) as log_activity,
+        ):
+            service.accept_invite(
+                db,
+                self.member,
+                WorkspaceInviteAcceptRequest(token="invite-token"),
+            )
+
+        actions = [call.args[1].action for call in log_activity.call_args_list]
+        self.assertCountEqual(
+            actions,
+            ["workspace.invite_accepted", "workspace.member_joined"],
+        )
 
     def test_admin_can_revoke_invite(self) -> None:
         service = WorkspaceInviteService()

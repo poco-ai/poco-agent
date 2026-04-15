@@ -8,6 +8,10 @@ class WorkspaceCreateRequest(BaseModel):
     name: str
 
 
+class WorkspaceOwnershipTransferRequest(BaseModel):
+    new_owner_user_id: str
+
+
 class WorkspaceResponse(BaseModel):
     workspace_id: UUID = Field(validation_alias="id")
     name: str

@@ -4,6 +4,7 @@ from datetime import UTC, datetime, timedelta
 
 from sqlalchemy.orm import Session
 
+from app.core.audit import auditable
 from app.core.errors.error_codes import ErrorCode
 from app.core.errors.exceptions import AppException
 from app.models.user import User
@@ -29,6 +30,16 @@ class WorkspaceInviteService:
     def _build_invite_response(invite: WorkspaceInvite) -> WorkspaceInviteResponse:
         return WorkspaceInviteResponse.model_validate(invite)
 
+    @auditable(
+        action="workspace.invite_created",
+        target_type="invite",
+        target_id=lambda _args, result: result.invite_id,
+        workspace_id=lambda _args, result: result.workspace_id,
+        metadata_fn=lambda args, _result: {
+            "role": args["request"].role,
+            "max_uses": args["request"].max_uses,
+        },
+    )
     def create_invite(
         self,
         db: Session,
@@ -75,6 +86,12 @@ class WorkspaceInviteService:
         invites = WorkspaceInviteRepository.list_by_workspace(db, workspace_id)
         return [self._build_invite_response(item) for item in invites]
 
+    @auditable(
+        action="workspace.invite_revoked",
+        target_type="invite",
+        target_id=lambda args, _result: args["invite_id"],
+        workspace_id=lambda args, _result: args["workspace_id"],
+    )
     def revoke_invite(
         self,
         db: Session,
@@ -95,6 +112,23 @@ class WorkspaceInviteService:
         db.commit()
         return self._build_invite_response(invite)
 
+    @auditable(
+        action="workspace.invite_accepted",
+        target_type="invite",
+        target_id=lambda args, _result: args["request"].token,
+        workspace_id=lambda _args, result: result.workspace_id,
+        metadata_fn=lambda _args, result: {"user_id": result.user_id},
+    )
+    @auditable(
+        action="workspace.member_joined",
+        target_type="member",
+        target_id=lambda _args, result: result.membership_id,
+        workspace_id=lambda _args, result: result.workspace_id,
+        metadata_fn=lambda _args, result: {
+            "user_id": result.user_id,
+            "role": result.role,
+        },
+    )
     def accept_invite(
         self,
         db: Session,

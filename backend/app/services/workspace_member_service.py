@@ -2,6 +2,7 @@ import uuid
 
 from sqlalchemy.orm import Session
 
+from app.core.audit import auditable
 from app.core.errors.error_codes import ErrorCode
 from app.core.errors.exceptions import AppException
 from app.models.user import User
@@ -78,6 +79,13 @@ class WorkspaceMemberService:
         members = WorkspaceMemberRepository.list_by_workspace(db, workspace_id)
         return [WorkspaceMemberResponse.model_validate(item) for item in members]
 
+    @auditable(
+        action="workspace.member_role_changed",
+        target_type="member",
+        target_id=lambda args, _result: args["membership_id"],
+        workspace_id=lambda args, _result: args["workspace_id"],
+        metadata_fn=lambda args, _result: {"role": args["request"].role},
+    )
     def update_member_role(
         self,
         db: Session,
@@ -101,3 +109,52 @@ class WorkspaceMemberService:
         membership.role = request.role
         db.commit()
         return WorkspaceMemberResponse.model_validate(membership)
+
+    @auditable(
+        action="workspace.member_removed",
+        target_type="member",
+        target_id=lambda args, _result: args["membership_id"],
+        workspace_id=lambda args, _result: args["workspace_id"],
+    )
+    def remove_member(
+        self,
+        db: Session,
+        current_user: User,
+        workspace_id: uuid.UUID,
+        membership_id: int,
+    ) -> None:
+        require_workspace_owner(db, workspace_id, current_user.id)
+        membership = WorkspaceMemberRepository.get_by_id(db, membership_id)
+        if membership is None or membership.workspace_id != workspace_id:
+            raise AppException(
+                error_code=ErrorCode.NOT_FOUND,
+                message=f"Workspace membership not found: {membership_id}",
+            )
+        if membership.role == "owner":
+            raise AppException(
+                error_code=ErrorCode.BAD_REQUEST,
+                message="Workspace owner cannot be removed",
+            )
+        db.delete(membership)
+        db.commit()
+
+    @auditable(
+        action="workspace.member_left",
+        target_type="member",
+        target_id=lambda args, _result: args["current_user"].id,
+        workspace_id=lambda args, _result: args["workspace_id"],
+    )
+    def leave_workspace(
+        self,
+        db: Session,
+        current_user: User,
+        workspace_id: uuid.UUID,
+    ) -> None:
+        membership = require_workspace_member(db, workspace_id, current_user.id)
+        if membership.role == "owner":
+            raise AppException(
+                error_code=ErrorCode.BAD_REQUEST,
+                message="Workspace owner cannot leave without transferring ownership",
+            )
+        db.delete(membership)
+        db.commit()

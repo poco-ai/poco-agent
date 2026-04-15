@@ -13,12 +13,24 @@ class WorkspaceRepository:
         return workspace
 
     @staticmethod
-    def get_by_id(session_db: Session, workspace_id: uuid.UUID) -> Workspace | None:
-        return session_db.query(Workspace).filter(Workspace.id == workspace_id).first()
+    def get_by_id(
+        session_db: Session,
+        workspace_id: uuid.UUID,
+        *,
+        include_deleted: bool = False,
+    ) -> Workspace | None:
+        query = session_db.query(Workspace).filter(Workspace.id == workspace_id)
+        if not include_deleted:
+            query = query.filter(Workspace.is_deleted.is_(False))
+        return query.first()
 
     @staticmethod
     def get_by_slug(session_db: Session, slug: str) -> Workspace | None:
-        return session_db.query(Workspace).filter(Workspace.slug == slug).first()
+        return (
+            session_db.query(Workspace)
+            .filter(Workspace.slug == slug, Workspace.is_deleted.is_(False))
+            .first()
+        )
 
     @staticmethod
     def get_personal_by_owner(
@@ -30,6 +42,7 @@ class WorkspaceRepository:
             .filter(
                 Workspace.owner_user_id == owner_user_id,
                 Workspace.kind == "personal",
+                Workspace.is_deleted.is_(False),
             )
             .first()
         )
@@ -42,6 +55,7 @@ class WorkspaceRepository:
             .filter(
                 WorkspaceMember.user_id == user_id,
                 WorkspaceMember.status == "active",
+                Workspace.is_deleted.is_(False),
             )
             .order_by(Workspace.created_at.desc())
             .all()

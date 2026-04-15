@@ -16,7 +16,7 @@
 - [x] Phase 1: 建立 auth mode 与本地部署兼容策略
 - [x] Phase 2: 建立 workspace、member、invite 基础模型
 - [x] Phase 3: 定义团队角色与基础权限语义
-- [ ] Phase 4: 建立声明式审计日志基础设施
+- [x] Phase 4: 建立声明式审计日志基础设施
 - [ ] Phase 5: 建立前端 workspace 上下文与导航入口
 
 ---
@@ -341,9 +341,9 @@
 - `backend/alembic/versions/*`
 
 **验收标准：**
-- [ ] spec 中明确单表统一模型，不按域拆表
-- [ ] spec 中明确 metadata 使用 JSONB
-- [ ] spec 中明确 action 使用点分命名空间
+- [x] spec 中明确单表统一模型，不按域拆表
+- [x] spec 中明确 metadata 使用 JSONB
+- [x] spec 中明确 action 使用点分命名空间
 
 #### 4.2 实现 `@auditable` 装饰器和 `AuditConfig`
 
@@ -359,9 +359,9 @@
 - `backend/app/core/settings.py` — 新增 AUDIT_RULES 配置
 
 **验收标准：**
-- [ ] spec 中明确装饰器只声明意图，不直接写数据库
-- [ ] spec 中明确配置层支持通配符和 default fallback
-- [ ] spec 中明确关闭某类审计只需改配置，不改代码
+- [x] spec 中明确装饰器只声明意图，不直接写数据库
+- [x] spec 中明确配置层支持通配符和 default fallback
+- [x] spec 中明确关闭某类审计只需改配置，不改代码
 
 #### 4.3 为 tenancy 核心操作接入审计日志
 
@@ -377,8 +377,8 @@
 - `backend/app/services/workspace_invite_service.py`
 
 **验收标准：**
-- [ ] spec 中明确 tenancy 核心操作全覆盖
-- [ ] spec 中明确其他域（issue、board、project）的审计日志在各自 spec 中定义
+- [x] spec 中明确 tenancy 核心操作全覆盖
+- [x] spec 中明确其他域（issue、board、project）的审计日志在各自 spec 中定义
 
 ---
 

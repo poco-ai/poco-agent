@@ -46,6 +46,10 @@ class Settings(BaseSettings):
         default=False,
         alias="WORKSPACE_FEATURES_ENABLED",
     )
+    audit_rules: dict[str, bool] = Field(
+        default_factory=lambda: {"default": True},
+        alias="AUDIT_RULES",
+    )
     local_default_user_id: str = Field(
         default="local-user",
         alias="LOCAL_DEFAULT_USER_ID",
