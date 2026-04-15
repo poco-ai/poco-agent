@@ -61,12 +61,16 @@ def get_current_user_id(
         user_session = auth_service.authenticate_session_token(db, session_token)
         if user_session and user_session.user_id:
             return user_session.user_id
-        raise HTTPException(status_code=401, detail="Authentication required")
+        if settings.auth_mode == "oauth_required":
+            raise HTTPException(status_code=401, detail="Authentication required")
 
     if _is_valid_internal_token(x_internal_token):
         value = (x_user_id or "").strip()
         if value:
             return value
+
+    if settings.auth_mode == "disabled":
+        return auth_service.get_or_create_local_user(db).id
 
     raise HTTPException(status_code=401, detail="Authentication required")
 

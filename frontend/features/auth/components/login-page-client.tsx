@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useT } from "@/lib/i18n/client";
 import {
+  type AuthProvider,
   buildProviderLoginPath,
   normalizeNextPath,
 } from "@/features/auth/lib/paths";
@@ -20,6 +21,7 @@ interface LoginPageClientProps {
   lng: string;
   nextPath?: string | null;
   errorCode?: string | null;
+  providers: AuthProvider[];
 }
 
 function GithubIcon() {
@@ -57,6 +59,7 @@ export function LoginPageClient({
   lng,
   nextPath,
   errorCode,
+  providers,
 }: LoginPageClientProps) {
   const { t } = useT("translation");
   const targetPath = normalizeNextPath(nextPath, lng);
@@ -89,28 +92,34 @@ export function LoginPageClient({
           ) : null}
 
           <div className="grid gap-3">
-            <Button asChild size="lg" className="w-full gap-2">
-              <a href={buildProviderLoginPath("google", targetPath)}>
-                <GoogleIcon />
-                <span>{t("auth.login.google")}</span>
-              </a>
-            </Button>
+            {providers.includes("google") ? (
+              <Button asChild size="lg" className="w-full gap-2">
+                <a href={buildProviderLoginPath("google", targetPath)}>
+                  <GoogleIcon />
+                  <span>{t("auth.login.google")}</span>
+                </a>
+              </Button>
+            ) : null}
 
-            <Button
-              asChild
-              size="lg"
-              variant="outline"
-              className="w-full gap-2"
-            >
-              <a href={buildProviderLoginPath("github", targetPath)}>
-                <GithubIcon />
-                <span>{t("auth.login.github")}</span>
-              </a>
-            </Button>
+            {providers.includes("github") ? (
+              <Button
+                asChild
+                size="lg"
+                variant="outline"
+                className="w-full gap-2"
+              >
+                <a href={buildProviderLoginPath("github", targetPath)}>
+                  <GithubIcon />
+                  <span>{t("auth.login.github")}</span>
+                </a>
+              </Button>
+            ) : null}
           </div>
 
           <p className="text-center text-xs leading-5 text-muted-foreground">
-            {t("auth.login.hint")}
+            {providers.length > 0
+              ? t("auth.login.hint")
+              : t("auth.login.noProviders")}
           </p>
         </CardContent>
       </Card>

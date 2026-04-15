@@ -2323,6 +2323,7 @@
       "google": "使用 Google 继续",
       "github": "使用 GitHub 继续",
       "hint": "我们会使用安全的浏览器会话来保持登录状态。",
+      "noProviders": "当前环境未配置可用的登录方式，请检查服务端 OAuth 配置。",
       "errors": {
         "default": "登录失败，请重试。",
         "provider_not_configured": "该登录方式尚未配置。",

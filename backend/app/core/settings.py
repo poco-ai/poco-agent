@@ -28,6 +28,10 @@ class Settings(BaseSettings):
     )
 
     secret_key: str = Field(default="change-this-secret-key-in-production")
+    auth_mode: Literal["disabled", "oauth_required"] = Field(
+        default="disabled",
+        alias="AUTH_MODE",
+    )
     auth_cookie_name: str = Field(default="poco_session", alias="AUTH_COOKIE_NAME")
     auth_cookie_secure: bool = Field(default=False, alias="AUTH_COOKIE_SECURE")
     auth_session_ttl_days: int = Field(default=30, alias="AUTH_SESSION_TTL_DAYS")
@@ -38,6 +42,18 @@ class Settings(BaseSettings):
     google_client_secret: str | None = Field(default=None, alias="GOOGLE_CLIENT_SECRET")
     github_client_id: str | None = Field(default=None, alias="GITHUB_CLIENT_ID")
     github_client_secret: str | None = Field(default=None, alias="GITHUB_CLIENT_SECRET")
+    workspace_features_enabled: bool = Field(
+        default=False,
+        alias="WORKSPACE_FEATURES_ENABLED",
+    )
+    local_default_user_id: str = Field(
+        default="local-user",
+        alias="LOCAL_DEFAULT_USER_ID",
+    )
+    local_default_user_name: str = Field(
+        default="Poco Local User",
+        alias="LOCAL_DEFAULT_USER_NAME",
+    )
     internal_api_token: str = Field(
         default="change-this-token-in-production", alias="INTERNAL_API_TOKEN"
     )

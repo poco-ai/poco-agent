@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -11,3 +12,14 @@ class CurrentUserResponse(BaseModel):
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
+
+AuthProvider = Literal["google", "github"]
+AuthMode = Literal["disabled", "oauth_required"]
+
+
+class AuthConfigResponse(BaseModel):
+    auth_mode: AuthMode
+    login_required: bool
+    providers: list[AuthProvider]
+    workspace_features_enabled: bool

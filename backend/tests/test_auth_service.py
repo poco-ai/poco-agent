@@ -1,4 +1,5 @@
 import unittest
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 from app.models.user import User
@@ -192,6 +193,103 @@ class AuthServiceTests(unittest.TestCase):
             profile_json={"login": "test-user"},
         )
         self.assertIs(user, existing_user)
+
+    def test_get_auth_config_returns_disabled_mode_without_login_requirement(
+        self,
+    ) -> None:
+        settings = SimpleNamespace(
+            auth_mode="disabled",
+            workspace_features_enabled=False,
+            google_client_id=None,
+            google_client_secret=None,
+            github_client_id=None,
+            github_client_secret=None,
+        )
+
+        with patch.object(self.service, "_get_settings", return_value=settings):
+            config = self.service.get_auth_config()
+
+        self.assertEqual(config.auth_mode, "disabled")
+        self.assertFalse(config.login_required)
+        self.assertFalse(config.workspace_features_enabled)
+        self.assertEqual(config.providers, [])
+
+    def test_get_auth_config_returns_configured_oauth_providers(self) -> None:
+        settings = SimpleNamespace(
+            auth_mode="oauth_required",
+            workspace_features_enabled=True,
+            google_client_id="google-client",
+            google_client_secret="google-secret",
+            github_client_id="github-client",
+            github_client_secret="github-secret",
+        )
+
+        with patch.object(self.service, "_get_settings", return_value=settings):
+            config = self.service.get_auth_config()
+
+        self.assertEqual(config.auth_mode, "oauth_required")
+        self.assertTrue(config.login_required)
+        self.assertTrue(config.workspace_features_enabled)
+        self.assertEqual(config.providers, ["google", "github"])
+
+    def test_get_or_create_local_user_returns_existing_user(self) -> None:
+        existing_user = self._build_user(
+            user_id="local-user",
+            primary_email=None,
+        )
+        settings = SimpleNamespace(
+            local_default_user_id="local-user",
+            local_default_user_name="Poco Local User",
+        )
+
+        with (
+            patch.object(self.service, "_get_settings", return_value=settings),
+            patch(
+                "app.services.auth_service.UserRepository.get_by_id",
+                return_value=existing_user,
+            ) as get_by_id,
+            patch("app.services.auth_service.UserRepository.create") as create_user,
+        ):
+            user = self.service.get_or_create_local_user(self.db)
+
+        get_by_id.assert_called_once_with(self.db, "local-user")
+        create_user.assert_not_called()
+        self.db.commit.assert_not_called()
+        self.assertIs(user, existing_user)
+
+    def test_get_or_create_local_user_creates_default_user_when_missing(self) -> None:
+        settings = SimpleNamespace(
+            local_default_user_id="local-user",
+            local_default_user_name="Poco Local User",
+        )
+        created_user = self._build_user(
+            user_id="local-user",
+            primary_email=None,
+        )
+
+        with (
+            patch.object(self.service, "_get_settings", return_value=settings),
+            patch(
+                "app.services.auth_service.UserRepository.get_by_id",
+                return_value=None,
+            ) as get_by_id,
+            patch(
+                "app.services.auth_service.UserRepository.create",
+                return_value=created_user,
+            ) as create_user,
+        ):
+            user = self.service.get_or_create_local_user(self.db)
+
+        get_by_id.assert_called_once_with(self.db, "local-user")
+        create_user.assert_called_once_with(
+            self.db,
+            user_id="local-user",
+            primary_email=None,
+            display_name="Poco Local User",
+            avatar_url=None,
+        )
+        self.db.commit.assert_called_once()
+        self.assertIs(user, created_user)
 
 
 if __name__ == "__main__":

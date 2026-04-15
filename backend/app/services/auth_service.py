@@ -16,6 +16,7 @@ from app.core.errors.error_codes import ErrorCode
 from app.core.errors.exceptions import AppException
 from app.core.settings import Settings, get_settings
 from app.models.user import User
+from app.schemas.auth import AuthConfigResponse
 from app.models.user_session import UserSession
 from app.repositories.auth_identity_repository import AuthIdentityRepository
 from app.repositories.user_repository import UserRepository
@@ -82,6 +83,40 @@ class AuthService:
 
     def _get_settings(self) -> Settings:
         return get_settings()
+
+    def get_available_auth_providers(self) -> list[str]:
+        settings = self._get_settings()
+        providers: list[str] = []
+        if settings.google_client_id and settings.google_client_secret:
+            providers.append("google")
+        if settings.github_client_id and settings.github_client_secret:
+            providers.append("github")
+        return providers
+
+    def get_auth_config(self) -> AuthConfigResponse:
+        settings = self._get_settings()
+        return AuthConfigResponse(
+            auth_mode=settings.auth_mode,
+            login_required=settings.auth_mode == "oauth_required",
+            providers=self.get_available_auth_providers(),
+            workspace_features_enabled=settings.workspace_features_enabled,
+        )
+
+    def get_or_create_local_user(self, db: Session) -> User:
+        settings = self._get_settings()
+        user = UserRepository.get_by_id(db, settings.local_default_user_id)
+        if user is not None:
+            return user
+
+        user = UserRepository.create(
+            db,
+            user_id=settings.local_default_user_id,
+            primary_email=None,
+            display_name=settings.local_default_user_name,
+            avatar_url=None,
+        )
+        db.commit()
+        return user
 
     def _get_client(self, provider: str):
         client = get_oauth_registry().create_client(provider)

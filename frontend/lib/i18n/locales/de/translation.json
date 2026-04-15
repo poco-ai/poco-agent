@@ -2323,6 +2323,7 @@
       "google": "Mit Google fortfahren",
       "github": "Mit GitHub fortfahren",
       "hint": "Wir verwenden eine sichere Browser-Sitzung, damit Sie angemeldet bleiben.",
+      "noProviders": "Für diese Umgebung sind keine Anmeldeanbieter konfiguriert. Prüfen Sie die OAuth-Einstellungen des Backends.",
       "errors": {
         "default": "Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.",
         "provider_not_configured": "Dieser Anmeldeanbieter ist noch nicht konfiguriert.",

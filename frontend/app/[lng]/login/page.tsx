@@ -26,5 +26,12 @@ export default async function LoginPage({
     redirect(buildSessionRecoveryPath(lng, nextPath));
   }
 
-  return <LoginPageClient lng={lng} nextPath={nextPath} errorCode={error} />;
+  return (
+    <LoginPageClient
+      lng={lng}
+      nextPath={nextPath}
+      errorCode={error}
+      providers={authState.config.providers}
+    />
+  );
 }

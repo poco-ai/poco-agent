@@ -2323,6 +2323,7 @@
       "google": "Continue with Google",
       "github": "Continue with GitHub",
       "hint": "We use a secure browser session to keep you signed in.",
+      "noProviders": "No sign-in providers are configured for this environment. Check the backend OAuth settings.",
       "errors": {
         "default": "Sign-in failed. Please try again.",
         "provider_not_configured": "This sign-in provider is not configured yet.",

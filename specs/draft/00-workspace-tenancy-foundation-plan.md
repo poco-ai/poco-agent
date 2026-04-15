@@ -8,12 +8,12 @@
 | **预期改动范围** | backend auth / backend tenancy model / backend audit logging / backend API / frontend shell context / frontend workspaces feature |
 | **改动类型** | feat |
 | **优先级** | P0 |
-| **状态** | drafting |
+| **状态** | in_progress |
 
 ## 实施阶段
 
-- [ ] Phase 0: 明确术语、命名和架构边界
-- [ ] Phase 1: 建立 auth mode 与本地部署兼容策略
+- [x] Phase 0: 明确术语、命名和架构边界
+- [x] Phase 1: 建立 auth mode 与本地部署兼容策略
 - [ ] Phase 2: 建立 workspace、member、invite 基础模型
 - [ ] Phase 3: 定义团队角色与基础权限语义
 - [ ] Phase 4: 建立声明式审计日志基础设施
@@ -75,8 +75,8 @@
 - `frontend/features/workspaces/` - 提供前端上下文和 UI
 
 **验收标准：**
-- [ ] spec 中不再混用 `team`、`tenant`、`workspace` 作为后端模型名
-- [ ] spec 中明确前端文案和后端模型名可以不同
+- [x] spec 中不再混用 `team`、`tenant`、`workspace` 作为后端模型名
+- [x] spec 中明确前端文案和后端模型名可以不同
 
 #### 0.2 明确新增模块的目录落点
 
@@ -98,8 +98,8 @@
 - `frontend/features/`
 
 **验收标准：**
-- [ ] spec 中明确 backend 的 API、Service、Repository、Schema 分层
-- [ ] spec 中明确 frontend 的新 feature 不继续扩展 `services/` 旧模式
+- [x] spec 中明确 backend 的 API、Service、Repository、Schema 分层
+- [x] spec 中明确 frontend 的新 feature 不继续扩展 `services/` 旧模式
 
 ---
 
@@ -128,9 +128,9 @@
 - `backend/.env.example`
 
 **验收标准：**
-- [ ] spec 中明确 `AUTH_MODE` 语义
-- [ ] spec 中明确本地默认推荐值
-- [ ] spec 中不使用 `MULTI_TENANT_ENABLED` 替代 auth mode
+- [x] spec 中明确 `AUTH_MODE` 语义
+- [x] spec 中明确本地默认推荐值
+- [x] spec 中不使用 `MULTI_TENANT_ENABLED` 替代 auth mode
 
 #### 1.2 定义 `/auth/config` 与 SSR 判定入口
 
@@ -143,8 +143,8 @@
 - `frontend/services/api-client.ts`
 
 **验收标准：**
-- [ ] spec 中明确前端 SSR 不能只靠 session cookie 判断模式
-- [ ] spec 中明确 auth config 作为服务端守卫输入
+- [x] spec 中明确前端 SSR 不能只靠 session cookie 判断模式
+- [x] spec 中明确 auth config 作为服务端守卫输入
 
 #### 1.3 定义默认个人空间行为
 
@@ -162,9 +162,9 @@
 - `frontend/features/workspaces/model/`
 
 **验收标准：**
-- [ ] spec 中明确匿名模式下的默认用户/默认空间策略
-- [ ] spec 中明确登录模式下的个人空间初始化策略
-- [ ] spec 中明确第一阶段不要求 executor_manager 感知 workspace
+- [x] spec 中明确匿名模式下的默认用户/默认空间策略
+- [x] spec 中明确登录模式下的个人空间初始化策略
+- [x] spec 中明确第一阶段不要求 executor_manager 感知 workspace
 
 ---
 
