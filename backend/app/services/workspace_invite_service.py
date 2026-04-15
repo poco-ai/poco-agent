@@ -15,9 +15,13 @@ from app.repositories.workspace_repository import WorkspaceRepository
 from app.schemas.workspace_invite import (
     WorkspaceInviteAcceptRequest,
     WorkspaceInviteCreateRequest,
+    WorkspaceInviteRevokeRequest,
     WorkspaceInviteResponse,
 )
 from app.schemas.workspace_member import WorkspaceMemberResponse
+from app.services.workspace_member_service import (
+    require_workspace_admin,
+)
 
 
 class WorkspaceInviteService:
@@ -38,11 +42,7 @@ class WorkspaceInviteService:
                 error_code=ErrorCode.NOT_FOUND,
                 message=f"Workspace not found: {workspace_id}",
             )
-        if workspace.owner_user_id != current_user.id:
-            raise AppException(
-                error_code=ErrorCode.FORBIDDEN,
-                message="Only workspace owners can create invites",
-            )
+        require_workspace_admin(db, workspace_id, current_user.id)
 
         invite = WorkspaceInvite(
             workspace_id=workspace.id,
@@ -70,14 +70,30 @@ class WorkspaceInviteService:
                 error_code=ErrorCode.NOT_FOUND,
                 message=f"Workspace not found: {workspace_id}",
             )
-        if workspace.owner_user_id != current_user.id:
-            raise AppException(
-                error_code=ErrorCode.FORBIDDEN,
-                message="Only workspace owners can view invites",
-            )
+        require_workspace_admin(db, workspace_id, current_user.id)
 
         invites = WorkspaceInviteRepository.list_by_workspace(db, workspace_id)
         return [self._build_invite_response(item) for item in invites]
+
+    def revoke_invite(
+        self,
+        db: Session,
+        current_user: User,
+        workspace_id: uuid.UUID,
+        invite_id: uuid.UUID,
+        request: WorkspaceInviteRevokeRequest,
+    ) -> WorkspaceInviteResponse:
+        _ = request
+        require_workspace_admin(db, workspace_id, current_user.id)
+        invite = WorkspaceInviteRepository.get_by_id(db, invite_id)
+        if invite is None or invite.workspace_id != workspace_id:
+            raise AppException(
+                error_code=ErrorCode.NOT_FOUND,
+                message=f"Workspace invite not found: {invite_id}",
+            )
+        invite.revoked_at = datetime.now(UTC)
+        db.commit()
+        return self._build_invite_response(invite)
 
     def accept_invite(
         self,

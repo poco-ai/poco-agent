@@ -37,3 +37,14 @@ class WorkspaceMemberRepository:
             .order_by(WorkspaceMember.joined_at.asc(), WorkspaceMember.id.asc())
             .all()
         )
+
+    @staticmethod
+    def get_by_id(
+        session_db: Session,
+        membership_id: int,
+    ) -> WorkspaceMember | None:
+        return (
+            session_db.query(WorkspaceMember)
+            .filter(WorkspaceMember.id == membership_id)
+            .first()
+        )

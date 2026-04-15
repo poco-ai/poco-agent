@@ -1,14 +1,21 @@
 from datetime import datetime
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
+
+WorkspaceRole = Literal["owner", "admin", "member"]
+
+
+class WorkspaceMemberRoleUpdateRequest(BaseModel):
+    role: WorkspaceRole
 
 
 class WorkspaceMemberResponse(BaseModel):
     membership_id: int = Field(validation_alias="id")
     workspace_id: UUID
     user_id: str
-    role: str
+    role: WorkspaceRole
     joined_at: datetime
     invited_by: str | None = None
     status: str

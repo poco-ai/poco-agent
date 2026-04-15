@@ -10,6 +10,7 @@ from app.schemas.response import Response, ResponseSchema
 from app.schemas.workspace_invite import (
     WorkspaceInviteAcceptRequest,
     WorkspaceInviteCreateRequest,
+    WorkspaceInviteRevokeRequest,
     WorkspaceInviteResponse,
 )
 from app.schemas.workspace_member import WorkspaceMemberResponse
@@ -43,6 +44,30 @@ async def create_workspace_invite(
 ) -> JSONResponse:
     result = service.create_invite(db, current_user, workspace_id, request)
     return Response.success(data=result, message="Workspace invite created successfully")
+
+
+@router.post(
+    "/{invite_id}/revoke",
+    response_model=ResponseSchema[WorkspaceInviteResponse],
+)
+async def revoke_workspace_invite(
+    workspace_id: uuid.UUID,
+    invite_id: uuid.UUID,
+    request: WorkspaceInviteRevokeRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> JSONResponse:
+    result = service.revoke_invite(
+        db,
+        current_user,
+        workspace_id,
+        invite_id,
+        request,
+    )
+    return Response.success(
+        data=result,
+        message="Workspace invite revoked successfully",
+    )
 
 
 @accept_router.post("/accept", response_model=ResponseSchema[WorkspaceMemberResponse])

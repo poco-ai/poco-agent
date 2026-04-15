@@ -10,7 +10,9 @@ from app.models.workspace_invite import WorkspaceInvite
 from app.schemas.workspace_invite import (
     WorkspaceInviteAcceptRequest,
     WorkspaceInviteCreateRequest,
+    WorkspaceInviteRevokeRequest,
 )
+from app.schemas.workspace_member import WorkspaceMemberRoleUpdateRequest
 from app.schemas.workspace_tenancy import WorkspaceCreateRequest
 from app.services.workspace_invite_service import WorkspaceInviteService
 from app.services.workspace_member_service import WorkspaceMemberService
@@ -140,6 +142,28 @@ class WorkspaceMemberServiceTests(unittest.TestCase):
             status="active",
         )
         self.workspace_id = uuid.uuid4()
+        self.owner_membership = MagicMock(
+            id=1,
+            workspace_id=self.workspace_id,
+            user_id="user-1",
+            role="owner",
+            joined_at=datetime.now(UTC),
+            invited_by=None,
+            status="active",
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
+        )
+        self.member_membership = MagicMock(
+            id=2,
+            workspace_id=self.workspace_id,
+            user_id="user-2",
+            role="member",
+            joined_at=datetime.now(UTC),
+            invited_by="user-1",
+            status="active",
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
+        )
 
     def test_list_members_requires_existing_membership(self) -> None:
         service = WorkspaceMemberService()
@@ -150,6 +174,53 @@ class WorkspaceMemberServiceTests(unittest.TestCase):
         ):
             with self.assertRaises(AppException):
                 service.list_members(self.db, self.current_user, self.workspace_id)
+
+    def test_update_member_role_requires_owner(self) -> None:
+        service = WorkspaceMemberService()
+
+        with (
+            patch(
+                "app.services.workspace_member_service.WorkspaceMemberRepository.get_by_workspace_and_user",
+                return_value=self.member_membership,
+            ),
+            patch(
+                "app.services.workspace_member_service.WorkspaceMemberRepository.get_by_id",
+                return_value=self.member_membership,
+            ),
+        ):
+            with self.assertRaises(AppException):
+                service.update_member_role(
+                    self.db,
+                    self.current_user,
+                    self.workspace_id,
+                    self.member_membership.id,
+                    WorkspaceMemberRoleUpdateRequest(role="admin"),
+                )
+
+    def test_owner_can_update_member_role(self) -> None:
+        service = WorkspaceMemberService()
+
+        with (
+            patch(
+                "app.services.workspace_member_service.WorkspaceMemberRepository.get_by_workspace_and_user",
+                return_value=self.owner_membership,
+            ),
+            patch(
+                "app.services.workspace_member_service.WorkspaceMemberRepository.get_by_id",
+                return_value=self.member_membership,
+            ),
+        ):
+            result = service.update_member_role(
+                self.db,
+                self.current_user,
+                self.workspace_id,
+                self.member_membership.id,
+                WorkspaceMemberRoleUpdateRequest(role="admin"),
+            )
+
+        self.db.commit.assert_called_once()
+        self.assertEqual(self.member_membership.role, "admin")
+        self.assertEqual(result.role, "admin")
 
 
 class WorkspaceInviteServiceTests(unittest.TestCase):
@@ -191,6 +262,47 @@ class WorkspaceInviteServiceTests(unittest.TestCase):
                     self.workspace.id,
                     WorkspaceInviteCreateRequest(role="member", expires_in_days=7),
                 )
+
+    def test_admin_can_create_invite(self) -> None:
+        service = WorkspaceInviteService()
+        admin_membership = MagicMock(
+            workspace_id=self.workspace.id,
+            user_id="user-2",
+            role="admin",
+            status="active",
+        )
+
+        with (
+            patch(
+                "app.services.workspace_invite_service.WorkspaceRepository.get_by_id",
+                return_value=self.workspace,
+            ),
+            patch(
+                "app.services.workspace_invite_service.WorkspaceMemberRepository.get_by_workspace_and_user",
+                return_value=admin_membership,
+            ),
+            patch(
+                "app.services.workspace_invite_service.WorkspaceInviteRepository.create"
+            ) as create_invite,
+        ):
+            def build_invite(_db, invite):
+                invite.id = uuid.uuid4()
+                invite.created_at = datetime.now(UTC)
+                invite.updated_at = datetime.now(UTC)
+                return invite
+
+            create_invite.side_effect = build_invite
+
+            result = service.create_invite(
+                self.db,
+                self.member,
+                self.workspace.id,
+                WorkspaceInviteCreateRequest(role="member", expires_in_days=7),
+            )
+
+        self.db.commit.assert_called_once()
+        create_invite.assert_called_once()
+        self.assertEqual(result.role, "member")
 
     def test_accept_invite_creates_membership_and_consumes_usage(self) -> None:
         service = WorkspaceInviteService()
@@ -249,6 +361,50 @@ class WorkspaceInviteServiceTests(unittest.TestCase):
         self.assertEqual(invite.used_count, 1)
         self.assertEqual(result.workspace_id, self.workspace.id)
         self.assertEqual(result.user_id, "user-2")
+
+    def test_admin_can_revoke_invite(self) -> None:
+        service = WorkspaceInviteService()
+        invite = WorkspaceInvite(
+            id=uuid.uuid4(),
+            workspace_id=self.workspace.id,
+            token="invite-token",
+            role="member",
+            expires_at=datetime.now(UTC) + timedelta(days=7),
+            created_by="user-1",
+            max_uses=1,
+            used_count=0,
+            revoked_at=None,
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
+        )
+        admin_membership = MagicMock(
+            workspace_id=self.workspace.id,
+            user_id="user-2",
+            role="admin",
+            status="active",
+        )
+
+        with (
+            patch(
+                "app.services.workspace_invite_service.WorkspaceInviteRepository.get_by_id",
+                return_value=invite,
+            ),
+            patch(
+                "app.services.workspace_invite_service.WorkspaceMemberRepository.get_by_workspace_and_user",
+                return_value=admin_membership,
+            ),
+        ):
+            result = service.revoke_invite(
+                self.db,
+                self.member,
+                self.workspace.id,
+                invite.id,
+                WorkspaceInviteRevokeRequest(),
+            )
+
+        self.db.commit.assert_called_once()
+        self.assertIsNotNone(invite.revoked_at)
+        self.assertEqual(result.invite_id, invite.id)
 
 
 if __name__ == "__main__":

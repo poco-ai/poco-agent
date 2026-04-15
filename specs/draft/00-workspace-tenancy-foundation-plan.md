@@ -15,7 +15,7 @@
 - [x] Phase 0: 明确术语、命名和架构边界
 - [x] Phase 1: 建立 auth mode 与本地部署兼容策略
 - [x] Phase 2: 建立 workspace、member、invite 基础模型
-- [ ] Phase 3: 定义团队角色与基础权限语义
+- [x] Phase 3: 定义团队角色与基础权限语义
 - [ ] Phase 4: 建立声明式审计日志基础设施
 - [ ] Phase 5: 建立前端 workspace 上下文与导航入口
 
@@ -277,8 +277,8 @@
 - `frontend/features/workspaces/model/`
 
 **验收标准：**
-- [ ] spec 中明确每个角色的职责边界
-- [ ] spec 中没有一开始引入过多角色复杂度
+- [x] spec 中明确每个角色的职责边界
+- [x] spec 中没有一开始引入过多角色复杂度
 
 #### 3.2 明确团队级操作权限
 
@@ -296,8 +296,8 @@
 - `backend/app/services/workspace_member_service.py`
 
 **验收标准：**
-- [ ] spec 中明确 owner/admin/member 的团队级权限
-- [ ] spec 中明确 route 保持薄，业务判断放在 service
+- [x] spec 中明确 owner/admin/member 的团队级权限
+- [x] spec 中明确 route 保持薄，业务判断放在 service
 
 ---
 

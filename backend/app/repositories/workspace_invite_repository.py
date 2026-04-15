@@ -30,3 +30,14 @@ class WorkspaceInviteRepository:
             .order_by(WorkspaceInvite.created_at.desc())
             .all()
         )
+
+    @staticmethod
+    def get_by_id(
+        session_db: Session,
+        invite_id: uuid.UUID,
+    ) -> WorkspaceInvite | None:
+        return (
+            session_db.query(WorkspaceInvite)
+            .filter(WorkspaceInvite.id == invite_id)
+            .first()
+        )

@@ -123,6 +123,42 @@ class WorkspaceApiTests(unittest.TestCase):
         self.assertEqual(body["data"]["token"], "invite-token")
         create_invite.assert_called_once()
 
+    @patch("app.api.v1.workspace_members.service.update_member_role")
+    def test_update_workspace_member_role_returns_member_payload(
+        self,
+        update_member_role,
+    ) -> None:
+        workspace_id = uuid.uuid4()
+        update_member_role.return_value = build_member_response(workspace_id)
+
+        response = self.client.patch(
+            f"/api/v1/workspaces/{workspace_id}/members/1/role",
+            json={"role": "admin"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["code"], 0)
+        self.assertEqual(body["data"]["role"], "member")
+        update_member_role.assert_called_once()
+
+    @patch("app.api.v1.workspace_invites.service.revoke_invite")
+    def test_revoke_workspace_invite_returns_invite_payload(self, revoke_invite) -> None:
+        workspace_id = uuid.uuid4()
+        invite = build_invite_response(workspace_id)
+        revoke_invite.return_value = invite
+
+        response = self.client.post(
+            f"/api/v1/workspaces/{workspace_id}/invites/{invite.invite_id}/revoke",
+            json={},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["code"], 0)
+        self.assertEqual(body["data"]["invite_id"], str(invite.invite_id))
+        revoke_invite.assert_called_once()
+
 
 if __name__ == "__main__":
     unittest.main()
