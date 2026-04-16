@@ -68,9 +68,6 @@
       },
       "members": {
         "title": "团队成员"
-      },
-      "invites": {
-        "title": "团队邀请"
       }
     },
     "summary": {
