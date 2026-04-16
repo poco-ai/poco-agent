@@ -118,6 +118,7 @@
       "description": "查看待处理和已撤销的空间邀请。",
       "empty": "暂无邀请。",
       "expiresAt": "过期时间 {{date}}",
+      "expired": "已过期",
       "revoked": "已撤销",
       "copy": "复制"
     },

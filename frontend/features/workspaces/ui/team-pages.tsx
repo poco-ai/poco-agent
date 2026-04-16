@@ -21,6 +21,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Empty,
@@ -45,8 +53,13 @@ import {
   formatWorkspaceKind,
   formatWorkspaceRole,
 } from "@/features/workspaces/lib/format";
+import {
+  countActiveInvites,
+  getInviteState,
+} from "@/features/workspaces/lib/team-overview";
 import { useWorkspaceContext } from "@/features/workspaces/model/workspace-context";
 import type {
+  Workspace,
   ActivityLog,
   WorkspaceInvite,
   WorkspaceMember,
@@ -72,7 +85,6 @@ function WorkspaceSummaryCards({
 }) {
   const { t } = useT("translation");
   const { currentWorkspace } = useWorkspaceContext();
-  const activeInvites = invites.filter((invite) => invite.revokedAt === null);
 
   const cards = [
     {
@@ -90,7 +102,7 @@ function WorkspaceSummaryCards({
     {
       icon: Ticket,
       label: t("workspaces.summary.invites"),
-      value: String(activeInvites.length),
+      value: String(countActiveInvites(invites)),
     },
   ];
 
@@ -110,6 +122,135 @@ function WorkspaceSummaryCards({
         </Card>
       ))}
     </div>
+  );
+}
+
+function WorkspaceOverviewHero({
+  workspace,
+  members,
+  invites,
+}: {
+  workspace: Workspace | null;
+  members: WorkspaceMember[];
+  invites: WorkspaceInvite[];
+}) {
+  const { t } = useT("translation");
+
+  return (
+    <Card className="overflow-hidden border-primary/20 bg-gradient-to-br from-primary/10 via-card to-card shadow-sm">
+      <CardContent className="flex flex-col gap-4 p-6 lg:flex-row lg:items-end lg:justify-between">
+        <div className="space-y-3">
+          <Badge variant="secondary">
+            {workspace
+              ? formatWorkspaceKind(t, workspace.kind)
+              : t("workspaces.emptyValue")}
+          </Badge>
+          <div className="space-y-1">
+            <h2 className="text-2xl font-semibold tracking-tight text-foreground">
+              {workspace?.name ?? t("workspaces.noWorkspace")}
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              {workspace
+                ? t("workspaces.currentWorkspace", { name: workspace.name })
+                : t("workspaces.noWorkspace")}
+            </p>
+          </div>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-3">
+          {[
+            {
+              label: t("workspaces.summary.kind"),
+              value: workspace
+                ? formatWorkspaceKind(t, workspace.kind)
+                : t("workspaces.emptyValue"),
+            },
+            {
+              label: t("workspaces.summary.members"),
+              value: String(members.length),
+            },
+            {
+              label: t("workspaces.summary.invites"),
+              value: String(countActiveInvites(invites)),
+            },
+          ].map((item) => (
+            <div
+              key={item.label}
+              className="rounded-2xl border border-border/60 bg-background/80 px-4 py-3 shadow-sm"
+            >
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                {item.label}
+              </p>
+              <p className="mt-2 text-lg font-semibold text-foreground">
+                {item.value}
+              </p>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+interface CreateInviteDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  initialRole: WorkspaceRole;
+  onCreate: (role: WorkspaceRole) => Promise<void>;
+}
+
+function CreateInviteDialog({
+  open,
+  onOpenChange,
+  initialRole,
+  onCreate,
+}: CreateInviteDialogProps) {
+  const { t } = useT("translation");
+  const [role, setRole] = React.useState<WorkspaceRole>(initialRole);
+  const [isSaving, setIsSaving] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!open) {
+      setRole(initialRole);
+      setIsSaving(false);
+    }
+  }, [initialRole, open]);
+
+  const handleCreate = async () => {
+    setIsSaving(true);
+    await onCreate(role);
+    setIsSaving(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{t("workspaces.invites.createTitle")}</DialogTitle>
+          <DialogDescription>
+            {t("workspaces.invites.createDescription")}
+          </DialogDescription>
+        </DialogHeader>
+        <Select value={role} onValueChange={(value) => setRole(value as WorkspaceRole)}>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {(["admin", "member"] as const).map((item) => (
+              <SelectItem key={item} value={item}>
+                {formatWorkspaceRole(t, item)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <DialogFooter>
+          <Button type="button" onClick={() => void handleCreate()} disabled={isSaving}>
+            <Ticket className="size-4" />
+            {t("workspaces.invites.createAction")}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -157,6 +298,11 @@ export function TeamPageClient() {
         <Skeleton className="h-40 rounded-2xl" />
       ) : (
         <>
+          <WorkspaceOverviewHero
+            workspace={currentWorkspace}
+            members={members}
+            invites={invites}
+          />
           <WorkspaceSummaryCards members={members} invites={invites} />
           <Card className="border-border/60">
             <CardHeader className="gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -305,6 +451,7 @@ export function TeamInvitesPageClient() {
   const [role, setRole] = React.useState<WorkspaceRole>("member");
   const [isLoading, setIsLoading] = React.useState(true);
   const [isMutating, setIsMutating] = React.useState(false);
+  const [inviteDialogOpen, setInviteDialogOpen] = React.useState(false);
 
   const refresh = React.useCallback(async () => {
     if (!currentWorkspace) return;
@@ -323,16 +470,18 @@ export function TeamInvitesPageClient() {
     void refresh();
   }, [refresh]);
 
-  const createInvite = async () => {
+  const createInvite = async (nextRole: WorkspaceRole) => {
     if (!currentWorkspace) return;
     setIsMutating(true);
     try {
       const invite = await workspacesApi.createInvite(currentWorkspace.id, {
-        role,
+        role: nextRole,
         expiresInDays: 7,
         maxUses: 1,
       });
       setInvites((prev) => [invite, ...prev]);
+      setRole(nextRole);
+      setInviteDialogOpen(false);
       toast.success(t("workspaces.toasts.inviteCreated"));
     } catch (error) {
       console.error("[Workspaces] invite create failed", error);
@@ -353,28 +502,14 @@ export function TeamInvitesPageClient() {
       title={t("workspaces.pages.invites.title")}
       subtitle={t("workspaces.invites.description")}
       toolbarActions={
-        <>
-          <Select value={role} onValueChange={(value) => setRole(value as WorkspaceRole)}>
-            <SelectTrigger className="w-full sm:w-44">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {(["admin", "member"] as const).map((item) => (
-                <SelectItem key={item} value={item}>
-                  {formatWorkspaceRole(t, item)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button
-            type="button"
-            onClick={() => void createInvite()}
-            disabled={isMutating || !currentWorkspace}
-          >
+        <Button
+          type="button"
+          onClick={() => setInviteDialogOpen(true)}
+          disabled={isMutating || !currentWorkspace}
+        >
             <Ticket className="size-4" />
             {t("workspaces.invites.createAction")}
-          </Button>
-        </>
+        </Button>
       }
     >
       <Card className="border-border/60">
@@ -414,11 +549,17 @@ export function TeamInvitesPageClient() {
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Badge variant={invite.revokedAt ? "secondary" : "outline"}>
-                    {invite.revokedAt
-                      ? t("workspaces.invites.revoked")
-                      : formatWorkspaceRole(t, invite.role)}
-                  </Badge>
+                  {getInviteState(invite) === "active" ? (
+                    <Badge variant="outline">
+                      {formatWorkspaceRole(t, invite.role)}
+                    </Badge>
+                  ) : (
+                    <Badge variant="secondary">
+                      {getInviteState(invite) === "revoked"
+                        ? t("workspaces.invites.revoked")
+                        : t("workspaces.invites.expired")}
+                    </Badge>
+                  )}
                   <Button
                     type="button"
                     variant="outline"
@@ -434,6 +575,12 @@ export function TeamInvitesPageClient() {
           )}
         </CardContent>
       </Card>
+      <CreateInviteDialog
+        open={inviteDialogOpen}
+        onOpenChange={setInviteDialogOpen}
+        initialRole={role}
+        onCreate={createInvite}
+      />
     </TeamShell>
   );
 }

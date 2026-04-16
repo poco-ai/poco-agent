@@ -118,6 +118,7 @@
       "description": "Review pending and revoked workspace invites.",
       "empty": "No invites yet.",
       "expiresAt": "Expires {{date}}",
+      "expired": "Expired",
       "revoked": "Revoked",
       "copy": "Copy"
     },

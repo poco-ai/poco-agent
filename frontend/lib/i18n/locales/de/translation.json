@@ -118,6 +118,7 @@
       "description": "Ausstehende und widerrufene Workspace-Einladungen prüfen.",
       "empty": "Noch keine Einladungen.",
       "expiresAt": "Läuft ab {{date}}",
+      "expired": "Abgelaufen",
       "revoked": "Widerrufen",
       "copy": "Kopieren"
     },

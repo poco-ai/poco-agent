@@ -118,6 +118,7 @@
       "description": "Consultez les invitations en attente et révoquées.",
       "empty": "Aucune invitation pour le moment.",
       "expiresAt": "Expire le {{date}}",
+      "expired": "Expirée",
       "revoked": "Révoquée",
       "copy": "Copier"
     },
