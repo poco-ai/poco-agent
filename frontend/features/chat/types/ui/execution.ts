@@ -90,6 +90,7 @@ export interface ExecutionSession {
   new_message?: NewMessage;
   state_patch: StatePatch;
   config_snapshot?: ConfigSnapshot | null;
+  workspace_export_status?: string | null;
   task_name?: string;
   user_prompt?: string;
   title?: string | null;

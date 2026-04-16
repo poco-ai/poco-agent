@@ -33,6 +33,7 @@ class ComputerService:
         self,
         *,
         session_id: str,
+        run_id: str | None,
         tool_use_id: str,
         content_type: str,
         data: bytes,
@@ -47,20 +48,34 @@ class ComputerService:
 
         safe_session_id = _sanitize_token(session_id)
         safe_tool_use_id = _sanitize_token(tool_use_id)
+        safe_run_id = _sanitize_token(run_id) if run_id else None
 
-        # Keep the key deterministic so the frontend can map (session_id, tool_use_id) -> screenshot.
+        # Keep both keys so session-scoped and run-scoped viewers can resolve screenshots.
         key = f"replays/{user_id}/{safe_session_id}/browser/{safe_tool_use_id}.png"
+        run_key = (
+            f"replays/{user_id}/{safe_session_id}/runs/{safe_run_id}/browser/"
+            f"{safe_tool_use_id}.png"
+            if safe_run_id
+            else None
+        )
 
         self._storage_service.put_object(
             key=key,
             body=data,
             content_type=content_type or "image/png",
         )
+        if run_key:
+            self._storage_service.put_object(
+                key=run_key,
+                body=data,
+                content_type=content_type or "image/png",
+            )
 
         return ComputerScreenshotUploadResponse(
             session_id=session_id,
+            run_id=run_id,
             tool_use_id=tool_use_id,
-            key=key,
+            key=run_key or key,
             content_type=content_type or "image/png",
             size_bytes=len(data),
         )

@@ -1,6 +1,6 @@
 import logging
 
-import httpx
+import httpx  # pyrefly: ignore[missing-import]
 
 from app.core.observability.request_context import (
     generate_request_id,
@@ -23,6 +23,7 @@ class ComputerClient:
         self,
         *,
         session_id: str,
+        run_id: str | None,
         tool_use_id: str,
         png_bytes: bytes,
     ) -> bool:
@@ -32,6 +33,7 @@ class ComputerClient:
                     f"{self.base_url}/api/v1/computer/screenshots",
                     data={
                         "session_id": session_id,
+                        "run_id": run_id or "",
                         "tool_use_id": tool_use_id,
                     },
                     files={

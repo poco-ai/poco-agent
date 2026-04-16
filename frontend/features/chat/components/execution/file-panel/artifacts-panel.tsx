@@ -18,7 +18,11 @@ import { chatService } from "@/features/chat/api/chat-api";
 interface ArtifactsPanelProps {
   fileChanges?: FileChange[];
   sessionId?: string;
+  runId?: string;
+  legacySessionArtifactsAvailable?: boolean;
   sessionStatus?:
+    | "queued"
+    | "claimed"
     | "pending"
     | "running"
     | "canceling"
@@ -51,6 +55,8 @@ interface ArtifactsPanelProps {
 export function ArtifactsPanel({
   fileChanges = [],
   sessionId,
+  runId,
+  legacySessionArtifactsAvailable = false,
   sessionStatus,
   headerAction,
   hideHeader = false,
@@ -63,17 +69,32 @@ export function ArtifactsPanel({
     null,
   );
   const [isSubmittingSkill, setIsSubmittingSkill] = React.useState(false);
+  const sidebarStateRef = React.useRef(new Map<string, boolean>());
+  const scopeKey = React.useMemo(
+    () => `${sessionId ?? ""}::${runId ?? "session"}`,
+    [runId, sessionId],
+  );
   const {
     files,
     selectedFile,
     viewMode,
+    isRefreshing,
     selectFile,
     closeViewer,
     ensureFreshFile,
-  } = useArtifacts({ sessionId, sessionStatus });
+  } = useArtifacts({ sessionId, runId, sessionStatus });
   const openExpandedPreview = React.useCallback(() => {
     setIsExpandedPreviewOpen(true);
   }, []);
+
+  React.useEffect(() => {
+    const cached = sidebarStateRef.current.get(scopeKey);
+    setIsSidebarCollapsed(cached ?? false);
+  }, [scopeKey]);
+
+  React.useEffect(() => {
+    sidebarStateRef.current.set(scopeKey, isSidebarCollapsed);
+  }, [isSidebarCollapsed, scopeKey]);
 
   React.useEffect(() => {
     if (viewMode !== "document" || !selectedFile) {
@@ -93,7 +114,12 @@ export function ArtifactsPanel({
     }
 
     if (fileChanges.length === 0) {
-      return <ArtifactsEmpty sessionStatus={sessionStatus} />;
+      return (
+        <ArtifactsEmpty
+          legacySessionArtifactsAvailable={legacySessionArtifactsAvailable}
+          sessionStatus={sessionStatus}
+        />
+      );
     }
 
     return (
@@ -173,7 +199,9 @@ export function ArtifactsPanel({
                 node.mount_id,
                 node.path,
               )
-            : await chatService.getFolderArchive(sessionId, node.path);
+            : runId
+              ? await chatService.getRunFolderArchive(runId, node.path)
+              : await chatService.getFolderArchive(sessionId, node.path);
         if (!response.url) {
           toast.error(t("fileSidebar.archiveNotAvailable"));
           return;
@@ -185,7 +213,7 @@ export function ArtifactsPanel({
         toast.error(t("fileSidebar.downloadFailed"));
       }
     },
-    [sessionId, t],
+    [runId, sessionId, t],
   );
 
   const handleSubmitSkill = React.useCallback(
@@ -237,8 +265,11 @@ export function ArtifactsPanel({
           )}
         >
           <div className="flex h-full flex-col overflow-hidden">
-            <div className="flex-1 min-h-0 overflow-hidden p-3 sm:p-4">
+            <div className="relative flex-1 min-h-0 overflow-hidden p-3 sm:p-4">
               {contentNode}
+              {isRefreshing ? (
+                <div className="pointer-events-none absolute inset-3 rounded-xl bg-background/30" />
+              ) : null}
             </div>
           </div>
         </div>
@@ -262,6 +293,7 @@ export function ArtifactsPanel({
               }}
               selectedFile={selectedFile}
               sessionId={sessionId}
+              runId={runId}
               onPackageSkill={
                 sessionId ? (node) => setPackageTarget(node) : undefined
               }

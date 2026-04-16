@@ -610,7 +610,8 @@
         "terminal": "Terminal"
       },
       "limitHint": "Zeigt nur die ersten {{limit}} Schritte",
-      "liveLabel": "Live"
+      "liveLabel": "Live",
+      "legacyHint": "Ältere Replay-Daten sind möglicherweise nur im Legacy-Sitzungsverlauf verfügbar."
     },
     "browser": {
       "screenshotAlt": "Browser-Screenshot",
@@ -633,7 +634,8 @@
       "creating": "Poco wird erstellt...",
       "working": "Agent arbeitet an deiner Aufgabe",
       "noChanges": "Keine Dateiänderungen",
-      "description": "Durch KI-Ausführung generierte Dateiänderungen werden hier angezeigt"
+      "description": "Durch KI-Ausführung generierte Dateiänderungen werden hier angezeigt",
+      "legacyHint": "Ältere Dateidaten sind möglicherweise nur in der sitzungsweiten Latest-Workspace-Ansicht verfügbar."
     },
     "viewer": {
       "loadingEngine": "Vorschau-Engine wird geladen...",

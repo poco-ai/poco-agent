@@ -22,6 +22,7 @@ if TYPE_CHECKING:
     from app.models.agent_message import AgentMessage
     from app.models.agent_scheduled_task import AgentScheduledTask
     from app.models.agent_session import AgentSession
+    from app.models.tool_execution import ToolExecution
     from app.models.usage_log import UsageLog
 
 
@@ -70,6 +71,14 @@ class AgentRun(Base, TimestampMixin):
         index=True,
     )
     config_snapshot: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    state_patch: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    workspace_archive_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    workspace_files_prefix: Mapped[str | None] = mapped_column(Text, nullable=True)
+    workspace_manifest_key: Mapped[str | None] = mapped_column(Text, nullable=True)
+    workspace_archive_key: Mapped[str | None] = mapped_column(Text, nullable=True)
+    workspace_export_status: Mapped[str | None] = mapped_column(
+        String(50), nullable=True
+    )
     scheduled_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
@@ -98,3 +107,4 @@ class AgentRun(Base, TimestampMixin):
     usage_logs: Mapped[list["UsageLog"]] = relationship(
         back_populates="run", cascade="all, delete-orphan"
     )
+    tool_executions: Mapped[list["ToolExecution"]] = relationship(back_populates="run")

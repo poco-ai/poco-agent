@@ -33,6 +33,7 @@ interface FileSidebarProps {
   onFileSelect: (file: FileNode) => void;
   selectedFile?: FileNode;
   sessionId?: string;
+  runId?: string;
   embedded?: boolean;
   onPackageSkill?: (node: FileNode) => void;
   onDownloadNode?: (node: FileNode) => void;
@@ -342,13 +343,14 @@ export function FileSidebar({
   onFileSelect,
   selectedFile,
   sessionId,
+  runId,
   embedded = false,
   onPackageSkill,
   onDownloadNode,
 }: FileSidebarProps) {
   const { t } = useT("translation");
-  const canDownloadArchive = Boolean(sessionId) && files.length > 0;
-  const canDownloadFolder = Boolean(sessionId);
+  const canDownloadArchive = Boolean(sessionId || runId) && files.length > 0;
+  const canDownloadFolder = Boolean(sessionId || runId);
   const [skillFolderPaths, setSkillFolderPaths] = React.useState<Set<string>>(
     () => new Set(),
   );
@@ -364,15 +366,20 @@ export function FileSidebar({
   }, [files]);
 
   const handleDownload = async () => {
-    if (!sessionId || !canDownloadArchive) return;
+    if ((!sessionId && !runId) || !canDownloadArchive) return;
     try {
       const response = await apiClient.get<{
         url?: string | null;
         filename?: string | null;
-      }>(API_ENDPOINTS.sessionWorkspaceArchive(sessionId));
+      }>(
+        runId
+          ? API_ENDPOINTS.runWorkspaceArchive(runId)
+          : API_ENDPOINTS.sessionWorkspaceArchive(sessionId!),
+      );
 
       if (response.url) {
-        const filename = response.filename || `workspace-${sessionId}.zip`;
+        const filename =
+          response.filename || `workspace-${runId || sessionId}.zip`;
         await downloadFileFromUrl(response.url, filename);
         toast.success(t("fileSidebar.downloadStarted"));
       } else {
@@ -397,7 +404,7 @@ export function FileSidebar({
         <span className="min-w-0 truncate text-xs font-semibold uppercase tracking-wide text-sidebar-foreground/70">
           {t("fileSidebar.title")}
         </span>
-        {sessionId && (
+        {(sessionId || runId) && (
           <PanelHeaderAction
             onClick={handleDownload}
             disabled={!canDownloadArchive}

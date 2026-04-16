@@ -17,6 +17,7 @@ from app.models import Base, TimestampMixin
 
 if TYPE_CHECKING:
     from app.models.agent_message import AgentMessage
+    from app.models.agent_run import AgentRun
     from app.models.agent_session import AgentSession
 
 
@@ -26,6 +27,12 @@ class ToolExecution(Base, TimestampMixin):
         Index(
             "ix_tool_executions_session_id_updated_at_id",
             "session_id",
+            "updated_at",
+            "id",
+        ),
+        Index(
+            "ix_tool_executions_run_id_updated_at_id",
+            "run_id",
             "updated_at",
             "id",
         ),
@@ -44,6 +51,10 @@ class ToolExecution(Base, TimestampMixin):
         nullable=False,
         index=True,
     )
+    run_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("agent_runs.id", ondelete="SET NULL"),
+        nullable=True,
+    )
     message_id: Mapped[int] = mapped_column(
         ForeignKey("agent_messages.id", ondelete="CASCADE"), nullable=False
     )
@@ -58,6 +69,7 @@ class ToolExecution(Base, TimestampMixin):
     duration_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     session: Mapped["AgentSession"] = relationship(back_populates="tool_executions")
+    run: Mapped["AgentRun | None"] = relationship(back_populates="tool_executions")
     message: Mapped["AgentMessage"] = relationship(
         back_populates="tool_executions",
         foreign_keys=[message_id],

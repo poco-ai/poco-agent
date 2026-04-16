@@ -143,6 +143,7 @@ export interface MessageAttachmentsDeltaResponse {
 
 export interface ToolExecutionResponse {
   id: string; // UUID
+  run_id?: string | null;
   message_id: number | null;
   tool_use_id: string | null;
   tool_name: string;

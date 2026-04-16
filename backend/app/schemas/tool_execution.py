@@ -9,6 +9,7 @@ class ToolExecutionResponse(BaseModel):
     """Tool execution response."""
 
     id: UUID
+    run_id: UUID | None = None
     message_id: int | None
     tool_use_id: str | None
     tool_name: str

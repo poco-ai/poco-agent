@@ -5,8 +5,8 @@ import logging
 import os
 from typing import Any
 
-import httpx
-import websockets
+import httpx  # pyrefly: ignore[missing-import]
+import websockets  # pyrefly: ignore[missing-import]
 
 from app.core.computer import ComputerClient
 from app.hooks.base import AgentHook, ExecutionContext
@@ -100,6 +100,7 @@ class BrowserScreenshotHook(AgentHook):
             task = asyncio.create_task(
                 self._capture_and_upload_best_effort(
                     session_id=context.session_id,
+                    run_id=context.run_id,
                     tool_use_id=tool_use_id,
                     tool_name=tool_name,
                     tool_result_content=block.get("content"),
@@ -112,6 +113,7 @@ class BrowserScreenshotHook(AgentHook):
         self,
         *,
         session_id: str,
+        run_id: str | None,
         tool_use_id: str,
         tool_name: str,
         tool_result_content: Any,
@@ -133,6 +135,7 @@ class BrowserScreenshotHook(AgentHook):
 
             ok = await self._client.upload_browser_screenshot(
                 session_id=session_id,
+                run_id=run_id,
                 tool_use_id=tool_use_id,
                 png_bytes=png_bytes,
             )

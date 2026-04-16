@@ -91,6 +91,15 @@ export const API_ENDPOINTS = {
 
   // Runs
   runsBySession: (sessionId: string) => `/runs/session/${sessionId}`,
+  runToolExecutions: (runId: string) => `/runs/${runId}/tool-executions`,
+  runToolExecutionsDelta: (runId: string) =>
+    `/runs/${runId}/tool-executions/delta`,
+  runBrowserScreenshot: (runId: string, toolUseId: string) =>
+    `/runs/${runId}/computer/browser/${toolUseId}`,
+  runWorkspaceFiles: (runId: string) => `/runs/${runId}/workspace/files`,
+  runWorkspaceArchive: (runId: string) => `/runs/${runId}/workspace/archive`,
+  runWorkspaceFolderArchive: (runId: string) =>
+    `/runs/${runId}/workspace/folder-archive`,
 
   // Custom Instructions
   customInstructions: "/claude-md",

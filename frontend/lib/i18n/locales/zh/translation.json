@@ -576,7 +576,15 @@
     "chat": "对话",
     "computer": "电脑",
     "artifacts": "产物",
-    "status": "状态"
+    "status": "状态",
+    "runs": {
+      "openAll": "查看全部 Run",
+      "allRuns": "全部 Run",
+      "sheetDescription": "快速切换查看不同运行轮次的回放与产物。",
+      "current": "当前",
+      "viewingHistory": "正在查看历史 Run {{number}}",
+      "backToCurrent": "回到当前"
+    }
   },
   "computer": {
     "title": "电脑",
@@ -610,7 +618,8 @@
         "terminal": "终端"
       },
       "limitHint": "仅展示前 {{limit}} 步",
-      "liveLabel": "实时"
+      "liveLabel": "实时",
+      "legacyHint": "较早的回放数据可能仅能在旧的会话级历史中查看。"
     },
     "browser": {
       "screenshotAlt": "浏览器截图",
@@ -633,7 +642,8 @@
       "creating": "Poco 正在创造中...",
       "working": "Agent is working on your task",
       "noChanges": "暂无文件变更",
-      "description": "AI 执行产生的文件变更将在此处展示"
+      "description": "AI 执行产生的文件变更将在此处展示",
+      "legacyHint": "较早的文件数据可能仅能在会话级的最新工作区视图中查看。"
     },
     "viewer": {
       "loadingEngine": "正在加载预览引擎...",
@@ -1982,6 +1992,20 @@
     "sidebarClose": "侧边栏关闭",
     "fileChanges": "文件变更",
     "totalFiles": "个文件"
+  },
+  "runTimeline": {
+    "runLabel": "Run {{number}}",
+    "selectRun": "切换到 Run {{number}}",
+    "node": {
+      "action": "执行型",
+      "chat": "对话型"
+    },
+    "preview": {
+      "executionSummary": "{{count}} 个文件变更或回放步骤",
+      "conversationOnly": "纯对话轮次",
+      "execution": "{{count}} 个文件变更或回放步骤",
+      "duration": "耗时 {{duration}}"
+    }
   },
   "mcpGrid": {
     "availableServers": "可用服务器: {{count}}",

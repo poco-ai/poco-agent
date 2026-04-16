@@ -14,8 +14,14 @@ def sanitize_storage_token(value: str) -> str:
 
 
 def build_browser_screenshot_key(
-    *, user_id: str, session_id: str, tool_use_id: str
+    *, user_id: str, session_id: str, tool_use_id: str, run_id: str | None = None
 ) -> str:
     safe_session_id = sanitize_storage_token(session_id)
     safe_tool_use_id = sanitize_storage_token(tool_use_id)
+    if run_id:
+        safe_run_id = sanitize_storage_token(run_id)
+        return (
+            f"replays/{user_id}/{safe_session_id}/runs/{safe_run_id}"
+            f"/browser/{safe_tool_use_id}.png"
+        )
     return f"replays/{user_id}/{safe_session_id}/browser/{safe_tool_use_id}.png"

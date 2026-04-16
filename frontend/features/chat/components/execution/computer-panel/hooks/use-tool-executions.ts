@@ -2,34 +2,45 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  getToolExecutionsAction,
-  getToolExecutionsDeltaAction,
+  getRunToolExecutionsAction,
+  getRunToolExecutionsDeltaAction,
 } from "@/features/chat/actions/query-actions";
 import type { ToolExecutionResponse } from "@/features/chat/types";
 
 interface UseToolExecutionsOptions {
-  sessionId?: string;
+  runId?: string;
   isActive?: boolean;
   pollingIntervalMs?: number;
   limit?: number;
 }
 
 export function useToolExecutions({
-  sessionId,
+  runId,
   isActive = false,
   pollingIntervalMs = 2000,
   limit = 500,
 }: UseToolExecutionsOptions) {
   const [executions, setExecutions] = useState<ToolExecutionResponse[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSwitchingRun, setIsSwitchingRun] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState<Error | null>(null);
-  const lastSessionIdRef = useRef<string | null>(null);
+  const lastRunIdRef = useRef<string | null>(null);
   const hasLoadedOnceRef = useRef(false);
   const requestSeqRef = useRef(0);
   const prevIsActiveRef = useRef(isActive);
   const cursorRef = useRef<{ afterCreatedAt?: string; afterId?: string }>({});
+  const cacheRef = useRef<
+    Map<
+      string,
+      {
+        executions: ToolExecutionResponse[];
+        hasMore: boolean;
+        cursor: { afterCreatedAt?: string; afterId?: string };
+      }
+    >
+  >(new Map());
 
   const mergeById = useCallback(
     (base: ToolExecutionResponse[], incoming: ToolExecutionResponse[]) => {
@@ -80,7 +91,7 @@ export function useToolExecutions({
 
   const fetchSnapshot = useCallback(
     async (replace = false) => {
-      if (!sessionId) return;
+      if (!runId) return;
       const seq = (requestSeqRef.current += 1);
       const shouldShowLoading = !hasLoadedOnceRef.current && replace;
       if (shouldShowLoading) {
@@ -90,8 +101,8 @@ export function useToolExecutions({
       const offset = replace ? 0 : executions.length;
 
       try {
-        const data = await getToolExecutionsAction({
-          sessionId,
+        const data = await getRunToolExecutionsAction({
+          runId,
           limit,
           offset,
         });
@@ -106,7 +117,36 @@ export function useToolExecutions({
           updateCursor(merged);
         }
 
-        setHasMore(data.length === limit);
+        const nextHasMore = data.length === limit;
+        setHasMore(nextHasMore);
+        const cachedExecutions = replace ? data : mergeById(executions, data);
+        cacheRef.current.set(runId, {
+          executions: cachedExecutions,
+          hasMore: nextHasMore,
+          cursor: replace
+            ? (() => {
+                if (data.length === 0) return {};
+                let latest = data[0];
+                for (let i = 1; i < data.length; i += 1) {
+                  const current = data[i];
+                  if (current.updated_at > latest.updated_at) {
+                    latest = current;
+                    continue;
+                  }
+                  if (
+                    current.updated_at === latest.updated_at &&
+                    current.id.localeCompare(latest.id) > 0
+                  ) {
+                    latest = current;
+                  }
+                }
+                return {
+                  afterCreatedAt: latest.updated_at,
+                  afterId: latest.id,
+                };
+              })()
+            : cursorRef.current,
+        });
         setError(null);
       } catch (err) {
         if (seq !== requestSeqRef.current) return;
@@ -114,15 +154,16 @@ export function useToolExecutions({
       } finally {
         if (seq !== requestSeqRef.current) return;
         setIsLoading(false);
+        setIsSwitchingRun(false);
         setIsLoadingMore(false);
         hasLoadedOnceRef.current = true;
       }
     },
-    [executions, limit, mergeById, sessionId, updateCursor],
+    [executions, limit, mergeById, runId, updateCursor],
   );
 
   const fetchDelta = useCallback(async () => {
-    if (!sessionId) return;
+    if (!runId) return;
     const seq = requestSeqRef.current;
     const { afterCreatedAt, afterId } = cursorRef.current;
     if (!afterCreatedAt) {
@@ -139,8 +180,8 @@ export function useToolExecutions({
 
       // Drain a few pages in one poll cycle to catch up quickly after bursts.
       while (hasMore && guard < 5) {
-        const payload = await getToolExecutionsDeltaAction({
-          sessionId,
+        const payload = await getRunToolExecutionsDeltaAction({
+          runId,
           afterCreatedAt: currentCreatedAt,
           afterId: currentId,
           limit,
@@ -164,57 +205,77 @@ export function useToolExecutions({
         afterId: currentId,
       };
       setExecutions((prev) => {
-        return mergeById(prev, appended);
+        const merged = mergeById(prev, appended);
+        cacheRef.current.set(runId, {
+          executions: merged,
+          hasMore,
+          cursor: {
+            afterCreatedAt: currentCreatedAt,
+            afterId: currentId,
+          },
+        });
+        return merged;
       });
       setError(null);
     } catch (err) {
       if (seq !== requestSeqRef.current) return;
       setError(err as Error);
     }
-  }, [fetchSnapshot, limit, mergeById, sessionId]);
+  }, [fetchSnapshot, limit, mergeById, runId]);
 
   const loadMore = useCallback(() => {
-    if (isLoadingMore || !hasMore || !sessionId) return;
+    if (isLoadingMore || !hasMore || !runId) return;
     setIsLoadingMore(true);
     void fetchSnapshot(false);
-  }, [fetchSnapshot, hasMore, isLoadingMore, sessionId]);
+  }, [fetchSnapshot, hasMore, isLoadingMore, runId]);
 
-  // Reset state when session changes.
+  // Reset state when run changes.
   useEffect(() => {
-    if (!sessionId) return;
-    if (lastSessionIdRef.current === sessionId) return;
-    lastSessionIdRef.current = sessionId;
+    if (!runId) return;
+    if (lastRunIdRef.current === runId) return;
+    const previousRunId = lastRunIdRef.current;
+    lastRunIdRef.current = runId;
     hasLoadedOnceRef.current = false;
     requestSeqRef.current += 1;
-    setExecutions([]);
     setError(null);
-    setIsLoading(false);
     setIsLoadingMore(false);
-    setHasMore(true);
-    cursorRef.current = {};
+    setIsSwitchingRun(previousRunId !== null);
+    const cached = cacheRef.current.get(runId);
+    if (cached) {
+      setExecutions(cached.executions);
+      setHasMore(cached.hasMore);
+      cursorRef.current = cached.cursor;
+      setIsLoading(false);
+      setIsSwitchingRun(false);
+      hasLoadedOnceRef.current = true;
+    } else {
+      setHasMore(true);
+      cursorRef.current = {};
+      setIsLoading(previousRunId === null);
+    }
     void fetchSnapshot(true);
-  }, [fetchSnapshot, sessionId]);
+  }, [fetchSnapshot, runId]);
 
   // Poll while active.
   useEffect(() => {
-    if (!sessionId) return;
+    if (!runId) return;
     if (!isActive) return;
     const id = setInterval(() => {
       void fetchDelta();
     }, pollingIntervalMs);
     return () => clearInterval(id);
-  }, [fetchDelta, isActive, pollingIntervalMs, sessionId]);
+  }, [fetchDelta, isActive, pollingIntervalMs, runId]);
 
   // When a session transitions from active -> terminal, fetch once more so the UI
   // can pick up the final tool_output written during cancellation/failure.
   useEffect(() => {
-    if (!sessionId) return;
+    if (!runId) return;
     const wasActive = prevIsActiveRef.current;
     prevIsActiveRef.current = isActive;
     if (wasActive && !isActive) {
       void fetchDelta();
     }
-  }, [fetchDelta, isActive, sessionId]);
+  }, [fetchDelta, isActive, runId]);
 
   return {
     executions,
@@ -222,6 +283,7 @@ export function useToolExecutions({
     isLoadingMore,
     hasMore,
     error,
+    isSwitchingRun,
     refetch: () => fetchSnapshot(true),
     loadMore,
   };

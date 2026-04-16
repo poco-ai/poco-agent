@@ -88,7 +88,10 @@ const findFileByPath = (
 
 interface UseArtifactsOptions {
   sessionId?: string;
+  runId?: string;
   sessionStatus?:
+    | "queued"
+    | "claimed"
     | "pending"
     | "running"
     | "canceling"
@@ -121,6 +124,7 @@ interface UseArtifactsReturn {
  */
 export function useArtifacts({
   sessionId,
+  runId,
   sessionStatus,
 }: UseArtifactsOptions): UseArtifactsReturn {
   const { t } = useT("translation");
@@ -128,6 +132,16 @@ export function useArtifacts({
   const [selectedPath, setSelectedPath] = useState<string | undefined>();
   const [viewMode, setViewMode] = useState<ViewMode>("artifacts");
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const cacheRef = useRef<Map<string, FileNode[]>>(new Map());
+  const stateCacheRef = useRef<
+    Map<string, { selectedPath?: string; viewMode: ViewMode }>
+  >(new Map());
+  const lastScopeKeyRef = useRef<string | null>(null);
+
+  const scopeKey = useMemo(
+    () => `${sessionId ?? ""}::${runId ?? "session"}`,
+    [runId, sessionId],
+  );
 
   // Coalesce concurrent refresh triggers (manual / auto / polling) into one request.
   const fetchPromiseRef = useRef<Promise<FileNode[]> | null>(null);
@@ -139,7 +153,9 @@ export function useArtifacts({
       setIsRefreshing(true);
       try {
         const session = await chatService.getSessionRaw(sessionId);
-        const workspaceFiles = await chatService.getFiles(sessionId);
+        const workspaceFiles = runId
+          ? await chatService.getRunFiles(runId)
+          : await chatService.getFiles(sessionId);
         const filesystemMode =
           session.config_snapshot?.filesystem_mode === "local_mount"
             ? "local_mount"
@@ -169,6 +185,7 @@ export function useArtifacts({
               ]
             : workspaceFiles;
         setFiles(data);
+        cacheRef.current.set(scopeKey, data);
         return data;
       } catch (error) {
         console.error("[Artifacts] Failed to fetch workspace files:", error);
@@ -181,7 +198,7 @@ export function useArtifacts({
 
     fetchPromiseRef.current = promise;
     return promise;
-  }, [sessionId, t]);
+  }, [runId, scopeKey, sessionId, t]);
 
   // Manual refresh method
   const refreshFiles = useCallback(async () => {
@@ -213,10 +230,34 @@ export function useArtifacts({
 
   // Initial fetch when sessionId becomes available.
   useEffect(() => {
-    setViewMode("artifacts");
-    setSelectedPath(undefined);
+    const previousScopeKey = lastScopeKeyRef.current;
+    lastScopeKeyRef.current = scopeKey;
+
+    if (!sessionId) {
+      setViewMode("artifacts");
+      setSelectedPath(undefined);
+      setFiles([]);
+      return;
+    }
+
+    if (
+      previousScopeKey === null ||
+      !previousScopeKey.startsWith(`${sessionId}::`)
+    ) {
+      setViewMode("artifacts");
+      setSelectedPath(undefined);
+    } else {
+      const cachedState = stateCacheRef.current.get(scopeKey);
+      setViewMode(cachedState?.viewMode ?? "artifacts");
+      setSelectedPath(cachedState?.selectedPath);
+    }
+
+    const cached = cacheRef.current.get(scopeKey);
+    if (cached) {
+      setFiles(cached);
+    }
     void fetchFiles();
-  }, [sessionId, fetchFiles]);
+  }, [scopeKey, sessionId, fetchFiles]);
 
   // Auto-refresh when session transitions into a finished status.
   const prevStatusRef = useRef<typeof sessionStatus>(undefined);
@@ -231,15 +272,27 @@ export function useArtifacts({
   }, [sessionId, sessionStatus, fetchFiles]);
 
   // Select a file and switch to document view
-  const selectFile = useCallback((file: FileNode) => {
-    setSelectedPath(normalizePath(file.path));
-    setViewMode("document");
-  }, []);
+  const selectFile = useCallback(
+    (file: FileNode) => {
+      const nextSelectedPath = normalizePath(file.path);
+      setSelectedPath(nextSelectedPath);
+      setViewMode("document");
+      stateCacheRef.current.set(scopeKey, {
+        selectedPath: nextSelectedPath,
+        viewMode: "document",
+      });
+    },
+    [scopeKey],
+  );
 
   const closeViewer = useCallback(() => {
     setViewMode("artifacts");
     setSelectedPath(undefined);
-  }, []);
+    stateCacheRef.current.set(scopeKey, {
+      selectedPath: undefined,
+      viewMode: "artifacts",
+    });
+  }, [scopeKey]);
 
   const selectedFile = useMemo((): FileNode | undefined => {
     if (!selectedPath) return undefined;
@@ -271,6 +324,14 @@ export function useArtifacts({
 
     void fetchFiles();
   }, [sessionId, viewMode, selectedFile, fetchFiles]);
+
+  useEffect(() => {
+    if (!sessionId) return;
+    stateCacheRef.current.set(scopeKey, {
+      selectedPath,
+      viewMode,
+    });
+  }, [scopeKey, selectedPath, sessionId, viewMode]);
 
   // If the user opens a file before its preview URL is ready, poll until it becomes available.
   useEffect(() => {

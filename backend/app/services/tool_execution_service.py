@@ -44,6 +44,23 @@ class ToolExecutionService:
         )
         return executions
 
+    def get_tool_executions_by_run(
+        self,
+        db: Session,
+        run_id: uuid.UUID,
+        *,
+        limit: int = 500,
+        offset: int = 0,
+    ) -> list[ToolExecution]:
+        executions = ToolExecutionRepository.list_by_run(
+            db,
+            run_id,
+            limit=max(1, int(limit)),
+            offset=max(0, int(offset)),
+        )
+        logger.debug("Retrieved %s tool executions for run %s", len(executions), run_id)
+        return executions
+
     def get_tool_execution(self, db: Session, execution_id: uuid.UUID) -> ToolExecution:
         """Gets a tool execution by ID.
 
@@ -83,6 +100,42 @@ class ToolExecutionService:
         fetched = ToolExecutionRepository.list_by_session_after_cursor(
             db,
             session_id,
+            after_created_at=after_created_at,
+            after_id=after_id,
+            limit=safe_limit + 1,
+        )
+
+        has_more = len(fetched) > safe_limit
+        items_db = fetched[:safe_limit]
+        items = [ToolExecutionResponse.model_validate(e) for e in items_db]
+
+        if items_db:
+            next_after_created_at = items_db[-1].updated_at
+            next_after_id = items_db[-1].id
+        else:
+            next_after_created_at = after_created_at
+            next_after_id = after_id
+
+        return ToolExecutionDeltaResponse(
+            items=items,
+            next_after_created_at=next_after_created_at,
+            next_after_id=next_after_id,
+            has_more=has_more,
+        )
+
+    def get_tool_executions_delta_by_run(
+        self,
+        db: Session,
+        run_id: uuid.UUID,
+        *,
+        after_created_at: datetime | None = None,
+        after_id: uuid.UUID | None = None,
+        limit: int = 200,
+    ) -> ToolExecutionDeltaResponse:
+        safe_limit = max(1, min(int(limit), 2000))
+        fetched = ToolExecutionRepository.list_by_run_after_cursor(
+            db,
+            run_id,
             after_created_at=after_created_at,
             after_id=after_id,
             limit=safe_limit + 1,

@@ -610,7 +610,8 @@
         "terminal": "Terminal"
       },
       "limitHint": "Affiche uniquement les {{limit}} premières étapes",
-      "liveLabel": "En direct"
+      "liveLabel": "En direct",
+      "legacyHint": "Les anciennes données de relecture peuvent n'être disponibles que dans l'historique de session hérité."
     },
     "browser": {
       "screenshotAlt": "Capture d'écran du navigateur",
@@ -633,7 +634,8 @@
       "creating": "Poco est en cours de création...",
       "working": "L'agent travaille sur votre tâche",
       "noChanges": "Aucune modification de fichier",
-      "description": "Les modifications de fichiers générées par l'exécution IA seront affichées ici"
+      "description": "Les modifications de fichiers générées par l'exécution IA seront affichées ici",
+      "legacyHint": "Les anciennes données de fichiers peuvent n'être disponibles que dans la vue du dernier workspace au niveau de la session."
     },
     "viewer": {
       "loadingEngine": "Chargement du moteur de prévisualisation...",

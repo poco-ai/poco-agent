@@ -5,6 +5,7 @@ from pathlib import Path, PurePosixPath
 
 from app.core.errors.error_codes import ErrorCode
 from app.core.errors.exceptions import AppException
+from app.models.agent_run import AgentRun
 from app.models.agent_session import AgentSession
 from app.schemas.workspace import WorkspaceArchiveResponse
 from app.services.storage_service import S3StorageService
@@ -29,7 +30,7 @@ class WorkspaceArchiveService:
         normalized_folder_path = self._normalize_folder_path(folder_path)
         filename = self._build_archive_filename(normalized_folder_path)
 
-        self._require_workspace_export_ready(session)
+        self._require_workspace_export_ready(session.workspace_export_status)
 
         manifest_key = (session.workspace_manifest_key or "").strip()
         if not manifest_key:
@@ -39,7 +40,9 @@ class WorkspaceArchiveService:
             )
 
         manifest = self._storage_service().get_manifest(manifest_key)
-        workspace_prefix = self._require_workspace_files_prefix(session)
+        workspace_prefix = self._require_workspace_files_prefix(
+            session.workspace_files_prefix
+        )
         file_entries = self._collect_folder_files(
             manifest=manifest,
             folder_path=normalized_folder_path,
@@ -52,6 +55,59 @@ class WorkspaceArchiveService:
 
         archive_key = self._build_archive_key(
             session=session,
+            folder_path=normalized_folder_path,
+        )
+        self._create_and_upload_archive(
+            archive_key=archive_key,
+            filename=filename,
+            folder_path=normalized_folder_path,
+            workspace_prefix=workspace_prefix,
+            file_entries=file_entries,
+        )
+
+        url = self._storage_service().presign_get(
+            archive_key,
+            response_content_disposition=f'attachment; filename="{filename}"',
+            response_content_type="application/zip",
+        )
+        return WorkspaceArchiveResponse(url=url, filename=filename)
+
+    def get_folder_archive_for_run(
+        self,
+        *,
+        session: AgentSession,
+        run: AgentRun,
+        folder_path: str,
+    ) -> WorkspaceArchiveResponse:
+        normalized_folder_path = self._normalize_folder_path(folder_path)
+        filename = self._build_archive_filename(normalized_folder_path)
+
+        self._require_workspace_export_ready(run.workspace_export_status)
+
+        manifest_key = (run.workspace_manifest_key or "").strip()
+        if not manifest_key:
+            raise AppException(
+                error_code=ErrorCode.BAD_REQUEST,
+                message="Workspace manifest is not available",
+            )
+
+        manifest = self._storage_service().get_manifest(manifest_key)
+        workspace_prefix = self._require_workspace_files_prefix(
+            run.workspace_files_prefix
+        )
+        file_entries = self._collect_folder_files(
+            manifest=manifest,
+            folder_path=normalized_folder_path,
+        )
+        if not file_entries:
+            raise AppException(
+                error_code=ErrorCode.NOT_FOUND,
+                message="Workspace folder is empty or unavailable",
+            )
+
+        archive_key = self._build_run_archive_key(
+            session=session,
+            run=run,
             folder_path=normalized_folder_path,
         )
         self._create_and_upload_archive(
@@ -95,6 +151,16 @@ class WorkspaceArchiveService:
         return f"workspaces/{session.user_id}/{session.id}/folder-archives/{digest}.zip"
 
     @staticmethod
+    def _build_run_archive_key(
+        *, session: AgentSession, run: AgentRun, folder_path: str
+    ) -> str:
+        digest = hashlib.sha256(folder_path.encode("utf-8")).hexdigest()[:16]
+        return (
+            f"workspaces/{session.user_id}/{session.id}/runs/{run.id}"
+            f"/folder-archives/{digest}.zip"
+        )
+
+    @staticmethod
     def _extract_object_key(file_entry: dict) -> str | None:
         for key in ("key", "object_key", "oss_key", "s3_key"):
             value = file_entry.get(key)
@@ -103,8 +169,8 @@ class WorkspaceArchiveService:
         return None
 
     @staticmethod
-    def _require_workspace_files_prefix(session: AgentSession) -> str:
-        workspace_prefix = (session.workspace_files_prefix or "").strip().rstrip("/")
+    def _require_workspace_files_prefix(workspace_files_prefix: str | None) -> str:
+        workspace_prefix = (workspace_files_prefix or "").strip().rstrip("/")
         if not workspace_prefix:
             raise AppException(
                 error_code=ErrorCode.BAD_REQUEST,
@@ -113,8 +179,8 @@ class WorkspaceArchiveService:
         return workspace_prefix
 
     @staticmethod
-    def _require_workspace_export_ready(session: AgentSession) -> None:
-        if (session.workspace_export_status or "").strip().lower() != "ready":
+    def _require_workspace_export_ready(workspace_export_status: str | None) -> None:
+        if (workspace_export_status or "").strip().lower() != "ready":
             raise AppException(
                 error_code=ErrorCode.BAD_REQUEST,
                 message="Workspace export not ready",

@@ -9,6 +9,8 @@ import type { FileChange } from "@/features/chat/types";
 interface FileChangesListProps {
   fileChanges?: FileChange[];
   sessionStatus?:
+    | "queued"
+    | "claimed"
     | "pending"
     | "running"
     | "canceling"

@@ -39,6 +39,13 @@ const toolExecutionsSchema = sessionIdSchema.extend({
   limit: z.number().int().positive().optional(),
   offset: z.number().int().min(0).optional(),
 });
+const runIdSchema = z.object({
+  runId: z.string().trim().min(1, "validation.missingRunId"),
+});
+const runToolExecutionsSchema = runIdSchema.extend({
+  limit: z.number().int().positive().optional(),
+  offset: z.number().int().min(0).optional(),
+});
 
 const toolExecutionsDeltaSchema = sessionIdSchema
   .extend({
@@ -50,8 +57,21 @@ const toolExecutionsDeltaSchema = sessionIdSchema
     (value) => !value.afterId || Boolean(value.afterCreatedAt),
     "afterCreatedAt is required when afterId is provided",
   );
+const runToolExecutionsDeltaSchema = runIdSchema
+  .extend({
+    afterCreatedAt: z.string().trim().min(1).optional(),
+    afterId: z.string().uuid().optional(),
+    limit: z.number().int().positive().max(2000).optional(),
+  })
+  .refine(
+    (value) => !value.afterId || Boolean(value.afterCreatedAt),
+    "afterCreatedAt is required when afterId is provided",
+  );
 
 const browserScreenshotSchema = sessionIdSchema.extend({
+  toolUseId: z.string().trim().min(1, VALIDATION_ERRORS.missingToolUseId),
+});
+const runBrowserScreenshotSchema = runIdSchema.extend({
   toolUseId: z.string().trim().min(1, VALIDATION_ERRORS.missingToolUseId),
 });
 
@@ -73,7 +93,14 @@ export type GetToolExecutionsInput = z.infer<typeof toolExecutionsSchema>;
 export type GetToolExecutionsDeltaInput = z.infer<
   typeof toolExecutionsDeltaSchema
 >;
+export type GetRunToolExecutionsInput = z.infer<typeof runToolExecutionsSchema>;
+export type GetRunToolExecutionsDeltaInput = z.infer<
+  typeof runToolExecutionsDeltaSchema
+>;
 export type GetBrowserScreenshotInput = z.infer<typeof browserScreenshotSchema>;
+export type GetRunBrowserScreenshotInput = z.infer<
+  typeof runBrowserScreenshotSchema
+>;
 
 export async function listSessionsAction(input?: ListSessionsInput) {
   const { userId, limit, offset } = listSessionsSchema.parse(input ?? {});
@@ -174,9 +201,35 @@ export async function getToolExecutionsDeltaAction(
   });
 }
 
+export async function getRunToolExecutionsAction(
+  input: GetRunToolExecutionsInput,
+) {
+  const { runId, limit, offset } = runToolExecutionsSchema.parse(input);
+  return chatService.getRunToolExecutions(runId, { limit, offset });
+}
+
+export async function getRunToolExecutionsDeltaAction(
+  input: GetRunToolExecutionsDeltaInput,
+) {
+  const { runId, afterCreatedAt, afterId, limit } =
+    runToolExecutionsDeltaSchema.parse(input);
+  return chatService.getRunToolExecutionsDelta(runId, {
+    after_created_at: afterCreatedAt,
+    after_id: afterId,
+    limit,
+  });
+}
+
 export async function getBrowserScreenshotAction(
   input: GetBrowserScreenshotInput,
 ) {
   const { sessionId, toolUseId } = browserScreenshotSchema.parse(input);
   return chatService.getBrowserScreenshot(sessionId, toolUseId);
+}
+
+export async function getRunBrowserScreenshotAction(
+  input: GetRunBrowserScreenshotInput,
+) {
+  const { runId, toolUseId } = runBrowserScreenshotSchema.parse(input);
+  return chatService.getRunBrowserScreenshot(runId, toolUseId);
 }

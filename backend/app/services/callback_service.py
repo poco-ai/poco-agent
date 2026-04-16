@@ -218,6 +218,7 @@ class CallbackService:
         session_db: Session,
         message: dict[str, Any],
         session_id: uuid.UUID,
+        run_id: uuid.UUID | None,
         message_id: int,
     ) -> None:
         content = message.get("content", [])
@@ -247,12 +248,15 @@ class CallbackService:
                     existing.tool_name = tool_name
                     existing.tool_input = tool_input
                     existing.message_id = message_id
+                    if run_id is not None and existing.run_id is None:
+                        existing.run_id = run_id
                     continue
 
                 ToolExecutionRepository.create(
                     session_db=session_db,
                     session_id=session_id,
                     message_id=message_id,
+                    run_id=run_id,
                     tool_use_id=tool_use_id,
                     tool_name=tool_name,
                     tool_input=tool_input,
@@ -279,6 +283,7 @@ class CallbackService:
                     session_db=session_db,
                     session_id=session_id,
                     message_id=message_id,
+                    run_id=run_id,
                     tool_use_id=tool_use_id,
                     tool_name="unknown",
                     tool_output=tool_output,
@@ -290,6 +295,8 @@ class CallbackService:
             existing.tool_output = tool_output
             existing.result_message_id = message_id
             existing.is_error = bool(is_error)
+            if run_id is not None and existing.run_id is None:
+                existing.run_id = run_id
 
             if existing.duration_ms is None and existing.created_at is not None:
                 duration = datetime.now(timezone.utc) - existing.created_at
@@ -359,7 +366,11 @@ class CallbackService:
         return "AssistantMessage" in latest_type or "ResultMessage" in latest_type
 
     def _persist_message_and_tools(
-        self, db: Session, session_id: uuid.UUID, message: dict[str, Any]
+        self,
+        db: Session,
+        session_id: uuid.UUID,
+        run_id: uuid.UUID | None,
+        message: dict[str, Any],
     ) -> AgentMessage:
         role = self._extract_role_from_message(message)
         text_preview = _extract_visible_message_text(message)
@@ -374,7 +385,7 @@ class CallbackService:
             text_preview=text_preview,
         )
         db.flush()
-        self._extract_tool_executions(db, message, session_id, db_message.id)
+        self._extract_tool_executions(db, message, session_id, run_id, db_message.id)
         return db_message
 
     def process_agent_callback(
@@ -434,7 +445,10 @@ class CallbackService:
                 )
             else:
                 persisted_message = self._persist_message_and_tools(
-                    db, db_session.id, callback.new_message
+                    db,
+                    db_session.id,
+                    db_run.id if db_run is not None else None,
+                    callback.new_message,
                 )
             self._extract_and_persist_usage(
                 db,
@@ -444,7 +458,10 @@ class CallbackService:
             )
 
         if callback.state_patch is not None:
-            db_session.state_patch = callback.state_patch.model_dump(mode="json")
+            state_patch_payload = callback.state_patch.model_dump(mode="json")
+            db_session.state_patch = state_patch_payload
+            if db_run is not None:
+                db_run.state_patch = state_patch_payload
         should_apply_workspace_export = self._should_apply_workspace_export(
             db,
             db_session,
@@ -467,12 +484,38 @@ class CallbackService:
         elif should_apply_workspace_export:
             if callback.workspace_files_prefix is not None:
                 db_session.workspace_files_prefix = callback.workspace_files_prefix
+                if db_run is not None:
+                    db_run.workspace_files_prefix = callback.workspace_files_prefix
             if callback.workspace_manifest_key is not None:
                 db_session.workspace_manifest_key = callback.workspace_manifest_key
+                if db_run is not None:
+                    db_run.workspace_manifest_key = callback.workspace_manifest_key
             if callback.workspace_archive_key is not None:
                 db_session.workspace_archive_key = callback.workspace_archive_key
+                if db_run is not None:
+                    db_run.workspace_archive_key = callback.workspace_archive_key
             if callback.workspace_export_status is not None:
                 db_session.workspace_export_status = callback.workspace_export_status
+                if db_run is not None:
+                    db_run.workspace_export_status = callback.workspace_export_status
+        elif db_run is not None:
+            if callback.workspace_files_prefix is not None:
+                db_run.workspace_files_prefix = callback.workspace_files_prefix
+            if callback.workspace_manifest_key is not None:
+                db_run.workspace_manifest_key = callback.workspace_manifest_key
+            if callback.workspace_archive_key is not None:
+                db_run.workspace_archive_key = callback.workspace_archive_key
+            if callback.workspace_export_status is not None:
+                db_run.workspace_export_status = callback.workspace_export_status
+
+        if callback.workspace_archive_key is not None and db_run is not None:
+            db_run.workspace_archive_key = callback.workspace_archive_key
+        if callback.workspace_export_status is not None and db_run is not None:
+            db_run.workspace_export_status = callback.workspace_export_status
+        if callback.workspace_files_prefix is not None and db_run is not None:
+            db_run.workspace_files_prefix = callback.workspace_files_prefix
+        if callback.workspace_manifest_key is not None and db_run is not None:
+            db_run.workspace_manifest_key = callback.workspace_manifest_key
 
         if db_run is not None:
             db_run.progress = int(callback.progress or 0)
