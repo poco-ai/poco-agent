@@ -362,7 +362,7 @@ export function TeamPageClient() {
       {isLoading ? (
         <Skeleton className="h-40 rounded-2xl" />
       ) : (
-        <div className="flex flex-col gap-5">
+        <div className="flex flex-col gap-6 pt-5">
           <WorkspaceOverviewHero
             workspace={currentWorkspace}
             members={members}
@@ -370,7 +370,7 @@ export function TeamPageClient() {
           />
           <WorkspaceSummaryCards members={members} invites={invites} />
           <Card className="border-border/60">
-            <CardHeader className="gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <CardHeader className="flex flex-wrap items-center justify-between gap-3">
               <div className="space-y-1">
                 <CardTitle>{t("workspaces.activity.title")}</CardTitle>
                 <CardDescription>
@@ -506,7 +506,7 @@ export function TeamMembersPageClient() {
   return (
     <TeamContentShell>
       <Card className="border-border/60">
-        <CardHeader className="gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <CardHeader className="flex flex-wrap items-center justify-between gap-3">
           <div className="space-y-1">
             <CardTitle>{t("workspaces.members.title")}</CardTitle>
             <CardDescription>{t("workspaces.members.description")}</CardDescription>

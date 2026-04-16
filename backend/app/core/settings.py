@@ -43,7 +43,7 @@ class Settings(BaseSettings):
     github_client_id: str | None = Field(default=None, alias="GITHUB_CLIENT_ID")
     github_client_secret: str | None = Field(default=None, alias="GITHUB_CLIENT_SECRET")
     workspace_features_enabled: bool = Field(
-        default=False,
+        default=True,
         alias="WORKSPACE_FEATURES_ENABLED",
     )
     audit_rules: dict[str, bool] = Field(

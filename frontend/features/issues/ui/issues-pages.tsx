@@ -342,7 +342,7 @@ export function TeamIssuesPageClient() {
     <>
       <TeamContentShell contentClassName="max-w-none">
         {selectedIssueId ? (
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-5">
             <Button
               type="button"
               variant="ghost"
@@ -357,8 +357,8 @@ export function TeamIssuesPageClient() {
           </div>
         ) : (
         <div>
-        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-          <div className="space-y-1">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+          <div className="space-y-1.5">
             <h2 className="text-lg font-semibold text-foreground">{t("issues.title")}</h2>
             <p className="text-sm text-muted-foreground">{t("issues.subtitle")}</p>
           </div>
@@ -396,7 +396,7 @@ export function TeamIssuesPageClient() {
           </div>
         </div>
         {!hasLoadedBoards && isRefreshing ? (
-          <div className="grid gap-5 lg:grid-cols-[280px_minmax(0,1fr)]">
+          <div className="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
             <Card className="border-border/60">
               <CardHeader>
                 <Skeleton className="h-5 w-24" />
@@ -448,7 +448,7 @@ export function TeamIssuesPageClient() {
             </CardContent>
           </Card>
         ) : (
-        <div className="grid gap-5 lg:grid-cols-[280px_minmax(0,1fr)]">
+        <div className="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
           <Card className="border-border/60">
             <CardHeader>
               <CardTitle>{t("issues.boardsTitle")}</CardTitle>
@@ -485,11 +485,6 @@ export function TeamIssuesPageClient() {
                     <p className="mt-1 text-xs text-muted-foreground">
                       {board.description || t("issues.subtitle")}
                     </p>
-                    {selectedBoardId === board.board_id ? (
-                      <Badge className="mt-3" variant="secondary">
-                        {t("issues.listTitle")}
-                      </Badge>
-                    ) : null}
                   </button>
                 ))
               )}
@@ -764,9 +759,9 @@ export function TeamIssueDetailPageClient({ issueId }: { issueId: string }) {
   const executionMeta = getAssignmentExecutionMeta(assignment);
 
   return (
-    <TeamContentShell contentClassName="max-w-none">
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-        <div className="space-y-1">
+    <>
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+        <div className="space-y-1.5">
           <h2 className="text-lg font-semibold text-foreground">{issue?.title ?? t("issues.detailTitle")}</h2>
           <p className="text-sm text-muted-foreground">
             {issue
@@ -786,8 +781,8 @@ export function TeamIssueDetailPageClient({ issueId }: { issueId: string }) {
         </Button>
       </div>
       {isLoading && !issue ? (
-        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
-          <div className="space-y-5">
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+          <div className="space-y-6">
             <Card className="border-border/60">
               <CardHeader>
                 <Skeleton className="h-5 w-28" />
@@ -827,7 +822,7 @@ export function TeamIssueDetailPageClient({ issueId }: { issueId: string }) {
               </CardContent>
             </Card>
           </div>
-          <div className="space-y-5">
+          <div className="space-y-6">
             <Card className="border-border/60">
               <CardHeader>
                 <Skeleton className="h-5 w-24" />
@@ -872,8 +867,8 @@ export function TeamIssueDetailPageClient({ issueId }: { issueId: string }) {
           </CardContent>
         </Card>
       ) : issue ? (
-        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
-          <div className="space-y-5">
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+          <div className="space-y-6">
             <Card className="border-border/60">
               <CardHeader>
                 <CardTitle>{t("issues.sections.overview")}</CardTitle>
@@ -999,7 +994,7 @@ export function TeamIssueDetailPageClient({ issueId }: { issueId: string }) {
             </Card>
           </div>
 
-          <div className="space-y-5">
+          <div className="space-y-6">
             <Card className="border-border/60">
               <CardHeader>
                 <CardTitle>{t("issues.executionTitle")}</CardTitle>
@@ -1091,6 +1086,6 @@ export function TeamIssueDetailPageClient({ issueId }: { issueId: string }) {
           </div>
         </div>
       ) : null}
-    </TeamContentShell>
+    </>
   );
 }

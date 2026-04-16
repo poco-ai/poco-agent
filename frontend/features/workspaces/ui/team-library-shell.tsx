@@ -4,7 +4,6 @@ import * as React from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { ChevronLeft, Users } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -25,7 +24,6 @@ import {
 import { PageHeaderShell } from "@/components/shared/page-header-shell";
 import { useLanguage } from "@/hooks/use-language";
 import { useT } from "@/lib/i18n/client";
-import { formatWorkspaceKind } from "@/features/workspaces/lib/format";
 import {
   buildTeamSectionHref,
   buildTeamSections,
@@ -130,28 +128,12 @@ export function TeamLibraryShell({ children }: TeamLibraryShellProps) {
   const sections = React.useMemo(
     () =>
       buildTeamSections(lng, {
-        overview: t("sidebar.team"),
+        overview: t("sidebar.teamOverview"),
         members: t("workspaces.pages.members.title"),
         issues: t("issues.title"),
       }),
     [lng, t],
   );
-
-  const activeSectionMeta = React.useMemo(
-    () => sections.find((s) => s.id === activeSection),
-    [sections, activeSection],
-  );
-
-  const railHeader = currentWorkspace ? (
-    <div className="min-w-0 flex-1">
-      <p className="truncate text-sm font-medium text-foreground">
-        {currentWorkspace.name}
-      </p>
-      <Badge variant="secondary" className="mt-0.5">
-        {formatWorkspaceKind(t, currentWorkspace.kind)}
-      </Badge>
-    </div>
-  ) : null;
 
   const handleSelectSection = React.useCallback(
     (sectionId: TeamSectionId) => {
@@ -165,14 +147,10 @@ export function TeamLibraryShell({ children }: TeamLibraryShellProps) {
     router.push(buildTeamSectionHref(lng, "overview"));
   }, [lng, router]);
 
-  const headerTitle = isMobileDetail
-    ? (activeSectionMeta?.label ?? t("sidebar.team"))
-    : t("sidebar.team");
-  const headerSubtitle = isMobileDetail
-    ? undefined
-    : currentWorkspace
-      ? t("workspaces.currentWorkspace", { name: currentWorkspace.name })
-      : t("workspaces.noWorkspace");
+  const headerTitle = t("sidebar.team");
+  const headerSubtitle = currentWorkspace
+    ? t("workspaces.currentWorkspace", { name: currentWorkspace.name })
+    : t("workspaces.noWorkspace");
 
   const mobileBackButton = isMobileDetail ? (
     <Button
@@ -247,7 +225,7 @@ export function TeamLibraryShell({ children }: TeamLibraryShellProps) {
           sections={sections}
           activeSectionId={activeSection}
           onSelect={handleSelectSection}
-          header={railHeader}
+
         />
         <main className="min-h-0 overflow-y-auto">
           {children}
@@ -268,7 +246,7 @@ export function TeamLibraryShell({ children }: TeamLibraryShellProps) {
               sections={sections}
               activeSectionId={activeSection}
               onSelect={handleSelectSection}
-              header={railHeader}
+    
               variant="mobile"
             />
           </div>

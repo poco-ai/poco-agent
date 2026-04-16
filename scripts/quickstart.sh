@@ -127,7 +127,7 @@ msg() {
     "warn.chown_failed") [[ "$LANG" == "zh" ]] && echo "chown RustFS 数据目录失败。您可能需要运行: sudo chown -R" || echo "Failed to chown RustFS data dir. You may need to run: sudo chown -R" ;;
     "warn.chmod_data_failed") [[ "$LANG" == "zh" ]] && echo "chmod RustFS 数据目录失败。您可能需要运行: sudo chown -R" || echo "Failed to chmod RustFS data dir. You may need to run: sudo chown -R" ;;
     "warn.chmod_workspace_failed") [[ "$LANG" == "zh" ]] && echo "chmod 工作空间目录失败。您可能需要运行: sudo chown -R" || echo "Failed to chmod workspace directories. You may need to run: sudo chown -R" ;;
-    "warn.rustfs_init_failed") [[ "$LANG" == "zh" ]] && echo "rustfs-init 失败；您可以重试: docker compose --profile init up -d rustfs-init" || echo "rustfs-init failed; you can retry: docker compose --profile init up -d rustfs-init" ;;
+    "warn.rustfs_init_failed") [[ "$LANG" == "zh" ]] && echo "rustfs-init 失败；您可以重试: docker compose --profile init rm -fsv rustfs-init && docker compose --profile init run --rm --no-deps rustfs-init" || echo "rustfs-init failed; you can retry: docker compose --profile init rm -fsv rustfs-init && docker compose --profile init run --rm --no-deps rustfs-init" ;;
     "warn.anthropic_not_set") [[ "$LANG" == "zh" ]] && echo "未设置模型 API Key（ANTHROPIC_API_KEY）！" || echo "Model API key is not set (ANTHROPIC_API_KEY)!" ;;
     "warn.default_model") [[ "$LANG" == "zh" ]] && echo "您选择了 Anthropic 官方 API，DEFAULT_MODEL 通常应以 'claude-' 开头，请确认模型 ID 是否正确。" || echo "You selected Anthropic official API. DEFAULT_MODEL usually starts with 'claude-'; please verify model ID." ;;
 
@@ -1026,7 +1026,8 @@ if [[ "$START_ALL" = true ]]; then
   fi
 
   if [[ "$INIT_BUCKET" = true ]]; then
-    "${COMPOSE[@]}" --profile init up -d --no-deps rustfs-init || \
+    "${COMPOSE[@]}" --profile init rm -fsv rustfs-init >/dev/null 2>&1 || true
+    "${COMPOSE[@]}" --profile init run --rm --no-deps rustfs-init || \
       warn "$(msg "warn.rustfs_init_failed")"
   fi
 fi

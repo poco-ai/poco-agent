@@ -197,6 +197,19 @@ Use Tailwind CSS v4 utility classes with CSS variables. All colors, shadows, and
 
 **DO NOT** hardcode colors like `#ffffff` or write raw CSS without using these variables.
 
+### Frontend Spacing System
+
+All pages must follow these spacing rules to maintain consistent visual breathing room:
+
+- **Content shell**: `pt-8 pb-6 px-4 sm:px-6`, `max-w-4xl` (use `max-w-none` for wide grid layouts)
+- **CardHeader / CardContent**: Global defaults in `components/ui/card.tsx` already include `pt-5 pb-2` (header) and `pt-4` (content). Do NOT re-add these per-instance.
+- **Toolbar/title to content below**: `mb-6`
+- **Between major sections or card groups**: `gap-6` or `space-y-6`
+- **Between list items within a card**: `space-y-3`
+- **Title to subtitle**: `space-y-1.5`
+
+Reference implementations: `CapabilityContentShell`, `TeamContentShell`.
+
 ### Frontend Internationalization (i18n)
 
 All user-facing text MUST use i18n translations, NOT hardcoded strings:
