@@ -6,12 +6,39 @@ import { useRouter } from "next/navigation";
 import { Bot, KanbanSquare, Plus, RefreshCw, Ticket } from "lucide-react";
 import { toast } from "sonner";
 
-import { PageHeaderShell } from "@/components/shared/page-header-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useT } from "@/lib/i18n/client";
 import { useLanguage } from "@/hooks/use-language";
@@ -25,7 +52,7 @@ import type {
 import { projectsService } from "@/features/projects/api/projects-api";
 import type { ProjectItem } from "@/features/projects/types";
 import type { Preset } from "@/features/capabilities/presets/lib/preset-types";
-import { useWorkspaceContext } from "@/features/workspaces";
+import { TeamShell, useWorkspaceContext } from "@/features/workspaces";
 
 function AssignmentBadge({
   assignment,
@@ -36,6 +63,120 @@ function AssignmentBadge({
   return <Badge variant="secondary">{assignment.status}</Badge>;
 }
 
+interface CreateBoardDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onCreate: (name: string) => Promise<void>;
+}
+
+function CreateBoardDialog({
+  open,
+  onOpenChange,
+  onCreate,
+}: CreateBoardDialogProps) {
+  const { t } = useT("translation");
+  const [name, setName] = React.useState("");
+  const [isSaving, setIsSaving] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!open) {
+      setName("");
+      setIsSaving(false);
+    }
+  }, [open]);
+
+  const handleCreate = async () => {
+    setIsSaving(true);
+    await onCreate(name);
+    setIsSaving(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{t("issues.dialogs.createBoardTitle")}</DialogTitle>
+          <DialogDescription>{t("issues.boardsTitle")}</DialogDescription>
+        </DialogHeader>
+        <Input
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+          placeholder={t("issues.boardNamePlaceholder")}
+          autoFocus
+        />
+        <DialogFooter>
+          <Button
+            type="button"
+            onClick={() => void handleCreate()}
+            disabled={isSaving || !name.trim()}
+          >
+            {t("issues.actions.createBoard")}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+interface CreateIssueDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  boardName: string | null;
+  onCreate: (title: string) => Promise<void>;
+}
+
+function CreateIssueDialog({
+  open,
+  onOpenChange,
+  boardName,
+  onCreate,
+}: CreateIssueDialogProps) {
+  const { t } = useT("translation");
+  const [title, setTitle] = React.useState("");
+  const [isSaving, setIsSaving] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!open) {
+      setTitle("");
+      setIsSaving(false);
+    }
+  }, [open]);
+
+  const handleCreate = async () => {
+    setIsSaving(true);
+    await onCreate(title);
+    setIsSaving(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{t("issues.dialogs.createIssueTitle")}</DialogTitle>
+          <DialogDescription>
+            {boardName ?? t("issues.emptyBoards")}
+          </DialogDescription>
+        </DialogHeader>
+        <Input
+          value={title}
+          onChange={(event) => setTitle(event.target.value)}
+          placeholder={t("issues.issueTitlePlaceholder")}
+          autoFocus
+        />
+        <DialogFooter>
+          <Button
+            type="button"
+            onClick={() => void handleCreate()}
+            disabled={isSaving || !title.trim()}
+          >
+            {t("issues.actions.createIssue")}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export function TeamIssuesPageClient() {
   const { t } = useT("translation");
   const lng = useLanguage();
@@ -43,49 +184,68 @@ export function TeamIssuesPageClient() {
   const [boards, setBoards] = React.useState<WorkspaceBoard[]>([]);
   const [issues, setIssues] = React.useState<WorkspaceIssue[]>([]);
   const [selectedBoardId, setSelectedBoardId] = React.useState<string | null>(null);
-  const [boardName, setBoardName] = React.useState("");
-  const [issueTitle, setIssueTitle] = React.useState("");
+  const [boardDialogOpen, setBoardDialogOpen] = React.useState(false);
+  const [issueDialogOpen, setIssueDialogOpen] = React.useState(false);
+  const [isRefreshing, setIsRefreshing] = React.useState(false);
+
+  const loadBoards = React.useCallback(async () => {
+    if (!currentWorkspace) return;
+    const nextBoards = await issuesApi.listBoards(currentWorkspace.id);
+    setBoards(nextBoards);
+    setSelectedBoardId((prev) => prev ?? nextBoards[0]?.board_id ?? null);
+  }, [currentWorkspace]);
+
+  const loadIssues = React.useCallback(async () => {
+    if (!selectedBoardId) {
+      setIssues([]);
+      return;
+    }
+    setIssues(await issuesApi.listIssues(selectedBoardId));
+  }, [selectedBoardId]);
+
+  const refresh = React.useCallback(async () => {
+    if (!currentWorkspace) return;
+    setIsRefreshing(true);
+    try {
+      await loadBoards();
+    } catch (error) {
+      console.error("[Issues] refresh failed", error);
+      toast.error(t("issues.toasts.loadFailed"));
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [currentWorkspace, loadBoards, t]);
+
+  React.useEffect(() => {
+    void refresh();
+  }, [refresh]);
 
   React.useEffect(() => {
     const load = async () => {
-      if (!currentWorkspace) return;
       try {
-        const nextBoards = await issuesApi.listBoards(currentWorkspace.id);
-        setBoards(nextBoards);
-        setSelectedBoardId((prev) => prev ?? nextBoards[0]?.board_id ?? null);
-      } catch (error) {
-        console.error("[Issues] load boards failed", error);
-        toast.error(t("issues.toasts.loadFailed"));
-      }
-    };
-    void load();
-  }, [currentWorkspace, t]);
-
-  React.useEffect(() => {
-    const load = async () => {
-      if (!selectedBoardId) {
-        setIssues([]);
-        return;
-      }
-      try {
-        setIssues(await issuesApi.listIssues(selectedBoardId));
+        await loadIssues();
       } catch (error) {
         console.error("[Issues] load issues failed", error);
         toast.error(t("issues.toasts.loadFailed"));
       }
     };
     void load();
-  }, [selectedBoardId, t]);
+  }, [loadIssues, t]);
 
-  const createBoard = async () => {
-    if (!currentWorkspace || !boardName.trim()) return;
+  const selectedBoard = React.useMemo(
+    () => boards.find((board) => board.board_id === selectedBoardId) ?? null,
+    [boards, selectedBoardId],
+  );
+
+  const createBoard = async (name: string) => {
+    if (!currentWorkspace || !name.trim()) return;
     try {
       const created = await issuesApi.createBoard(currentWorkspace.id, {
-        name: boardName.trim(),
+        name: name.trim(),
       });
       setBoards((prev) => [created, ...prev]);
       setSelectedBoardId(created.board_id);
-      setBoardName("");
+      setBoardDialogOpen(false);
       toast.success(t("issues.toasts.boardCreated"));
     } catch (error) {
       console.error("[Issues] create board failed", error);
@@ -93,14 +253,14 @@ export function TeamIssuesPageClient() {
     }
   };
 
-  const createIssue = async () => {
-    if (!selectedBoardId || !issueTitle.trim()) return;
+  const createIssue = async (title: string) => {
+    if (!selectedBoardId || !title.trim()) return;
     try {
       const created = await issuesApi.createIssue(selectedBoardId, {
-        title: issueTitle.trim(),
+        title: title.trim(),
       });
       setIssues((prev) => [created, ...prev]);
-      setIssueTitle("");
+      setIssueDialogOpen(false);
       toast.success(t("issues.toasts.issueCreated"));
     } catch (error) {
       console.error("[Issues] create issue failed", error);
@@ -110,78 +270,124 @@ export function TeamIssuesPageClient() {
 
   return (
     <>
-      <PageHeaderShell
-        left={
-          <div className="flex items-center gap-3">
-            <KanbanSquare className="hidden size-5 text-muted-foreground md:block" />
-            <div>
-              <p className="text-base font-semibold">{t("issues.title")}</p>
-              <p className="text-xs text-muted-foreground">{t("issues.subtitle")}</p>
-            </div>
-          </div>
+      <TeamShell
+        activePage="issues"
+        title={t("issues.title")}
+        subtitle={t("issues.subtitle")}
+        toolbarActions={
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => void refresh()}
+              disabled={isRefreshing}
+            >
+              <RefreshCw
+                className={isRefreshing ? "size-4 animate-spin" : "size-4"}
+              />
+              {t("issues.refresh")}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setBoardDialogOpen(true)}
+            >
+              <Plus className="size-4" />
+              {t("issues.actions.createBoard")}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => setIssueDialogOpen(true)}
+              disabled={!selectedBoardId}
+            >
+              <Ticket className="size-4" />
+              {t("issues.actions.createIssue")}
+            </Button>
+          </>
         }
-      />
-      <main className="flex-1 overflow-auto p-4 sm:p-6">
-        <div className="mx-auto grid max-w-6xl gap-5 lg:grid-cols-[280px_minmax(0,1fr)]">
-          <Card>
+      >
+        <div className="grid gap-5 lg:grid-cols-[280px_minmax(0,1fr)]">
+          <Card className="border-border/60">
             <CardHeader>
               <CardTitle>{t("issues.boardsTitle")}</CardTitle>
+              <CardDescription>{t("issues.subtitle")}</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex gap-2">
-                <Input
-                  value={boardName}
-                  onChange={(event) => setBoardName(event.target.value)}
-                  placeholder={t("issues.boardNamePlaceholder")}
-                />
-                <Button type="button" size="icon" onClick={() => void createBoard()}>
-                  <Plus className="size-4" />
-                </Button>
-              </div>
+            <CardContent className="space-y-3 pb-6">
               {boards.length === 0 ? (
-                <p className="text-sm text-muted-foreground">{t("issues.emptyBoards")}</p>
+                <Empty className="min-h-72 rounded-2xl border border-dashed border-border/70 bg-muted/10">
+                  <EmptyContent>
+                    <EmptyMedia variant="icon">
+                      <KanbanSquare className="size-5" />
+                    </EmptyMedia>
+                    <EmptyHeader>
+                      <EmptyTitle>{t("issues.boardsTitle")}</EmptyTitle>
+                      <EmptyDescription>
+                        {t("issues.emptyBoards")}
+                      </EmptyDescription>
+                    </EmptyHeader>
+                  </EmptyContent>
+                </Empty>
               ) : (
                 boards.map((board) => (
                   <button
                     key={board.board_id}
                     type="button"
                     onClick={() => setSelectedBoardId(board.board_id)}
-                    className="w-full rounded-xl border border-border/60 px-3 py-2 text-left text-sm transition hover:bg-muted/40"
+                    className="w-full rounded-2xl border border-border/60 px-4 py-3 text-left transition hover:bg-muted/40"
                   >
-                    {board.name}
+                    <p className="text-sm font-medium text-foreground">{board.name}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {board.description || t("issues.subtitle")}
+                    </p>
+                    {selectedBoardId === board.board_id ? (
+                      <Badge className="mt-3" variant="secondary">
+                        {t("issues.listTitle")}
+                      </Badge>
+                    ) : null}
                   </button>
                 ))
               )}
             </CardContent>
           </Card>
-          <Card>
+
+          <Card className="border-border/60">
             <CardHeader>
-              <CardTitle>{t("issues.listTitle")}</CardTitle>
+              <CardTitle>{selectedBoard?.name ?? t("issues.listTitle")}</CardTitle>
+              <CardDescription>
+                {selectedBoard?.description || t("issues.detailPlaceholder")}
+              </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex gap-2">
-                <Input
-                  value={issueTitle}
-                  onChange={(event) => setIssueTitle(event.target.value)}
-                  placeholder={t("issues.issueTitlePlaceholder")}
-                />
-                <Button type="button" size="icon" onClick={() => void createIssue()}>
-                  <Ticket className="size-4" />
-                </Button>
-              </div>
+            <CardContent className="space-y-3 pb-6">
               {issues.length === 0 ? (
-                <p className="text-sm text-muted-foreground">{t("issues.emptyIssues")}</p>
+                <Empty className="min-h-72 rounded-2xl border border-dashed border-border/70 bg-muted/10">
+                  <EmptyContent>
+                    <EmptyMedia variant="icon">
+                      <Ticket className="size-5" />
+                    </EmptyMedia>
+                    <EmptyHeader>
+                      <EmptyTitle>{t("issues.listTitle")}</EmptyTitle>
+                      <EmptyDescription>
+                        {selectedBoardId
+                          ? t("issues.emptyIssues")
+                          : t("issues.emptyBoards")}
+                      </EmptyDescription>
+                    </EmptyHeader>
+                  </EmptyContent>
+                </Empty>
               ) : (
                 issues.map((issue) => (
                   <Link
                     key={issue.issue_id}
                     href={`/${lng}/team/issues/${issue.issue_id}`}
-                    className="block rounded-xl border border-border/60 px-4 py-3 transition hover:bg-muted/30"
+                    className="block rounded-2xl border border-border/60 px-4 py-4 transition hover:bg-muted/30"
                   >
                     <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="font-medium">{issue.title}</p>
-                        <p className="text-xs text-muted-foreground">
+                      <div className="min-w-0">
+                        <p className="truncate font-medium">{issue.title}</p>
+                        <p className="mt-1 text-xs text-muted-foreground">
                           {issue.status} · {issue.priority}
                         </p>
                       </div>
@@ -193,7 +399,19 @@ export function TeamIssuesPageClient() {
             </CardContent>
           </Card>
         </div>
-      </main>
+      </TeamShell>
+
+      <CreateBoardDialog
+        open={boardDialogOpen}
+        onOpenChange={setBoardDialogOpen}
+        onCreate={createBoard}
+      />
+      <CreateIssueDialog
+        open={issueDialogOpen}
+        onOpenChange={setIssueDialogOpen}
+        boardName={selectedBoard?.name ?? null}
+        onCreate={createIssue}
+      />
     </>
   );
 }
@@ -302,51 +520,38 @@ export function TeamIssueDetailPageClient({ issueId }: { issueId: string }) {
     }
   };
 
-  if (!issue) {
-    return (
-      <>
-        <PageHeaderShell
-          left={
-            <div>
-              <p className="text-base font-semibold">{t("issues.detailTitle")}</p>
-              <p className="text-xs text-muted-foreground">
-                {t("issues.detailSubtitle", { issueId })}
-              </p>
-            </div>
-          }
-        />
-        <main className="flex-1 overflow-auto p-4 sm:p-6" />
-      </>
-    );
-  }
-
-  const assignment = issue.agent_assignment;
+  const assignment = issue?.agent_assignment;
 
   return (
-    <>
-      <PageHeaderShell
-        left={
-          <div>
-            <p className="text-base font-semibold">{t("issues.detailTitle")}</p>
-            <p className="text-xs text-muted-foreground">
-              {t("issues.detailSubtitle", { issueId })}
-            </p>
-          </div>
-        }
-        right={
-          <Button type="button" variant="outline" onClick={() => void load()}>
-            <RefreshCw className="size-4" />
-            {t("issues.refresh")}
-          </Button>
-        }
-      />
-      <main className="flex-1 overflow-auto p-4 sm:p-6">
-        <div className="mx-auto grid max-w-6xl gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
-          <Card>
+    <TeamShell
+      activePage="issues"
+      title={issue?.title ?? t("issues.detailTitle")}
+      subtitle={
+        issue
+          ? t("issues.detailSubtitle", { issueId })
+          : t("issues.subtitle")
+      }
+      toolbarActions={
+        <Button type="button" variant="outline" size="sm" onClick={() => void load()}>
+          <RefreshCw className="size-4" />
+          {t("issues.refresh")}
+        </Button>
+      }
+    >
+      {!issue ? (
+        <Card className="border-border/60">
+          <CardContent className="p-6" />
+        </Card>
+      ) : (
+        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
+          <Card className="border-border/60">
             <CardHeader>
               <CardTitle>{issue.title}</CardTitle>
+              <CardDescription>
+                {t("issues.detailSubtitle", { issueId })}
+              </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 pb-6">
               <div className="flex flex-wrap gap-2">
                 <Badge variant="outline">{issue.status}</Badge>
                 <Badge variant="outline">{issue.priority}</Badge>
@@ -442,12 +647,13 @@ export function TeamIssueDetailPageClient({ issueId }: { issueId: string }) {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-border/60">
             <CardHeader>
               <CardTitle>{t("issues.executionTitle")}</CardTitle>
+              <CardDescription>{t("issues.subtitle")}</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="rounded-xl border border-border/60 p-4">
+            <CardContent className="space-y-4 pb-6">
+              <div className="rounded-2xl border border-border/60 p-4">
                 <p className="text-sm font-medium">{t("issues.fields.assignmentStatus")}</p>
                 <p className="mt-1 text-sm text-muted-foreground">
                   {assignment?.status ?? t("issues.unassigned")}
@@ -485,7 +691,7 @@ export function TeamIssueDetailPageClient({ issueId }: { issueId: string }) {
             </CardContent>
           </Card>
         </div>
-      </main>
-    </>
+      )}
+    </TeamShell>
   );
 }

@@ -58,7 +58,9 @@
     },
     "create": {
       "placeholder": "Название нового пространства",
-      "action": "Создать"
+      "action": "Создать",
+      "dialogTitle": "Создать пространство",
+      "dialogDescription": "Создайте общее пространство и сразу переключитесь в него."
     },
     "pages": {
       "overview": {
@@ -165,12 +167,18 @@
       "scheduled_task": "Scheduled task"
     },
     "actions": {
+      "createBoard": "Новая доска",
+      "createIssue": "Новая issue",
       "saveAssignment": "Save assignment",
       "trigger": "Trigger now",
       "retry": "Retry",
       "cancel": "Cancel assignment",
       "release": "Release sandbox",
       "openSession": "Open session"
+    },
+    "dialogs": {
+      "createBoardTitle": "Создать доску",
+      "createIssueTitle": "Создать issue"
     },
     "toasts": {
       "loadFailed": "Не удалось загрузить данные issues",

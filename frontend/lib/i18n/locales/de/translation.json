@@ -58,7 +58,9 @@
     },
     "create": {
       "placeholder": "Neuer Workspace-Name",
-      "action": "Erstellen"
+      "action": "Erstellen",
+      "dialogTitle": "Workspace erstellen",
+      "dialogDescription": "Erstelle einen geteilten Workspace und wechsle sofort dorthin."
     },
     "pages": {
       "overview": {
@@ -165,12 +167,18 @@
       "scheduled_task": "Scheduled task"
     },
     "actions": {
+      "createBoard": "Neues Board",
+      "createIssue": "Neue Issue",
       "saveAssignment": "Save assignment",
       "trigger": "Trigger now",
       "retry": "Retry",
       "cancel": "Cancel assignment",
       "release": "Release sandbox",
       "openSession": "Open session"
+    },
+    "dialogs": {
+      "createBoardTitle": "Board erstellen",
+      "createIssueTitle": "Issue erstellen"
     },
     "toasts": {
       "loadFailed": "Issue-Daten konnten nicht geladen werden",

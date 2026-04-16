@@ -58,7 +58,9 @@
     },
     "create": {
       "placeholder": "新しいワークスペース名",
-      "action": "作成"
+      "action": "作成",
+      "dialogTitle": "ワークスペースを作成",
+      "dialogDescription": "共有ワークスペースを作成して、すぐに切り替えます。"
     },
     "pages": {
       "overview": {
@@ -165,12 +167,18 @@
       "scheduled_task": "Scheduled task"
     },
     "actions": {
+      "createBoard": "新しいボード",
+      "createIssue": "新しい Issue",
       "saveAssignment": "Save assignment",
       "trigger": "Trigger now",
       "retry": "Retry",
       "cancel": "Cancel assignment",
       "release": "Release sandbox",
       "openSession": "Open session"
+    },
+    "dialogs": {
+      "createBoardTitle": "ボードを作成",
+      "createIssueTitle": "Issue を作成"
     },
     "toasts": {
       "loadFailed": "Issue データの読み込みに失敗しました",

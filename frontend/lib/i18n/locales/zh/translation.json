@@ -58,7 +58,9 @@
     },
     "create": {
       "placeholder": "新空间名称",
-      "action": "创建"
+      "action": "创建",
+      "dialogTitle": "创建空间",
+      "dialogDescription": "创建一个共享空间，并立即切换到该空间。"
     },
     "pages": {
       "overview": {
@@ -165,12 +167,18 @@
       "scheduled_task": "定时任务"
     },
     "actions": {
+      "createBoard": "新建看板",
+      "createIssue": "新建事项",
       "saveAssignment": "保存分配",
       "trigger": "立即触发",
       "retry": "重新执行",
       "cancel": "取消分配",
       "release": "释放 sandbox",
       "openSession": "打开会话"
+    },
+    "dialogs": {
+      "createBoardTitle": "创建看板",
+      "createIssueTitle": "创建事项"
     },
     "toasts": {
       "loadFailed": "加载事项数据失败",

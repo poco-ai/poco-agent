@@ -58,7 +58,9 @@
     },
     "create": {
       "placeholder": "Nom du nouvel espace",
-      "action": "Créer"
+      "action": "Créer",
+      "dialogTitle": "Créer un espace",
+      "dialogDescription": "Créez un espace partagé et basculez dessus immédiatement."
     },
     "pages": {
       "overview": {
@@ -165,12 +167,18 @@
       "scheduled_task": "Scheduled task"
     },
     "actions": {
+      "createBoard": "Nouveau tableau",
+      "createIssue": "Nouvelle issue",
       "saveAssignment": "Save assignment",
       "trigger": "Trigger now",
       "retry": "Retry",
       "cancel": "Cancel assignment",
       "release": "Release sandbox",
       "openSession": "Open session"
+    },
+    "dialogs": {
+      "createBoardTitle": "Créer un tableau",
+      "createIssueTitle": "Créer une issue"
     },
     "toasts": {
       "loadFailed": "Échec du chargement des données d’issue",

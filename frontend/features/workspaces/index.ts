@@ -10,6 +10,7 @@ export type {
   WorkspaceMember,
   WorkspaceRole,
 } from "./model/types";
+export { TeamShell } from "./ui/team-shell";
 export {
   TeamInvitesPageClient,
   TeamMembersPageClient,

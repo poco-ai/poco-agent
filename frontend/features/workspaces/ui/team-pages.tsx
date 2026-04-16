@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
 import {
   Activity,
   Building2,
@@ -9,12 +8,10 @@ import {
   RefreshCw,
   Shield,
   Ticket,
-  UserPlus,
   Users,
 } from "lucide-react";
 import { toast } from "sonner";
 
-import { PageHeaderShell } from "@/components/shared/page-header-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,7 +21,15 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import {
   Select,
   SelectContent,
@@ -32,10 +37,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Skeleton } from "@/components/ui/skeleton";
 import { useT } from "@/lib/i18n/client";
 import { cn } from "@/lib/utils";
-import { useLanguage } from "@/hooks/use-language";
 import { workspacesApi } from "@/features/workspaces/api/workspaces-api";
 import {
   formatActivityAction,
@@ -49,6 +52,7 @@ import type {
   WorkspaceMember,
   WorkspaceRole,
 } from "@/features/workspaces/model/types";
+import { TeamShell } from "@/features/workspaces/ui/team-shell";
 
 function formatDateTime(value: string): string {
   const date = new Date(value);
@@ -57,118 +61,6 @@ function formatDateTime(value: string): string {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(date);
-}
-
-function TeamHeader({ activePage }: { activePage: "overview" | "members" | "invites" }) {
-  const { t } = useT("translation");
-  const {
-    workspaces,
-    currentWorkspace,
-    currentWorkspaceId,
-    isLoading,
-    selectWorkspace,
-    createWorkspace,
-  } = useWorkspaceContext();
-  const [newWorkspaceName, setNewWorkspaceName] = React.useState("");
-  const [isCreating, setIsCreating] = React.useState(false);
-
-  const handleCreateWorkspace = async () => {
-    setIsCreating(true);
-    const created = await createWorkspace(newWorkspaceName);
-    if (created) setNewWorkspaceName("");
-    setIsCreating(false);
-  };
-
-  return (
-    <PageHeaderShell
-      left={
-        <div className="flex min-w-0 flex-1 items-center gap-3">
-          <Building2 className="hidden size-5 text-muted-foreground md:block" />
-          <div className="min-w-0">
-            <p className="text-base font-semibold leading-tight text-foreground">
-              {t(`workspaces.pages.${activePage}.title`)}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {currentWorkspace
-                ? t("workspaces.currentWorkspace", {
-                    name: currentWorkspace.name,
-                  })
-                : t("workspaces.noWorkspace")}
-            </p>
-          </div>
-        </div>
-      }
-      right={
-        <div className="hidden items-center gap-2 md:flex">
-          <Select
-            value={currentWorkspaceId ?? undefined}
-            onValueChange={selectWorkspace}
-            disabled={isLoading || workspaces.length === 0}
-          >
-            <SelectTrigger className="w-56">
-              <SelectValue placeholder={t("workspaces.switcher.placeholder")} />
-            </SelectTrigger>
-            <SelectContent>
-              {workspaces.map((workspace) => (
-                <SelectItem key={workspace.id} value={workspace.id}>
-                  {workspace.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Input
-            value={newWorkspaceName}
-            onChange={(event) => setNewWorkspaceName(event.target.value)}
-            placeholder={t("workspaces.create.placeholder")}
-            className="w-48"
-          />
-          <Button
-            type="button"
-            onClick={() => void handleCreateWorkspace()}
-            disabled={isCreating || !newWorkspaceName.trim()}
-          >
-            <UserPlus className="size-4" />
-            {t("workspaces.create.action")}
-          </Button>
-        </div>
-      }
-    />
-  );
-}
-
-function TeamContentShell({
-  activePage,
-  children,
-}: {
-  activePage: "overview" | "members" | "invites";
-  children: React.ReactNode;
-}) {
-  const { t } = useT("translation");
-  const lng = useLanguage();
-  const links = [
-    { id: "overview", href: `/${lng}/team`, label: t("workspaces.pages.overview.title") },
-    { id: "members", href: `/${lng}/team/members`, label: t("workspaces.pages.members.title") },
-    { id: "invites", href: `/${lng}/team/invites`, label: t("workspaces.pages.invites.title") },
-    { id: "issues", href: `/${lng}/team/issues`, label: t("issues.title") },
-  ];
-
-  return (
-    <>
-      <TeamHeader activePage={activePage} />
-      <main className="flex-1 overflow-auto p-4 sm:p-6">
-        <div className="mx-auto flex w-full max-w-6xl flex-col gap-5">
-          <div className="flex flex-wrap gap-2">
-            {links.map((link) => (
-              <Button key={link.id} asChild variant={link.id === activePage ? "default" : "outline"} size="sm">
-                <Link href={link.href}>{link.label}</Link>
-              </Button>
-            ))}
-          </div>
-          {children}
-        </div>
-      </main>
-    </>
-  );
 }
 
 function WorkspaceSummaryCards({
@@ -205,7 +97,7 @@ function WorkspaceSummaryCards({
   return (
     <div className="grid gap-3 md:grid-cols-3">
       {cards.map(({ icon: Icon, label, value }) => (
-        <Card key={label} className="overflow-hidden">
+        <Card key={label} className="overflow-hidden border-border/60">
           <CardContent className="flex items-center gap-4 p-5">
             <div className="rounded-xl bg-primary/10 p-3 text-primary">
               <Icon className="size-5" />
@@ -254,15 +146,21 @@ export function TeamPageClient() {
   }, [refresh]);
 
   return (
-    <TeamContentShell activePage="overview">
+    <TeamShell
+      activePage="overview"
+      title={t("workspaces.pages.overview.title")}
+      subtitle={t("workspaces.currentWorkspace", {
+        name: currentWorkspace?.name ?? t("workspaces.noWorkspace"),
+      })}
+    >
       {isLoading ? (
-        <Skeleton className="h-40 rounded-xl" />
+        <Skeleton className="h-40 rounded-2xl" />
       ) : (
         <>
           <WorkspaceSummaryCards members={members} invites={invites} />
-          <Card>
-            <CardHeader className="flex-row items-center justify-between gap-3">
-              <div>
+          <Card className="border-border/60">
+            <CardHeader className="gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="space-y-1">
                 <CardTitle>{t("workspaces.activity.title")}</CardTitle>
                 <CardDescription>
                   {t("workspaces.activity.description")}
@@ -280,16 +178,26 @@ export function TeamPageClient() {
                 {t("workspaces.refresh")}
               </Button>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-3 pb-6">
               {activity.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  {t("workspaces.activity.empty")}
-                </p>
+                <Empty className="min-h-56 rounded-2xl border border-dashed border-border/70 bg-muted/10">
+                  <EmptyContent>
+                    <EmptyMedia variant="icon">
+                      <Activity className="size-5" />
+                    </EmptyMedia>
+                    <EmptyHeader>
+                      <EmptyTitle>{t("workspaces.activity.title")}</EmptyTitle>
+                      <EmptyDescription>
+                        {t("workspaces.activity.empty")}
+                      </EmptyDescription>
+                    </EmptyHeader>
+                  </EmptyContent>
+                </Empty>
               ) : (
                 activity.map((item) => (
                   <div
                     key={item.id}
-                    className="flex items-start gap-3 rounded-xl border border-border/60 bg-muted/20 p-4"
+                    className="flex items-start gap-3 rounded-2xl border border-border/60 bg-muted/15 p-4"
                   >
                     <Activity className="mt-0.5 size-4 text-muted-foreground" />
                     <div className="min-w-0 flex-1">
@@ -308,7 +216,7 @@ export function TeamPageClient() {
           </Card>
         </>
       )}
-    </TeamContentShell>
+    </TeamShell>
   );
 }
 
@@ -336,24 +244,38 @@ export function TeamMembersPageClient() {
   }, [refresh]);
 
   return (
-    <TeamContentShell activePage="members">
-      <Card>
+    <TeamShell
+      activePage="members"
+      title={t("workspaces.pages.members.title")}
+      subtitle={t("workspaces.members.description")}
+    >
+      <Card className="border-border/60">
         <CardHeader>
           <CardTitle>{t("workspaces.members.title")}</CardTitle>
           <CardDescription>{t("workspaces.members.description")}</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent className="space-y-3 pb-6">
           {isLoading ? (
-            <Skeleton className="h-28 rounded-xl" />
+            <Skeleton className="h-28 rounded-2xl" />
           ) : members.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              {t("workspaces.members.empty")}
-            </p>
+            <Empty className="min-h-56 rounded-2xl border border-dashed border-border/70 bg-muted/10">
+              <EmptyContent>
+                <EmptyMedia variant="icon">
+                  <Users className="size-5" />
+                </EmptyMedia>
+                <EmptyHeader>
+                  <EmptyTitle>{t("workspaces.members.title")}</EmptyTitle>
+                  <EmptyDescription>
+                    {t("workspaces.members.empty")}
+                  </EmptyDescription>
+                </EmptyHeader>
+              </EmptyContent>
+            </Empty>
           ) : (
             members.map((member) => (
               <div
                 key={member.id}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/60 bg-card p-4"
+                className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border/60 bg-card p-4"
               >
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium">{member.userId}</p>
@@ -372,7 +294,7 @@ export function TeamMembersPageClient() {
           )}
         </CardContent>
       </Card>
-    </TeamContentShell>
+    </TeamShell>
   );
 }
 
@@ -426,17 +348,14 @@ export function TeamInvitesPageClient() {
   };
 
   return (
-    <TeamContentShell activePage="invites">
-      <Card>
-        <CardHeader>
-          <CardTitle>{t("workspaces.invites.createTitle")}</CardTitle>
-          <CardDescription>
-            {t("workspaces.invites.createDescription")}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-wrap gap-2">
+    <TeamShell
+      activePage="invites"
+      title={t("workspaces.pages.invites.title")}
+      subtitle={t("workspaces.invites.description")}
+      toolbarActions={
+        <>
           <Select value={role} onValueChange={(value) => setRole(value as WorkspaceRole)}>
-            <SelectTrigger className="w-44">
+            <SelectTrigger className="w-full sm:w-44">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -455,26 +374,36 @@ export function TeamInvitesPageClient() {
             <Ticket className="size-4" />
             {t("workspaces.invites.createAction")}
           </Button>
-        </CardContent>
-      </Card>
-
-      <Card>
+        </>
+      }
+    >
+      <Card className="border-border/60">
         <CardHeader>
           <CardTitle>{t("workspaces.invites.title")}</CardTitle>
           <CardDescription>{t("workspaces.invites.description")}</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent className="space-y-3 pb-6">
           {isLoading ? (
-            <Skeleton className="h-28 rounded-xl" />
+            <Skeleton className="h-28 rounded-2xl" />
           ) : invites.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              {t("workspaces.invites.empty")}
-            </p>
+            <Empty className="min-h-56 rounded-2xl border border-dashed border-border/70 bg-muted/10">
+              <EmptyContent>
+                <EmptyMedia variant="icon">
+                  <Ticket className="size-5" />
+                </EmptyMedia>
+                <EmptyHeader>
+                  <EmptyTitle>{t("workspaces.invites.title")}</EmptyTitle>
+                  <EmptyDescription>
+                    {t("workspaces.invites.empty")}
+                  </EmptyDescription>
+                </EmptyHeader>
+              </EmptyContent>
+            </Empty>
           ) : (
             invites.map((invite) => (
               <div
                 key={invite.id}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/60 bg-card p-4"
+                className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border/60 bg-card p-4"
               >
                 <div className="min-w-0">
                   <p className="truncate font-mono text-sm">{invite.token}</p>
@@ -505,6 +434,6 @@ export function TeamInvitesPageClient() {
           )}
         </CardContent>
       </Card>
-    </TeamContentShell>
+    </TeamShell>
   );
 }
