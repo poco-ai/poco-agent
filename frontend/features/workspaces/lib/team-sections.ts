@@ -5,6 +5,13 @@ export interface TeamSection {
   href: string;
 }
 
+const TEAM_SECTION_IDS: TeamSectionId[] = [
+  "overview",
+  "members",
+  "invites",
+  "issues",
+];
+
 export function buildTeamSectionHref(
   lng: string | undefined,
   sectionId: TeamSectionId,
@@ -24,7 +31,7 @@ export function buildTeamSectionHref(
 }
 
 export function buildTeamSections(lng: string | undefined): TeamSection[] {
-  return ["overview", "members", "invites", "issues"].map((sectionId) => ({
+  return TEAM_SECTION_IDS.map((sectionId) => ({
     id: sectionId,
     href: buildTeamSectionHref(lng, sectionId),
   }));

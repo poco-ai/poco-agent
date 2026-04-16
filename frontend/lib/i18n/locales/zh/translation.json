@@ -177,6 +177,25 @@
       "aiAssigned": "AI 已分配",
       "running": "执行中"
     },
+    "statuses": {
+      "todo": "待处理",
+      "in_progress": "处理中",
+      "done": "已完成",
+      "canceled": "已取消"
+    },
+    "priorities": {
+      "low": "低",
+      "medium": "中",
+      "high": "高",
+      "urgent": "紧急"
+    },
+    "assignmentStatuses": {
+      "pending": "待触发",
+      "running": "执行中",
+      "completed": "已完成",
+      "failed": "执行失败",
+      "cancelled": "已取消"
+    },
     "placeholders": {
       "project": "选择项目",
       "preset": "选择 preset",
@@ -184,7 +203,12 @@
     },
     "preview": {
       "executionMode": "执行模式",
-      "pendingImpact": "assignment hardening 落地后，这里会展示影响预览。"
+      "pendingImpact": "assignment hardening 落地后，这里会展示影响预览。",
+      "releaseHint": "释放后会清掉保留中的 sandbox，下一次执行会重新准备环境。"
+    },
+    "states": {
+      "loadErrorTitle": "加载事项数据失败",
+      "loadErrorDescription": "请刷新后重试。"
     },
     "triggerModes": {
       "persistent_sandbox": "持久化 sandbox",
@@ -196,6 +220,7 @@
       "saveAssignment": "保存分配",
       "trigger": "立即触发",
       "retry": "重新执行",
+      "retryLoad": "重新加载",
       "cancel": "取消分配",
       "release": "释放 sandbox",
       "openSession": "打开会话"

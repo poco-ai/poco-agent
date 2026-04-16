@@ -177,6 +177,25 @@
       "aiAssigned": "AI assigned",
       "running": "Running now"
     },
+    "statuses": {
+      "todo": "To do",
+      "in_progress": "In progress",
+      "done": "Done",
+      "canceled": "Canceled"
+    },
+    "priorities": {
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High",
+      "urgent": "Urgent"
+    },
+    "assignmentStatuses": {
+      "pending": "Pending",
+      "running": "Running",
+      "completed": "Completed",
+      "failed": "Failed",
+      "cancelled": "Cancelled"
+    },
     "placeholders": {
       "project": "Select a project",
       "preset": "Select a preset",
@@ -184,7 +203,12 @@
     },
     "preview": {
       "executionMode": "Execution mode",
-      "pendingImpact": "Impact preview will appear here after assignment hardening lands."
+      "pendingImpact": "Impact preview will appear here after assignment hardening lands.",
+      "releaseHint": "Releasing clears the retained sandbox before the next execution."
+    },
+    "states": {
+      "loadErrorTitle": "Couldn't load issue data",
+      "loadErrorDescription": "Refresh and try again."
     },
     "triggerModes": {
       "persistent_sandbox": "Persistent sandbox",
@@ -196,6 +220,7 @@
       "saveAssignment": "Save assignment",
       "trigger": "Trigger now",
       "retry": "Retry",
+      "retryLoad": "Retry load",
       "cancel": "Cancel assignment",
       "release": "Release sandbox",
       "openSession": "Open session"

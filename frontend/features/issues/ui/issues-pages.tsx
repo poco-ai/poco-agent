@@ -32,6 +32,7 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
   SelectContent,
@@ -49,6 +50,11 @@ import {
   summarizeBoardIssues,
 } from "@/features/issues/lib/issues-index-view";
 import { getAssignmentExecutionMeta } from "@/features/issues/lib/issue-detail-view";
+import {
+  formatAssignmentStatus,
+  formatIssuePriority,
+  formatIssueStatus,
+} from "@/features/issues/lib/issue-presentation";
 import type {
   AgentAssignment,
   WorkspaceBoard,
@@ -64,8 +70,13 @@ function AssignmentBadge({
 }: {
   assignment?: AgentAssignment | null;
 }) {
+  const { t } = useT("translation");
   if (!assignment) return null;
-  return <Badge variant="secondary">{assignment.status}</Badge>;
+  return (
+    <Badge variant="secondary">
+      {formatAssignmentStatus(t, assignment.status)}
+    </Badge>
+  );
 }
 
 function formatDateTime(value: string): string {
@@ -201,6 +212,9 @@ export function TeamIssuesPageClient() {
   const [boardDialogOpen, setBoardDialogOpen] = React.useState(false);
   const [issueDialogOpen, setIssueDialogOpen] = React.useState(false);
   const [isRefreshing, setIsRefreshing] = React.useState(false);
+  const [hasLoadedBoards, setHasLoadedBoards] = React.useState(false);
+  const [boardLoadFailed, setBoardLoadFailed] = React.useState(false);
+  const [issuesLoadFailed, setIssuesLoadFailed] = React.useState(false);
   const [query, setQuery] = React.useState("");
 
   const loadBoards = React.useCallback(async () => {
@@ -221,10 +235,13 @@ export function TeamIssuesPageClient() {
   const refresh = React.useCallback(async () => {
     if (!currentWorkspace) return;
     setIsRefreshing(true);
+    setBoardLoadFailed(false);
     try {
       await loadBoards();
+      setHasLoadedBoards(true);
     } catch (error) {
       console.error("[Issues] refresh failed", error);
+      setBoardLoadFailed(true);
       toast.error(t("issues.toasts.loadFailed"));
     } finally {
       setIsRefreshing(false);
@@ -237,10 +254,12 @@ export function TeamIssuesPageClient() {
 
   React.useEffect(() => {
     const load = async () => {
+      setIssuesLoadFailed(false);
       try {
         await loadIssues();
       } catch (error) {
         console.error("[Issues] load issues failed", error);
+        setIssuesLoadFailed(true);
         toast.error(t("issues.toasts.loadFailed"));
       }
     };
@@ -332,6 +351,59 @@ export function TeamIssuesPageClient() {
           </>
         }
       >
+        {!hasLoadedBoards && isRefreshing ? (
+          <div className="grid gap-5 lg:grid-cols-[280px_minmax(0,1fr)]">
+            <Card className="border-border/60">
+              <CardHeader>
+                <Skeleton className="h-5 w-24" />
+                <Skeleton className="h-4 w-40" />
+              </CardHeader>
+              <CardContent className="space-y-3 pb-6">
+                <Skeleton className="h-20 rounded-2xl" />
+                <Skeleton className="h-20 rounded-2xl" />
+                <Skeleton className="h-20 rounded-2xl" />
+              </CardContent>
+            </Card>
+            <Card className="border-border/60">
+              <CardHeader>
+                <Skeleton className="h-5 w-32" />
+                <Skeleton className="h-4 w-56" />
+              </CardHeader>
+              <CardContent className="space-y-4 pb-6">
+                <div className="grid gap-3 md:grid-cols-3">
+                  <Skeleton className="h-20 rounded-2xl" />
+                  <Skeleton className="h-20 rounded-2xl" />
+                  <Skeleton className="h-20 rounded-2xl" />
+                </div>
+                <Skeleton className="h-10 rounded-xl" />
+                <Skeleton className="h-24 rounded-2xl" />
+                <Skeleton className="h-24 rounded-2xl" />
+              </CardContent>
+            </Card>
+          </div>
+        ) : boardLoadFailed && boards.length === 0 ? (
+          <Card className="border-border/60">
+            <CardContent className="p-6">
+              <Empty className="min-h-72 rounded-2xl border border-dashed border-border/70 bg-muted/10">
+                <EmptyContent>
+                  <EmptyMedia variant="icon">
+                    <Ticket className="size-5" />
+                  </EmptyMedia>
+                  <EmptyHeader>
+                    <EmptyTitle>{t("issues.states.loadErrorTitle")}</EmptyTitle>
+                    <EmptyDescription>
+                      {t("issues.states.loadErrorDescription")}
+                    </EmptyDescription>
+                  </EmptyHeader>
+                  <Button type="button" variant="outline" onClick={() => void refresh()}>
+                    <RefreshCw className="size-4" />
+                    {t("issues.actions.retryLoad")}
+                  </Button>
+                </EmptyContent>
+              </Empty>
+            </CardContent>
+          </Card>
+        ) : (
         <div className="grid gap-5 lg:grid-cols-[280px_minmax(0,1fr)]">
           <Card className="border-border/60">
             <CardHeader>
@@ -423,7 +495,29 @@ export function TeamIssuesPageClient() {
                 placeholder={t("issues.searchPlaceholder")}
               />
 
-              {issues.length === 0 ? (
+              {issuesLoadFailed ? (
+                <Empty className="min-h-72 rounded-2xl border border-dashed border-border/70 bg-muted/10">
+                  <EmptyContent>
+                    <EmptyMedia variant="icon">
+                      <Ticket className="size-5" />
+                    </EmptyMedia>
+                    <EmptyHeader>
+                      <EmptyTitle>{t("issues.states.loadErrorTitle")}</EmptyTitle>
+                      <EmptyDescription>
+                        {t("issues.states.loadErrorDescription")}
+                      </EmptyDescription>
+                    </EmptyHeader>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => void loadIssues()}
+                    >
+                      <RefreshCw className="size-4" />
+                      {t("issues.actions.retryLoad")}
+                    </Button>
+                  </EmptyContent>
+                </Empty>
+              ) : issues.length === 0 ? (
                 <Empty className="min-h-72 rounded-2xl border border-dashed border-border/70 bg-muted/10">
                   <EmptyContent>
                     <EmptyMedia variant="icon">
@@ -464,8 +558,12 @@ export function TeamIssuesPageClient() {
                       <div className="min-w-0">
                         <p className="truncate font-medium">{issue.title}</p>
                         <div className="mt-2 flex flex-wrap items-center gap-2">
-                          <Badge variant="outline">{issue.status}</Badge>
-                          <Badge variant="outline">{issue.priority}</Badge>
+                          <Badge variant="outline">
+                            {formatIssueStatus(t, issue.status)}
+                          </Badge>
+                          <Badge variant="outline">
+                            {formatIssuePriority(t, issue.priority)}
+                          </Badge>
                           {issue.related_project_id ? (
                             <Badge variant="secondary">
                               {t("issues.fields.project")}
@@ -486,6 +584,7 @@ export function TeamIssuesPageClient() {
             </CardContent>
           </Card>
         </div>
+        )}
       </TeamShell>
 
       <CreateBoardDialog
@@ -517,9 +616,13 @@ export function TeamIssueDetailPageClient({ issueId }: { issueId: string }) {
   const [scheduleCron, setScheduleCron] = React.useState("0 * * * *");
   const [prompt, setPrompt] = React.useState("");
   const [relatedProjectId, setRelatedProjectId] = React.useState<string>("none");
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [loadFailed, setLoadFailed] = React.useState(false);
   const [isSaving, setIsSaving] = React.useState(false);
 
   const load = React.useCallback(async () => {
+    setIsLoading(true);
+    setLoadFailed(false);
     try {
       const [nextIssue, nextPresets, nextProjects] = await Promise.all([
         issuesApi.getIssue(issueId),
@@ -540,7 +643,10 @@ export function TeamIssueDetailPageClient({ issueId }: { issueId: string }) {
       setRelatedProjectId(nextIssue.related_project_id ?? "none");
     } catch (error) {
       console.error("[Issues] load detail failed", error);
+      setLoadFailed(true);
       toast.error(t("issues.toasts.loadFailed"));
+    } finally {
+      setIsLoading(false);
     }
   }, [issueId, t]);
 
@@ -620,17 +726,105 @@ export function TeamIssueDetailPageClient({ issueId }: { issueId: string }) {
           : t("issues.subtitle")
       }
       toolbarActions={
-        <Button type="button" variant="outline" size="sm" onClick={() => void load()}>
-          <RefreshCw className="size-4" />
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => void load()}
+          disabled={isLoading}
+        >
+          <RefreshCw className={isLoading ? "size-4 animate-spin" : "size-4"} />
           {t("issues.refresh")}
         </Button>
       }
     >
-      {!issue ? (
+      {isLoading && !issue ? (
+        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
+          <div className="space-y-5">
+            <Card className="border-border/60">
+              <CardHeader>
+                <Skeleton className="h-5 w-28" />
+                <Skeleton className="h-4 w-40" />
+              </CardHeader>
+              <CardContent className="space-y-4 pb-6">
+                <div className="flex gap-2">
+                  <Skeleton className="h-6 w-20 rounded-full" />
+                  <Skeleton className="h-6 w-20 rounded-full" />
+                  <Skeleton className="h-6 w-24 rounded-full" />
+                </div>
+                <Skeleton className="h-16 rounded-2xl" />
+                <Skeleton className="h-10 rounded-xl" />
+              </CardContent>
+            </Card>
+            <Card className="border-border/60">
+              <CardHeader>
+                <Skeleton className="h-5 w-36" />
+                <Skeleton className="h-4 w-56" />
+              </CardHeader>
+              <CardContent className="space-y-4 pb-6">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <Skeleton className="h-10 rounded-xl" />
+                  <Skeleton className="h-10 rounded-xl" />
+                </div>
+                <Skeleton className="h-10 rounded-xl" />
+                <Skeleton className="h-10 w-40 rounded-xl" />
+              </CardContent>
+            </Card>
+            <Card className="border-border/60">
+              <CardHeader>
+                <Skeleton className="h-5 w-32" />
+                <Skeleton className="h-4 w-56" />
+              </CardHeader>
+              <CardContent className="pb-6">
+                <Skeleton className="h-40 rounded-2xl" />
+              </CardContent>
+            </Card>
+          </div>
+          <div className="space-y-5">
+            <Card className="border-border/60">
+              <CardHeader>
+                <Skeleton className="h-5 w-24" />
+                <Skeleton className="h-4 w-40" />
+              </CardHeader>
+              <CardContent className="space-y-4 pb-6">
+                <Skeleton className="h-48 rounded-2xl" />
+                <Skeleton className="h-32 rounded-2xl" />
+              </CardContent>
+            </Card>
+            <Card className="border-border/60">
+              <CardHeader>
+                <Skeleton className="h-5 w-32" />
+                <Skeleton className="h-4 w-56" />
+              </CardHeader>
+              <CardContent className="pb-6">
+                <Skeleton className="h-28 rounded-2xl" />
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      ) : loadFailed && !issue ? (
         <Card className="border-border/60">
-          <CardContent className="p-6" />
+          <CardContent className="p-6">
+            <Empty className="min-h-72 rounded-2xl border border-dashed border-border/70 bg-muted/10">
+              <EmptyContent>
+                <EmptyMedia variant="icon">
+                  <Ticket className="size-5" />
+                </EmptyMedia>
+                <EmptyHeader>
+                  <EmptyTitle>{t("issues.states.loadErrorTitle")}</EmptyTitle>
+                  <EmptyDescription>
+                    {t("issues.states.loadErrorDescription")}
+                  </EmptyDescription>
+                </EmptyHeader>
+                <Button type="button" variant="outline" onClick={() => void load()}>
+                  <RefreshCw className="size-4" />
+                  {t("issues.actions.retryLoad")}
+                </Button>
+              </EmptyContent>
+            </Empty>
+          </CardContent>
         </Card>
-      ) : (
+      ) : issue ? (
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
           <div className="space-y-5">
             <Card className="border-border/60">
@@ -642,8 +836,12 @@ export function TeamIssueDetailPageClient({ issueId }: { issueId: string }) {
               </CardHeader>
               <CardContent className="space-y-4 pb-6">
                 <div className="flex flex-wrap gap-2">
-                  <Badge variant="outline">{issue.status}</Badge>
-                  <Badge variant="outline">{issue.priority}</Badge>
+                  <Badge variant="outline">
+                    {formatIssueStatus(t, issue.status)}
+                  </Badge>
+                  <Badge variant="outline">
+                    {formatIssuePriority(t, issue.priority)}
+                  </Badge>
                   {assignment ? <AssignmentBadge assignment={assignment} /> : null}
                 </div>
                 <p className="text-sm text-muted-foreground">
@@ -764,7 +962,9 @@ export function TeamIssueDetailPageClient({ issueId }: { issueId: string }) {
                 <div className="rounded-2xl border border-border/60 p-4">
                   <p className="text-sm font-medium">{t("issues.fields.assignmentStatus")}</p>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    {assignment?.status ?? t("issues.unassigned")}
+                    {assignment
+                      ? formatAssignmentStatus(t, assignment.status)
+                      : t("issues.unassigned")}
                   </p>
                   <p className="mt-3 text-sm font-medium">{t("issues.fields.session")}</p>
                   <p className="mt-1 break-all text-sm text-muted-foreground">
@@ -835,12 +1035,15 @@ export function TeamIssueDetailPageClient({ issueId }: { issueId: string }) {
                       ? `${t("issues.fields.session")}: ${assignment?.session_id}`
                       : `${t("issues.preview.pendingImpact")}`}
                   </p>
+                  <p className="mt-3 text-xs text-muted-foreground">
+                    {t("issues.preview.releaseHint")}
+                  </p>
                 </div>
               </CardContent>
             </Card>
           </div>
         </div>
-      )}
+      ) : null}
     </TeamShell>
   );
 }

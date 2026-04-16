@@ -177,6 +177,25 @@
       "aiAssigned": "Назначено ИИ",
       "running": "Сейчас выполняются"
     },
+    "statuses": {
+      "todo": "К выполнению",
+      "in_progress": "В работе",
+      "done": "Готово",
+      "canceled": "Отменено"
+    },
+    "priorities": {
+      "low": "Низкий",
+      "medium": "Средний",
+      "high": "Высокий",
+      "urgent": "Срочный"
+    },
+    "assignmentStatuses": {
+      "pending": "Ожидает",
+      "running": "Выполняется",
+      "completed": "Завершено",
+      "failed": "Не удалось",
+      "cancelled": "Отменено"
+    },
     "placeholders": {
       "project": "Select a project",
       "preset": "Select a preset",
@@ -184,7 +203,12 @@
     },
     "preview": {
       "executionMode": "Режим выполнения",
-      "pendingImpact": "Здесь появится preview влияния после внедрения assignment hardening."
+      "pendingImpact": "Здесь появится preview влияния после внедрения assignment hardening.",
+      "releaseHint": "Освобождение удалит сохраненный sandbox перед следующим запуском."
+    },
+    "states": {
+      "loadErrorTitle": "Не удалось загрузить данные issue",
+      "loadErrorDescription": "Обновите страницу и попробуйте снова."
     },
     "triggerModes": {
       "persistent_sandbox": "Persistent sandbox",
@@ -196,6 +220,7 @@
       "saveAssignment": "Save assignment",
       "trigger": "Trigger now",
       "retry": "Retry",
+      "retryLoad": "Повторить загрузку",
       "cancel": "Cancel assignment",
       "release": "Release sandbox",
       "openSession": "Open session"

@@ -177,6 +177,25 @@
       "aiAssigned": "Assignées à l’IA",
       "running": "En cours"
     },
+    "statuses": {
+      "todo": "À faire",
+      "in_progress": "En cours",
+      "done": "Terminée",
+      "canceled": "Annulée"
+    },
+    "priorities": {
+      "low": "Basse",
+      "medium": "Moyenne",
+      "high": "Haute",
+      "urgent": "Urgente"
+    },
+    "assignmentStatuses": {
+      "pending": "En attente",
+      "running": "En cours",
+      "completed": "Terminée",
+      "failed": "Échouée",
+      "cancelled": "Annulée"
+    },
     "placeholders": {
       "project": "Select a project",
       "preset": "Select a preset",
@@ -184,7 +203,12 @@
     },
     "preview": {
       "executionMode": "Mode d’exécution",
-      "pendingImpact": "L’aperçu d’impact apparaîtra ici quand le durcissement des affectations sera disponible."
+      "pendingImpact": "L’aperçu d’impact apparaîtra ici quand le durcissement des affectations sera disponible.",
+      "releaseHint": "La libération efface le sandbox conservé avant la prochaine exécution."
+    },
+    "states": {
+      "loadErrorTitle": "Impossible de charger les données de l’issue",
+      "loadErrorDescription": "Actualisez la vue et réessayez."
     },
     "triggerModes": {
       "persistent_sandbox": "Persistent sandbox",
@@ -196,6 +220,7 @@
       "saveAssignment": "Save assignment",
       "trigger": "Trigger now",
       "retry": "Retry",
+      "retryLoad": "Recharger",
       "cancel": "Cancel assignment",
       "release": "Release sandbox",
       "openSession": "Open session"

@@ -177,6 +177,25 @@
       "aiAssigned": "AI 割り当て",
       "running": "実行中"
     },
+    "statuses": {
+      "todo": "未着手",
+      "in_progress": "進行中",
+      "done": "完了",
+      "canceled": "キャンセル済み"
+    },
+    "priorities": {
+      "low": "低",
+      "medium": "中",
+      "high": "高",
+      "urgent": "緊急"
+    },
+    "assignmentStatuses": {
+      "pending": "待機中",
+      "running": "実行中",
+      "completed": "完了",
+      "failed": "失敗",
+      "cancelled": "キャンセル済み"
+    },
     "placeholders": {
       "project": "Select a project",
       "preset": "Select a preset",
@@ -184,7 +203,12 @@
     },
     "preview": {
       "executionMode": "実行モード",
-      "pendingImpact": "assignment hardening が入ると、ここに影響プレビューが表示されます。"
+      "pendingImpact": "assignment hardening が入ると、ここに影響プレビューが表示されます。",
+      "releaseHint": "release を実行すると、次回実行前に保持中の sandbox が破棄されます。"
+    },
+    "states": {
+      "loadErrorTitle": "Issue データを読み込めませんでした",
+      "loadErrorDescription": "更新してからもう一度お試しください。"
     },
     "triggerModes": {
       "persistent_sandbox": "Persistent sandbox",
@@ -196,6 +220,7 @@
       "saveAssignment": "Save assignment",
       "trigger": "Trigger now",
       "retry": "Retry",
+      "retryLoad": "再読み込み",
       "cancel": "Cancel assignment",
       "release": "Release sandbox",
       "openSession": "Open session"

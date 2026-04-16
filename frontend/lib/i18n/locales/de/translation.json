@@ -177,6 +177,25 @@
       "aiAssigned": "KI zugewiesen",
       "running": "Gerade aktiv"
     },
+    "statuses": {
+      "todo": "Offen",
+      "in_progress": "In Bearbeitung",
+      "done": "Erledigt",
+      "canceled": "Abgebrochen"
+    },
+    "priorities": {
+      "low": "Niedrig",
+      "medium": "Mittel",
+      "high": "Hoch",
+      "urgent": "Dringend"
+    },
+    "assignmentStatuses": {
+      "pending": "Ausstehend",
+      "running": "Läuft",
+      "completed": "Abgeschlossen",
+      "failed": "Fehlgeschlagen",
+      "cancelled": "Abgebrochen"
+    },
     "placeholders": {
       "project": "Select a project",
       "preset": "Select a preset",
@@ -184,7 +203,12 @@
     },
     "preview": {
       "executionMode": "Ausführungsmodus",
-      "pendingImpact": "Die Auswirkungs-Vorschau erscheint hier, sobald die Assignment-Härtung bereitsteht."
+      "pendingImpact": "Die Auswirkungs-Vorschau erscheint hier, sobald die Assignment-Härtung bereitsteht.",
+      "releaseHint": "Beim Freigeben wird die beibehaltene Sandbox vor der nächsten Ausführung gelöscht."
+    },
+    "states": {
+      "loadErrorTitle": "Issue-Daten konnten nicht geladen werden",
+      "loadErrorDescription": "Aktualisieren Sie die Ansicht und versuchen Sie es erneut."
     },
     "triggerModes": {
       "persistent_sandbox": "Persistent sandbox",
@@ -196,6 +220,7 @@
       "saveAssignment": "Save assignment",
       "trigger": "Trigger now",
       "retry": "Retry",
+      "retryLoad": "Erneut laden",
       "cancel": "Cancel assignment",
       "release": "Release sandbox",
       "openSession": "Open session"
