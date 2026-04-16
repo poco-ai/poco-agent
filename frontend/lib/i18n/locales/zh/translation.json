@@ -138,10 +138,12 @@
     "listTitle": "事项",
     "executionTitle": "执行状态",
     "refresh": "刷新",
+    "searchPlaceholder": "搜索事项...",
     "boardNamePlaceholder": "新看板名称",
     "issueTitlePlaceholder": "新事项标题",
     "emptyBoards": "暂无看板。",
     "emptyIssues": "暂无事项。",
+    "emptySearch": "当前搜索条件下没有匹配的事项。",
     "emptyDescription": "暂无描述。",
     "none": "无",
     "unassigned": "未分配",
@@ -155,8 +157,14 @@
       "schedule": "调度表达式",
       "prompt": "执行提示词",
       "assignmentStatus": "分配状态",
+      "updatedAt": "更新时间",
       "session": "执行会话",
       "container": "Sandbox 容器"
+    },
+    "summary": {
+      "total": "事项总数",
+      "aiAssigned": "AI 已分配",
+      "running": "执行中"
     },
     "placeholders": {
       "project": "选择项目",

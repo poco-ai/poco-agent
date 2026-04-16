@@ -138,10 +138,12 @@
     "listTitle": "Issues",
     "executionTitle": "Execution",
     "refresh": "Refresh",
+    "searchPlaceholder": "Issue を検索...",
     "boardNamePlaceholder": "新しいボード名",
     "issueTitlePlaceholder": "新しい Issue タイトル",
     "emptyBoards": "ボードはまだありません。",
     "emptyIssues": "Issue はまだありません。",
+    "emptySearch": "現在の検索条件に一致する Issue はありません。",
     "emptyDescription": "No description yet.",
     "none": "None",
     "unassigned": "Unassigned",
@@ -155,8 +157,14 @@
       "schedule": "Schedule",
       "prompt": "Prompt",
       "assignmentStatus": "Assignment status",
+      "updatedAt": "更新日時",
       "session": "Execution session",
       "container": "Sandbox container"
+    },
+    "summary": {
+      "total": "Issue 総数",
+      "aiAssigned": "AI 割り当て",
+      "running": "実行中"
     },
     "placeholders": {
       "project": "Select a project",

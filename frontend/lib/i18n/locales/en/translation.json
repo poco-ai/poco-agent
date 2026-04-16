@@ -138,10 +138,12 @@
     "listTitle": "Issues",
     "executionTitle": "Execution",
     "refresh": "Refresh",
+    "searchPlaceholder": "Search issues...",
     "boardNamePlaceholder": "New board name",
     "issueTitlePlaceholder": "New issue title",
     "emptyBoards": "No boards yet.",
     "emptyIssues": "No issues yet.",
+    "emptySearch": "No issues match the current search.",
     "emptyDescription": "No description yet.",
     "none": "None",
     "unassigned": "Unassigned",
@@ -155,8 +157,14 @@
       "schedule": "Schedule",
       "prompt": "Prompt",
       "assignmentStatus": "Assignment status",
+      "updatedAt": "Updated",
       "session": "Execution session",
       "container": "Sandbox container"
+    },
+    "summary": {
+      "total": "Total issues",
+      "aiAssigned": "AI assigned",
+      "running": "Running now"
     },
     "placeholders": {
       "project": "Select a project",

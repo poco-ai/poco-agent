@@ -44,6 +44,10 @@ import { useT } from "@/lib/i18n/client";
 import { useLanguage } from "@/hooks/use-language";
 import { presetsService } from "@/features/capabilities/presets/api/presets-api";
 import { issuesApi } from "@/features/issues/api/issues-api";
+import {
+  filterIssuesByQuery,
+  summarizeBoardIssues,
+} from "@/features/issues/lib/issues-index-view";
 import type {
   AgentAssignment,
   WorkspaceBoard,
@@ -61,6 +65,15 @@ function AssignmentBadge({
 }) {
   if (!assignment) return null;
   return <Badge variant="secondary">{assignment.status}</Badge>;
+}
+
+function formatDateTime(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
 }
 
 interface CreateBoardDialogProps {
@@ -187,6 +200,7 @@ export function TeamIssuesPageClient() {
   const [boardDialogOpen, setBoardDialogOpen] = React.useState(false);
   const [issueDialogOpen, setIssueDialogOpen] = React.useState(false);
   const [isRefreshing, setIsRefreshing] = React.useState(false);
+  const [query, setQuery] = React.useState("");
 
   const loadBoards = React.useCallback(async () => {
     if (!currentWorkspace) return;
@@ -235,6 +249,14 @@ export function TeamIssuesPageClient() {
   const selectedBoard = React.useMemo(
     () => boards.find((board) => board.board_id === selectedBoardId) ?? null,
     [boards, selectedBoardId],
+  );
+  const filteredIssues = React.useMemo(
+    () => filterIssuesByQuery(issues, query),
+    [issues, query],
+  );
+  const boardSummary = React.useMemo(
+    () => summarizeBoardIssues(issues),
+    [issues],
   );
 
   const createBoard = async (name: string) => {
@@ -336,7 +358,11 @@ export function TeamIssuesPageClient() {
                     key={board.board_id}
                     type="button"
                     onClick={() => setSelectedBoardId(board.board_id)}
-                    className="w-full rounded-2xl border border-border/60 px-4 py-3 text-left transition hover:bg-muted/40"
+                    className={
+                      selectedBoardId === board.board_id
+                        ? "w-full rounded-2xl border border-foreground/10 bg-accent/60 px-4 py-3 text-left transition"
+                        : "w-full rounded-2xl border border-border/60 px-4 py-3 text-left transition hover:bg-muted/40"
+                    }
                   >
                     <p className="text-sm font-medium text-foreground">{board.name}</p>
                     <p className="mt-1 text-xs text-muted-foreground">
@@ -360,7 +386,42 @@ export function TeamIssuesPageClient() {
                 {selectedBoard?.description || t("issues.detailPlaceholder")}
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-3 pb-6">
+            <CardContent className="space-y-4 pb-6">
+              <div className="grid gap-3 md:grid-cols-3">
+                {[
+                  {
+                    label: t("issues.summary.total"),
+                    value: String(boardSummary.totalIssues),
+                  },
+                  {
+                    label: t("issues.summary.aiAssigned"),
+                    value: String(boardSummary.aiAssignedIssues),
+                  },
+                  {
+                    label: t("issues.summary.running"),
+                    value: String(boardSummary.runningIssues),
+                  },
+                ].map((item) => (
+                  <div
+                    key={item.label}
+                    className="rounded-2xl border border-border/60 bg-muted/10 px-4 py-3"
+                  >
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                      {item.label}
+                    </p>
+                    <p className="mt-2 text-lg font-semibold text-foreground">
+                      {item.value}
+                    </p>
+                  </div>
+                ))}
+              </div>
+
+              <Input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder={t("issues.searchPlaceholder")}
+              />
+
               {issues.length === 0 ? (
                 <Empty className="min-h-72 rounded-2xl border border-dashed border-border/70 bg-muted/10">
                   <EmptyContent>
@@ -377,8 +438,22 @@ export function TeamIssuesPageClient() {
                     </EmptyHeader>
                   </EmptyContent>
                 </Empty>
+              ) : filteredIssues.length === 0 ? (
+                <Empty className="min-h-56 rounded-2xl border border-dashed border-border/70 bg-muted/10">
+                  <EmptyContent>
+                    <EmptyMedia variant="icon">
+                      <Ticket className="size-5" />
+                    </EmptyMedia>
+                    <EmptyHeader>
+                      <EmptyTitle>{t("issues.listTitle")}</EmptyTitle>
+                      <EmptyDescription>
+                        {t("issues.emptySearch")}
+                      </EmptyDescription>
+                    </EmptyHeader>
+                  </EmptyContent>
+                </Empty>
               ) : (
-                issues.map((issue) => (
+                filteredIssues.map((issue) => (
                   <Link
                     key={issue.issue_id}
                     href={`/${lng}/team/issues/${issue.issue_id}`}
@@ -387,11 +462,22 @@ export function TeamIssuesPageClient() {
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <p className="truncate font-medium">{issue.title}</p>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          {issue.status} · {issue.priority}
+                        <div className="mt-2 flex flex-wrap items-center gap-2">
+                          <Badge variant="outline">{issue.status}</Badge>
+                          <Badge variant="outline">{issue.priority}</Badge>
+                          {issue.related_project_id ? (
+                            <Badge variant="secondary">
+                              {t("issues.fields.project")}
+                            </Badge>
+                          ) : null}
+                          {issue.agent_assignment ? (
+                            <AssignmentBadge assignment={issue.agent_assignment} />
+                          ) : null}
+                        </div>
+                        <p className="mt-3 text-xs text-muted-foreground">
+                          {t("issues.fields.updatedAt")} · {formatDateTime(issue.updated_at)}
                         </p>
                       </div>
-                      <AssignmentBadge assignment={issue.agent_assignment} />
                     </div>
                   </Link>
                 ))

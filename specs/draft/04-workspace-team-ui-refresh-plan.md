@@ -18,7 +18,7 @@
 
 - [x] Phase 0: 收敛信息架构与共享 shell
 - [x] Phase 1: 重做 team overview / members / invites
-- [ ] Phase 2: 重做 team issues index 与 board 导航
+- [x] Phase 2: 重做 team issues index 与 board 导航
 - [ ] Phase 3: 重做 issue detail 与 execution 区域
 - [ ] Phase 4: 补齐状态、移动端与验收
 

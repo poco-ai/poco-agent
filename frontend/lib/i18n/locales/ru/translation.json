@@ -138,10 +138,12 @@
     "listTitle": "Issues",
     "executionTitle": "Execution",
     "refresh": "Refresh",
+    "searchPlaceholder": "Искать issues...",
     "boardNamePlaceholder": "Название новой доски",
     "issueTitlePlaceholder": "Заголовок новой issue",
     "emptyBoards": "Досок пока нет.",
     "emptyIssues": "Issues пока нет.",
+    "emptySearch": "Нет issues, подходящих под текущий поиск.",
     "emptyDescription": "No description yet.",
     "none": "None",
     "unassigned": "Unassigned",
@@ -155,8 +157,14 @@
       "schedule": "Schedule",
       "prompt": "Prompt",
       "assignmentStatus": "Assignment status",
+      "updatedAt": "Обновлено",
       "session": "Execution session",
       "container": "Sandbox container"
+    },
+    "summary": {
+      "total": "Всего issues",
+      "aiAssigned": "Назначено ИИ",
+      "running": "Сейчас выполняются"
     },
     "placeholders": {
       "project": "Select a project",
