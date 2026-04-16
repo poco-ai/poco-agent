@@ -150,6 +150,15 @@
     "detailTitle": "Issue Detail",
     "detailSubtitle": "Issue ID: {{issueId}}",
     "detailPlaceholder": "Issue detail view will expand with board metadata and audit history.",
+    "sections": {
+      "overview": "Overview",
+      "assignment": "Assignment settings",
+      "assignmentDescription": "Configure the assignee, trigger mode, and schedule before you run the issue.",
+      "prompt": "Execution prompt",
+      "promptDescription": "Keep the prompt editable without mixing it into the execution controls.",
+      "executionPreview": "Execution preview",
+      "executionPreviewDescription": "Reserve space for impact preview, next run details, and retained sandbox handling."
+    },
     "fields": {
       "project": "Related project",
       "agentPreset": "AI preset",
@@ -159,7 +168,9 @@
       "assignmentStatus": "Assignment status",
       "updatedAt": "Updated",
       "session": "Execution session",
-      "container": "Sandbox container"
+      "container": "Sandbox container",
+      "lastTriggeredAt": "Last triggered",
+      "lastCompletedAt": "Last completed"
     },
     "summary": {
       "total": "Total issues",
@@ -170,6 +181,10 @@
       "project": "Select a project",
       "preset": "Select a preset",
       "prompt": "Review or edit the generated agent prompt"
+    },
+    "preview": {
+      "executionMode": "Execution mode",
+      "pendingImpact": "Impact preview will appear here after assignment hardening lands."
     },
     "triggerModes": {
       "persistent_sandbox": "Persistent sandbox",

@@ -150,6 +150,15 @@
     "detailTitle": "Детали issue",
     "detailSubtitle": "ID issue: {{issueId}}",
     "detailPlaceholder": "Экран деталей позже будет дополнен метаданными доски и историей аудита.",
+    "sections": {
+      "overview": "Обзор",
+      "assignment": "Параметры назначения",
+      "assignmentDescription": "Настройте пресет, режим запуска и расписание до запуска issue.",
+      "prompt": "Промпт выполнения",
+      "promptDescription": "Промпт редактируется отдельно и не смешивается с управляющими действиями.",
+      "executionPreview": "Предпросмотр выполнения",
+      "executionPreviewDescription": "Зона для будущего preview влияния, следующего запуска и управления сохраненным sandbox."
+    },
     "fields": {
       "project": "Related project",
       "agentPreset": "AI preset",
@@ -159,7 +168,9 @@
       "assignmentStatus": "Assignment status",
       "updatedAt": "Обновлено",
       "session": "Execution session",
-      "container": "Sandbox container"
+      "container": "Sandbox container",
+      "lastTriggeredAt": "Последний запуск",
+      "lastCompletedAt": "Последнее завершение"
     },
     "summary": {
       "total": "Всего issues",
@@ -170,6 +181,10 @@
       "project": "Select a project",
       "preset": "Select a preset",
       "prompt": "Review or edit the generated agent prompt"
+    },
+    "preview": {
+      "executionMode": "Режим выполнения",
+      "pendingImpact": "Здесь появится preview влияния после внедрения assignment hardening."
     },
     "triggerModes": {
       "persistent_sandbox": "Persistent sandbox",

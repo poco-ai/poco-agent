@@ -48,6 +48,7 @@ import {
   filterIssuesByQuery,
   summarizeBoardIssues,
 } from "@/features/issues/lib/issues-index-view";
+import { getAssignmentExecutionMeta } from "@/features/issues/lib/issue-detail-view";
 import type {
   AgentAssignment,
   WorkspaceBoard,
@@ -607,6 +608,7 @@ export function TeamIssueDetailPageClient({ issueId }: { issueId: string }) {
   };
 
   const assignment = issue?.agent_assignment;
+  const executionMeta = getAssignmentExecutionMeta(assignment);
 
   return (
     <TeamShell
@@ -630,23 +632,23 @@ export function TeamIssueDetailPageClient({ issueId }: { issueId: string }) {
         </Card>
       ) : (
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
-          <Card className="border-border/60">
-            <CardHeader>
-              <CardTitle>{issue.title}</CardTitle>
-              <CardDescription>
-                {t("issues.detailSubtitle", { issueId })}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4 pb-6">
-              <div className="flex flex-wrap gap-2">
-                <Badge variant="outline">{issue.status}</Badge>
-                <Badge variant="outline">{issue.priority}</Badge>
-                {assignment ? <AssignmentBadge assignment={assignment} /> : null}
-              </div>
-              <p className="text-sm text-muted-foreground">
-                {issue.description || t("issues.emptyDescription")}
-              </p>
-              <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-5">
+            <Card className="border-border/60">
+              <CardHeader>
+                <CardTitle>{t("issues.sections.overview")}</CardTitle>
+                <CardDescription>
+                  {t("issues.detailSubtitle", { issueId })}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4 pb-6">
+                <div className="flex flex-wrap gap-2">
+                  <Badge variant="outline">{issue.status}</Badge>
+                  <Badge variant="outline">{issue.priority}</Badge>
+                  {assignment ? <AssignmentBadge assignment={assignment} /> : null}
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {issue.description || t("issues.emptyDescription")}
+                </p>
                 <div className="space-y-2">
                   <p className="text-xs font-medium text-muted-foreground">
                     {t("issues.fields.project")}
@@ -665,44 +667,56 @@ export function TeamIssueDetailPageClient({ issueId }: { issueId: string }) {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
-                  <p className="text-xs font-medium text-muted-foreground">
-                    {t("issues.fields.agentPreset")}
-                  </p>
-                  <Select value={selectedPresetId} onValueChange={setSelectedPresetId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder={t("issues.placeholders.preset")} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">{t("issues.none")}</SelectItem>
-                      {presets.map((preset) => (
-                        <SelectItem key={preset.preset_id} value={String(preset.preset_id)}>
-                          {preset.name}
+              </CardContent>
+            </Card>
+
+            <Card className="border-border/60">
+              <CardHeader>
+                <CardTitle>{t("issues.sections.assignment")}</CardTitle>
+                <CardDescription>
+                  {t("issues.sections.assignmentDescription")}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4 pb-6">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium text-muted-foreground">
+                      {t("issues.fields.agentPreset")}
+                    </p>
+                    <Select value={selectedPresetId} onValueChange={setSelectedPresetId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder={t("issues.placeholders.preset")} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">{t("issues.none")}</SelectItem>
+                        {presets.map((preset) => (
+                          <SelectItem key={preset.preset_id} value={String(preset.preset_id)}>
+                            {preset.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium text-muted-foreground">
+                      {t("issues.fields.triggerMode")}
+                    </p>
+                    <Select value={triggerMode} onValueChange={(value) => setTriggerMode(value as typeof triggerMode)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="persistent_sandbox">
+                          {t("issues.triggerModes.persistent_sandbox")}
                         </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                        <SelectItem value="scheduled_task">
+                          {t("issues.triggerModes.scheduled_task")}
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
-              </div>
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <p className="text-xs font-medium text-muted-foreground">
-                    {t("issues.fields.triggerMode")}
-                  </p>
-                  <Select value={triggerMode} onValueChange={(value) => setTriggerMode(value as typeof triggerMode)}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="persistent_sandbox">
-                        {t("issues.triggerModes.persistent_sandbox")}
-                      </SelectItem>
-                      <SelectItem value="scheduled_task">
-                        {t("issues.triggerModes.scheduled_task")}
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+
                 <div className="space-y-2">
                   <p className="text-xs font-medium text-muted-foreground">
                     {t("issues.fields.schedule")}
@@ -714,68 +728,117 @@ export function TeamIssueDetailPageClient({ issueId }: { issueId: string }) {
                     placeholder="0 * * * *"
                   />
                 </div>
-              </div>
-              <div className="space-y-2">
-                <p className="text-xs font-medium text-muted-foreground">
-                  {t("issues.fields.prompt")}
-                </p>
+
+                <Button type="button" onClick={() => void saveAssignment()} disabled={isSaving}>
+                  <Bot className="size-4" />
+                  {t("issues.actions.saveAssignment")}
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card className="border-border/60">
+              <CardHeader>
+                <CardTitle>{t("issues.sections.prompt")}</CardTitle>
+                <CardDescription>
+                  {t("issues.sections.promptDescription")}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2 pb-6">
                 <Textarea
                   value={prompt}
                   onChange={(event) => setPrompt(event.target.value)}
                   rows={10}
                   placeholder={t("issues.placeholders.prompt")}
                 />
-              </div>
-              <Button type="button" onClick={() => void saveAssignment()} disabled={isSaving}>
-                <Bot className="size-4" />
-                {t("issues.actions.saveAssignment")}
-              </Button>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </div>
 
-          <Card className="border-border/60">
-            <CardHeader>
-              <CardTitle>{t("issues.executionTitle")}</CardTitle>
-              <CardDescription>{t("issues.subtitle")}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4 pb-6">
-              <div className="rounded-2xl border border-border/60 p-4">
-                <p className="text-sm font-medium">{t("issues.fields.assignmentStatus")}</p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {assignment?.status ?? t("issues.unassigned")}
-                </p>
-                <p className="mt-3 text-sm font-medium">{t("issues.fields.session")}</p>
-                <p className="mt-1 break-all text-sm text-muted-foreground">
-                  {assignment?.session_id ?? t("issues.none")}
-                </p>
-                <p className="mt-3 text-sm font-medium">{t("issues.fields.container")}</p>
-                <p className="mt-1 break-all text-sm text-muted-foreground">
-                  {assignment?.container_id ?? t("issues.none")}
-                </p>
-              </div>
-              <div className="grid gap-2">
-                <Button type="button" onClick={() => void runAction("trigger")}>
-                  {t("issues.actions.trigger")}
-                </Button>
-                <Button type="button" variant="outline" onClick={() => void runAction("retry")}>
-                  {t("issues.actions.retry")}
-                </Button>
-                <Button type="button" variant="outline" onClick={() => void runAction("cancel")}>
-                  {t("issues.actions.cancel")}
-                </Button>
-                <Button type="button" variant="outline" onClick={() => void runAction("release")}>
-                  {t("issues.actions.release")}
-                </Button>
-                {assignment?.session_id ? (
-                  <Button type="button" variant="secondary" asChild>
-                    <Link href={`/${lng}/chat/${assignment.session_id}`}>
-                      {t("issues.actions.openSession")}
-                    </Link>
+          <div className="space-y-5">
+            <Card className="border-border/60">
+              <CardHeader>
+                <CardTitle>{t("issues.executionTitle")}</CardTitle>
+                <CardDescription>{t("issues.subtitle")}</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4 pb-6">
+                <div className="rounded-2xl border border-border/60 p-4">
+                  <p className="text-sm font-medium">{t("issues.fields.assignmentStatus")}</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {assignment?.status ?? t("issues.unassigned")}
+                  </p>
+                  <p className="mt-3 text-sm font-medium">{t("issues.fields.session")}</p>
+                  <p className="mt-1 break-all text-sm text-muted-foreground">
+                    {assignment?.session_id ?? t("issues.none")}
+                  </p>
+                  <p className="mt-3 text-sm font-medium">{t("issues.fields.container")}</p>
+                  <p className="mt-1 break-all text-sm text-muted-foreground">
+                    {assignment?.container_id ?? t("issues.none")}
+                  </p>
+                  <p className="mt-3 text-sm font-medium">{t("issues.fields.lastTriggeredAt")}</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {executionMeta.lastTriggeredAt
+                      ? formatDateTime(executionMeta.lastTriggeredAt)
+                      : t("issues.none")}
+                  </p>
+                  <p className="mt-3 text-sm font-medium">{t("issues.fields.lastCompletedAt")}</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {executionMeta.lastCompletedAt
+                      ? formatDateTime(executionMeta.lastCompletedAt)
+                      : t("issues.none")}
+                  </p>
+                </div>
+                <div className="grid gap-2">
+                  <Button type="button" onClick={() => void runAction("trigger")}>
+                    {t("issues.actions.trigger")}
                   </Button>
-                ) : null}
-              </div>
-            </CardContent>
-          </Card>
+                  <Button type="button" variant="outline" onClick={() => void runAction("retry")}>
+                    {t("issues.actions.retry")}
+                  </Button>
+                  <Button type="button" variant="outline" onClick={() => void runAction("cancel")}>
+                    {t("issues.actions.cancel")}
+                  </Button>
+                  <Button type="button" variant="outline" onClick={() => void runAction("release")}>
+                    {t("issues.actions.release")}
+                  </Button>
+                  {assignment?.session_id ? (
+                    <Button type="button" variant="secondary" asChild>
+                      <Link href={`/${lng}/chat/${assignment.session_id}`}>
+                        {t("issues.actions.openSession")}
+                      </Link>
+                    </Button>
+                  ) : null}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-border/60">
+              <CardHeader>
+                <CardTitle>{t("issues.sections.executionPreview")}</CardTitle>
+                <CardDescription>
+                  {t("issues.sections.executionPreviewDescription")}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3 pb-6">
+                <div className="rounded-2xl border border-dashed border-border/70 bg-muted/10 p-4 text-sm text-muted-foreground">
+                  <p>{t("issues.preview.executionMode")}: {t(`issues.triggerModes.${triggerMode}`)}</p>
+                  <p className="mt-2">
+                    {executionMeta.isScheduled
+                      ? `${t("issues.fields.schedule")}: ${scheduleCron || t("issues.none")}`
+                      : `${t("issues.fields.container")}: ${
+                          executionMeta.hasRetainedContainer
+                            ? assignment?.container_id
+                            : t("issues.none")
+                        }`}
+                  </p>
+                  <p className="mt-2">
+                    {executionMeta.hasSession
+                      ? `${t("issues.fields.session")}: ${assignment?.session_id}`
+                      : `${t("issues.preview.pendingImpact")}`}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       )}
     </TeamShell>

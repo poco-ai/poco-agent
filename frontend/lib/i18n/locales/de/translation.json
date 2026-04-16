@@ -150,6 +150,15 @@
     "detailTitle": "Issue-Details",
     "detailSubtitle": "Issue-ID: {{issueId}}",
     "detailPlaceholder": "Die Detailansicht wird später um Board-Metadaten und Audit-Verlauf erweitert.",
+    "sections": {
+      "overview": "Überblick",
+      "assignment": "Zuweisungseinstellungen",
+      "assignmentDescription": "Konfigurieren Sie Assignee, Auslösemodus und Zeitplan, bevor Sie das Issue starten.",
+      "prompt": "Ausführungsprompt",
+      "promptDescription": "Der Prompt bleibt bearbeitbar, ohne mit den Ausführungssteuerungen vermischt zu werden.",
+      "executionPreview": "Ausführungsvorschau",
+      "executionPreviewDescription": "Reservierter Bereich für Impact-Vorschau, nächsten Lauf und den Umgang mit dem beibehaltenen Sandbox-Container."
+    },
     "fields": {
       "project": "Related project",
       "agentPreset": "AI preset",
@@ -159,7 +168,9 @@
       "assignmentStatus": "Assignment status",
       "updatedAt": "Aktualisiert",
       "session": "Execution session",
-      "container": "Sandbox container"
+      "container": "Sandbox container",
+      "lastTriggeredAt": "Zuletzt ausgelöst",
+      "lastCompletedAt": "Zuletzt abgeschlossen"
     },
     "summary": {
       "total": "Issues gesamt",
@@ -170,6 +181,10 @@
       "project": "Select a project",
       "preset": "Select a preset",
       "prompt": "Review or edit the generated agent prompt"
+    },
+    "preview": {
+      "executionMode": "Ausführungsmodus",
+      "pendingImpact": "Die Auswirkungs-Vorschau erscheint hier, sobald die Assignment-Härtung bereitsteht."
     },
     "triggerModes": {
       "persistent_sandbox": "Persistent sandbox",

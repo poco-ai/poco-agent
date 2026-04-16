@@ -150,6 +150,15 @@
     "detailTitle": "Issue 詳細",
     "detailSubtitle": "Issue ID: {{issueId}}",
     "detailPlaceholder": "詳細ビューには今後ボード情報と監査履歴が追加されます。",
+    "sections": {
+      "overview": "概要",
+      "assignment": "割り当て設定",
+      "assignmentDescription": "Issue を実行する前に、担当 preset、トリガーモード、スケジュールを整理します。",
+      "prompt": "実行プロンプト",
+      "promptDescription": "実行コントロールに混ぜずに、プロンプトだけを編集できるようにします。",
+      "executionPreview": "実行プレビュー",
+      "executionPreviewDescription": "影響プレビュー、次回実行、保持中 sandbox の扱いを入れるための領域です。"
+    },
     "fields": {
       "project": "Related project",
       "agentPreset": "AI preset",
@@ -159,7 +168,9 @@
       "assignmentStatus": "Assignment status",
       "updatedAt": "更新日時",
       "session": "Execution session",
-      "container": "Sandbox container"
+      "container": "Sandbox container",
+      "lastTriggeredAt": "最終トリガー",
+      "lastCompletedAt": "最終完了"
     },
     "summary": {
       "total": "Issue 総数",
@@ -170,6 +181,10 @@
       "project": "Select a project",
       "preset": "Select a preset",
       "prompt": "Review or edit the generated agent prompt"
+    },
+    "preview": {
+      "executionMode": "実行モード",
+      "pendingImpact": "assignment hardening が入ると、ここに影響プレビューが表示されます。"
     },
     "triggerModes": {
       "persistent_sandbox": "Persistent sandbox",

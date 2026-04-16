@@ -150,6 +150,15 @@
     "detailTitle": "事项详情",
     "detailSubtitle": "事项 ID：{{issueId}}",
     "detailPlaceholder": "事项详情页后续会补充看板元数据和审计历史。",
+    "sections": {
+      "overview": "概览",
+      "assignment": "分配设置",
+      "assignmentDescription": "在执行事项前，先明确 preset、触发方式和调度配置。",
+      "prompt": "执行提示词",
+      "promptDescription": "把提示词编辑和执行控制拆开，避免继续堆成一个长表单。",
+      "executionPreview": "执行预览",
+      "executionPreviewDescription": "为 impact preview、下次执行时间和 retained container 释放确认预留明确区域。"
+    },
     "fields": {
       "project": "关联项目",
       "agentPreset": "AI preset",
@@ -159,7 +168,9 @@
       "assignmentStatus": "分配状态",
       "updatedAt": "更新时间",
       "session": "执行会话",
-      "container": "Sandbox 容器"
+      "container": "Sandbox 容器",
+      "lastTriggeredAt": "最近触发时间",
+      "lastCompletedAt": "最近完成时间"
     },
     "summary": {
       "total": "事项总数",
@@ -170,6 +181,10 @@
       "project": "选择项目",
       "preset": "选择 preset",
       "prompt": "查看或编辑系统生成的执行提示词"
+    },
+    "preview": {
+      "executionMode": "执行模式",
+      "pendingImpact": "assignment hardening 落地后，这里会展示影响预览。"
     },
     "triggerModes": {
       "persistent_sandbox": "持久化 sandbox",

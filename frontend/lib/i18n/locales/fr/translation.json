@@ -150,6 +150,15 @@
     "detailTitle": "Détail de l’issue",
     "detailSubtitle": "ID de l’issue : {{issueId}}",
     "detailPlaceholder": "La vue détaillée sera étendue avec les métadonnées du tableau et l’historique d’audit.",
+    "sections": {
+      "overview": "Vue d’ensemble",
+      "assignment": "Paramètres d’affectation",
+      "assignmentDescription": "Configurez l’agent, le mode de déclenchement et la planification avant d’exécuter l’issue.",
+      "prompt": "Prompt d’exécution",
+      "promptDescription": "Gardez le prompt modifiable sans le mélanger aux contrôles d’exécution.",
+      "executionPreview": "Aperçu de l’exécution",
+      "executionPreviewDescription": "Zone réservée pour l’aperçu d’impact, la prochaine exécution et la gestion du sandbox conservé."
+    },
     "fields": {
       "project": "Related project",
       "agentPreset": "AI preset",
@@ -159,7 +168,9 @@
       "assignmentStatus": "Assignment status",
       "updatedAt": "Mis à jour",
       "session": "Execution session",
-      "container": "Sandbox container"
+      "container": "Sandbox container",
+      "lastTriggeredAt": "Dernier déclenchement",
+      "lastCompletedAt": "Dernière exécution terminée"
     },
     "summary": {
       "total": "Issues au total",
@@ -170,6 +181,10 @@
       "project": "Select a project",
       "preset": "Select a preset",
       "prompt": "Review or edit the generated agent prompt"
+    },
+    "preview": {
+      "executionMode": "Mode d’exécution",
+      "pendingImpact": "L’aperçu d’impact apparaîtra ici quand le durcissement des affectations sera disponible."
     },
     "triggerModes": {
       "persistent_sandbox": "Persistent sandbox",
