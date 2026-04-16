@@ -11,6 +11,8 @@ export type {
   WorkspaceRole,
 } from "./model/types";
 export { TeamShell } from "./ui/team-shell";
+export { TeamContentShell } from "./ui/team-content-shell";
+export { TeamLibraryShell } from "./ui/team-library-shell";
 export {
   TeamInvitesPageClient,
   TeamMembersPageClient,

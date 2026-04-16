@@ -122,6 +122,9 @@
       "revoked": "Revoked",
       "copy": "Copy"
     },
+    "mobile": {
+      "back": "Back to team"
+    },
     "toasts": {
       "loadFailed": "Failed to load workspace data",
       "created": "Workspace created",

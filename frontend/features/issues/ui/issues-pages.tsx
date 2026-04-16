@@ -63,7 +63,8 @@ import type {
 import { projectsService } from "@/features/projects/api/projects-api";
 import type { ProjectItem } from "@/features/projects/types";
 import type { Preset } from "@/features/capabilities/presets/lib/preset-types";
-import { TeamShell, useWorkspaceContext } from "@/features/workspaces";
+import { useWorkspaceContext } from "@/features/workspaces";
+import { TeamContentShell } from "@/features/workspaces/ui/team-content-shell";
 
 function AssignmentBadge({
   assignment,
@@ -312,12 +313,13 @@ export function TeamIssuesPageClient() {
 
   return (
     <>
-      <TeamShell
-        activePage="issues"
-        title={t("issues.title")}
-        subtitle={t("issues.subtitle")}
-        toolbarActions={
-          <>
+      <TeamContentShell contentClassName="max-w-none">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <div className="space-y-1">
+            <h2 className="text-lg font-semibold text-foreground">{t("issues.title")}</h2>
+            <p className="text-sm text-muted-foreground">{t("issues.subtitle")}</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
             <Button
               type="button"
               variant="outline"
@@ -348,9 +350,8 @@ export function TeamIssuesPageClient() {
               <Ticket className="size-4" />
               {t("issues.actions.createIssue")}
             </Button>
-          </>
-        }
-      >
+          </div>
+        </div>
         {!hasLoadedBoards && isRefreshing ? (
           <div className="grid gap-5 lg:grid-cols-[280px_minmax(0,1fr)]">
             <Card className="border-border/60">
@@ -585,7 +586,7 @@ export function TeamIssuesPageClient() {
           </Card>
         </div>
         )}
-      </TeamShell>
+      </TeamContentShell>
 
       <CreateBoardDialog
         open={boardDialogOpen}
@@ -717,15 +718,16 @@ export function TeamIssueDetailPageClient({ issueId }: { issueId: string }) {
   const executionMeta = getAssignmentExecutionMeta(assignment);
 
   return (
-    <TeamShell
-      activePage="issues"
-      title={issue?.title ?? t("issues.detailTitle")}
-      subtitle={
-        issue
-          ? t("issues.detailSubtitle", { issueId })
-          : t("issues.subtitle")
-      }
-      toolbarActions={
+    <TeamContentShell contentClassName="max-w-none">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <div className="space-y-1">
+          <h2 className="text-lg font-semibold text-foreground">{issue?.title ?? t("issues.detailTitle")}</h2>
+          <p className="text-sm text-muted-foreground">
+            {issue
+              ? t("issues.detailSubtitle", { issueId })
+              : t("issues.subtitle")}
+          </p>
+        </div>
         <Button
           type="button"
           variant="outline"
@@ -736,8 +738,7 @@ export function TeamIssueDetailPageClient({ issueId }: { issueId: string }) {
           <RefreshCw className={isLoading ? "size-4 animate-spin" : "size-4"} />
           {t("issues.refresh")}
         </Button>
-      }
-    >
+      </div>
       {isLoading && !issue ? (
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
           <div className="space-y-5">
@@ -1044,6 +1045,6 @@ export function TeamIssueDetailPageClient({ issueId }: { issueId: string }) {
           </div>
         </div>
       ) : null}
-    </TeamShell>
+    </TeamContentShell>
   );
 }

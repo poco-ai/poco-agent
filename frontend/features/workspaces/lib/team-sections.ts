@@ -1,8 +1,18 @@
+import type * as React from "react";
+import {
+  Building2,
+  MailPlus,
+  Ticket,
+  Users,
+} from "lucide-react";
+
 export type TeamSectionId = "overview" | "members" | "invites" | "issues";
 
 export interface TeamSection {
   id: TeamSectionId;
   href: string;
+  label: string;
+  icon?: React.ComponentType<{ className?: string }>;
 }
 
 const TEAM_SECTION_IDS: TeamSectionId[] = [
@@ -11,6 +21,13 @@ const TEAM_SECTION_IDS: TeamSectionId[] = [
   "invites",
   "issues",
 ];
+
+const TEAM_SECTION_ICONS: Record<TeamSectionId, React.ComponentType<{ className?: string }>> = {
+  overview: Building2,
+  members: Users,
+  invites: MailPlus,
+  issues: Ticket,
+};
 
 export function buildTeamSectionHref(
   lng: string | undefined,
@@ -30,9 +47,18 @@ export function buildTeamSectionHref(
   }
 }
 
-export function buildTeamSections(lng: string | undefined): TeamSection[] {
+export function buildTeamSections(
+  lng: string | undefined,
+  labels?: Partial<Record<TeamSectionId, string>>,
+): TeamSection[] {
   return TEAM_SECTION_IDS.map((sectionId) => ({
     id: sectionId,
     href: buildTeamSectionHref(lng, sectionId),
+    label: labels?.[sectionId] ?? sectionId,
+    icon: TEAM_SECTION_ICONS[sectionId],
   }));
+}
+
+export function getTeamSectionIcon(sectionId: TeamSectionId): React.ComponentType<{ className?: string }> {
+  return TEAM_SECTION_ICONS[sectionId];
 }

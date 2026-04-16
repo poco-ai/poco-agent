@@ -122,6 +122,9 @@
       "revoked": "已撤销",
       "copy": "复制"
     },
+    "mobile": {
+      "back": "返回团队"
+    },
     "toasts": {
       "loadFailed": "加载空间数据失败",
       "created": "空间已创建",

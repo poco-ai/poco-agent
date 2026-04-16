@@ -65,7 +65,7 @@ import type {
   WorkspaceMember,
   WorkspaceRole,
 } from "@/features/workspaces/model/types";
-import { TeamShell } from "@/features/workspaces/ui/team-shell";
+import { TeamContentShell } from "@/features/workspaces/ui/team-content-shell";
 
 function formatDateTime(value: string): string {
   const date = new Date(value);
@@ -287,13 +287,7 @@ export function TeamPageClient() {
   }, [refresh]);
 
   return (
-    <TeamShell
-      activePage="overview"
-      title={t("workspaces.pages.overview.title")}
-      subtitle={t("workspaces.currentWorkspace", {
-        name: currentWorkspace?.name ?? t("workspaces.noWorkspace"),
-      })}
-    >
+    <TeamContentShell>
       {isLoading ? (
         <Skeleton className="h-40 rounded-2xl" />
       ) : (
@@ -362,7 +356,7 @@ export function TeamPageClient() {
           </Card>
         </>
       )}
-    </TeamShell>
+    </TeamContentShell>
   );
 }
 
@@ -390,11 +384,7 @@ export function TeamMembersPageClient() {
   }, [refresh]);
 
   return (
-    <TeamShell
-      activePage="members"
-      title={t("workspaces.pages.members.title")}
-      subtitle={t("workspaces.members.description")}
-    >
+    <TeamContentShell>
       <Card className="border-border/60">
         <CardHeader>
           <CardTitle>{t("workspaces.members.title")}</CardTitle>
@@ -440,7 +430,7 @@ export function TeamMembersPageClient() {
           )}
         </CardContent>
       </Card>
-    </TeamShell>
+    </TeamContentShell>
   );
 }
 
@@ -497,25 +487,21 @@ export function TeamInvitesPageClient() {
   };
 
   return (
-    <TeamShell
-      activePage="invites"
-      title={t("workspaces.pages.invites.title")}
-      subtitle={t("workspaces.invites.description")}
-      toolbarActions={
-        <Button
-          type="button"
-          onClick={() => setInviteDialogOpen(true)}
-          disabled={isMutating || !currentWorkspace}
-        >
+    <TeamContentShell>
+      <Card className="border-border/60">
+        <CardHeader className="gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-1">
+            <CardTitle>{t("workspaces.invites.title")}</CardTitle>
+            <CardDescription>{t("workspaces.invites.description")}</CardDescription>
+          </div>
+          <Button
+            type="button"
+            onClick={() => setInviteDialogOpen(true)}
+            disabled={isMutating || !currentWorkspace}
+          >
             <Ticket className="size-4" />
             {t("workspaces.invites.createAction")}
-        </Button>
-      }
-    >
-      <Card className="border-border/60">
-        <CardHeader>
-          <CardTitle>{t("workspaces.invites.title")}</CardTitle>
-          <CardDescription>{t("workspaces.invites.description")}</CardDescription>
+          </Button>
         </CardHeader>
         <CardContent className="space-y-3 pb-6">
           {isLoading ? (
@@ -581,6 +567,6 @@ export function TeamInvitesPageClient() {
         initialRole={role}
         onCreate={createInvite}
       />
-    </TeamShell>
+    </TeamContentShell>
   );
 }

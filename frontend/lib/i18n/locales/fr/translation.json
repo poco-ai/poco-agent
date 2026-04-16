@@ -122,6 +122,9 @@
       "revoked": "Révoquée",
       "copy": "Copier"
     },
+    "mobile": {
+      "back": "Retour à l'équipe"
+    },
     "toasts": {
       "loadFailed": "Échec du chargement des données d’espace",
       "created": "Espace créé",

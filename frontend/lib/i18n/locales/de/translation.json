@@ -122,6 +122,9 @@
       "revoked": "Widerrufen",
       "copy": "Kopieren"
     },
+    "mobile": {
+      "back": "Zurück zum Team"
+    },
     "toasts": {
       "loadFailed": "Workspace-Daten konnten nicht geladen werden",
       "created": "Workspace erstellt",
