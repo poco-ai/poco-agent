@@ -137,7 +137,7 @@ function WorkspaceOverviewHero({
   const { t } = useT("translation");
 
   return (
-    <Card className="overflow-hidden border-primary/20 bg-gradient-to-br from-primary/10 via-card to-card shadow-sm">
+    <Card className="overflow-hidden border-border/60 bg-card">
       <CardContent className="flex flex-col gap-4 p-6 lg:flex-row lg:items-end lg:justify-between">
         <div className="space-y-3">
           <Badge variant="secondary">
@@ -176,7 +176,7 @@ function WorkspaceOverviewHero({
           ].map((item) => (
             <div
               key={item.label}
-              className="rounded-2xl border border-border/60 bg-background/80 px-4 py-3 shadow-sm"
+              className="rounded-2xl border border-border/60 bg-muted/20 px-4 py-3"
             >
               <p className="text-xs uppercase tracking-wide text-muted-foreground">
                 {item.label}
@@ -291,7 +291,7 @@ export function TeamPageClient() {
       {isLoading ? (
         <Skeleton className="h-40 rounded-2xl" />
       ) : (
-        <>
+        <div className="flex flex-col gap-5">
           <WorkspaceOverviewHero
             workspace={currentWorkspace}
             members={members}
@@ -354,7 +354,7 @@ export function TeamPageClient() {
               )}
             </CardContent>
           </Card>
-        </>
+        </div>
       )}
     </TeamContentShell>
   );
