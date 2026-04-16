@@ -220,6 +220,7 @@
     "actions": {
       "createBoard": "新建看板",
       "createIssue": "新建事项",
+      "backToList": "返回列表",
       "saveAssignment": "保存分配",
       "trigger": "立即触发",
       "retry": "重新执行",

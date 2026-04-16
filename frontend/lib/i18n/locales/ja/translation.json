@@ -220,6 +220,7 @@
     "actions": {
       "createBoard": "新しいボード",
       "createIssue": "新しい Issue",
+      "backToList": "一覧に戻る",
       "saveAssignment": "Save assignment",
       "trigger": "Trigger now",
       "retry": "Retry",

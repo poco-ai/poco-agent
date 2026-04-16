@@ -220,6 +220,7 @@
     "actions": {
       "createBoard": "Neues Board",
       "createIssue": "Neue Issue",
+      "backToList": "Zurück zur Liste",
       "saveAssignment": "Save assignment",
       "trigger": "Trigger now",
       "retry": "Retry",

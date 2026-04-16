@@ -220,6 +220,7 @@
     "actions": {
       "createBoard": "Новая доска",
       "createIssue": "Новая issue",
+      "backToList": "Назад к списку",
       "saveAssignment": "Save assignment",
       "trigger": "Trigger now",
       "retry": "Retry",

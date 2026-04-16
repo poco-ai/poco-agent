@@ -2,8 +2,8 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { Bot, KanbanSquare, Plus, RefreshCw, Ticket } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Bot, ChevronLeft, KanbanSquare, Plus, RefreshCw, Ticket } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -206,6 +206,8 @@ function CreateIssueDialog({
 export function TeamIssuesPageClient() {
   const { t } = useT("translation");
   const lng = useLanguage();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const { currentWorkspace } = useWorkspaceContext();
   const [boards, setBoards] = React.useState<WorkspaceBoard[]>([]);
   const [issues, setIssues] = React.useState<WorkspaceIssue[]>([]);
@@ -217,6 +219,31 @@ export function TeamIssuesPageClient() {
   const [boardLoadFailed, setBoardLoadFailed] = React.useState(false);
   const [issuesLoadFailed, setIssuesLoadFailed] = React.useState(false);
   const [query, setQuery] = React.useState("");
+
+  const queryIssueId = searchParams.get("issue");
+  const [selectedIssueId, setSelectedIssueId] = React.useState<string | null>(queryIssueId);
+
+  React.useEffect(() => {
+    setSelectedIssueId(queryIssueId);
+  }, [queryIssueId]);
+
+  const selectIssue = React.useCallback(
+    (issueId: string) => {
+      setSelectedIssueId(issueId);
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("issue", issueId);
+      router.replace(`/${lng}/team/issues?${params.toString()}`, { scroll: false });
+    },
+    [lng, router, searchParams],
+  );
+
+  const clearIssue = React.useCallback(() => {
+    setSelectedIssueId(null);
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("issue");
+    const qs = params.toString();
+    router.replace(`/${lng}/team/issues${qs ? `?${qs}` : ""}`, { scroll: false });
+  }, [lng, router, searchParams]);
 
   const loadBoards = React.useCallback(async () => {
     if (!currentWorkspace) return;
@@ -314,6 +341,22 @@ export function TeamIssuesPageClient() {
   return (
     <>
       <TeamContentShell contentClassName="max-w-none">
+        {selectedIssueId ? (
+          <div className="flex flex-col gap-4">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="w-fit"
+              onClick={clearIssue}
+            >
+              <ChevronLeft className="size-4" />
+              {t("issues.actions.backToList")}
+            </Button>
+            <TeamIssueDetailPageClient issueId={selectedIssueId} />
+          </div>
+        ) : (
+        <div>
         <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
           <div className="space-y-1">
             <h2 className="text-lg font-semibold text-foreground">{t("issues.title")}</h2>
@@ -550,10 +593,11 @@ export function TeamIssuesPageClient() {
                 </Empty>
               ) : (
                 filteredIssues.map((issue) => (
-                  <Link
+                  <button
                     key={issue.issue_id}
-                    href={`/${lng}/team/issues/${issue.issue_id}`}
-                    className="block rounded-2xl border border-border/60 px-4 py-4 transition hover:bg-muted/30"
+                    type="button"
+                    onClick={() => selectIssue(issue.issue_id)}
+                    className="block w-full rounded-2xl border border-border/60 px-4 py-4 text-left transition hover:bg-muted/30"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
@@ -579,11 +623,13 @@ export function TeamIssuesPageClient() {
                         </p>
                       </div>
                     </div>
-                  </Link>
+                  </button>
                 ))
               )}
             </CardContent>
           </Card>
+        </div>
+        )}
         </div>
         )}
       </TeamContentShell>
