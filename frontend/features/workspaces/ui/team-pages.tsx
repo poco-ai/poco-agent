@@ -5,6 +5,7 @@ import {
   Activity,
   Building2,
   Copy,
+  MailPlus,
   RefreshCw,
   Shield,
   Ticket,
@@ -254,6 +255,76 @@ function CreateInviteDialog({
   );
 }
 
+function InviteListContent({
+  invites,
+  isMutating,
+  onCopyToken,
+}: {
+  invites: WorkspaceInvite[];
+  isMutating: boolean;
+  onCopyToken: (token: string) => void;
+}) {
+  const { t } = useT("translation");
+
+  if (invites.length === 0) {
+    return (
+      <Empty className="min-h-48 rounded-2xl border border-dashed border-border/70 bg-muted/10">
+        <EmptyContent>
+          <EmptyMedia variant="icon">
+            <Ticket className="size-5" />
+          </EmptyMedia>
+          <EmptyHeader>
+            <EmptyTitle>{t("workspaces.invites.empty")}</EmptyTitle>
+          </EmptyHeader>
+        </EmptyContent>
+      </Empty>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {invites.map((invite) => (
+        <div
+          key={invite.id}
+          className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border/60 bg-card p-4"
+        >
+          <div className="min-w-0">
+            <p className="truncate font-mono text-sm">{invite.token}</p>
+            <p className="text-xs text-muted-foreground">
+              {t("workspaces.invites.expiresAt", {
+                date: formatDateTime(invite.expiresAt),
+              })}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            {getInviteState(invite) === "active" ? (
+              <Badge variant="outline">
+                {formatWorkspaceRole(t, invite.role)}
+              </Badge>
+            ) : (
+              <Badge variant="secondary">
+                {getInviteState(invite) === "revoked"
+                  ? t("workspaces.invites.revoked")
+                  : t("workspaces.invites.expired")}
+              </Badge>
+            )}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => void onCopyToken(invite.token)}
+              disabled={isMutating}
+            >
+              <Copy className="size-4" />
+              {t("workspaces.invites.copy")}
+            </Button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function TeamPageClient() {
   const { t } = useT("translation");
   const { currentWorkspace, isLoading } = useWorkspaceContext();
@@ -364,9 +435,15 @@ export function TeamMembersPageClient() {
   const { t } = useT("translation");
   const { currentWorkspace } = useWorkspaceContext();
   const [members, setMembers] = React.useState<WorkspaceMember[]>([]);
+  const [invites, setInvites] = React.useState<WorkspaceInvite[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
+  const [invitesLoading, setInvitesLoading] = React.useState(false);
+  const [inviteListOpen, setInviteListOpen] = React.useState(false);
+  const [createInviteOpen, setCreateInviteOpen] = React.useState(false);
+  const [role, setRole] = React.useState<WorkspaceRole>("member");
+  const [isMutating, setIsMutating] = React.useState(false);
 
-  const refresh = React.useCallback(async () => {
+  const refreshMembers = React.useCallback(async () => {
     if (!currentWorkspace) return;
     setIsLoading(true);
     try {
@@ -379,16 +456,71 @@ export function TeamMembersPageClient() {
     }
   }, [currentWorkspace, t]);
 
+  const refreshInvites = React.useCallback(async () => {
+    if (!currentWorkspace) return;
+    setInvitesLoading(true);
+    try {
+      setInvites(await workspacesApi.listInvites(currentWorkspace.id));
+    } catch (error) {
+      console.error("[Workspaces] invites refresh failed", error);
+      toast.error(t("workspaces.toasts.loadFailed"));
+    } finally {
+      setInvitesLoading(false);
+    }
+  }, [currentWorkspace, t]);
+
   React.useEffect(() => {
-    void refresh();
-  }, [refresh]);
+    void refreshMembers();
+  }, [refreshMembers]);
+
+  React.useEffect(() => {
+    void refreshInvites();
+  }, [refreshInvites]);
+
+  const createInvite = async (nextRole: WorkspaceRole) => {
+    if (!currentWorkspace) return;
+    setIsMutating(true);
+    try {
+      const invite = await workspacesApi.createInvite(currentWorkspace.id, {
+        role: nextRole,
+        expiresInDays: 7,
+        maxUses: 1,
+      });
+      setInvites((prev) => [invite, ...prev]);
+      setRole(nextRole);
+      setCreateInviteOpen(false);
+      toast.success(t("workspaces.toasts.inviteCreated"));
+    } catch (error) {
+      console.error("[Workspaces] invite create failed", error);
+      toast.error(t("workspaces.toasts.inviteFailed"));
+    } finally {
+      setIsMutating(false);
+    }
+  };
+
+  const copyInviteToken = async (token: string) => {
+    await navigator.clipboard.writeText(token);
+    toast.success(t("workspaces.toasts.inviteCopied"));
+  };
 
   return (
     <TeamContentShell>
       <Card className="border-border/60">
-        <CardHeader>
-          <CardTitle>{t("workspaces.members.title")}</CardTitle>
-          <CardDescription>{t("workspaces.members.description")}</CardDescription>
+        <CardHeader className="gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-1">
+            <CardTitle>{t("workspaces.members.title")}</CardTitle>
+            <CardDescription>{t("workspaces.members.description")}</CardDescription>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setInviteListOpen(true)}
+            disabled={!currentWorkspace}
+          >
+            <MailPlus className="size-4" />
+            {t("workspaces.invites.createAction")}
+          </Button>
         </CardHeader>
         <CardContent className="space-y-3 pb-6">
           {isLoading ? (
@@ -430,140 +562,58 @@ export function TeamMembersPageClient() {
           )}
         </CardContent>
       </Card>
-    </TeamContentShell>
-  );
-}
-
-export function TeamInvitesPageClient() {
-  const { t } = useT("translation");
-  const { currentWorkspace } = useWorkspaceContext();
-  const [invites, setInvites] = React.useState<WorkspaceInvite[]>([]);
-  const [role, setRole] = React.useState<WorkspaceRole>("member");
-  const [isLoading, setIsLoading] = React.useState(true);
-  const [isMutating, setIsMutating] = React.useState(false);
-  const [inviteDialogOpen, setInviteDialogOpen] = React.useState(false);
-
-  const refresh = React.useCallback(async () => {
-    if (!currentWorkspace) return;
-    setIsLoading(true);
-    try {
-      setInvites(await workspacesApi.listInvites(currentWorkspace.id));
-    } catch (error) {
-      console.error("[Workspaces] invites refresh failed", error);
-      toast.error(t("workspaces.toasts.loadFailed"));
-    } finally {
-      setIsLoading(false);
-    }
-  }, [currentWorkspace, t]);
-
-  React.useEffect(() => {
-    void refresh();
-  }, [refresh]);
-
-  const createInvite = async (nextRole: WorkspaceRole) => {
-    if (!currentWorkspace) return;
-    setIsMutating(true);
-    try {
-      const invite = await workspacesApi.createInvite(currentWorkspace.id, {
-        role: nextRole,
-        expiresInDays: 7,
-        maxUses: 1,
-      });
-      setInvites((prev) => [invite, ...prev]);
-      setRole(nextRole);
-      setInviteDialogOpen(false);
-      toast.success(t("workspaces.toasts.inviteCreated"));
-    } catch (error) {
-      console.error("[Workspaces] invite create failed", error);
-      toast.error(t("workspaces.toasts.inviteFailed"));
-    } finally {
-      setIsMutating(false);
-    }
-  };
-
-  const copyInviteToken = async (token: string) => {
-    await navigator.clipboard.writeText(token);
-    toast.success(t("workspaces.toasts.inviteCopied"));
-  };
-
-  return (
-    <TeamContentShell>
-      <Card className="border-border/60">
-        <CardHeader className="gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="space-y-1">
-            <CardTitle>{t("workspaces.invites.title")}</CardTitle>
-            <CardDescription>{t("workspaces.invites.description")}</CardDescription>
-          </div>
-          <Button
-            type="button"
-            onClick={() => setInviteDialogOpen(true)}
-            disabled={isMutating || !currentWorkspace}
-          >
-            <Ticket className="size-4" />
-            {t("workspaces.invites.createAction")}
-          </Button>
-        </CardHeader>
-        <CardContent className="space-y-3 pb-6">
-          {isLoading ? (
+      <Dialog open={inviteListOpen} onOpenChange={setInviteListOpen}>
+        <DialogContent className="max-h-[60vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{t("workspaces.invites.title")}</DialogTitle>
+            <DialogDescription>
+              {t("workspaces.invites.description")}
+            </DialogDescription>
+          </DialogHeader>
+          {invitesLoading ? (
             <Skeleton className="h-28 rounded-2xl" />
-          ) : invites.length === 0 ? (
-            <Empty className="min-h-56 rounded-2xl border border-dashed border-border/70 bg-muted/10">
-              <EmptyContent>
-                <EmptyMedia variant="icon">
-                  <Ticket className="size-5" />
-                </EmptyMedia>
-                <EmptyHeader>
-                  <EmptyTitle>{t("workspaces.invites.title")}</EmptyTitle>
-                  <EmptyDescription>
-                    {t("workspaces.invites.empty")}
-                  </EmptyDescription>
-                </EmptyHeader>
-              </EmptyContent>
-            </Empty>
           ) : (
-            invites.map((invite) => (
-              <div
-                key={invite.id}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border/60 bg-card p-4"
-              >
-                <div className="min-w-0">
-                  <p className="truncate font-mono text-sm">{invite.token}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {t("workspaces.invites.expiresAt", {
-                      date: formatDateTime(invite.expiresAt),
-                    })}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  {getInviteState(invite) === "active" ? (
-                    <Badge variant="outline">
-                      {formatWorkspaceRole(t, invite.role)}
-                    </Badge>
-                  ) : (
-                    <Badge variant="secondary">
-                      {getInviteState(invite) === "revoked"
-                        ? t("workspaces.invites.revoked")
-                        : t("workspaces.invites.expired")}
-                    </Badge>
-                  )}
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => void copyInviteToken(invite.token)}
-                  >
-                    <Copy className="size-4" />
-                    {t("workspaces.invites.copy")}
-                  </Button>
-                </div>
-              </div>
-            ))
+            <InviteListContent
+              invites={invites}
+              isMutating={isMutating}
+              onCopyToken={copyInviteToken}
+            />
           )}
-        </CardContent>
-      </Card>
+          <DialogFooter className="flex items-center justify-between sm:justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => void refreshInvites()}
+              disabled={invitesLoading}
+            >
+              <RefreshCw className={cn("size-4", invitesLoading && "animate-spin")} />
+              {t("workspaces.refresh")}
+            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setCreateInviteOpen(true)}
+              >
+                <MailPlus className="size-4" />
+                {t("workspaces.invites.createAction")}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => setInviteListOpen(false)}
+              >
+                {t("common.close")}
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <CreateInviteDialog
-        open={inviteDialogOpen}
-        onOpenChange={setInviteDialogOpen}
+        open={createInviteOpen}
+        onOpenChange={setCreateInviteOpen}
         initialRole={role}
         onCreate={createInvite}
       />

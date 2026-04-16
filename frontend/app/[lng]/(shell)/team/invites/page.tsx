@@ -1,5 +1,5 @@
-import { TeamInvitesPageClient } from "@/features/workspaces";
+import { redirect } from "next/navigation";
 
 export default function TeamInvitesPage() {
-  return <TeamInvitesPageClient />;
+  redirect("/team/members");
 }

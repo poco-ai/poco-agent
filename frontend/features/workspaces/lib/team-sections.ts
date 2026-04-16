@@ -1,12 +1,11 @@
 import type * as React from "react";
 import {
   Building2,
-  MailPlus,
   Ticket,
   Users,
 } from "lucide-react";
 
-export type TeamSectionId = "overview" | "members" | "invites" | "issues";
+export type TeamSectionId = "overview" | "members" | "issues";
 
 export interface TeamSection {
   id: TeamSectionId;
@@ -18,14 +17,12 @@ export interface TeamSection {
 const TEAM_SECTION_IDS: TeamSectionId[] = [
   "overview",
   "members",
-  "invites",
   "issues",
 ];
 
 const TEAM_SECTION_ICONS: Record<TeamSectionId, React.ComponentType<{ className?: string }>> = {
   overview: Building2,
   members: Users,
-  invites: MailPlus,
   issues: Ticket,
 };
 
@@ -40,8 +37,6 @@ export function buildTeamSectionHref(
       return `${prefix}/team`;
     case "members":
       return `${prefix}/team/members`;
-    case "invites":
-      return `${prefix}/team/invites`;
     case "issues":
       return `${prefix}/team/issues`;
   }

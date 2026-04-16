@@ -95,7 +95,6 @@ function CreateWorkspaceDialog({
 
 function resolveSectionFromPath(pathname: string): TeamSectionId {
   if (pathname.includes("/members")) return "members";
-  if (pathname.includes("/invites")) return "invites";
   if (pathname.includes("/issues")) return "issues";
   return "overview";
 }
@@ -133,7 +132,6 @@ export function TeamLibraryShell({ children }: TeamLibraryShellProps) {
       buildTeamSections(lng, {
         overview: t("sidebar.team"),
         members: t("workspaces.pages.members.title"),
-        invites: t("workspaces.pages.invites.title"),
         issues: t("issues.title"),
       }),
     [lng, t],
