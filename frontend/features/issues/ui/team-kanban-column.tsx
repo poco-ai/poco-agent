@@ -82,7 +82,7 @@ export function TeamKanbanColumn({
       )}
     >
       <div className="flex items-center justify-between gap-3">
-        <div className="space-y-1">
+        <div className="space-y-1.5">
           <p className="text-sm font-semibold text-foreground">
             {formatIssueStatus(t, status)}
           </p>

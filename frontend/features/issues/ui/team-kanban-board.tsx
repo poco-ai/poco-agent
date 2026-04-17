@@ -173,7 +173,7 @@ export function TeamKanbanBoard({
       onDragCancel={handleDragCancel}
       onDragEnd={handleDragEnd}
     >
-      <div className="space-y-4">
+      <div className="space-y-6">
         <div className="grid grid-cols-2 gap-2 md:hidden">
           {columns.map((column) => (
             <button

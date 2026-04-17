@@ -50,14 +50,14 @@ export function TeamBoardContextBar({
 
   return (
     <section className="rounded-[32px] border border-border/70 bg-card px-5 py-5 shadow-sm sm:px-6">
-      <div className="flex flex-col gap-5">
+      <div className="flex flex-col gap-6">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-          <div className="min-w-0 space-y-4">
+          <div className="min-w-0 space-y-6">
             <div className="space-y-1.5">
               <p className="text-xs font-medium uppercase tracking-[0.24em] text-muted-foreground">
                 {t("issues.context.eyebrow")}
               </p>
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 <h2 className="text-2xl font-semibold text-foreground">
                   {selectedBoard?.name ?? t("issues.context.noBoardTitle")}
                 </h2>

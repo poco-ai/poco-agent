@@ -71,7 +71,7 @@ export const TeamIssueCard = React.forwardRef<HTMLButtonElement, TeamIssueCardPr
       >
         <div className="space-y-2">
           <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0 space-y-1">
+            <div className="min-w-0 space-y-1.5">
               <p className="line-clamp-2 text-sm font-semibold text-foreground">
                 {issue.title}
               </p>

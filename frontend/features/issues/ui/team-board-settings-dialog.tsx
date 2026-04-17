@@ -106,7 +106,7 @@ export function TeamBoardSettingsDialog({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4">
+          <div className="space-y-6">
             <div className="space-y-2">
               <p className="text-sm font-medium text-foreground">
                 {t("issues.fields.boardName")}
@@ -131,7 +131,7 @@ export function TeamBoardSettingsDialog({
             </div>
 
             <div className="rounded-2xl border border-destructive/20 bg-destructive/5 p-4">
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 <p className="text-sm font-medium text-foreground">
                   {t("issues.actions.deleteBoard")}
                 </p>

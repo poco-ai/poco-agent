@@ -450,7 +450,7 @@ export function TeamIssuesPageClient() {
             <div className="space-y-6">
               <section className="rounded-[28px] border border-border/70 bg-card px-5 py-4 sm:px-6">
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                  <div className="space-y-1">
+                  <div className="space-y-1.5">
                     <p className="text-sm font-semibold text-foreground">
                       {t("issues.toolbar.title")}
                     </p>
