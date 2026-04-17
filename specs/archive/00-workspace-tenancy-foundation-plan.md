@@ -1,3 +1,6 @@
+> **状态**：✅ 已完成 (2026-04-17)
+> **归档原因**：功能已实现并测试通过
+
 # Workspace tenancy foundation plan
 
 ## 元数据

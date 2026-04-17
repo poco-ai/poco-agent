@@ -1,3 +1,6 @@
+> **状态**：✅ 已完成 (2026-04-17)
+> **归档原因**：功能已实现并测试通过
+
 # Workspace team library layout alignment plan
 
 ## 元数据
@@ -10,7 +13,7 @@
 | **预期改动范围** | frontend workspaces feature / frontend issues feature / shared section shell / i18n copy |
 | **改动类型** | refactor |
 | **优先级** | P1 |
-| **状态** | complete |
+| **状态** | completed |
 
 ## 实施阶段
 
