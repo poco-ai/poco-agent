@@ -158,7 +158,9 @@
       "prompt": "执行提示词",
       "promptDescription": "把提示词编辑和执行控制拆开，避免继续堆成一个长表单。",
       "executionPreview": "执行预览",
-      "executionPreviewDescription": "为 impact preview、下次执行时间和 retained container 释放确认预留明确区域。"
+      "executionPreviewDescription": "为 impact preview、下次执行时间和 retained container 释放确认预留明确区域。",
+      "dialogOverviewDescription": "保持 board 上下文不变，同时查看事项详情和分配信息。",
+      "executionDescription": "不离开当前 board，就地执行 assignment 相关动作。"
     },
     "fields": {
       "project": "关联项目",
@@ -241,11 +243,15 @@
       "retryLoad": "重新加载",
       "cancel": "取消分配",
       "release": "释放 sandbox",
-      "openSession": "打开会话"
+      "openSession": "打开会话",
+      "deleteIssue": "删除事项",
+      "deletingIssue": "正在删除事项..."
     },
     "dialogs": {
       "createBoardTitle": "创建看板",
-      "createIssueTitle": "创建事项"
+      "createIssueTitle": "创建事项",
+      "deleteIssueTitle": "要删除这个事项吗？",
+      "deleteIssueDescription": "删除后会立即从当前 board 中移除，且无法恢复。"
     },
     "toasts": {
       "loadFailed": "加载事项数据失败",
@@ -259,7 +265,9 @@
       "retried": "已重新执行",
       "cancelled": "已取消分配",
       "released": "已释放 sandbox",
-      "actionFailed": "操作失败"
+      "actionFailed": "操作失败",
+      "issueDeleted": "事项已删除",
+      "issueDeleteFailed": "删除事项失败"
     }
   },
   "hero": {

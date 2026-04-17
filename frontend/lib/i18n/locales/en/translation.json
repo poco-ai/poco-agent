@@ -158,7 +158,9 @@
       "prompt": "Execution prompt",
       "promptDescription": "Keep the prompt editable without mixing it into the execution controls.",
       "executionPreview": "Execution preview",
-      "executionPreviewDescription": "Reserve space for impact preview, next run details, and retained sandbox handling."
+      "executionPreviewDescription": "Reserve space for impact preview, next run details, and retained sandbox handling.",
+      "dialogOverviewDescription": "Stay anchored to the board while you review issue details and assignment context.",
+      "executionDescription": "Run assignment actions without leaving the current board."
     },
     "fields": {
       "project": "Related project",
@@ -241,11 +243,15 @@
       "retryLoad": "Retry load",
       "cancel": "Cancel assignment",
       "release": "Release sandbox",
-      "openSession": "Open session"
+      "openSession": "Open session",
+      "deleteIssue": "Delete issue",
+      "deletingIssue": "Deleting issue..."
     },
     "dialogs": {
       "createBoardTitle": "Create board",
-      "createIssueTitle": "Create issue"
+      "createIssueTitle": "Create issue",
+      "deleteIssueTitle": "Delete this issue?",
+      "deleteIssueDescription": "This removes the issue from the current board immediately."
     },
     "toasts": {
       "loadFailed": "Failed to load issue data",
@@ -259,7 +265,9 @@
       "retried": "Execution retried",
       "cancelled": "Assignment cancelled",
       "released": "Sandbox released",
-      "actionFailed": "Action failed"
+      "actionFailed": "Action failed",
+      "issueDeleted": "Issue deleted",
+      "issueDeleteFailed": "Failed to delete issue"
     }
   },
   "hero": {

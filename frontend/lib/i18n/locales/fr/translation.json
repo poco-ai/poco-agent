@@ -158,7 +158,9 @@
       "prompt": "Prompt d’exécution",
       "promptDescription": "Gardez le prompt modifiable sans le mélanger aux contrôles d’exécution.",
       "executionPreview": "Aperçu de l’exécution",
-      "executionPreviewDescription": "Zone réservée pour l’aperçu d’impact, la prochaine exécution et la gestion du sandbox conservé."
+      "executionPreviewDescription": "Zone réservée pour l’aperçu d’impact, la prochaine exécution et la gestion du sandbox conservé.",
+      "dialogOverviewDescription": "Stay anchored to the board while you review issue details and assignment context.",
+      "executionDescription": "Run assignment actions without leaving the current board."
     },
     "fields": {
       "project": "Related project",
@@ -241,11 +243,15 @@
       "retryLoad": "Recharger",
       "cancel": "Cancel assignment",
       "release": "Release sandbox",
-      "openSession": "Open session"
+      "openSession": "Open session",
+      "deleteIssue": "Supprimer l’issue",
+      "deletingIssue": "Suppression de l’issue..."
     },
     "dialogs": {
       "createBoardTitle": "Créer un tableau",
-      "createIssueTitle": "Créer une issue"
+      "createIssueTitle": "Créer une issue",
+      "deleteIssueTitle": "Supprimer cette issue ?",
+      "deleteIssueDescription": "This removes the issue from the current board immediately."
     },
     "toasts": {
       "loadFailed": "Échec du chargement des données d’issue",
@@ -259,7 +265,9 @@
       "retried": "Execution retried",
       "cancelled": "Assignment cancelled",
       "released": "Sandbox released",
-      "actionFailed": "Action failed"
+      "actionFailed": "Action failed",
+      "issueDeleted": "Issue supprimée",
+      "issueDeleteFailed": "Échec de la suppression de l’issue"
     }
   },
   "hero": {

@@ -158,7 +158,9 @@
       "prompt": "Промпт выполнения",
       "promptDescription": "Промпт редактируется отдельно и не смешивается с управляющими действиями.",
       "executionPreview": "Предпросмотр выполнения",
-      "executionPreviewDescription": "Зона для будущего preview влияния, следующего запуска и управления сохраненным sandbox."
+      "executionPreviewDescription": "Зона для будущего preview влияния, следующего запуска и управления сохраненным sandbox.",
+      "dialogOverviewDescription": "Stay anchored to the board while you review issue details and assignment context.",
+      "executionDescription": "Run assignment actions without leaving the current board."
     },
     "fields": {
       "project": "Related project",
@@ -241,11 +243,15 @@
       "retryLoad": "Повторить загрузку",
       "cancel": "Cancel assignment",
       "release": "Release sandbox",
-      "openSession": "Open session"
+      "openSession": "Open session",
+      "deleteIssue": "Удалить issue",
+      "deletingIssue": "Удаление issue..."
     },
     "dialogs": {
       "createBoardTitle": "Создать доску",
-      "createIssueTitle": "Создать issue"
+      "createIssueTitle": "Создать issue",
+      "deleteIssueTitle": "Удалить эту issue?",
+      "deleteIssueDescription": "This removes the issue from the current board immediately."
     },
     "toasts": {
       "loadFailed": "Не удалось загрузить данные issues",
@@ -259,7 +265,9 @@
       "retried": "Execution retried",
       "cancelled": "Assignment cancelled",
       "released": "Sandbox released",
-      "actionFailed": "Action failed"
+      "actionFailed": "Action failed",
+      "issueDeleted": "Issue удалена",
+      "issueDeleteFailed": "Не удалось удалить issue"
     }
   },
   "hero": {

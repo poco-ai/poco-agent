@@ -101,6 +101,15 @@ export const issuesApi = {
     );
   },
 
+  deleteIssue: async (
+    boardId: string,
+    issueId: string,
+  ): Promise<WorkspaceIssue> => {
+    return apiClient.delete<WorkspaceIssue>(
+      API_ENDPOINTS.workspaceIssue(boardId, issueId),
+    );
+  },
+
   getAssignment: async (issueId: string): Promise<AgentAssignment | null> => {
     return apiClient.get<AgentAssignment | null>(
       API_ENDPOINTS.workspaceIssueAgentAssignment(issueId),
