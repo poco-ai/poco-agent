@@ -374,6 +374,30 @@ class WorkspaceIssueServiceTests(unittest.TestCase):
 
         self.assertEqual(exc.exception.error_code, ErrorCode.BAD_REQUEST)
 
+    def test_delete_issue_returns_deleted_payload(self) -> None:
+        db = MagicMock()
+        issue = self._build_issue(title="Delete me", status="todo", position=0)
+
+        with (
+            patch(
+                "app.services.workspace_issue_service.require_workspace_member",
+                return_value=MagicMock(role="member", status="active"),
+            ),
+            patch(
+                "app.services.workspace_issue_service.WorkspaceIssueRepository.get_by_id",
+                return_value=issue,
+            ),
+        ):
+            result = WorkspaceIssueService().delete_issue(
+                db,
+                self.current_user,
+                issue.id,
+            )
+
+        self.assertEqual(result.issue_id, issue.id)
+        db.delete.assert_called_once_with(issue)
+        db.commit.assert_called_once()
+
     def _build_issue(self, title: str, status: str, position: int) -> WorkspaceIssue:
         return self._stamp_issue(
             WorkspaceIssue(

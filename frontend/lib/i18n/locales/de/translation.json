@@ -163,6 +163,8 @@
       "executionDescription": "Run assignment actions without leaving the current board."
     },
     "fields": {
+      "boardName": "Board-Name",
+      "boardDescription": "Board-Beschreibung",
       "project": "Related project",
       "agentPreset": "AI preset",
       "triggerMode": "Trigger mode",
@@ -235,6 +237,7 @@
     },
     "actions": {
       "createBoard": "Neues Board",
+      "boardSettings": "Board-Einstellungen",
       "createIssue": "Neue Issue",
       "backToList": "Zurück zur Liste",
       "saveAssignment": "Save assignment",
@@ -244,12 +247,18 @@
       "cancel": "Cancel assignment",
       "release": "Release sandbox",
       "openSession": "Open session",
+      "deleteBoard": "Board löschen",
+      "deletingBoard": "Board wird gelöscht...",
       "deleteIssue": "Issue löschen",
       "deletingIssue": "Issue wird gelöscht..."
     },
     "dialogs": {
       "createBoardTitle": "Board erstellen",
       "createIssueTitle": "Issue erstellen",
+      "boardSettingsTitle": "Board-Einstellungen",
+      "boardSettingsDescription": "Benenne dieses Board um, passe die Beschreibung an oder entferne es aus dem Workspace.",
+      "deleteBoardTitle": "Dieses Board löschen?",
+      "deleteBoardDescription": "Dadurch werden das Board und seine {{count}} Issues dauerhaft gelöscht.",
       "deleteIssueTitle": "Dieses Issue löschen?",
       "deleteIssueDescription": "This removes the issue from the current board immediately."
     },
@@ -257,6 +266,10 @@
       "loadFailed": "Issue-Daten konnten nicht geladen werden",
       "boardCreated": "Board erstellt",
       "boardCreateFailed": "Board konnte nicht erstellt werden",
+      "boardUpdated": "Board aktualisiert",
+      "boardUpdateFailed": "Board konnte nicht aktualisiert werden",
+      "boardDeleted": "Board gelöscht",
+      "boardDeleteFailed": "Board konnte nicht gelöscht werden",
       "issueCreated": "Issue erstellt",
       "issueCreateFailed": "Issue konnte nicht erstellt werden",
       "assignmentSaved": "Assignment saved",

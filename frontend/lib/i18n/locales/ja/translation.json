@@ -163,6 +163,8 @@
       "executionDescription": "Run assignment actions without leaving the current board."
     },
     "fields": {
+      "boardName": "ボード名",
+      "boardDescription": "ボードの説明",
       "project": "Related project",
       "agentPreset": "AI preset",
       "triggerMode": "Trigger mode",
@@ -235,6 +237,7 @@
     },
     "actions": {
       "createBoard": "新しいボード",
+      "boardSettings": "ボード設定",
       "createIssue": "新しい Issue",
       "backToList": "一覧に戻る",
       "saveAssignment": "Save assignment",
@@ -244,12 +247,18 @@
       "cancel": "Cancel assignment",
       "release": "Release sandbox",
       "openSession": "Open session",
+      "deleteBoard": "ボードを削除",
+      "deletingBoard": "ボードを削除中...",
       "deleteIssue": "Issue を削除",
       "deletingIssue": "Issue を削除しています..."
     },
     "dialogs": {
       "createBoardTitle": "ボードを作成",
       "createIssueTitle": "Issue を作成",
+      "boardSettingsTitle": "ボード設定",
+      "boardSettingsDescription": "このボードの名前や説明を更新するか、ワークスペースから削除します。",
+      "deleteBoardTitle": "このボードを削除しますか？",
+      "deleteBoardDescription": "この操作により、ボードと {{count}} 件の Issue が完全に削除されます。",
       "deleteIssueTitle": "この Issue を削除しますか？",
       "deleteIssueDescription": "This removes the issue from the current board immediately."
     },
@@ -257,6 +266,10 @@
       "loadFailed": "Issue データの読み込みに失敗しました",
       "boardCreated": "ボードを作成しました",
       "boardCreateFailed": "ボードの作成に失敗しました",
+      "boardUpdated": "ボードを更新しました",
+      "boardUpdateFailed": "ボードの更新に失敗しました",
+      "boardDeleted": "ボードを削除しました",
+      "boardDeleteFailed": "ボードの削除に失敗しました",
       "issueCreated": "Issue を作成しました",
       "issueCreateFailed": "Issue の作成に失敗しました",
       "assignmentSaved": "Assignment saved",

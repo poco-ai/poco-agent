@@ -163,6 +163,8 @@
       "executionDescription": "Run assignment actions without leaving the current board."
     },
     "fields": {
+      "boardName": "Название доски",
+      "boardDescription": "Описание доски",
       "project": "Related project",
       "agentPreset": "AI preset",
       "triggerMode": "Trigger mode",
@@ -235,6 +237,7 @@
     },
     "actions": {
       "createBoard": "Новая доска",
+      "boardSettings": "Настройки доски",
       "createIssue": "Новая issue",
       "backToList": "Назад к списку",
       "saveAssignment": "Save assignment",
@@ -244,12 +247,18 @@
       "cancel": "Cancel assignment",
       "release": "Release sandbox",
       "openSession": "Open session",
+      "deleteBoard": "Удалить доску",
+      "deletingBoard": "Удаление доски...",
       "deleteIssue": "Удалить issue",
       "deletingIssue": "Удаление issue..."
     },
     "dialogs": {
       "createBoardTitle": "Создать доску",
       "createIssueTitle": "Создать issue",
+      "boardSettingsTitle": "Настройки доски",
+      "boardSettingsDescription": "Переименуйте доску, измените её описание или удалите её из рабочего пространства.",
+      "deleteBoardTitle": "Удалить эту доску?",
+      "deleteBoardDescription": "Это навсегда удалит доску и все {{count}} issue в ней.",
       "deleteIssueTitle": "Удалить эту issue?",
       "deleteIssueDescription": "This removes the issue from the current board immediately."
     },
@@ -257,6 +266,10 @@
       "loadFailed": "Не удалось загрузить данные issues",
       "boardCreated": "Доска создана",
       "boardCreateFailed": "Не удалось создать доску",
+      "boardUpdated": "Доска обновлена",
+      "boardUpdateFailed": "Не удалось обновить доску",
+      "boardDeleted": "Доска удалена",
+      "boardDeleteFailed": "Не удалось удалить доску",
       "issueCreated": "Issue создана",
       "issueCreateFailed": "Не удалось создать issue",
       "assignmentSaved": "Assignment saved",

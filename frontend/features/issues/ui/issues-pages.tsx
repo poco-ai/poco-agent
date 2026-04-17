@@ -38,10 +38,12 @@ import {
 import { useTeamKanban } from "@/features/issues/model/use-team-kanban";
 import type {
   WorkspaceBoard,
+  WorkspaceBoardInput,
   WorkspaceIssue,
   WorkspaceIssueStatus,
 } from "@/features/issues/model/types";
 import { TeamBoardContextBar } from "@/features/issues/ui/team-board-context-bar";
+import { TeamBoardSettingsDialog } from "@/features/issues/ui/team-board-settings-dialog";
 import { TeamIssueDetailDialog } from "@/features/issues/ui/team-issue-detail-dialog";
 import { TeamKanbanBoard } from "@/features/issues/ui/team-kanban-board";
 import { useWorkspaceContext } from "@/features/workspaces";
@@ -171,6 +173,7 @@ export function TeamIssuesPageClient() {
     null,
   );
   const [boardDialogOpen, setBoardDialogOpen] = React.useState(false);
+  const [boardSettingsOpen, setBoardSettingsOpen] = React.useState(false);
   const [issueDialogOpen, setIssueDialogOpen] = React.useState(false);
   const [isRefreshing, setIsRefreshing] = React.useState(false);
   const [hasLoadedBoards, setHasLoadedBoards] = React.useState(false);
@@ -242,6 +245,13 @@ export function TeamIssuesPageClient() {
     () => boards.find((board) => board.board_id === selectedBoardId) ?? null,
     [boards, selectedBoardId],
   );
+
+  React.useEffect(() => {
+    if (!selectedBoard) {
+      setBoardSettingsOpen(false);
+    }
+  }, [selectedBoard]);
+
   const filteredIssues = React.useMemo(
     () => filterIssuesByQuery(issues, query),
     [issues, query],
@@ -280,6 +290,57 @@ export function TeamIssuesPageClient() {
     } catch (error) {
       console.error("[Issues] create issue failed", error);
       toast.error(t("issues.toasts.issueCreateFailed"));
+    }
+  };
+
+  const saveBoardSettings = async (input: WorkspaceBoardInput) => {
+    if (!currentWorkspace || !selectedBoard) {
+      return;
+    }
+
+    try {
+      const updatedBoard = await issuesApi.updateBoard(
+        currentWorkspace.id,
+        selectedBoard.board_id,
+        input,
+      );
+      setBoards((previousBoards) =>
+        previousBoards.map((board) =>
+          board.board_id === updatedBoard.board_id ? updatedBoard : board,
+        ),
+      );
+      setBoardSettingsOpen(false);
+      toast.success(t("issues.toasts.boardUpdated"));
+    } catch (error) {
+      console.error("[Issues] update board failed", error);
+      toast.error(t("issues.toasts.boardUpdateFailed"));
+    }
+  };
+
+  const deleteBoard = async () => {
+    if (!currentWorkspace || !selectedBoard) {
+      return;
+    }
+
+    try {
+      await issuesApi.deleteBoard(currentWorkspace.id, selectedBoard.board_id);
+      const deletedBoardId = selectedBoard.board_id;
+      const deletedBoardIndex = boards.findIndex(
+        (board) => board.board_id === deletedBoardId,
+      );
+      const nextBoards = boards.filter((board) => board.board_id !== deletedBoardId);
+      const fallbackBoard =
+        nextBoards[deletedBoardIndex] ?? nextBoards[deletedBoardIndex - 1] ?? null;
+
+      setBoards(nextBoards);
+      setSelectedBoardId(fallbackBoard?.board_id ?? null);
+      setIssues([]);
+      setBoardSettingsOpen(false);
+      closeIssue();
+      toast.success(t("issues.toasts.boardDeleted"));
+    } catch (error) {
+      console.error("[Issues] delete board failed", error);
+      toast.error(t("issues.toasts.boardDeleteFailed"));
     }
   };
 
@@ -334,6 +395,7 @@ export function TeamIssuesPageClient() {
             onBoardChange={setSelectedBoardId}
             onRefresh={() => void refresh()}
             onCreateBoard={() => setBoardDialogOpen(true)}
+            onOpenSettings={() => setBoardSettingsOpen(true)}
           />
 
           {!hasLoadedBoards && isRefreshing ? (
@@ -521,6 +583,14 @@ export function TeamIssuesPageClient() {
         onOpenChange={setIssueDialogOpen}
         boardName={selectedBoard?.name ?? null}
         onCreate={createIssue}
+      />
+      <TeamBoardSettingsDialog
+        board={selectedBoard}
+        issueCount={boardSummary.totalIssues}
+        open={boardSettingsOpen}
+        onOpenChange={setBoardSettingsOpen}
+        onSave={saveBoardSettings}
+        onDelete={deleteBoard}
       />
       <TeamIssueDetailDialog
         issueId={selectedIssueId}

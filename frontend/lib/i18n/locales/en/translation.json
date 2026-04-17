@@ -163,6 +163,8 @@
       "executionDescription": "Run assignment actions without leaving the current board."
     },
     "fields": {
+      "boardName": "Board name",
+      "boardDescription": "Board description",
       "project": "Related project",
       "agentPreset": "AI preset",
       "triggerMode": "Trigger mode",
@@ -235,6 +237,7 @@
     },
     "actions": {
       "createBoard": "New board",
+      "boardSettings": "Board settings",
       "createIssue": "New issue",
       "backToList": "Back to list",
       "saveAssignment": "Save assignment",
@@ -244,12 +247,18 @@
       "cancel": "Cancel assignment",
       "release": "Release sandbox",
       "openSession": "Open session",
+      "deleteBoard": "Delete board",
+      "deletingBoard": "Deleting board...",
       "deleteIssue": "Delete issue",
       "deletingIssue": "Deleting issue..."
     },
     "dialogs": {
       "createBoardTitle": "Create board",
       "createIssueTitle": "Create issue",
+      "boardSettingsTitle": "Board settings",
+      "boardSettingsDescription": "Rename this board, adjust its description, or remove it from the workspace.",
+      "deleteBoardTitle": "Delete this board?",
+      "deleteBoardDescription": "This permanently deletes the board and its {{count}} issues.",
       "deleteIssueTitle": "Delete this issue?",
       "deleteIssueDescription": "This removes the issue from the current board immediately."
     },
@@ -257,6 +266,10 @@
       "loadFailed": "Failed to load issue data",
       "boardCreated": "Board created",
       "boardCreateFailed": "Failed to create board",
+      "boardUpdated": "Board updated",
+      "boardUpdateFailed": "Failed to update board",
+      "boardDeleted": "Board deleted",
+      "boardDeleteFailed": "Failed to delete board",
       "issueCreated": "Issue created",
       "issueCreateFailed": "Failed to create issue",
       "assignmentSaved": "Assignment saved",

@@ -20,6 +20,14 @@ function formatDateTime(value: string): string {
   }).format(date);
 }
 
+function formatIssuePosition(position: number): string | null {
+  if (!Number.isFinite(position)) {
+    return null;
+  }
+
+  return `#${position + 1}`;
+}
+
 interface TeamIssueCardProps {
   issue: WorkspaceIssue;
   onOpen: (issueId: string) => void;
@@ -44,6 +52,7 @@ export const TeamIssueCard = React.forwardRef<HTMLButtonElement, TeamIssueCardPr
     ref,
   ) {
     const { t } = useT("translation");
+    const positionLabel = formatIssuePosition(issue.position);
 
     return (
       <button
@@ -96,7 +105,7 @@ export const TeamIssueCard = React.forwardRef<HTMLButtonElement, TeamIssueCardPr
           <span>
             {t("issues.fields.updatedAt")} · {formatDateTime(issue.updated_at)}
           </span>
-          <span>#{issue.position + 1}</span>
+          {positionLabel ? <span>{positionLabel}</span> : null}
         </div>
       </button>
     );

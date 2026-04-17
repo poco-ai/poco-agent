@@ -163,6 +163,8 @@
       "executionDescription": "Run assignment actions without leaving the current board."
     },
     "fields": {
+      "boardName": "Nom du tableau",
+      "boardDescription": "Description du tableau",
       "project": "Related project",
       "agentPreset": "AI preset",
       "triggerMode": "Trigger mode",
@@ -235,6 +237,7 @@
     },
     "actions": {
       "createBoard": "Nouveau tableau",
+      "boardSettings": "Paramètres du tableau",
       "createIssue": "Nouvelle issue",
       "backToList": "Retour à la liste",
       "saveAssignment": "Save assignment",
@@ -244,12 +247,18 @@
       "cancel": "Cancel assignment",
       "release": "Release sandbox",
       "openSession": "Open session",
+      "deleteBoard": "Supprimer le tableau",
+      "deletingBoard": "Suppression du tableau...",
       "deleteIssue": "Supprimer l’issue",
       "deletingIssue": "Suppression de l’issue..."
     },
     "dialogs": {
       "createBoardTitle": "Créer un tableau",
       "createIssueTitle": "Créer une issue",
+      "boardSettingsTitle": "Paramètres du tableau",
+      "boardSettingsDescription": "Renommez ce tableau, modifiez sa description ou supprimez-le de l’espace de travail.",
+      "deleteBoardTitle": "Supprimer ce tableau ?",
+      "deleteBoardDescription": "Cela supprime définitivement le tableau et ses {{count}} issues.",
       "deleteIssueTitle": "Supprimer cette issue ?",
       "deleteIssueDescription": "This removes the issue from the current board immediately."
     },
@@ -257,6 +266,10 @@
       "loadFailed": "Échec du chargement des données d’issue",
       "boardCreated": "Tableau créé",
       "boardCreateFailed": "Échec de la création du tableau",
+      "boardUpdated": "Tableau mis à jour",
+      "boardUpdateFailed": "Échec de la mise à jour du tableau",
+      "boardDeleted": "Tableau supprimé",
+      "boardDeleteFailed": "Échec de la suppression du tableau",
       "issueCreated": "Issue créée",
       "issueCreateFailed": "Échec de la création de l’issue",
       "assignmentSaved": "Assignment saved",

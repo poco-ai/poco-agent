@@ -1,8 +1,14 @@
 "use client";
 
-import { Plus, RefreshCw } from "lucide-react";
+import { MoreHorizontal, Plus, RefreshCw, Settings2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Select,
   SelectContent,
@@ -24,6 +30,7 @@ interface TeamBoardContextBarProps {
   onBoardChange: (boardId: string) => void;
   onRefresh: () => void;
   onCreateBoard: () => void;
+  onOpenSettings: () => void;
 }
 
 export function TeamBoardContextBar({
@@ -37,6 +44,7 @@ export function TeamBoardContextBar({
   onBoardChange,
   onRefresh,
   onCreateBoard,
+  onOpenSettings,
 }: TeamBoardContextBarProps) {
   const { t } = useT("translation");
 
@@ -107,6 +115,28 @@ export function TeamBoardContextBar({
               <Plus className="size-4" />
               {t("issues.actions.createBoard")}
             </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  disabled={!selectedBoard}
+                  aria-label={t("issues.actions.boardSettings")}
+                >
+                  <MoreHorizontal className="size-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onSelect={() => onOpenSettings()}
+                  disabled={!selectedBoard}
+                >
+                  <Settings2 className="size-4" />
+                  {t("issues.actions.boardSettings")}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 

@@ -163,6 +163,8 @@
       "executionDescription": "不离开当前 board，就地执行 assignment 相关动作。"
     },
     "fields": {
+      "boardName": "看板名称",
+      "boardDescription": "看板描述",
       "project": "关联项目",
       "agentPreset": "AI preset",
       "triggerMode": "触发方式",
@@ -235,6 +237,7 @@
     },
     "actions": {
       "createBoard": "新建看板",
+      "boardSettings": "看板设置",
       "createIssue": "新建事项",
       "backToList": "返回列表",
       "saveAssignment": "保存分配",
@@ -244,12 +247,18 @@
       "cancel": "取消分配",
       "release": "释放 sandbox",
       "openSession": "打开会话",
+      "deleteBoard": "删除看板",
+      "deletingBoard": "正在删除看板...",
       "deleteIssue": "删除事项",
       "deletingIssue": "正在删除事项..."
     },
     "dialogs": {
       "createBoardTitle": "创建看板",
       "createIssueTitle": "创建事项",
+      "boardSettingsTitle": "看板设置",
+      "boardSettingsDescription": "修改看板名称和描述，或将其从当前工作区中删除。",
+      "deleteBoardTitle": "要删除这个看板吗？",
+      "deleteBoardDescription": "删除后会永久移除该看板以及其中的 {{count}} 个事项。",
       "deleteIssueTitle": "要删除这个事项吗？",
       "deleteIssueDescription": "删除后会立即从当前 board 中移除，且无法恢复。"
     },
@@ -257,6 +266,10 @@
       "loadFailed": "加载事项数据失败",
       "boardCreated": "看板已创建",
       "boardCreateFailed": "创建看板失败",
+      "boardUpdated": "看板已更新",
+      "boardUpdateFailed": "更新看板失败",
+      "boardDeleted": "看板已删除",
+      "boardDeleteFailed": "删除看板失败",
       "issueCreated": "事项已创建",
       "issueCreateFailed": "创建事项失败",
       "assignmentSaved": "分配已保存",
