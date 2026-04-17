@@ -3,7 +3,9 @@ import type {
   AgentAssignment,
   AgentAssignmentActionResult,
   WorkspaceBoard,
+  WorkspaceBoardInput,
   WorkspaceIssue,
+  WorkspaceIssueMoveInput,
 } from "@/features/issues/model/types";
 
 export const issuesApi = {
@@ -13,11 +15,31 @@ export const issuesApi = {
 
   createBoard: async (
     workspaceId: string,
-    input: { name: string; description?: string | null },
+    input: WorkspaceBoardInput,
   ): Promise<WorkspaceBoard> => {
     return apiClient.post<WorkspaceBoard>(
       API_ENDPOINTS.workspaceBoards(workspaceId),
       input,
+    );
+  },
+
+  updateBoard: async (
+    workspaceId: string,
+    boardId: string,
+    input: WorkspaceBoardInput,
+  ): Promise<WorkspaceBoard> => {
+    return apiClient.patch<WorkspaceBoard>(
+      API_ENDPOINTS.workspaceBoard(workspaceId, boardId),
+      input,
+    );
+  },
+
+  deleteBoard: async (
+    workspaceId: string,
+    boardId: string,
+  ): Promise<WorkspaceBoard> => {
+    return apiClient.delete<WorkspaceBoard>(
+      API_ENDPOINTS.workspaceBoard(workspaceId, boardId),
     );
   },
 
@@ -65,6 +87,16 @@ export const issuesApi = {
   ): Promise<WorkspaceIssue> => {
     return apiClient.patch<WorkspaceIssue>(
       API_ENDPOINTS.workspaceIssue(boardId, issueId),
+      input,
+    );
+  },
+
+  moveIssue: async (
+    issueId: string,
+    input: WorkspaceIssueMoveInput,
+  ): Promise<WorkspaceIssue> => {
+    return apiClient.post<WorkspaceIssue>(
+      API_ENDPOINTS.workspaceIssueMove(issueId),
       input,
     );
   },

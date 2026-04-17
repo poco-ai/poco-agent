@@ -9,12 +9,14 @@ from app.schemas.agent_assignment import AgentAssignmentResponse
 IssueStatus = Literal["todo", "in_progress", "done", "canceled"]
 IssueType = Literal["task", "bug", "idea"]
 IssuePriority = Literal["low", "medium", "high", "urgent"]
+ISSUE_STATUS_VALUES: tuple[str, ...] = ("todo", "in_progress", "done", "canceled")
 
 
 class WorkspaceIssueCreateRequest(BaseModel):
     title: str = Field(min_length=1, max_length=255)
     description: str | None = None
     status: IssueStatus = "todo"
+    position: int | None = Field(default=None, ge=0)
     type: IssueType = "task"
     priority: IssuePriority = "medium"
     due_date: datetime | None = None
@@ -37,6 +39,7 @@ class WorkspaceIssueUpdateRequest(BaseModel):
     title: str | None = Field(default=None, min_length=1, max_length=255)
     description: str | None = None
     status: IssueStatus | None = None
+    position: int | None = Field(default=None, ge=0)
     type: IssueType | None = None
     priority: IssuePriority | None = None
     due_date: datetime | None = None
@@ -62,6 +65,7 @@ class WorkspaceIssueResponse(BaseModel):
     title: str
     description: str | None = None
     status: str
+    position: int
     type: str
     priority: str
     due_date: datetime | None = None
@@ -76,3 +80,8 @@ class WorkspaceIssueResponse(BaseModel):
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
+
+class WorkspaceIssueMoveRequest(BaseModel):
+    status: IssueStatus
+    position: int = Field(ge=0)

@@ -1,3 +1,14 @@
+export type WorkspaceIssueStatus =
+  | "todo"
+  | "in_progress"
+  | "done"
+  | "canceled";
+
+export interface WorkspaceBoardInput {
+  name: string;
+  description?: string | null;
+}
+
 export interface WorkspaceBoard {
   board_id: string;
   workspace_id: string;
@@ -15,7 +26,8 @@ export interface WorkspaceIssue {
   board_id: string;
   title: string;
   description?: string | null;
-  status: string;
+  status: WorkspaceIssueStatus;
+  position: number;
   type: string;
   priority: string;
   due_date?: string | null;
@@ -51,4 +63,9 @@ export interface AgentAssignment {
 export interface AgentAssignmentActionResult {
   assignment: AgentAssignment;
   issue_status: string;
+}
+
+export interface WorkspaceIssueMoveInput {
+  status: WorkspaceIssueStatus;
+  position: number;
 }

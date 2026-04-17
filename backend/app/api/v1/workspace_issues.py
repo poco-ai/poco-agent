@@ -13,6 +13,7 @@ from app.schemas.agent_assignment import (
 )
 from app.schemas.workspace_issue import (
     WorkspaceIssueCreateRequest,
+    WorkspaceIssueMoveRequest,
     WorkspaceIssueResponse,
     WorkspaceIssueUpdateRequest,
 )
@@ -80,6 +81,17 @@ async def get_workspace_issue(
 ) -> JSONResponse:
     result = service.get_issue(db, current_user, issue_id)
     return Response.success(data=result, message="Workspace issue retrieved successfully")
+
+
+@detail_router.post("/{issue_id}/move", response_model=ResponseSchema[WorkspaceIssueResponse])
+async def move_workspace_issue(
+    issue_id: uuid.UUID,
+    request: WorkspaceIssueMoveRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> JSONResponse:
+    result = service.move_issue(db, current_user, issue_id, request)
+    return Response.success(data=result, message="Workspace issue moved successfully")
 
 
 @detail_router.get(

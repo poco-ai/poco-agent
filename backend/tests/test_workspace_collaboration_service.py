@@ -7,9 +7,15 @@ from app.models.preset import Preset
 from app.models.project import Project
 from app.models.user import User
 from app.models.workspace_board import WorkspaceBoard
+from app.models.workspace_issue import WorkspaceIssue
+from app.core.errors.error_codes import ErrorCode
+from app.core.errors.exceptions import AppException
 from app.schemas.preset import PresetCopyRequest
 from app.schemas.project import ProjectCopyRequest
-from app.schemas.workspace_issue import WorkspaceIssueCreateRequest
+from app.schemas.workspace_issue import (
+    WorkspaceIssueCreateRequest,
+    WorkspaceIssueMoveRequest,
+)
 from app.services.preset_service import PresetService
 from app.services.project_service import ProjectService
 from app.services.workspace_issue_service import WorkspaceIssueService
@@ -163,27 +169,29 @@ class CollaborationProjectServiceTests(unittest.TestCase):
 
 
 class WorkspaceIssueServiceTests(unittest.TestCase):
-    def test_create_issue_clears_human_assignee_when_preset_assignee_is_set(
-        self,
-    ) -> None:
-        db = MagicMock()
-        workspace_id = uuid.uuid4()
-        board = WorkspaceBoard(
+    def setUp(self) -> None:
+        self.workspace_id = uuid.uuid4()
+        self.board = WorkspaceBoard(
             id=uuid.uuid4(),
-            workspace_id=workspace_id,
+            workspace_id=self.workspace_id,
             name="Team Board",
             description=None,
             created_by="user-1",
             created_at=datetime.now(UTC),
             updated_at=datetime.now(UTC),
         )
-        current_user = User(
+        self.current_user = User(
             id="user-1",
             primary_email="alice@example.com",
             display_name="Alice",
             avatar_url=None,
             status="active",
         )
+
+    def test_create_issue_clears_human_assignee_when_preset_assignee_is_set(
+        self,
+    ) -> None:
+        db = MagicMock()
 
         with (
             patch(
@@ -196,7 +204,7 @@ class WorkspaceIssueServiceTests(unittest.TestCase):
             ),
             patch(
                 "app.services.workspace_issue_service.WorkspaceBoardRepository.get_by_id",
-                return_value=board,
+                return_value=self.board,
             ),
             patch(
                 "app.services.workspace_issue_service.WorkspaceIssueRepository.create",
@@ -205,8 +213,8 @@ class WorkspaceIssueServiceTests(unittest.TestCase):
         ):
             WorkspaceIssueService().create_issue(
                 db,
-                current_user,
-                board.id,
+                self.current_user,
+                self.board.id,
                 WorkspaceIssueCreateRequest(
                     title="Investigate flaky tests",
                     assignee_user_id="user-2",
@@ -219,10 +227,159 @@ class WorkspaceIssueServiceTests(unittest.TestCase):
         self.assertIsNone(issue.assignee_user_id)
         self.assertEqual(issue.assignee_preset_id, 9)
 
+    def test_create_issue_appends_position_within_status_column(self) -> None:
+        db = MagicMock()
+        existing_issues = [
+            self._build_issue(title="A", status="todo", position=0),
+            self._build_issue(title="B", status="todo", position=1),
+        ]
+
+        with (
+            patch(
+                "app.services.workspace_issue_service.require_workspace_member",
+                return_value=MagicMock(role="member", status="active"),
+            ),
+            patch(
+                "app.services.workspace_issue_service.WorkspaceBoardRepository.get_by_id",
+                return_value=self.board,
+            ),
+            patch(
+                "app.services.workspace_issue_service.WorkspaceIssueRepository.list_by_board_and_status",
+                return_value=existing_issues,
+            ),
+            patch(
+                "app.services.workspace_issue_service.WorkspaceIssueRepository.create",
+                side_effect=lambda _db, issue: self._stamp_issue(issue),
+            ),
+        ):
+            result = WorkspaceIssueService().create_issue(
+                db,
+                self.current_user,
+                self.board.id,
+                WorkspaceIssueCreateRequest(title="Investigate flaky tests"),
+            )
+
+        self.assertEqual(result.position, 2)
+
+    def test_move_issue_to_new_column_reorders_source_and_target_columns(self) -> None:
+        db = MagicMock()
+        moved_issue = self._build_issue(title="Move me", status="todo", position=1)
+        source_issue = self._build_issue(title="Stay", status="todo", position=0)
+        target_issue = self._build_issue(title="Done", status="done", position=0)
+
+        with (
+            patch(
+                "app.services.workspace_issue_service.require_workspace_member",
+                return_value=MagicMock(role="member", status="active"),
+            ),
+            patch(
+                "app.services.workspace_issue_service.WorkspaceIssueRepository.get_by_id",
+                return_value=moved_issue,
+            ),
+            patch(
+                "app.services.workspace_issue_service.WorkspaceIssueRepository.list_by_board_and_status",
+                side_effect=[[source_issue], [target_issue]],
+            ),
+        ):
+            result = WorkspaceIssueService().move_issue(
+                db,
+                self.current_user,
+                moved_issue.id,
+                WorkspaceIssueMoveRequest(status="done", position=0),
+            )
+
+        self.assertEqual(result.status, "done")
+        self.assertEqual(result.position, 0)
+        self.assertEqual(source_issue.position, 0)
+        self.assertEqual(target_issue.position, 1)
+        db.commit.assert_called_once()
+        db.refresh.assert_called_once_with(moved_issue)
+
+    def test_move_issue_within_column_reorders_positions(self) -> None:
+        db = MagicMock()
+        first_issue = self._build_issue(title="First", status="todo", position=0)
+        moved_issue = self._build_issue(title="Second", status="todo", position=1)
+        third_issue = self._build_issue(title="Third", status="todo", position=2)
+
+        with (
+            patch(
+                "app.services.workspace_issue_service.require_workspace_member",
+                return_value=MagicMock(role="member", status="active"),
+            ),
+            patch(
+                "app.services.workspace_issue_service.WorkspaceIssueRepository.get_by_id",
+                return_value=moved_issue,
+            ),
+            patch(
+                "app.services.workspace_issue_service.WorkspaceIssueRepository.list_by_board_and_status",
+                return_value=[first_issue, third_issue],
+            ),
+        ):
+            result = WorkspaceIssueService().move_issue(
+                db,
+                self.current_user,
+                moved_issue.id,
+                WorkspaceIssueMoveRequest(status="todo", position=0),
+            )
+
+        self.assertEqual(result.position, 0)
+        self.assertEqual(first_issue.position, 1)
+        self.assertEqual(third_issue.position, 2)
+
+    def test_move_issue_rejects_unknown_target_status(self) -> None:
+        db = MagicMock()
+        issue = self._build_issue(title="Move me", status="todo", position=0)
+
+        with (
+            patch(
+                "app.services.workspace_issue_service.require_workspace_member",
+                return_value=MagicMock(role="member", status="active"),
+            ),
+            patch(
+                "app.services.workspace_issue_service.WorkspaceIssueRepository.get_by_id",
+                return_value=issue,
+            ),
+        ):
+            with self.assertRaises(AppException) as exc:
+                WorkspaceIssueService().move_issue(
+                    db,
+                    self.current_user,
+                    issue.id,
+                    WorkspaceIssueMoveRequest.model_construct(
+                        status="blocked",
+                        position=0,
+                    ),
+                )
+
+        self.assertEqual(exc.exception.error_code, ErrorCode.BAD_REQUEST)
+
+    def _build_issue(self, title: str, status: str, position: int) -> WorkspaceIssue:
+        return self._stamp_issue(
+            WorkspaceIssue(
+                id=uuid.uuid4(),
+                workspace_id=self.workspace_id,
+                board_id=self.board.id,
+                title=title,
+                description=None,
+                status=status,
+                position=position,
+                type="task",
+                priority="medium",
+                due_date=None,
+                assignee_user_id=None,
+                assignee_preset_id=None,
+                reporter_user_id=None,
+                related_project_id=None,
+                creator_user_id="user-1",
+                updated_by="user-1",
+            )
+        )
+
     @staticmethod
     def _stamp_issue(issue):
         now = datetime.now(UTC)
-        issue.id = uuid.uuid4()
+        if getattr(issue, "id", None) is None:
+            issue.id = uuid.uuid4()
         issue.created_at = now
         issue.updated_at = now
         return issue

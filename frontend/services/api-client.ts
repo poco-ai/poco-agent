@@ -205,10 +205,13 @@ export const API_ENDPOINTS = {
     `/workspaces/${workspaceId}/activity`,
   workspaceBoards: (workspaceId: string) =>
     `/workspaces/${workspaceId}/boards`,
+  workspaceBoard: (workspaceId: string, boardId: string) =>
+    `/workspaces/${workspaceId}/boards/${boardId}`,
   workspaceIssues: (boardId: string) => `/workspace-boards/${boardId}/issues`,
   workspaceIssue: (boardId: string, issueId: string) =>
     `/workspace-boards/${boardId}/issues/${issueId}`,
   workspaceIssueDetail: (issueId: string) => `/workspace-issues/${issueId}`,
+  workspaceIssueMove: (issueId: string) => `/workspace-issues/${issueId}/move`,
   workspaceIssueAgentAssignment: (issueId: string) =>
     `/workspace-issues/${issueId}/agent-assignment`,
   workspaceIssueAgentTrigger: (issueId: string) =>

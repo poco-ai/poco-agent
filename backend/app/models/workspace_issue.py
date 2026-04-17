@@ -38,6 +38,12 @@ class WorkspaceIssue(Base, TimestampMixin):
         server_default=text("'todo'"),
         index=True,
     )
+    position: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=0,
+        server_default=text("0"),
+    )
     type: Mapped[str] = mapped_column(
         String(50),
         nullable=False,
