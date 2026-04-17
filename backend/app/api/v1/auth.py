@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.core.deps import get_current_user, get_db
 from app.models.user import User
-from app.schemas.auth import CurrentUserResponse
+from app.schemas.auth import AuthConfigResponse, CurrentUserResponse
 from app.schemas.response import Response, ResponseSchema
 from app.services.auth_service import AuthService
 
@@ -37,6 +37,14 @@ async def login_with_github(
     next_path: str | None = Query(default=None, alias="next"),
 ):
     return await service.start_login(request, "github", next_path)
+
+
+@router.get("/config", response_model=ResponseSchema[AuthConfigResponse])
+async def get_auth_config() -> JSONResponse:
+    return Response.success(
+        data=service.get_auth_config(),
+        message="Auth config retrieved successfully",
+    )
 
 
 @router.get("/google/callback")

@@ -16,10 +16,14 @@ import {
   normalizeNextPath,
 } from "@/features/auth/lib/paths";
 
+type AuthProvider = "google" | "github";
+
 interface LoginPageClientProps {
   lng: string;
   nextPath?: string | null;
   errorCode?: string | null;
+  configuredProviders: AuthProvider[];
+  setupRequired: boolean;
 }
 
 function GithubIcon() {
@@ -57,6 +61,8 @@ export function LoginPageClient({
   lng,
   nextPath,
   errorCode,
+  configuredProviders,
+  setupRequired,
 }: LoginPageClientProps) {
   const { t } = useT("translation");
   const targetPath = normalizeNextPath(nextPath, lng);
@@ -67,6 +73,14 @@ export function LoginPageClient({
           defaultValue: t("auth.login.errors.default"),
         })
       : null;
+  const availableProviders = new Set(configuredProviders);
+  const subtitle = setupRequired
+    ? t("auth.login.setupRequiredSubtitle")
+    : configuredProviders.length === 1
+      ? configuredProviders[0] === "google"
+        ? t("auth.login.subtitleGoogleOnly")
+        : t("auth.login.subtitleGithubOnly")
+      : t("auth.login.subtitleMultiple");
 
   return (
     <main className="flex min-h-dvh items-center justify-center bg-background px-4 py-10">
@@ -76,7 +90,7 @@ export function LoginPageClient({
             {t("auth.login.title")}
           </CardTitle>
           <CardDescription className="text-sm text-muted-foreground">
-            {t("auth.login.subtitle")}
+            {subtitle}
           </CardDescription>
         </CardHeader>
 
@@ -88,29 +102,44 @@ export function LoginPageClient({
             </div>
           ) : null}
 
-          <div className="grid gap-3">
-            <Button asChild size="lg" className="w-full gap-2">
-              <a href={buildProviderLoginPath("google", targetPath)}>
-                <GoogleIcon />
-                <span>{t("auth.login.google")}</span>
-              </a>
-            </Button>
+          {setupRequired ? (
+            <div className="rounded-xl border border-border/60 bg-muted/30 px-4 py-4 text-sm text-muted-foreground">
+              <p className="font-medium text-foreground">
+                {t("auth.login.setupRequiredTitle")}
+              </p>
+              <p className="mt-2">{t("auth.login.setupRequiredDescription")}</p>
+            </div>
+          ) : (
+            <div className="grid gap-3">
+              {availableProviders.has("google") ? (
+                <Button asChild size="lg" className="w-full gap-2">
+                  <a href={buildProviderLoginPath("google", targetPath)}>
+                    <GoogleIcon />
+                    <span>{t("auth.login.google")}</span>
+                  </a>
+                </Button>
+              ) : null}
 
-            <Button
-              asChild
-              size="lg"
-              variant="outline"
-              className="w-full gap-2"
-            >
-              <a href={buildProviderLoginPath("github", targetPath)}>
-                <GithubIcon />
-                <span>{t("auth.login.github")}</span>
-              </a>
-            </Button>
-          </div>
+              {availableProviders.has("github") ? (
+                <Button
+                  asChild
+                  size="lg"
+                  variant="outline"
+                  className="w-full gap-2"
+                >
+                  <a href={buildProviderLoginPath("github", targetPath)}>
+                    <GithubIcon />
+                    <span>{t("auth.login.github")}</span>
+                  </a>
+                </Button>
+              ) : null}
+            </div>
+          )}
 
           <p className="text-center text-xs leading-5 text-muted-foreground">
-            {t("auth.login.hint")}
+            {setupRequired
+              ? t("auth.login.setupRequiredHint")
+              : t("auth.login.hint")}
           </p>
         </CardContent>
       </Card>

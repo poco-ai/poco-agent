@@ -3,7 +3,7 @@ import secrets
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from functools import lru_cache
-from typing import Any
+from typing import Any, Literal
 from urllib.parse import urlencode, urlsplit
 
 import httpx
@@ -17,6 +17,7 @@ from app.core.errors.exceptions import AppException
 from app.core.settings import Settings, get_settings
 from app.models.user import User
 from app.models.user_session import UserSession
+from app.schemas.auth import AuthConfigResponse, AuthProviderStatus
 from app.repositories.auth_identity_repository import AuthIdentityRepository
 from app.repositories.user_repository import UserRepository
 from app.repositories.user_session_repository import UserSessionRepository
@@ -91,6 +92,56 @@ class AuthService:
                 message=f"OAuth provider is not configured: {provider}",
             )
         return client
+
+    def get_configured_providers(self) -> list[Literal["google", "github"]]:
+        settings = self._get_settings()
+        providers: list[Literal["google", "github"]] = []
+        if settings.google_client_id and settings.google_client_secret:
+            providers.append("google")
+        if settings.github_client_id and settings.github_client_secret:
+            providers.append("github")
+        return providers
+
+    def is_single_user_mode_effective(self) -> bool:
+        """Return whether requests should resolve to the configured single user.
+
+        `oauth_optional` means:
+        - if at least one OAuth provider is configured, login is still required;
+        - if no providers are configured, the system falls back to single-user mode.
+        """
+        settings = self._get_settings()
+        if settings.auth_mode == "single_user":
+            return True
+        return (
+            settings.auth_mode == "oauth_optional"
+            and not self.get_configured_providers()
+        )
+
+    def is_login_required(self) -> bool:
+        return not self.is_single_user_mode_effective()
+
+    def is_setup_required(self) -> bool:
+        return self.is_login_required() and not self.get_configured_providers()
+
+    def get_auth_config(self) -> AuthConfigResponse:
+        configured_providers = self.get_configured_providers()
+        return AuthConfigResponse(
+            mode=self._get_settings().auth_mode,
+            login_required=self.is_login_required(),
+            single_user_effective=self.is_single_user_mode_effective(),
+            setup_required=self.is_setup_required(),
+            configured_providers=configured_providers,
+            providers=[
+                AuthProviderStatus(
+                    name="google",
+                    enabled="google" in configured_providers,
+                ),
+                AuthProviderStatus(
+                    name="github",
+                    enabled="github" in configured_providers,
+                ),
+            ],
+        )
 
     def _default_next_path(self) -> str:
         settings = self._get_settings()
@@ -176,6 +227,11 @@ class AuthService:
         provider: str,
         next_path: str | None,
     ) -> Response:
+        if self.is_single_user_mode_effective():
+            return RedirectResponse(
+                url=self._frontend_url(self.normalize_next_path(next_path)),
+                status_code=302,
+            )
         try:
             client = self._get_client(provider)
         except AppException:
@@ -421,6 +477,38 @@ class AuthService:
             self.hash_session_token(value),
             datetime.now(timezone.utc),
         )
+
+    def ensure_single_user(self, db: Session) -> User:
+        settings = self._get_settings()
+        single_user_id = settings.single_user_id.strip() or "default"
+        user = UserRepository.get_by_id(db, single_user_id)
+        display_name = settings.single_user_name.strip() or None
+
+        if user is None:
+            user = UserRepository.create(
+                db,
+                user_id=single_user_id,
+                primary_email=None,
+                display_name=display_name,
+                avatar_url=None,
+                status="active",
+            )
+            db.commit()
+            return user
+
+        updated = False
+        if user.display_name != display_name:
+            user.display_name = display_name
+            updated = True
+        if user.primary_email is not None:
+            user.primary_email = None
+            updated = True
+        if user.status != "active":
+            user.status = "active"
+            updated = True
+        if updated:
+            db.commit()
+        return user
 
     def logout(self, db: Session, session_token: str | None) -> None:
         if session_token is None or not session_token.strip():
