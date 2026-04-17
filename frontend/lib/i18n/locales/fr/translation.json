@@ -2333,6 +2333,7 @@
       "setupRequiredHint": "Configurez au moins un fournisseur de connexion, puis actualisez cette page.",
       "errors": {
         "default": "La connexion a échoué. Veuillez réessayer.",
+        "runtime_config_failed": "Impossible de charger la configuration de connexion. Veuillez actualiser la page et réessayer.",
         "provider_not_configured": "Ce fournisseur de connexion n’est pas encore configuré.",
         "invalid_oauth_state": "Votre session de connexion a expiré. Veuillez réessayer.",
         "oauth_failed": "Impossible de terminer la connexion. Veuillez réessayer."

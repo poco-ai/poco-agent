@@ -22,6 +22,7 @@ interface LoginPageRuntimeGuardProps {
     configuredProviders: AuthProvider[];
     setupRequired: boolean;
   }) => void;
+  onError: (message: string) => void;
 }
 
 const AUTH_CONFIG_CACHE_TTL_MS = 30_000;
@@ -53,6 +54,7 @@ async function fetchAuthConfig(): Promise<AuthConfigResponse> {
 export function LoginPageRuntimeGuard({
   nextPath,
   onResolved,
+  onError,
 }: LoginPageRuntimeGuardProps) {
   const router = useRouter();
 
@@ -84,7 +86,7 @@ export function LoginPageRuntimeGuard({
           return;
         }
 
-        throw error;
+        onError("runtime_config_failed");
       }
     };
 
@@ -93,7 +95,7 @@ export function LoginPageRuntimeGuard({
     return () => {
       cancelled = true;
     };
-  }, [nextPath, onResolved, router]);
+  }, [nextPath, onError, onResolved, router]);
 
   return null;
 }

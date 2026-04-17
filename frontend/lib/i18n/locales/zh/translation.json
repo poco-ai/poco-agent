@@ -2333,6 +2333,7 @@
       "setupRequiredHint": "请至少配置一种登录方式后再刷新页面。",
       "errors": {
         "default": "登录失败，请重试。",
+        "runtime_config_failed": "无法加载登录配置，请刷新后重试。",
         "provider_not_configured": "该登录方式尚未配置。",
         "invalid_oauth_state": "登录会话已过期，请重试。",
         "oauth_failed": "无法完成登录，请重试。"

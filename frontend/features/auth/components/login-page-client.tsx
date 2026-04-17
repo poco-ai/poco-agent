@@ -68,13 +68,15 @@ export function LoginPageClient({
     AuthProvider[] | null
   >(null);
   const [setupRequired, setSetupRequired] = React.useState(false);
+  const [runtimeError, setRuntimeError] = React.useState<string | null>(null);
 
   const errorMessage =
-    errorCode && errorCode !== ""
+    (runtimeError ? t("auth.login.errors.runtime_config_failed") : null) ??
+    (errorCode && errorCode !== ""
       ? t(`auth.login.errors.${errorCode}`, {
           defaultValue: t("auth.login.errors.default"),
         })
-      : null;
+      : null);
   const availableProviders = new Set(configuredProviders ?? []);
   const isLoading = configuredProviders === null && !setupRequired;
   const subtitle = setupRequired
@@ -85,14 +87,33 @@ export function LoginPageClient({
         : t("auth.login.subtitleGithubOnly")
       : t("auth.login.subtitleMultiple");
 
+  const handleResolved = React.useCallback(
+    ({
+      configuredProviders: nextProviders,
+      setupRequired,
+    }: {
+      configuredProviders: AuthProvider[];
+      setupRequired: boolean;
+    }) => {
+      setConfiguredProviders(nextProviders);
+      setSetupRequired(setupRequired);
+      setRuntimeError(null);
+    },
+    [],
+  );
+
+  const handleError = React.useCallback((message: string) => {
+    setConfiguredProviders([]);
+    setSetupRequired(false);
+    setRuntimeError(message);
+  }, []);
+
   return (
     <main className="flex min-h-dvh items-center justify-center bg-background px-4 py-10">
       <LoginPageRuntimeGuard
         nextPath={targetPath}
-        onResolved={({ configuredProviders: nextProviders, setupRequired }) => {
-          setConfiguredProviders(nextProviders);
-          setSetupRequired(setupRequired);
-        }}
+        onResolved={handleResolved}
+        onError={handleError}
       />
 
       <Card className="w-full max-w-md border-border/60 bg-card/95 shadow-lg">

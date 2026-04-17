@@ -2333,6 +2333,7 @@
       "setupRequiredHint": "Configure at least one login provider, then refresh this page.",
       "errors": {
         "default": "Sign-in failed. Please try again.",
+        "runtime_config_failed": "Unable to load sign-in configuration. Please refresh and try again.",
         "provider_not_configured": "This sign-in provider is not configured yet.",
         "invalid_oauth_state": "Your sign-in session expired. Please try again.",
         "oauth_failed": "We could not complete sign-in. Please try again."

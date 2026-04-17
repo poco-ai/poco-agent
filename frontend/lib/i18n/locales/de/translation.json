@@ -2333,6 +2333,7 @@
       "setupRequiredHint": "Konfigurieren Sie mindestens einen Anmeldeanbieter und laden Sie dann diese Seite neu.",
       "errors": {
         "default": "Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.",
+        "runtime_config_failed": "Anmeldekonfiguration konnte nicht geladen werden. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
         "provider_not_configured": "Dieser Anmeldeanbieter ist noch nicht konfiguriert.",
         "invalid_oauth_state": "Ihre Anmeldesitzung ist abgelaufen. Bitte versuchen Sie es erneut.",
         "oauth_failed": "Die Anmeldung konnte nicht abgeschlossen werden. Bitte versuchen Sie es erneut."
