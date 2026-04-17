@@ -2320,11 +2320,20 @@
     "login": {
       "title": "Sign in to Poco",
       "subtitle": "Use Google or GitHub to continue.",
+      "subtitleMultiple": "Use an available sign-in provider to continue.",
+      "subtitleGoogleOnly": "Use Google to continue.",
+      "subtitleGithubOnly": "Use GitHub to continue.",
+      "setupRequiredSubtitle": "An administrator must configure login before this deployment can be used.",
       "google": "Continue with Google",
       "github": "Continue with GitHub",
       "hint": "We use a secure browser session to keep you signed in.",
+      "loading": "Checking available sign-in methods...",
+      "setupRequiredTitle": "Login configuration required",
+      "setupRequiredDescription": "This deployment requires OAuth sign-in before use. Ask an administrator to configure Google or GitHub login.",
+      "setupRequiredHint": "Configure at least one login provider, then refresh this page.",
       "errors": {
         "default": "Sign-in failed. Please try again.",
+        "runtime_config_failed": "Unable to load sign-in configuration. Please refresh and try again.",
         "provider_not_configured": "This sign-in provider is not configured yet.",
         "invalid_oauth_state": "Your sign-in session expired. Please try again.",
         "oauth_failed": "We could not complete sign-in. Please try again."

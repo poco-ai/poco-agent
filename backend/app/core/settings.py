@@ -34,10 +34,16 @@ class Settings(BaseSettings):
     oauth_session_cookie_name: str = Field(
         default="poco_oauth", alias="OAUTH_SESSION_COOKIE_NAME"
     )
+    auth_mode: Literal["oauth_required", "oauth_optional", "single_user"] = Field(
+        default="oauth_required",
+        alias="AUTH_MODE",
+    )
     google_client_id: str | None = Field(default=None, alias="GOOGLE_CLIENT_ID")
     google_client_secret: str | None = Field(default=None, alias="GOOGLE_CLIENT_SECRET")
     github_client_id: str | None = Field(default=None, alias="GITHUB_CLIENT_ID")
     github_client_secret: str | None = Field(default=None, alias="GITHUB_CLIENT_SECRET")
+    single_user_id: str = Field(default="default", alias="SINGLE_USER_ID")
+    single_user_name: str = Field(default="Local User", alias="SINGLE_USER_NAME")
     internal_api_token: str = Field(
         default="change-this-token-in-production", alias="INTERNAL_API_TOKEN"
     )

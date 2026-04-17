@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import { AlertCircle } from "lucide-react";
 
 import {
@@ -15,6 +16,9 @@ import {
   buildProviderLoginPath,
   normalizeNextPath,
 } from "@/features/auth/lib/paths";
+import { LoginPageRuntimeGuard } from "@/features/auth/components/login-page-runtime-guard";
+
+type AuthProvider = "google" | "github";
 
 interface LoginPageClientProps {
   lng: string;
@@ -60,23 +64,65 @@ export function LoginPageClient({
 }: LoginPageClientProps) {
   const { t } = useT("translation");
   const targetPath = normalizeNextPath(nextPath, lng);
+  const [configuredProviders, setConfiguredProviders] = React.useState<
+    AuthProvider[] | null
+  >(null);
+  const [setupRequired, setSetupRequired] = React.useState(false);
+  const [runtimeError, setRuntimeError] = React.useState<string | null>(null);
 
   const errorMessage =
-    errorCode && errorCode !== ""
+    (runtimeError ? t("auth.login.errors.runtime_config_failed") : null) ??
+    (errorCode && errorCode !== ""
       ? t(`auth.login.errors.${errorCode}`, {
           defaultValue: t("auth.login.errors.default"),
         })
-      : null;
+      : null);
+  const availableProviders = new Set(configuredProviders ?? []);
+  const isLoading = configuredProviders === null && !setupRequired;
+  const subtitle = setupRequired
+    ? t("auth.login.setupRequiredSubtitle")
+    : configuredProviders?.length === 1
+      ? configuredProviders[0] === "google"
+        ? t("auth.login.subtitleGoogleOnly")
+        : t("auth.login.subtitleGithubOnly")
+      : t("auth.login.subtitleMultiple");
+
+  const handleResolved = React.useCallback(
+    ({
+      configuredProviders: nextProviders,
+      setupRequired,
+    }: {
+      configuredProviders: AuthProvider[];
+      setupRequired: boolean;
+    }) => {
+      setConfiguredProviders(nextProviders);
+      setSetupRequired(setupRequired);
+      setRuntimeError(null);
+    },
+    [],
+  );
+
+  const handleError = React.useCallback((message: string) => {
+    setConfiguredProviders([]);
+    setSetupRequired(false);
+    setRuntimeError(message);
+  }, []);
 
   return (
     <main className="flex min-h-dvh items-center justify-center bg-background px-4 py-10">
+      <LoginPageRuntimeGuard
+        nextPath={targetPath}
+        onResolved={handleResolved}
+        onError={handleError}
+      />
+
       <Card className="w-full max-w-md border-border/60 bg-card/95 shadow-lg">
         <CardHeader className="space-y-3 text-center">
           <CardTitle className="text-2xl font-semibold text-foreground">
             {t("auth.login.title")}
           </CardTitle>
           <CardDescription className="text-sm text-muted-foreground">
-            {t("auth.login.subtitle")}
+            {subtitle}
           </CardDescription>
         </CardHeader>
 
@@ -88,29 +134,50 @@ export function LoginPageClient({
             </div>
           ) : null}
 
-          <div className="grid gap-3">
-            <Button asChild size="lg" className="w-full gap-2">
-              <a href={buildProviderLoginPath("google", targetPath)}>
-                <GoogleIcon />
-                <span>{t("auth.login.google")}</span>
-              </a>
-            </Button>
+          {setupRequired ? (
+            <div className="rounded-xl border border-border/60 bg-muted/30 px-4 py-4 text-sm text-muted-foreground">
+              <p className="font-medium text-foreground">
+                {t("auth.login.setupRequiredTitle")}
+              </p>
+              <p className="mt-2">{t("auth.login.setupRequiredDescription")}</p>
+            </div>
+          ) : (
+            <div className="grid gap-3">
+              {isLoading ? (
+                <div className="rounded-xl border border-border/60 bg-muted/30 px-4 py-4 text-sm text-muted-foreground">
+                  {t("auth.login.loading")}
+                </div>
+              ) : null}
 
-            <Button
-              asChild
-              size="lg"
-              variant="outline"
-              className="w-full gap-2"
-            >
-              <a href={buildProviderLoginPath("github", targetPath)}>
-                <GithubIcon />
-                <span>{t("auth.login.github")}</span>
-              </a>
-            </Button>
-          </div>
+              {availableProviders.has("google") ? (
+                <Button asChild size="lg" className="w-full gap-2">
+                  <a href={buildProviderLoginPath("google", targetPath)}>
+                    <GoogleIcon />
+                    <span>{t("auth.login.google")}</span>
+                  </a>
+                </Button>
+              ) : null}
+
+              {availableProviders.has("github") ? (
+                <Button
+                  asChild
+                  size="lg"
+                  variant="outline"
+                  className="w-full gap-2"
+                >
+                  <a href={buildProviderLoginPath("github", targetPath)}>
+                    <GithubIcon />
+                    <span>{t("auth.login.github")}</span>
+                  </a>
+                </Button>
+              ) : null}
+            </div>
+          )}
 
           <p className="text-center text-xs leading-5 text-muted-foreground">
-            {t("auth.login.hint")}
+            {setupRequired
+              ? t("auth.login.setupRequiredHint")
+              : t("auth.login.hint")}
           </p>
         </CardContent>
       </Card>
