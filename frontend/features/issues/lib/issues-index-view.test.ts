@@ -15,6 +15,7 @@ function createIssue(overrides: Partial<WorkspaceIssue> = {}): WorkspaceIssue {
     title: "Fix login flicker",
     description: "Investigate the loading state after auth redirect",
     status: "todo",
+    position: 0,
     type: "task",
     priority: "medium",
     due_date: null,

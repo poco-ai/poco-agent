@@ -173,10 +173,26 @@
       "lastTriggeredAt": "最終トリガー",
       "lastCompletedAt": "最終完了"
     },
+    "context": {
+      "eyebrow": "Board workspace",
+      "noBoardTitle": "Pick a board to start scanning work",
+      "noBoardDescription": "Switch between named boards here, then review workflow columns in the canvas below.",
+      "boardSelectLabel": "Current board",
+      "boardSelectPlaceholder": "Select a board"
+    },
     "summary": {
       "total": "Issue 総数",
       "aiAssigned": "AI 割り当て",
       "running": "実行中"
+    },
+    "toolbar": {
+      "title": "Board canvas",
+      "description": "{{count}} visible issues across the current workflow"
+    },
+    "columns": {
+      "count": "{{count}} issues",
+      "emptyTitle": "Nothing in this column",
+      "emptyDescription": "New issues will appear here as the workflow moves forward."
     },
     "statuses": {
       "todo": "未着手",

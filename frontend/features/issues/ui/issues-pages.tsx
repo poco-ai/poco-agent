@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Bot, ChevronLeft, KanbanSquare, Plus, RefreshCw, Ticket } from "lucide-react";
+import { Bot, ChevronLeft, KanbanSquare, RefreshCw, Ticket } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -60,6 +60,8 @@ import type {
   WorkspaceBoard,
   WorkspaceIssue,
 } from "@/features/issues/model/types";
+import { TeamBoardContextBar } from "@/features/issues/ui/team-board-context-bar";
+import { TeamKanbanBoard } from "@/features/issues/ui/team-kanban-board";
 import { projectsService } from "@/features/projects/api/projects-api";
 import type { ProjectItem } from "@/features/projects/types";
 import type { Preset } from "@/features/capabilities/presets/lib/preset-types";
@@ -249,7 +251,11 @@ export function TeamIssuesPageClient() {
     if (!currentWorkspace) return;
     const nextBoards = await issuesApi.listBoards(currentWorkspace.id);
     setBoards(nextBoards);
-    setSelectedBoardId((prev) => prev ?? nextBoards[0]?.board_id ?? null);
+    setSelectedBoardId((prev) =>
+      prev && nextBoards.some((board) => board.board_id === prev)
+        ? prev
+        : nextBoards[0]?.board_id ?? null,
+    );
   }, [currentWorkspace]);
 
   const loadIssues = React.useCallback(async () => {
@@ -356,276 +362,191 @@ export function TeamIssuesPageClient() {
             <TeamIssueDetailPageClient issueId={selectedIssueId} />
           </div>
         ) : (
-        <div>
-        <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
-          <div className="space-y-1.5">
-            <h2 className="text-lg font-semibold text-foreground">{t("issues.title")}</h2>
-            <p className="text-sm text-muted-foreground">{t("issues.subtitle")}</p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => void refresh()}
-              disabled={isRefreshing}
-            >
-              <RefreshCw
-                className={isRefreshing ? "size-4 animate-spin" : "size-4"}
-              />
-              {t("issues.refresh")}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setBoardDialogOpen(true)}
-            >
-              <Plus className="size-4" />
-              {t("issues.actions.createBoard")}
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              onClick={() => setIssueDialogOpen(true)}
-              disabled={!selectedBoardId}
-            >
-              <Ticket className="size-4" />
-              {t("issues.actions.createIssue")}
-            </Button>
-          </div>
-        </div>
-        {!hasLoadedBoards && isRefreshing ? (
-          <div className="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
-            <Card className="border-border/60">
-              <CardHeader>
-                <Skeleton className="h-5 w-24" />
-                <Skeleton className="h-4 w-40" />
-              </CardHeader>
-              <CardContent className="space-y-3 pb-6">
-                <Skeleton className="h-20 rounded-2xl" />
-                <Skeleton className="h-20 rounded-2xl" />
-                <Skeleton className="h-20 rounded-2xl" />
-              </CardContent>
-            </Card>
-            <Card className="border-border/60">
-              <CardHeader>
-                <Skeleton className="h-5 w-32" />
-                <Skeleton className="h-4 w-56" />
-              </CardHeader>
-              <CardContent className="space-y-4 pb-6">
-                <div className="grid gap-3 md:grid-cols-3">
-                  <Skeleton className="h-20 rounded-2xl" />
-                  <Skeleton className="h-20 rounded-2xl" />
-                  <Skeleton className="h-20 rounded-2xl" />
-                </div>
-                <Skeleton className="h-10 rounded-xl" />
-                <Skeleton className="h-24 rounded-2xl" />
-                <Skeleton className="h-24 rounded-2xl" />
-              </CardContent>
-            </Card>
-          </div>
-        ) : boardLoadFailed && boards.length === 0 ? (
-          <Card className="border-border/60">
-            <CardContent className="p-6">
-              <Empty className="min-h-72 rounded-2xl border border-dashed border-border/70 bg-muted/10">
-                <EmptyContent>
-                  <EmptyMedia variant="icon">
-                    <Ticket className="size-5" />
-                  </EmptyMedia>
-                  <EmptyHeader>
-                    <EmptyTitle>{t("issues.states.loadErrorTitle")}</EmptyTitle>
-                    <EmptyDescription>
-                      {t("issues.states.loadErrorDescription")}
-                    </EmptyDescription>
-                  </EmptyHeader>
-                  <Button type="button" variant="outline" onClick={() => void refresh()}>
-                    <RefreshCw className="size-4" />
-                    {t("issues.actions.retryLoad")}
-                  </Button>
-                </EmptyContent>
-              </Empty>
-            </CardContent>
-          </Card>
-        ) : (
-        <div className="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
-          <Card className="border-border/60">
-            <CardHeader>
-              <CardTitle>{t("issues.boardsTitle")}</CardTitle>
-              <CardDescription>{t("issues.subtitle")}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3 pb-6">
-              {boards.length === 0 ? (
-                <Empty className="min-h-72 rounded-2xl border border-dashed border-border/70 bg-muted/10">
-                  <EmptyContent>
-                    <EmptyMedia variant="icon">
-                      <KanbanSquare className="size-5" />
-                    </EmptyMedia>
-                    <EmptyHeader>
-                      <EmptyTitle>{t("issues.boardsTitle")}</EmptyTitle>
-                      <EmptyDescription>
-                        {t("issues.emptyBoards")}
-                      </EmptyDescription>
-                    </EmptyHeader>
-                  </EmptyContent>
-                </Empty>
-              ) : (
-                boards.map((board) => (
-                  <button
-                    key={board.board_id}
-                    type="button"
-                    onClick={() => setSelectedBoardId(board.board_id)}
-                    className={
-                      selectedBoardId === board.board_id
-                        ? "w-full rounded-2xl border border-foreground/10 bg-accent/60 px-4 py-3 text-left transition"
-                        : "w-full rounded-2xl border border-border/60 px-4 py-3 text-left transition hover:bg-muted/40"
-                    }
-                  >
-                    <p className="text-sm font-medium text-foreground">{board.name}</p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {board.description || t("issues.subtitle")}
-                    </p>
-                  </button>
-                ))
-              )}
-            </CardContent>
-          </Card>
+          <div className="space-y-6">
+            <TeamBoardContextBar
+              boards={boards}
+              selectedBoardId={selectedBoardId}
+              selectedBoard={selectedBoard}
+              totalIssues={boardSummary.totalIssues}
+              aiAssignedIssues={boardSummary.aiAssignedIssues}
+              runningIssues={boardSummary.runningIssues}
+              isRefreshing={isRefreshing}
+              onBoardChange={setSelectedBoardId}
+              onRefresh={() => void refresh()}
+              onCreateBoard={() => setBoardDialogOpen(true)}
+            />
 
-          <Card className="border-border/60">
-            <CardHeader>
-              <CardTitle>{selectedBoard?.name ?? t("issues.listTitle")}</CardTitle>
-              <CardDescription>
-                {selectedBoard?.description || t("issues.detailPlaceholder")}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4 pb-6">
-              <div className="grid gap-3 md:grid-cols-3">
-                {[
-                  {
-                    label: t("issues.summary.total"),
-                    value: String(boardSummary.totalIssues),
-                  },
-                  {
-                    label: t("issues.summary.aiAssigned"),
-                    value: String(boardSummary.aiAssignedIssues),
-                  },
-                  {
-                    label: t("issues.summary.running"),
-                    value: String(boardSummary.runningIssues),
-                  },
-                ].map((item) => (
-                  <div
-                    key={item.label}
-                    className="rounded-2xl border border-border/60 bg-muted/10 px-4 py-3"
-                  >
-                    <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                      {item.label}
-                    </p>
-                    <p className="mt-2 text-lg font-semibold text-foreground">
-                      {item.value}
-                    </p>
+            {!hasLoadedBoards && isRefreshing ? (
+              <div className="space-y-6">
+                <div className="rounded-[32px] border border-border/70 bg-card px-5 py-5 sm:px-6">
+                  <div className="grid gap-3 md:grid-cols-3">
+                    <Skeleton className="h-24 rounded-3xl" />
+                    <Skeleton className="h-24 rounded-3xl" />
+                    <Skeleton className="h-24 rounded-3xl" />
                   </div>
-                ))}
+                </div>
+                <div className="rounded-[32px] border border-border/70 bg-card px-5 py-4 sm:px-6">
+                  <div className="flex flex-col gap-3 sm:flex-row">
+                    <Skeleton className="h-10 flex-1 rounded-2xl" />
+                    <Skeleton className="h-10 w-40 rounded-2xl" />
+                  </div>
+                </div>
+                <div className="hidden gap-4 md:flex">
+                  <Skeleton className="h-[28rem] w-[20rem] rounded-[28px]" />
+                  <Skeleton className="h-[28rem] w-[20rem] rounded-[28px]" />
+                  <Skeleton className="h-[28rem] w-[20rem] rounded-[28px]" />
+                </div>
+                <Skeleton className="h-[28rem] rounded-[28px] md:hidden" />
               </div>
-
-              <Input
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder={t("issues.searchPlaceholder")}
-              />
-
-              {issuesLoadFailed ? (
-                <Empty className="min-h-72 rounded-2xl border border-dashed border-border/70 bg-muted/10">
-                  <EmptyContent>
-                    <EmptyMedia variant="icon">
-                      <Ticket className="size-5" />
-                    </EmptyMedia>
-                    <EmptyHeader>
-                      <EmptyTitle>{t("issues.states.loadErrorTitle")}</EmptyTitle>
-                      <EmptyDescription>
-                        {t("issues.states.loadErrorDescription")}
-                      </EmptyDescription>
-                    </EmptyHeader>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => void loadIssues()}
-                    >
-                      <RefreshCw className="size-4" />
-                      {t("issues.actions.retryLoad")}
-                    </Button>
-                  </EmptyContent>
-                </Empty>
-              ) : issues.length === 0 ? (
-                <Empty className="min-h-72 rounded-2xl border border-dashed border-border/70 bg-muted/10">
-                  <EmptyContent>
-                    <EmptyMedia variant="icon">
-                      <Ticket className="size-5" />
-                    </EmptyMedia>
-                    <EmptyHeader>
-                      <EmptyTitle>{t("issues.listTitle")}</EmptyTitle>
-                      <EmptyDescription>
-                        {selectedBoardId
-                          ? t("issues.emptyIssues")
-                          : t("issues.emptyBoards")}
-                      </EmptyDescription>
-                    </EmptyHeader>
-                  </EmptyContent>
-                </Empty>
-              ) : filteredIssues.length === 0 ? (
-                <Empty className="min-h-56 rounded-2xl border border-dashed border-border/70 bg-muted/10">
-                  <EmptyContent>
-                    <EmptyMedia variant="icon">
-                      <Ticket className="size-5" />
-                    </EmptyMedia>
-                    <EmptyHeader>
-                      <EmptyTitle>{t("issues.listTitle")}</EmptyTitle>
-                      <EmptyDescription>
-                        {t("issues.emptySearch")}
-                      </EmptyDescription>
-                    </EmptyHeader>
-                  </EmptyContent>
-                </Empty>
-              ) : (
-                filteredIssues.map((issue) => (
-                  <button
-                    key={issue.issue_id}
-                    type="button"
-                    onClick={() => selectIssue(issue.issue_id)}
-                    className="block w-full rounded-2xl border border-border/60 px-4 py-4 text-left transition hover:bg-muted/30"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="truncate font-medium">{issue.title}</p>
-                        <div className="mt-2 flex flex-wrap items-center gap-2">
-                          <Badge variant="outline">
-                            {formatIssueStatus(t, issue.status)}
-                          </Badge>
-                          <Badge variant="outline">
-                            {formatIssuePriority(t, issue.priority)}
-                          </Badge>
-                          {issue.related_project_id ? (
-                            <Badge variant="secondary">
-                              {t("issues.fields.project")}
-                            </Badge>
-                          ) : null}
-                          {issue.agent_assignment ? (
-                            <AssignmentBadge assignment={issue.agent_assignment} />
-                          ) : null}
-                        </div>
-                        <p className="mt-3 text-xs text-muted-foreground">
-                          {t("issues.fields.updatedAt")} · {formatDateTime(issue.updated_at)}
-                        </p>
-                      </div>
+            ) : boardLoadFailed && boards.length === 0 ? (
+              <Card className="border-border/60">
+                <CardContent className="p-6">
+                  <Empty className="min-h-72 rounded-2xl border border-dashed border-border/70 bg-muted/10">
+                    <EmptyContent>
+                      <EmptyMedia variant="icon">
+                        <Ticket className="size-5" />
+                      </EmptyMedia>
+                      <EmptyHeader>
+                        <EmptyTitle>{t("issues.states.loadErrorTitle")}</EmptyTitle>
+                        <EmptyDescription>
+                          {t("issues.states.loadErrorDescription")}
+                        </EmptyDescription>
+                      </EmptyHeader>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => void refresh()}
+                      >
+                        <RefreshCw className="size-4" />
+                        {t("issues.actions.retryLoad")}
+                      </Button>
+                    </EmptyContent>
+                  </Empty>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-6">
+                <section className="rounded-[28px] border border-border/70 bg-card px-5 py-4 sm:px-6">
+                  <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="space-y-1">
+                      <p className="text-sm font-semibold text-foreground">
+                        {t("issues.toolbar.title")}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {t("issues.toolbar.description", {
+                          count: filteredIssues.length,
+                        })}
+                      </p>
                     </div>
-                  </button>
-                ))
-              )}
-            </CardContent>
-          </Card>
-        </div>
-        )}
-        </div>
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                      <Input
+                        value={query}
+                        onChange={(event) => setQuery(event.target.value)}
+                        placeholder={t("issues.searchPlaceholder")}
+                        className="min-w-0 sm:w-72"
+                      />
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={() => setIssueDialogOpen(true)}
+                        disabled={!selectedBoardId}
+                      >
+                        <Ticket className="size-4" />
+                        {t("issues.actions.createIssue")}
+                      </Button>
+                    </div>
+                  </div>
+                </section>
+
+                {!selectedBoardId ? (
+                  <Card className="border-border/60">
+                    <CardContent className="p-6">
+                      <Empty className="min-h-72 rounded-2xl border border-dashed border-border/70 bg-muted/10">
+                        <EmptyContent>
+                          <EmptyMedia variant="icon">
+                            <KanbanSquare className="size-5" />
+                          </EmptyMedia>
+                          <EmptyHeader>
+                            <EmptyTitle>{t("issues.boardsTitle")}</EmptyTitle>
+                            <EmptyDescription>
+                              {t("issues.emptyBoards")}
+                            </EmptyDescription>
+                          </EmptyHeader>
+                        </EmptyContent>
+                      </Empty>
+                    </CardContent>
+                  </Card>
+                ) : issuesLoadFailed ? (
+                  <Card className="border-border/60">
+                    <CardContent className="p-6">
+                      <Empty className="min-h-72 rounded-2xl border border-dashed border-border/70 bg-muted/10">
+                        <EmptyContent>
+                          <EmptyMedia variant="icon">
+                            <Ticket className="size-5" />
+                          </EmptyMedia>
+                          <EmptyHeader>
+                            <EmptyTitle>{t("issues.states.loadErrorTitle")}</EmptyTitle>
+                            <EmptyDescription>
+                              {t("issues.states.loadErrorDescription")}
+                            </EmptyDescription>
+                          </EmptyHeader>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => void loadIssues()}
+                          >
+                            <RefreshCw className="size-4" />
+                            {t("issues.actions.retryLoad")}
+                          </Button>
+                        </EmptyContent>
+                      </Empty>
+                    </CardContent>
+                  </Card>
+                ) : issues.length === 0 ? (
+                  <Card className="border-border/60">
+                    <CardContent className="p-6">
+                      <Empty className="min-h-72 rounded-2xl border border-dashed border-border/70 bg-muted/10">
+                        <EmptyContent>
+                          <EmptyMedia variant="icon">
+                            <Ticket className="size-5" />
+                          </EmptyMedia>
+                          <EmptyHeader>
+                            <EmptyTitle>{t("issues.listTitle")}</EmptyTitle>
+                            <EmptyDescription>
+                              {t("issues.emptyIssues")}
+                            </EmptyDescription>
+                          </EmptyHeader>
+                        </EmptyContent>
+                      </Empty>
+                    </CardContent>
+                  </Card>
+                ) : filteredIssues.length === 0 ? (
+                  <Card className="border-border/60">
+                    <CardContent className="p-6">
+                      <Empty className="min-h-56 rounded-2xl border border-dashed border-border/70 bg-muted/10">
+                        <EmptyContent>
+                          <EmptyMedia variant="icon">
+                            <Ticket className="size-5" />
+                          </EmptyMedia>
+                          <EmptyHeader>
+                            <EmptyTitle>{t("issues.listTitle")}</EmptyTitle>
+                            <EmptyDescription>
+                              {t("issues.emptySearch")}
+                            </EmptyDescription>
+                          </EmptyHeader>
+                        </EmptyContent>
+                      </Empty>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <TeamKanbanBoard
+                    issues={filteredIssues}
+                    onOpenIssue={selectIssue}
+                  />
+                )}
+              </div>
+            )}
+          </div>
         )}
       </TeamContentShell>
 

@@ -173,10 +173,26 @@
       "lastTriggeredAt": "最近触发时间",
       "lastCompletedAt": "最近完成时间"
     },
+    "context": {
+      "eyebrow": "看板工作区",
+      "noBoardTitle": "先选择一个看板，再开始查看工作流",
+      "noBoardDescription": "在这里切换命名 board，然后在下方画布中直接浏览各状态列。",
+      "boardSelectLabel": "当前看板",
+      "boardSelectPlaceholder": "选择一个看板"
+    },
     "summary": {
       "total": "事项总数",
       "aiAssigned": "AI 已分配",
       "running": "执行中"
+    },
+    "toolbar": {
+      "title": "看板画布",
+      "description": "当前工作流中共有 {{count}} 个可见事项"
+    },
+    "columns": {
+      "count": "{{count}} 个事项",
+      "emptyTitle": "这一列还没有事项",
+      "emptyDescription": "随着工作流推进，新事项会出现在这里。"
     },
     "statuses": {
       "todo": "待处理",

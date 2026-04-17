@@ -173,10 +173,26 @@
       "lastTriggeredAt": "Последний запуск",
       "lastCompletedAt": "Последнее завершение"
     },
+    "context": {
+      "eyebrow": "Board workspace",
+      "noBoardTitle": "Pick a board to start scanning work",
+      "noBoardDescription": "Switch between named boards here, then review workflow columns in the canvas below.",
+      "boardSelectLabel": "Current board",
+      "boardSelectPlaceholder": "Select a board"
+    },
     "summary": {
       "total": "Всего issues",
       "aiAssigned": "Назначено ИИ",
       "running": "Сейчас выполняются"
+    },
+    "toolbar": {
+      "title": "Board canvas",
+      "description": "{{count}} visible issues across the current workflow"
+    },
+    "columns": {
+      "count": "{{count}} issues",
+      "emptyTitle": "Nothing in this column",
+      "emptyDescription": "New issues will appear here as the workflow moves forward."
     },
     "statuses": {
       "todo": "К выполнению",
