@@ -266,6 +266,7 @@
       "cancelled": "已取消分配",
       "released": "已释放 sandbox",
       "actionFailed": "操作失败",
+      "issueMoveFailed": "移动事项失败",
       "issueDeleted": "事项已删除",
       "issueDeleteFailed": "删除事项失败"
     }

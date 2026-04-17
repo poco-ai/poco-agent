@@ -2,7 +2,7 @@ import uuid
 
 from sqlalchemy.orm import Session
 
-from app.core.audit import auditable
+from app.core.audit import AuditEvent, auditable
 from app.core.errors.error_codes import ErrorCode
 from app.core.errors.exceptions import AppException
 from app.models.user import User
@@ -16,6 +16,7 @@ from app.schemas.workspace_issue import (
     WorkspaceIssueResponse,
     WorkspaceIssueUpdateRequest,
 )
+from app.services.activity_logger import ActivityLogger
 from app.services.agent_assignment_service import AgentAssignmentService
 from app.services.workspace_member_service import require_workspace_member
 
@@ -85,6 +86,35 @@ class WorkspaceIssueService:
         target_issues.insert(insert_at, issue)
         self._resequence_column(source_issues, source_status)
         self._resequence_column(target_issues, target_status)
+
+    @staticmethod
+    def _log_issue_move(
+        db: Session,
+        *,
+        current_user: User,
+        issue: WorkspaceIssue,
+        source_status: str,
+        source_position: int,
+    ) -> None:
+        if source_status == issue.status:
+            return
+
+        ActivityLogger().log_activity(
+            db,
+            AuditEvent(
+                workspace_id=issue.workspace_id,
+                actor_user_id=current_user.id,
+                action="issue.moved",
+                target_type="issue",
+                target_id=str(issue.id),
+                metadata={
+                    "from_status": source_status,
+                    "to_status": issue.status,
+                    "from_position": source_position,
+                    "to_position": issue.position,
+                },
+            ),
+        )
 
     @auditable(
         action="issue.created",
@@ -342,6 +372,8 @@ class WorkspaceIssueService:
                 message=f"Workspace issue not found: {issue_id}",
             )
         require_workspace_member(db, issue.workspace_id, current_user.id)
+        source_status = issue.status
+        source_position = issue.position
         self._move_issue_within_board(
             db,
             issue,
@@ -351,6 +383,13 @@ class WorkspaceIssueService:
         issue.updated_by = current_user.id
         db.commit()
         db.refresh(issue)
+        self._log_issue_move(
+            db,
+            current_user=current_user,
+            issue=issue,
+            source_status=source_status,
+            source_position=source_position,
+        )
         return self._to_response(issue)
 
     @auditable(

@@ -28,6 +28,10 @@ import { useT } from "@/lib/i18n/client";
 import { useLanguage } from "@/hooks/use-language";
 import { issuesApi } from "@/features/issues/api/issues-api";
 import {
+  mergeMovedIssue,
+  moveKanbanIssue,
+} from "@/features/issues/lib/kanban-columns";
+import {
   filterIssuesByQuery,
   summarizeBoardIssues,
 } from "@/features/issues/lib/issues-index-view";
@@ -35,6 +39,7 @@ import { useTeamKanban } from "@/features/issues/model/use-team-kanban";
 import type {
   WorkspaceBoard,
   WorkspaceIssue,
+  WorkspaceIssueStatus,
 } from "@/features/issues/model/types";
 import { TeamBoardContextBar } from "@/features/issues/ui/team-board-context-bar";
 import { TeamIssueDetailDialog } from "@/features/issues/ui/team-issue-detail-dialog";
@@ -171,6 +176,7 @@ export function TeamIssuesPageClient() {
   const [hasLoadedBoards, setHasLoadedBoards] = React.useState(false);
   const [boardLoadFailed, setBoardLoadFailed] = React.useState(false);
   const [issuesLoadFailed, setIssuesLoadFailed] = React.useState(false);
+  const [isMovePending, setIsMovePending] = React.useState(false);
   const [query, setQuery] = React.useState("");
   const { selectedIssueId, openIssue, closeIssue } = useTeamKanban(lng);
 
@@ -276,6 +282,42 @@ export function TeamIssuesPageClient() {
       toast.error(t("issues.toasts.issueCreateFailed"));
     }
   };
+
+  const moveIssue = React.useCallback(
+    async (issueId: string, status: WorkspaceIssueStatus, position: number) => {
+      if (isMovePending) {
+        return;
+      }
+
+      const previousIssues = issues;
+      const optimisticIssues = moveKanbanIssue(previousIssues, {
+        issueId,
+        status,
+        position,
+      });
+      if (optimisticIssues === previousIssues) {
+        return;
+      }
+
+      setIssues(optimisticIssues);
+      setIsMovePending(true);
+
+      try {
+        const updatedIssue = await issuesApi.moveIssue(issueId, {
+          status,
+          position,
+        });
+        setIssues((currentIssues) => mergeMovedIssue(currentIssues, updatedIssue));
+      } catch (error) {
+        console.error("[Issues] move issue failed", error);
+        setIssues(previousIssues);
+        toast.error(t("issues.toasts.issueMoveFailed"));
+      } finally {
+        setIsMovePending(false);
+      }
+    },
+    [isMovePending, issues, t],
+  );
 
   return (
     <>
@@ -457,7 +499,12 @@ export function TeamIssuesPageClient() {
                   </CardContent>
                 </Card>
               ) : (
-                <TeamKanbanBoard issues={filteredIssues} onOpenIssue={openIssue} />
+                <TeamKanbanBoard
+                  issues={filteredIssues}
+                  onOpenIssue={openIssue}
+                  onMoveIssue={moveIssue}
+                  isMovePending={isMovePending}
+                />
               )}
             </div>
           )}

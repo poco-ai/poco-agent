@@ -266,6 +266,7 @@
       "cancelled": "Assignment cancelled",
       "released": "Sandbox released",
       "actionFailed": "Action failed",
+      "issueMoveFailed": "Issue konnte nicht verschoben werden",
       "issueDeleted": "Issue gelöscht",
       "issueDeleteFailed": "Issue konnte nicht gelöscht werden"
     }

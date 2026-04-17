@@ -280,6 +280,10 @@ class WorkspaceIssueServiceTests(unittest.TestCase):
                 "app.services.workspace_issue_service.WorkspaceIssueRepository.list_by_board_and_status",
                 side_effect=[[source_issue], [target_issue]],
             ),
+            patch(
+                "app.services.workspace_issue_service.ActivityLogger.log_activity",
+                return_value=None,
+            ) as log_activity,
         ):
             result = WorkspaceIssueService().move_issue(
                 db,
@@ -294,6 +298,18 @@ class WorkspaceIssueServiceTests(unittest.TestCase):
         self.assertEqual(target_issue.position, 1)
         db.commit.assert_called_once()
         db.refresh.assert_called_once_with(moved_issue)
+        log_activity.assert_called_once()
+        event = log_activity.call_args.args[1]
+        self.assertEqual(event.action, "issue.moved")
+        self.assertEqual(
+            event.metadata,
+            {
+                "from_status": "todo",
+                "to_status": "done",
+                "from_position": 1,
+                "to_position": 0,
+            },
+        )
 
     def test_move_issue_within_column_reorders_positions(self) -> None:
         db = MagicMock()
@@ -314,6 +330,10 @@ class WorkspaceIssueServiceTests(unittest.TestCase):
                 "app.services.workspace_issue_service.WorkspaceIssueRepository.list_by_board_and_status",
                 return_value=[first_issue, third_issue],
             ),
+            patch(
+                "app.services.workspace_issue_service.ActivityLogger.log_activity",
+                return_value=None,
+            ) as log_activity,
         ):
             result = WorkspaceIssueService().move_issue(
                 db,
@@ -325,6 +345,7 @@ class WorkspaceIssueServiceTests(unittest.TestCase):
         self.assertEqual(result.position, 0)
         self.assertEqual(first_issue.position, 1)
         self.assertEqual(third_issue.position, 2)
+        log_activity.assert_not_called()
 
     def test_move_issue_rejects_unknown_target_status(self) -> None:
         db = MagicMock()

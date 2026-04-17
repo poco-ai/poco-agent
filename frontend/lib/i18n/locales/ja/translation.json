@@ -266,6 +266,7 @@
       "cancelled": "Assignment cancelled",
       "released": "Sandbox released",
       "actionFailed": "Action failed",
+      "issueMoveFailed": "Issue の移動に失敗しました",
       "issueDeleted": "Issue を削除しました",
       "issueDeleteFailed": "Issue の削除に失敗しました"
     }

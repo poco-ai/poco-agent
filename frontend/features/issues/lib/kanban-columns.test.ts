@@ -6,6 +6,8 @@ import {
   KANBAN_COLUMN_ORDER,
   buildKanbanColumns,
   getNextMobileKanbanStatus,
+  mergeMovedIssue,
+  moveKanbanIssue,
 } from "./kanban-columns.ts";
 
 function createIssue(overrides: Partial<WorkspaceIssue> = {}): WorkspaceIssue {
@@ -68,4 +70,85 @@ test("buildKanbanColumns keeps empty columns so the board canvas remains stable"
 test("getNextMobileKanbanStatus falls back to the first default column when selection is invalid", () => {
   assert.equal(getNextMobileKanbanStatus("blocked"), "todo");
   assert.equal(getNextMobileKanbanStatus("done"), "done");
+});
+
+test("moveKanbanIssue reorders issues within the same column", () => {
+  const nextIssues = moveKanbanIssue(
+    [
+      createIssue({ issue_id: "issue-1", status: "todo", position: 0 }),
+      createIssue({ issue_id: "issue-2", status: "todo", position: 1 }),
+      createIssue({ issue_id: "issue-3", status: "todo", position: 2 }),
+    ],
+    {
+      issueId: "issue-3",
+      status: "todo",
+      position: 0,
+    },
+  );
+
+  assert.deepEqual(
+    buildKanbanColumns(nextIssues)
+      .find((column) => column.status === "todo")
+      ?.issues.map((issue) => `${issue.issue_id}:${issue.position}`),
+    ["issue-3:0", "issue-1:1", "issue-2:2"],
+  );
+});
+
+test("moveKanbanIssue moves issues across columns and resequences both sides", () => {
+  const nextIssues = moveKanbanIssue(
+    [
+      createIssue({ issue_id: "issue-1", status: "todo", position: 0 }),
+      createIssue({ issue_id: "issue-2", status: "todo", position: 1 }),
+      createIssue({ issue_id: "issue-3", status: "done", position: 0 }),
+    ],
+    {
+      issueId: "issue-2",
+      status: "done",
+      position: 0,
+    },
+  );
+
+  assert.deepEqual(
+    buildKanbanColumns(nextIssues)
+      .find((column) => column.status === "todo")
+      ?.issues.map((issue) => `${issue.issue_id}:${issue.position}`),
+    ["issue-1:0"],
+  );
+  assert.deepEqual(
+    buildKanbanColumns(nextIssues)
+      .find((column) => column.status === "done")
+      ?.issues.map((issue) => `${issue.issue_id}:${issue.position}`),
+    ["issue-2:0", "issue-3:1"],
+  );
+});
+
+test("mergeMovedIssue keeps the optimistic order while refreshing the moved issue payload", () => {
+  const optimisticIssues = moveKanbanIssue(
+    [
+      createIssue({ issue_id: "issue-1", status: "todo", position: 0 }),
+      createIssue({ issue_id: "issue-2", status: "todo", position: 1 }),
+      createIssue({ issue_id: "issue-3", status: "done", position: 0 }),
+    ],
+    {
+      issueId: "issue-2",
+      status: "done",
+      position: 0,
+    },
+  );
+
+  const nextIssues = mergeMovedIssue(
+    optimisticIssues,
+    createIssue({
+      issue_id: "issue-2",
+      status: "done",
+      position: 0,
+      updated_at: "2026-04-16T10:30:00Z",
+      title: "Updated from server",
+    }),
+  );
+
+  const movedIssue = nextIssues.find((issue) => issue.issue_id === "issue-2");
+  assert.equal(movedIssue?.title, "Updated from server");
+  assert.equal(movedIssue?.status, "done");
+  assert.equal(movedIssue?.position, 0);
 });
