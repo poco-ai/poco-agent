@@ -17,6 +17,7 @@ from app.core.errors.exceptions import AppException
 from app.core.settings import Settings, get_settings
 from app.models.user import User
 from app.models.user_session import UserSession
+from app.schemas.auth import AuthConfigResponse, AuthProviderName, AuthProviderStatus
 from app.repositories.auth_identity_repository import AuthIdentityRepository
 from app.repositories.user_repository import UserRepository
 from app.repositories.user_session_repository import UserSessionRepository
@@ -24,6 +25,17 @@ from app.repositories.user_session_repository import UserSessionRepository
 GOOGLE_USERINFO_URL = "https://openidconnect.googleapis.com/v1/userinfo"
 GITHUB_USER_URL = "https://api.github.com/user"
 GITHUB_USER_EMAILS_URL = "https://api.github.com/user/emails"
+
+FEISHU_CN_AUTHORIZE_URL = "https://accounts.feishu.cn/open-apis/authen/v1/authorize"
+FEISHU_CN_TOKEN_URL = "https://open.feishu.cn/open-apis/authen/v2/oauth/token"
+FEISHU_CN_USERINFO_URL = "https://open.feishu.cn/open-apis/authen/v1/user_info"
+FEISHU_GLOBAL_AUTHORIZE_URL = (
+    "https://accounts.larksuite.com/open-apis/authen/v1/authorize"
+)
+FEISHU_GLOBAL_TOKEN_URL = "https://open.larksuite.com/open-apis/authen/v2/oauth/token"
+FEISHU_GLOBAL_USERINFO_URL = "https://open.larksuite.com/open-apis/authen/v1/user_info"
+
+SUPPORTED_AUTH_PROVIDERS: tuple[AuthProviderName, ...] = ("google", "github", "feishu")
 
 
 @dataclass(slots=True)
@@ -92,6 +104,61 @@ class AuthService:
             )
         return client
 
+    def get_configured_providers(self) -> list[AuthProviderName]:
+        settings = self._get_settings()
+        providers: list[AuthProviderName] = []
+        if (settings.google_client_id or "").strip() and (
+            settings.google_client_secret or ""
+        ).strip():
+            providers.append("google")
+        if (settings.github_client_id or "").strip() and (
+            settings.github_client_secret or ""
+        ).strip():
+            providers.append("github")
+        if (settings.feishu_oauth_client_id or "").strip() and (
+            settings.feishu_oauth_client_secret or ""
+        ).strip():
+            providers.append("feishu")
+        return providers
+
+    def is_single_user_mode_effective(self) -> bool:
+        """Return whether requests should resolve to the configured single user.
+
+        `oauth_optional` means:
+        - if at least one OAuth provider is configured, login is still required;
+        - if no providers are configured, the system falls back to single-user mode.
+        """
+        settings = self._get_settings()
+        if settings.auth_mode == "single_user":
+            return True
+        return (
+            settings.auth_mode == "oauth_optional"
+            and not self.get_configured_providers()
+        )
+
+    def is_login_required(self) -> bool:
+        return not self.is_single_user_mode_effective()
+
+    def is_setup_required(self) -> bool:
+        return self.is_login_required() and not self.get_configured_providers()
+
+    def get_auth_config(self) -> AuthConfigResponse:
+        configured_providers = self.get_configured_providers()
+        return AuthConfigResponse(
+            mode=self._get_settings().auth_mode,
+            login_required=self.is_login_required(),
+            single_user_effective=self.is_single_user_mode_effective(),
+            setup_required=self.is_setup_required(),
+            configured_providers=configured_providers,
+            providers=[
+                AuthProviderStatus(
+                    name=provider,
+                    enabled=provider in configured_providers,
+                )
+                for provider in SUPPORTED_AUTH_PROVIDERS
+            ],
+        )
+
     def _default_next_path(self) -> str:
         settings = self._get_settings()
         language = (settings.frontend_default_language or "en").strip() or "en"
@@ -143,6 +210,33 @@ class AuthService:
     def build_redirect_uri(self, provider: str) -> str:
         return self._frontend_url(f"/api/v1/auth/{provider}/callback")
 
+    def _get_feishu_oauth_urls(self) -> tuple[str, str, str]:
+        settings = self._get_settings()
+        if settings.feishu_oauth_region == "global":
+            authorize_url = FEISHU_GLOBAL_AUTHORIZE_URL
+            token_url = FEISHU_GLOBAL_TOKEN_URL
+            userinfo_url = FEISHU_GLOBAL_USERINFO_URL
+        else:
+            authorize_url = FEISHU_CN_AUTHORIZE_URL
+            token_url = FEISHU_CN_TOKEN_URL
+            userinfo_url = FEISHU_CN_USERINFO_URL
+        return (
+            settings.feishu_oauth_authorize_url or authorize_url,
+            settings.feishu_oauth_token_url or token_url,
+            settings.feishu_oauth_userinfo_url or userinfo_url,
+        )
+
+    def _get_feishu_oauth_credentials(self) -> tuple[str, str]:
+        settings = self._get_settings()
+        client_id = (settings.feishu_oauth_client_id or "").strip()
+        client_secret = (settings.feishu_oauth_client_secret or "").strip()
+        if not client_id or not client_secret:
+            raise AppException(
+                error_code=ErrorCode.BAD_REQUEST,
+                message="OAuth provider is not configured: feishu",
+            )
+        return client_id, client_secret
+
     def _build_session_expiry(self) -> datetime:
         ttl_days = max(1, self._get_settings().auth_session_ttl_days)
         return datetime.now(timezone.utc) + timedelta(days=ttl_days)
@@ -176,6 +270,13 @@ class AuthService:
         provider: str,
         next_path: str | None,
     ) -> Response:
+        if self.is_single_user_mode_effective():
+            return RedirectResponse(
+                url=self._frontend_url(self.normalize_next_path(next_path)),
+                status_code=302,
+            )
+        if provider == "feishu":
+            return self._start_feishu_login(request, next_path)
         try:
             client = self._get_client(provider)
         except AppException:
@@ -199,6 +300,39 @@ class AuthService:
             **authorize_kwargs,
         )
 
+    def _start_feishu_login(
+        self,
+        request: Request,
+        next_path: str | None,
+    ) -> RedirectResponse:
+        try:
+            client_id, _ = self._get_feishu_oauth_credentials()
+        except AppException:
+            return self._login_error_redirect(next_path, "provider_not_configured")
+
+        authorize_url, _, _ = self._get_feishu_oauth_urls()
+        normalized_next = self.normalize_next_path(next_path)
+        state = secrets.token_urlsafe(16)
+        request.session[self.oauth_session_key] = {
+            "provider": "feishu",
+            "next": normalized_next,
+            "state": state,
+        }
+
+        params = {
+            "client_id": client_id,
+            "redirect_uri": self.build_redirect_uri("feishu"),
+            "response_type": "code",
+            "state": state,
+        }
+        scope = self._get_settings().feishu_oauth_scope.strip()
+        if scope:
+            params["scope"] = scope
+        return RedirectResponse(
+            url=f"{authorize_url}?{urlencode(params)}",
+            status_code=302,
+        )
+
     async def handle_callback(
         self,
         request: Request,
@@ -209,10 +343,17 @@ class AuthService:
         next_path = oauth_state.get("next")
         if oauth_state.get("provider") != provider:
             return self._login_error_redirect(next_path, "invalid_oauth_state")
+        if provider == "feishu" and request.query_params.get(
+            "state"
+        ) != oauth_state.get("state"):
+            return self._login_error_redirect(next_path, "invalid_oauth_state")
 
         try:
-            client = self._get_client(provider)
-            token = await client.authorize_access_token(request)
+            if provider == "feishu":
+                token = await self._exchange_feishu_token(request)
+            else:
+                client = self._get_client(provider)
+                token = await client.authorize_access_token(request)
             profile = await self._fetch_provider_profile(provider, token)
             user = self._upsert_user(db, profile)
             session_token = self._create_user_session(db, user.id, request)
@@ -296,6 +437,8 @@ class AuthService:
             return await self._fetch_google_profile(token)
         if provider == "github":
             return await self._fetch_github_profile(token)
+        if provider == "feishu":
+            return await self._fetch_feishu_profile(token)
         raise AppException(
             error_code=ErrorCode.BAD_REQUEST,
             message=f"Unsupported OAuth provider: {provider}",
@@ -388,6 +531,144 @@ class AuthService:
             },
         )
 
+    @staticmethod
+    def _extract_nested_dict(payload: Any, key: str) -> dict[str, Any]:
+        if not isinstance(payload, dict):
+            return {}
+        value = payload.get(key)
+        return value if isinstance(value, dict) else {}
+
+    def _extract_feishu_access_token(self, payload: dict[str, Any]) -> str | None:
+        data = self._extract_nested_dict(payload, "data")
+        token = (
+            payload.get("access_token")
+            or payload.get("user_access_token")
+            or data.get("access_token")
+            or data.get("user_access_token")
+        )
+        value = str(token or "").strip()
+        return value or None
+
+    async def _exchange_feishu_token(self, request: Request) -> dict[str, Any]:
+        error = (request.query_params.get("error") or "").strip()
+        if error:
+            raise AppException(
+                error_code=ErrorCode.UNAUTHORIZED,
+                message=f"Feishu OAuth returned error: {error}",
+            )
+
+        code = (request.query_params.get("code") or "").strip()
+        if not code:
+            raise AppException(
+                error_code=ErrorCode.UNAUTHORIZED,
+                message="Feishu OAuth code is missing",
+            )
+
+        client_id, client_secret = self._get_feishu_oauth_credentials()
+        _, token_url, _ = self._get_feishu_oauth_urls()
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.post(
+                token_url,
+                json={
+                    "grant_type": "authorization_code",
+                    "client_id": client_id,
+                    "client_secret": client_secret,
+                    "code": code,
+                    "redirect_uri": self.build_redirect_uri("feishu"),
+                },
+                headers={"Content-Type": "application/json"},
+            )
+            response.raise_for_status()
+            payload = response.json()
+
+        if not isinstance(payload, dict):
+            raise AppException(
+                error_code=ErrorCode.UNAUTHORIZED,
+                message="Feishu OAuth token response is invalid",
+            )
+        if payload.get("code") not in (None, 0):
+            raise AppException(
+                error_code=ErrorCode.UNAUTHORIZED,
+                message=f"Feishu OAuth token request failed: {payload.get('msg')}",
+            )
+        if not self._extract_feishu_access_token(payload):
+            raise AppException(
+                error_code=ErrorCode.UNAUTHORIZED,
+                message="Feishu access token is missing",
+            )
+        return payload
+
+    def _extract_feishu_user_data(self, payload: Any) -> dict[str, Any]:
+        if not isinstance(payload, dict):
+            return {}
+        data = payload.get("data")
+        return data if isinstance(data, dict) else payload
+
+    async def _fetch_feishu_profile(self, token: dict[str, Any]) -> ProviderProfile:
+        access_token = self._extract_feishu_access_token(token)
+        if not access_token:
+            raise AppException(
+                error_code=ErrorCode.UNAUTHORIZED,
+                message="Feishu access token is missing",
+            )
+
+        _, _, userinfo_url = self._get_feishu_oauth_urls()
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.get(
+                userinfo_url,
+                headers={"Authorization": f"Bearer {access_token}"},
+            )
+            response.raise_for_status()
+            payload = response.json()
+
+        if isinstance(payload, dict) and payload.get("code") not in (None, 0):
+            raise AppException(
+                error_code=ErrorCode.UNAUTHORIZED,
+                message=f"Feishu user info request failed: {payload.get('msg')}",
+            )
+
+        data = self._extract_feishu_user_data(payload)
+        provider_user_id = (
+            str(data.get("union_id") or "").strip()
+            or str(data.get("open_id") or "").strip()
+            or str(data.get("user_id") or "").strip()
+            or str(data.get("sub") or "").strip()
+        )
+        if not provider_user_id:
+            raise AppException(
+                error_code=ErrorCode.UNAUTHORIZED,
+                message="Feishu user id is missing",
+            )
+
+        email = self.normalize_email(data.get("email"))
+        display_name = (
+            str(data.get("name") or "").strip()
+            or str(data.get("en_name") or "").strip()
+            or None
+        )
+        avatar_url = (
+            str(
+                data.get("avatar_url")
+                or data.get("avatar_big")
+                or data.get("avatar_middle")
+                or data.get("avatar_thumb")
+                or ""
+            ).strip()
+            or None
+        )
+
+        return ProviderProfile(
+            provider="feishu",
+            provider_user_id=provider_user_id,
+            email=email,
+            email_verified=bool(
+                email and self._get_settings().feishu_oauth_email_verified
+            ),
+            display_name=display_name,
+            avatar_url=avatar_url,
+            profile_json=payload if isinstance(payload, dict) else {"raw": payload},
+        )
+
     def _select_github_email(self, payload: Any) -> tuple[str | None, bool]:
         if not isinstance(payload, list):
             return None, False
@@ -421,6 +702,38 @@ class AuthService:
             self.hash_session_token(value),
             datetime.now(timezone.utc),
         )
+
+    def ensure_single_user(self, db: Session) -> User:
+        settings = self._get_settings()
+        single_user_id = settings.single_user_id.strip() or "default"
+        user = UserRepository.get_by_id(db, single_user_id)
+        display_name = settings.single_user_name.strip() or None
+
+        if user is None:
+            user = UserRepository.create(
+                db,
+                user_id=single_user_id,
+                primary_email=None,
+                display_name=display_name,
+                avatar_url=None,
+                status="active",
+            )
+            db.commit()
+            return user
+
+        updated = False
+        if user.display_name != display_name:
+            user.display_name = display_name
+            updated = True
+        if user.primary_email is not None:
+            user.primary_email = None
+            updated = True
+        if user.status != "active":
+            user.status = "active"
+            updated = True
+        if updated:
+            db.commit()
+        return user
 
     def logout(self, db: Session, session_token: str | None) -> None:
         if session_token is None or not session_token.strip():

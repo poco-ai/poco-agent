@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.core.deps import get_current_user, get_db
 from app.models.user import User
-from app.schemas.auth import CurrentUserResponse
+from app.schemas.auth import AuthConfigResponse, CurrentUserResponse
 from app.schemas.response import Response, ResponseSchema
 from app.services.auth_service import AuthService
 
@@ -39,6 +39,22 @@ async def login_with_github(
     return await service.start_login(request, "github", next_path)
 
 
+@router.get("/feishu/login")
+async def login_with_feishu(
+    request: Request,
+    next_path: str | None = Query(default=None, alias="next"),
+):
+    return await service.start_login(request, "feishu", next_path)
+
+
+@router.get("/config", response_model=ResponseSchema[AuthConfigResponse])
+async def get_auth_config() -> JSONResponse:
+    return Response.success(
+        data=service.get_auth_config(),
+        message="Auth config retrieved successfully",
+    )
+
+
 @router.get("/google/callback")
 async def google_callback(
     request: Request, db: Session = Depends(get_db)
@@ -51,6 +67,13 @@ async def github_callback(
     request: Request, db: Session = Depends(get_db)
 ) -> RedirectResponse:
     return await service.handle_callback(request, "github", db)
+
+
+@router.get("/feishu/callback")
+async def feishu_callback(
+    request: Request, db: Session = Depends(get_db)
+) -> RedirectResponse:
+    return await service.handle_callback(request, "feishu", db)
 
 
 @router.get("/me", response_model=ResponseSchema[CurrentUserResponse])

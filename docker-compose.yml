@@ -157,6 +157,10 @@ services:
       FEISHU_STREAM_ENABLED: ${FEISHU_STREAM_ENABLED:-true}
       FEISHU_APP_ID: ${FEISHU_APP_ID:-}
       FEISHU_APP_SECRET: ${FEISHU_APP_SECRET:-}
+      FEISHU_OAUTH_CLIENT_ID: ${FEISHU_OAUTH_CLIENT_ID:-}
+      FEISHU_OAUTH_CLIENT_SECRET: ${FEISHU_OAUTH_CLIENT_SECRET:-}
+      FEISHU_OAUTH_REGION: ${FEISHU_OAUTH_REGION:-cn}
+      FEISHU_OAUTH_SCOPE: ${FEISHU_OAUTH_SCOPE:-}
       FEISHU_VERIFICATION_TOKEN: ${FEISHU_VERIFICATION_TOKEN:-}
       FEISHU_BASE_URL: ${FEISHU_BASE_URL:-https://open.feishu.cn}
 
@@ -303,6 +307,7 @@ services:
     environment:
       # Runtime backend URL for the Next.js API proxy (/api/v1/* -> backend).
       BACKEND_URL: ${BACKEND_URL:-http://backend:8000}
+      FRONTEND_PUBLIC_URL: ${FRONTEND_PUBLIC_URL:-http://localhost:3000}
       NEXT_PUBLIC_AUTH_COOKIE_NAME: ${NEXT_PUBLIC_AUTH_COOKIE_NAME:-poco_session}
     ports:
       - "${FRONTEND_PORT:-3000}:3000"
