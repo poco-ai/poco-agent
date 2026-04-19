@@ -2320,14 +2320,31 @@
     "login": {
       "title": "Se connecter à Poco",
       "subtitle": "Utilisez Google ou GitHub pour continuer.",
+      "subtitleMultiple": "Utilisez un fournisseur de connexion disponible pour continuer.",
+      "subtitleGoogleOnly": "Utilisez Google pour continuer.",
+      "subtitleGithubOnly": "Utilisez GitHub pour continuer.",
+      "setupRequiredSubtitle": "Un administrateur doit configurer la connexion avant que ce déploiement puisse être utilisé.",
       "google": "Continuer avec Google",
       "github": "Continuer avec GitHub",
       "hint": "Nous utilisons une session de navigateur sécurisée pour vous garder connecté.",
+      "loading": "Vérification des méthodes de connexion disponibles...",
+      "setupRequiredTitle": "Configuration de connexion requise",
+      "setupRequiredDescription": "Ce déploiement nécessite une connexion OAuth avant utilisation. Demandez à un administrateur de configurer Google ou GitHub.",
+      "setupRequiredHint": "Configurez au moins un fournisseur de connexion, puis actualisez cette page.",
       "errors": {
         "default": "La connexion a échoué. Veuillez réessayer.",
+        "runtime_config_failed": "Impossible de charger la configuration de connexion. Veuillez actualiser la page et réessayer.",
         "provider_not_configured": "Ce fournisseur de connexion n’est pas encore configuré.",
         "invalid_oauth_state": "Votre session de connexion a expiré. Veuillez réessayer.",
         "oauth_failed": "Impossible de terminer la connexion. Veuillez réessayer."
+      },
+      "feishu": "Continuer avec Feishu/Lark",
+      "subtitleSingle": "Utilisez {{provider}} pour continuer.",
+      "noProviders": "Aucun fournisseur de connexion n’est disponible.",
+      "providers": {
+        "google": "Google",
+        "github": "GitHub",
+        "feishu": "Feishu/Lark"
       }
     }
   }

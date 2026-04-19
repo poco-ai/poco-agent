@@ -68,6 +68,9 @@ def get_current_user_id(
         if value:
             return value
 
+    if auth_service.is_single_user_mode_effective():
+        return auth_service.ensure_single_user(db).id
+
     raise HTTPException(status_code=401, detail="Authentication required")
 
 

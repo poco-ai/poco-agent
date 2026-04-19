@@ -1,3 +1,5 @@
+import type { AuthProvider } from "@/features/auth/model/types";
+
 export const AUTH_SESSION_COOKIE_NAME =
   process.env.NEXT_PUBLIC_AUTH_COOKIE_NAME || "poco_session";
 
@@ -35,7 +37,7 @@ export function buildSessionRecoveryPath(
 }
 
 export function buildProviderLoginPath(
-  provider: "google" | "github",
+  provider: AuthProvider,
   nextPath: string,
 ): string {
   const search = new URLSearchParams({ next: nextPath });

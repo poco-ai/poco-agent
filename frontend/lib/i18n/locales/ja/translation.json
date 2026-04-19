@@ -2320,14 +2320,31 @@
     "login": {
       "title": "Poco にサインイン",
       "subtitle": "Google または GitHub で続行します。",
+      "subtitleMultiple": "利用可能なサインイン方法で続行してください。",
+      "subtitleGoogleOnly": "Google で続行します。",
+      "subtitleGithubOnly": "GitHub で続行します。",
+      "setupRequiredSubtitle": "このデプロイを利用する前に、管理者がログイン設定を行う必要があります。",
       "google": "Google で続行",
       "github": "GitHub で続行",
       "hint": "安全なブラウザーセッションでログイン状態を維持します。",
+      "loading": "利用可能なサインイン方法を確認しています...",
+      "setupRequiredTitle": "ログイン設定が必要です",
+      "setupRequiredDescription": "このデプロイでは利用前に OAuth ログイン設定が必要です。管理者に Google または GitHub ログインの設定を依頼してください。",
+      "setupRequiredHint": "少なくとも 1 つのログイン方法を設定してから、このページを再読み込みしてください。",
       "errors": {
         "default": "サインインに失敗しました。もう一度お試しください。",
+        "runtime_config_failed": "サインイン設定を読み込めませんでした。ページを更新してもう一度お試しください。",
         "provider_not_configured": "このサインイン方法はまだ設定されていません。",
         "invalid_oauth_state": "サインインセッションの有効期限が切れました。もう一度お試しください。",
         "oauth_failed": "サインインを完了できませんでした。もう一度お試しください。"
+      },
+      "feishu": "Feishu/Lark で続行",
+      "subtitleSingle": "{{provider}} で続行します。",
+      "noProviders": "利用可能なサインイン方法がありません。",
+      "providers": {
+        "google": "Google",
+        "github": "GitHub",
+        "feishu": "Feishu/Lark"
       }
     }
   }

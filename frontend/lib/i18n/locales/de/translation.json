@@ -2320,14 +2320,31 @@
     "login": {
       "title": "Bei Poco anmelden",
       "subtitle": "Mit Google oder GitHub fortfahren.",
+      "subtitleMultiple": "Mit einem verfügbaren Anmeldeanbieter fortfahren.",
+      "subtitleGoogleOnly": "Mit Google fortfahren.",
+      "subtitleGithubOnly": "Mit GitHub fortfahren.",
+      "setupRequiredSubtitle": "Ein Administrator muss die Anmeldung konfigurieren, bevor diese Bereitstellung verwendet werden kann.",
       "google": "Mit Google fortfahren",
       "github": "Mit GitHub fortfahren",
       "hint": "Wir verwenden eine sichere Browser-Sitzung, damit Sie angemeldet bleiben.",
+      "loading": "Verfügbare Anmeldeoptionen werden geprüft...",
+      "setupRequiredTitle": "Anmeldekonfiguration erforderlich",
+      "setupRequiredDescription": "Diese Bereitstellung erfordert eine OAuth-Anmeldung vor der Nutzung. Bitten Sie einen Administrator, Google- oder GitHub-Login zu konfigurieren.",
+      "setupRequiredHint": "Konfigurieren Sie mindestens einen Anmeldeanbieter und laden Sie dann diese Seite neu.",
       "errors": {
         "default": "Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.",
+        "runtime_config_failed": "Anmeldekonfiguration konnte nicht geladen werden. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
         "provider_not_configured": "Dieser Anmeldeanbieter ist noch nicht konfiguriert.",
         "invalid_oauth_state": "Ihre Anmeldesitzung ist abgelaufen. Bitte versuchen Sie es erneut.",
         "oauth_failed": "Die Anmeldung konnte nicht abgeschlossen werden. Bitte versuchen Sie es erneut."
+      },
+      "feishu": "Mit Feishu/Lark fortfahren",
+      "subtitleSingle": "Mit {{provider}} fortfahren.",
+      "noProviders": "Es ist kein Anmeldeanbieter verfügbar.",
+      "providers": {
+        "google": "Google",
+        "github": "GitHub",
+        "feishu": "Feishu/Lark"
       }
     }
   }

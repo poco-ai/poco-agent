@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import { AlertCircle } from "lucide-react";
 
 import {
@@ -15,6 +16,8 @@ import {
   buildProviderLoginPath,
   normalizeNextPath,
 } from "@/features/auth/lib/paths";
+import { LoginPageRuntimeGuard } from "@/features/auth/components/login-page-runtime-guard";
+import type { AuthProvider } from "@/features/auth/model/types";
 
 interface LoginPageClientProps {
   lng: string;
@@ -53,6 +56,42 @@ function GoogleIcon() {
   );
 }
 
+function FeishuIcon() {
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABwAAAAbCAYAAABvCO8sAAABzUlEQVR4Ab2WA4xdURCGazsootq2gxpBbduNGlRRbZvRi2tFte12bducfV+SWd89ZznJf33nG11Um7B1ajURaeXWPreipXLsu1szYAGr69YNqRobqNlVlT0G2MfpbFxWlpVSM62B/gAHOsHWBH2X0f9eyhSv10Z9TIktH1Chu0L/SLXfj00iMKDlA6qdj/S2gRIc5bUFlh/a2eOZZmkJLD+Ua+yA9CsoqkQe5TL2lAG6fPuHHLv+MVcPn3tzb0EgsA2nRb54csbRCAynxcIa7nNJm3E3pcWIi0jqD7mQu95x/EVR4MpjIu3WmaH0iX4pqMaze9Jw9jUFoALQ6ZtuS1hUUvEZ9tokMmCryP33QjamfiqsCEhFxpQUcwSq9ro47lza2a9eOMI0u9U7Hml2JWeI2F56kGyLAol6xDIXTm2zMwOR7tNf7S1TiLP8MEPv7IH5wajb6ihpPPa+E0hhBKQBWgINAtxlkQdwnBcQx248yRCsfEADHLHNsGGVBkR6H5kxwUYgxjRyEw9/aUBcP3m3cH+pvxZkSklwZCXNyhlkAOYHEzFwSr30oIp9jpszMgMNXwqV0QzA9lJ19qyq/0tn6J830G2V/Oc9F1YOHN8DQeBeXjEAAAAASUVORK5CYII="
+      alt=""
+      className="size-5"
+      aria-hidden="true"
+    />
+  );
+}
+
+interface ProviderUiConfig {
+  labelKey: string;
+  icon: React.ComponentType;
+  variant: "default" | "outline";
+}
+
+const PROVIDER_UI_CONFIG: Record<AuthProvider, ProviderUiConfig> = {
+  google: {
+    labelKey: "auth.login.google",
+    icon: GoogleIcon,
+    variant: "default",
+  },
+  github: {
+    labelKey: "auth.login.github",
+    icon: GithubIcon,
+    variant: "outline",
+  },
+  feishu: {
+    labelKey: "auth.login.feishu",
+    icon: FeishuIcon,
+    variant: "outline",
+  },
+};
+
 export function LoginPageClient({
   lng,
   nextPath,
@@ -60,23 +99,64 @@ export function LoginPageClient({
 }: LoginPageClientProps) {
   const { t } = useT("translation");
   const targetPath = normalizeNextPath(nextPath, lng);
+  const [configuredProviders, setConfiguredProviders] = React.useState<
+    AuthProvider[] | null
+  >(null);
+  const [setupRequired, setSetupRequired] = React.useState(false);
+  const [runtimeError, setRuntimeError] = React.useState<string | null>(null);
 
   const errorMessage =
-    errorCode && errorCode !== ""
+    (runtimeError ? t("auth.login.errors.runtime_config_failed") : null) ??
+    (errorCode && errorCode !== ""
       ? t(`auth.login.errors.${errorCode}`, {
           defaultValue: t("auth.login.errors.default"),
         })
-      : null;
+      : null);
+  const isLoading = configuredProviders === null && !setupRequired;
+  const subtitle = setupRequired
+    ? t("auth.login.setupRequiredSubtitle")
+    : configuredProviders?.length === 1
+      ? t("auth.login.subtitleSingle", {
+          provider: t(`auth.login.providers.${configuredProviders[0]}`),
+        })
+      : t("auth.login.subtitleMultiple");
+
+  const handleResolved = React.useCallback(
+    ({
+      configuredProviders: nextProviders,
+      setupRequired,
+    }: {
+      configuredProviders: AuthProvider[];
+      setupRequired: boolean;
+    }) => {
+      setConfiguredProviders(nextProviders);
+      setSetupRequired(setupRequired);
+      setRuntimeError(null);
+    },
+    [],
+  );
+
+  const handleError = React.useCallback((message: string) => {
+    setConfiguredProviders([]);
+    setSetupRequired(false);
+    setRuntimeError(message);
+  }, []);
 
   return (
     <main className="flex min-h-dvh items-center justify-center bg-background px-4 py-10">
+      <LoginPageRuntimeGuard
+        nextPath={targetPath}
+        onResolved={handleResolved}
+        onError={handleError}
+      />
+
       <Card className="w-full max-w-md border-border/60 bg-card/95 shadow-lg">
         <CardHeader className="space-y-3 text-center">
           <CardTitle className="text-2xl font-semibold text-foreground">
             {t("auth.login.title")}
           </CardTitle>
           <CardDescription className="text-sm text-muted-foreground">
-            {t("auth.login.subtitle")}
+            {subtitle}
           </CardDescription>
         </CardHeader>
 
@@ -88,29 +168,57 @@ export function LoginPageClient({
             </div>
           ) : null}
 
-          <div className="grid gap-3">
-            <Button asChild size="lg" className="w-full gap-2">
-              <a href={buildProviderLoginPath("google", targetPath)}>
-                <GoogleIcon />
-                <span>{t("auth.login.google")}</span>
-              </a>
-            </Button>
+          {setupRequired ? (
+            <div className="rounded-xl border border-border/60 bg-muted/30 px-4 py-4 text-sm text-muted-foreground">
+              <p className="font-medium text-foreground">
+                {t("auth.login.setupRequiredTitle")}
+              </p>
+              <p className="mt-2">{t("auth.login.setupRequiredDescription")}</p>
+            </div>
+          ) : (
+            <div className="grid gap-3">
+              {isLoading ? (
+                <div className="rounded-xl border border-border/60 bg-muted/30 px-4 py-4 text-sm text-muted-foreground">
+                  {t("auth.login.loading")}
+                </div>
+              ) : null}
 
-            <Button
-              asChild
-              size="lg"
-              variant="outline"
-              className="w-full gap-2"
-            >
-              <a href={buildProviderLoginPath("github", targetPath)}>
-                <GithubIcon />
-                <span>{t("auth.login.github")}</span>
-              </a>
-            </Button>
-          </div>
+              {configuredProviders?.map((provider) => {
+                const config = PROVIDER_UI_CONFIG[provider];
+                const Icon = config.icon;
+                return (
+                  <Button
+                    key={provider}
+                    asChild
+                    size="lg"
+                    variant={config.variant}
+                    className="w-full gap-2"
+                  >
+                    <a href={buildProviderLoginPath(provider, targetPath)}>
+                      <Icon />
+                      <span>{t(config.labelKey)}</span>
+                    </a>
+                  </Button>
+                );
+              })}
+
+              {!isLoading && configuredProviders?.length === 0 ? (
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="w-full gap-2"
+                  disabled
+                >
+                  {t("auth.login.noProviders")}
+                </Button>
+              ) : null}
+            </div>
+          )}
 
           <p className="text-center text-xs leading-5 text-muted-foreground">
-            {t("auth.login.hint")}
+            {setupRequired
+              ? t("auth.login.setupRequiredHint")
+              : t("auth.login.hint")}
           </p>
         </CardContent>
       </Card>
