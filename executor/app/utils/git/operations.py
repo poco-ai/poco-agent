@@ -634,6 +634,7 @@ def log(
 def diff(
     file: str | None = None,
     cached: bool = False,
+    ref: str | None = None,
     cwd: str | Path | None = None,
     context_lines: int | None = None,
     name_only: bool = False,
@@ -644,6 +645,7 @@ def diff(
     Args:
         file: Specific file to diff
         cached: If True, show staged changes
+        ref: Optional ref to diff against (for example "HEAD")
         cwd: Working directory
         context_lines: Number of context lines
         name_only: If True, only show file names
@@ -658,19 +660,24 @@ def diff(
 
     if cached:
         args.append("--cached")
+    if ref:
+        args.append(ref)
     if context_lines:
         args.extend(["-U", str(context_lines)])
     if name_only:
         args.append("--name-only")
     if file:
-        args.append(file)
+        args.extend(["--", file])
 
     result = _run_git_command(args, cwd=cwd, check=False)
     return result.stdout
 
 
 def get_numstat(
-    cwd: str | Path | None = None, cached: bool = False
+    cwd: str | Path | None = None,
+    cached: bool = False,
+    ref: str | None = None,
+    file: str | None = None,
 ) -> dict[str, tuple[int, int]]:
     """
     Get the numstat for changed files (added and deleted lines per file).
@@ -678,6 +685,8 @@ def get_numstat(
     Args:
         cwd: Working directory
         cached: If True, get numstat for staged changes only
+        ref: Optional ref to diff against (for example "HEAD")
+        file: Optional file path to scope the diff
 
     Returns:
         dict: Mapping of file path to (added_lines, deleted_lines) tuple
@@ -688,6 +697,10 @@ def get_numstat(
     args = ["diff", "--numstat"]
     if cached:
         args.append("--cached")
+    if ref:
+        args.append(ref)
+    if file:
+        args.extend(["--", file])
 
     result = _run_git_command(args, cwd=cwd, check=True)
 
@@ -706,6 +719,42 @@ def get_numstat(
                 continue
 
     return numstat
+
+
+def get_numstat_total(
+    cwd: str | Path | None = None,
+    *,
+    cached: bool = False,
+    ref: str | None = None,
+    file: str | None = None,
+) -> tuple[int, int]:
+    """Get aggregated numstat totals for the current diff selection."""
+
+    args = ["diff", "--numstat"]
+    if cached:
+        args.append("--cached")
+    if ref:
+        args.append(ref)
+    if file:
+        args.extend(["--", file])
+
+    result = _run_git_command(args, cwd=cwd, check=True)
+
+    total_added = 0
+    total_deleted = 0
+    for line in result.stdout.strip().split("\n"):
+        if not line:
+            continue
+        parts = line.split("\t")
+        if len(parts) < 2:
+            continue
+        try:
+            total_added += int(parts[0]) if parts[0] != "-" else 0
+            total_deleted += int(parts[1]) if parts[1] != "-" else 0
+        except ValueError:
+            continue
+
+    return total_added, total_deleted
 
 
 def create_branch(

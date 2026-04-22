@@ -1,9 +1,10 @@
-import type { RunResponse } from "@/features/chat/types";
+import type { RunResponse } from "../../types/index.ts";
+import { countFileChanges } from "../../lib/run-record-utils.ts";
 
 export function hasRunArtifacts(run: RunResponse): boolean {
-  const fileChanges = run.state_patch?.workspace_state?.file_changes ?? [];
+  const fileChangeCount = getRunFileChangeCount(run);
   return (
-    fileChanges.length > 0 ||
+    fileChangeCount > 0 ||
     Boolean(
       run.workspace_manifest_key ||
       run.workspace_files_prefix ||
@@ -11,6 +12,21 @@ export function hasRunArtifacts(run: RunResponse): boolean {
       run.workspace_export_status === "ready",
     )
   );
+}
+
+export function getRunFileChangeCount(run: RunResponse): number {
+  const workspaceFileChangeCount =
+    run.state_patch?.workspace_state?.file_change_count;
+  if (typeof run.file_change_count === "number") {
+    return run.file_change_count;
+  }
+  if (
+    typeof workspaceFileChangeCount === "number" &&
+    workspaceFileChangeCount > 0
+  ) {
+    return workspaceFileChangeCount;
+  }
+  return countFileChanges(run.state_patch?.workspace_state?.file_changes ?? []);
 }
 
 export function buildActionHint(

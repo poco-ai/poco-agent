@@ -1,4 +1,4 @@
-import { API_ENDPOINTS, apiClient } from "@/services/api-client";
+import { API_ENDPOINTS, apiClient } from "../../../services/api-client.ts";
 import type { LocalFilesystemSupport } from "@/features/task-composer/types/local-filesystem";
 
 export const localFilesystemApi = {

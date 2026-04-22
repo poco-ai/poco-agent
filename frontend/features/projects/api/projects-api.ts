@@ -1,7 +1,7 @@
-import { apiClient, API_ENDPOINTS } from "@/services/api-client";
+import { apiClient, API_ENDPOINTS } from "../../../services/api-client.ts";
 import type { SessionResponse } from "@/features/chat/types";
 import type { LocalMountConfig } from "@/features/chat/types/api/session";
-import { userInputService } from "@/features/chat/api/user-input-api";
+import { userInputService } from "../../chat/api/user-input-api.ts";
 import type { ProjectItem, TaskHistoryItem } from "@/features/projects/types";
 
 interface ProjectApiResponse {

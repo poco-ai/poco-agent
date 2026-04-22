@@ -107,6 +107,24 @@ export function getBrowserStepLabel(execution: ToolExecutionResponse): string {
   return `${action}${meta}`;
 }
 
+export function getReplayFrameKind(
+  execution: ToolExecutionResponse,
+): "browser" | "terminal" | "tool" | null {
+  const toolName = execution.tool_name || "";
+  const normalizedToolName = normalizeToolName(toolName);
+
+  if (normalizedToolName === "bash") {
+    return "terminal";
+  }
+  if (toolName.startsWith(POCO_PLAYWRIGHT_MCP_PREFIX)) {
+    return "browser";
+  }
+  if (COMPUTER_GENERIC_TOOL_NAMES.has(normalizedToolName)) {
+    return "tool";
+  }
+  return null;
+}
+
 export function clampIndex(value: number, min: number, max: number): number {
   if (Number.isNaN(value)) return min;
   if (value < min) return min;

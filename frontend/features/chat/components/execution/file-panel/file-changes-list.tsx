@@ -5,6 +5,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useT } from "@/lib/i18n/client";
 import { FileChangeCard } from "./file-change-card";
 import type { FileChange } from "@/features/chat/types";
+import { dedupeFileChanges } from "@/features/chat/lib/run-record-utils";
 
 interface FileChangesListProps {
   fileChanges?: FileChange[];
@@ -46,14 +47,12 @@ function ArtifactsSummaryBar({ summary, t }: ArtifactsSummaryBarProps) {
         [container-type:inline-size]
       "
     >
-      {/* 左侧总计 */}
       <div className="flex shrink-0 items-center gap-2">
         <span className="text-muted-foreground">
           {t("artifacts.summary.total")}
         </span>
       </div>
 
-      {/* 右侧统计 */}
       <div className="flex flex-nowrap gap-2 min-w-0 overflow-hidden">
         {summary.added > 0 && (
           <Badge
@@ -120,11 +119,9 @@ function Badge({ value, label, prefix = "", color }: BadgeProps) {
         ${colorMap[color]}
       `}
     >
-      {/* 数字永远显示 */}
       {prefix}
       {value}
 
-      {/* 文字：当容器小于 360px 自动隐藏 */}
       <span
         className="
           ml-1
@@ -138,17 +135,18 @@ function Badge({ value, label, prefix = "", color }: BadgeProps) {
   );
 }
 
-/**
- * Enhanced scrollable list of file changes with summary
- */
 export function FileChangesList({
   fileChanges = [],
   sessionStatus,
   onFileClick,
 }: FileChangesListProps) {
   const { t } = useT("translation");
+  const normalizedFileChanges = React.useMemo(
+    () => dedupeFileChanges(fileChanges),
+    [fileChanges],
+  );
 
-  if (fileChanges.length === 0) {
+  if (normalizedFileChanges.length === 0) {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center text-muted-foreground">
@@ -158,7 +156,7 @@ export function FileChangesList({
     );
   }
 
-  const summary = fileChanges.reduce(
+  const summary = normalizedFileChanges.reduce(
     (acc, change) => {
       switch (change.status) {
         case "added":
@@ -184,7 +182,7 @@ export function FileChangesList({
       <ArtifactsSummaryBar summary={summary} t={t} />
       <ScrollArea className="flex-1 min-w-0 max-w-full overflow-hidden [&_[data-slot=scroll-area-viewport]]:overflow-x-hidden">
         <div className="w-full min-w-0 max-w-full px-4 py-4 space-y-3">
-          {fileChanges.map((change, index) => (
+          {normalizedFileChanges.map((change, index) => (
             <FileChangeCard
               key={`${change.path}-${index}`}
               change={change}

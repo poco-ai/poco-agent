@@ -5,7 +5,7 @@
  * with proper sorting (folders first, then alphabetical).
  */
 
-import type { FileNode } from "@/features/chat/types";
+import type { FileNode } from "../types/index.ts";
 
 // ---------------------------------------------------------------------------
 // Flatten

@@ -2,13 +2,14 @@
  * Base application error class with error codes
  */
 export class AppError extends Error {
-  constructor(
-    message: string,
-    public code: string,
-    public statusCode: number = 400,
-  ) {
+  code: string;
+  statusCode: number;
+
+  constructor(message: string, code: string, statusCode: number = 400) {
     super(message);
     this.name = "AppError";
+    this.code = code;
+    this.statusCode = statusCode;
     Error.captureStackTrace?.(this, AppError);
   }
 
@@ -36,13 +37,14 @@ export class NetworkError extends AppError {
  * API request errors
  */
 export class ApiError extends AppError {
-  constructor(
-    message: string,
-    public statusCode: number,
-    public details?: unknown,
-  ) {
+  statusCode: number;
+  details?: unknown;
+
+  constructor(message: string, statusCode: number, details?: unknown) {
     super(message, "API_ERROR", statusCode);
     this.name = "ApiError";
+    this.statusCode = statusCode;
+    this.details = details;
   }
 }
 
@@ -50,12 +52,12 @@ export class ApiError extends AppError {
  * Validation errors
  */
 export class ValidationError extends AppError {
-  constructor(
-    message: string,
-    public field?: string,
-  ) {
+  field?: string;
+
+  constructor(message: string, field?: string) {
     super(message, "VALIDATION_ERROR", 400);
     this.name = "ValidationError";
+    this.field = field;
   }
 }
 

@@ -581,6 +581,7 @@
       "openAll": "View all runs",
       "allRuns": "All runs",
       "sheetDescription": "Quickly switch replay and artifacts across different runs.",
+      "sheetHint": "Scroll vertically to browse and switch to earlier runs.",
       "current": "Current",
       "viewingHistory": "Viewing history Run {{number}}",
       "backToCurrent": "Back to current"
@@ -2001,9 +2002,9 @@
       "chat": "Conversation"
     },
     "preview": {
-      "executionSummary": "{{count}} file changes or replay steps",
+      "executionSummary": "Execution run with workspace activity",
       "conversationOnly": "Conversation-only turn",
-      "execution": "{{count}} file changes or replay steps",
+      "execution": "{{files}} file changes · {{steps}} replay steps",
       "duration": "Duration {{duration}}"
     }
   },

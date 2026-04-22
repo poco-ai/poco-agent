@@ -2,7 +2,12 @@
  * Global error handling utilities
  */
 
-import { AppError, NetworkError, ApiError, RateLimitError } from "./app-error";
+import {
+  AppError,
+  NetworkError,
+  ApiError,
+  RateLimitError,
+} from "./app-error.ts";
 
 /**
  * Parse API error response and create appropriate error

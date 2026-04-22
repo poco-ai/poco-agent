@@ -21,12 +21,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n/client";
-import { getRunToolExecutionsAction } from "@/features/chat/actions/query-actions";
+import { useRunRecordSummary } from "@/features/chat/hooks/use-run-record-summary";
 import {
   buildActionHint,
   formatDurationSeconds,
+  getRunFileChangeCount,
   getStatusTone,
-  hasRunArtifacts,
 } from "@/features/chat/components/layout/run-timeline-utils";
 
 interface MobileRunSheetProps {
@@ -49,55 +49,7 @@ export function MobileRunSheet({
   onFollowCurrentRun,
 }: MobileRunSheetProps) {
   const { t } = useT("translation");
-  const [runToolCounts, setRunToolCounts] = React.useState<
-    Record<string, number>
-  >({});
-
-  React.useEffect(() => {
-    if (!open) return;
-    let cancelled = false;
-
-    const unresolvedRuns = runs.filter((run) => {
-      if (hasRunArtifacts(run)) return false;
-      return runToolCounts[run.run_id] === undefined;
-    });
-    if (unresolvedRuns.length === 0) return;
-
-    const loadToolCounts = async () => {
-      const entries = await Promise.all(
-        unresolvedRuns.map(async (run) => {
-          try {
-            const items = await getRunToolExecutionsAction({
-              runId: run.run_id,
-              limit: 2000,
-              offset: 0,
-            });
-            return [run.run_id, items.length] as const;
-          } catch (error) {
-            console.error(
-              "[MobileRunSheet] Failed to load run tool counts:",
-              error,
-            );
-            return [run.run_id, 0] as const;
-          }
-        }),
-      );
-
-      if (cancelled) return;
-      setRunToolCounts((prev) => {
-        const next = { ...prev };
-        for (const [runId, toolCount] of entries) {
-          next[runId] = toolCount;
-        }
-        return next;
-      });
-    };
-
-    void loadToolCounts();
-    return () => {
-      cancelled = true;
-    };
-  }, [open, runToolCounts, runs]);
+  const runRecordSummaries = useRunRecordSummary(runs, open);
 
   const isViewingHistory = Boolean(
     selectedRunId && currentRunId && selectedRunId !== currentRunId,
@@ -106,7 +58,7 @@ export function MobileRunSheet({
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
-      <DrawerContent>
+      <DrawerContent className="!h-[85vh] !max-h-[85vh]">
         <DrawerHeader className="pb-2 text-left">
           <DrawerTitle>{t("mobile.runs.allRuns")}</DrawerTitle>
           <DrawerDescription>
@@ -131,28 +83,29 @@ export function MobileRunSheet({
           </div>
         ) : null}
 
-        <ScrollArea className="max-h-[70vh] px-2 pb-4">
-          <div className="space-y-1 px-2 pb-4">
+        {runs.length > 1 ? (
+          <div className="px-4 pb-2 text-xs text-muted-foreground">
+            {t("mobile.runs.sheetHint")}
+          </div>
+        ) : null}
+
+        <ScrollArea className="flex-1 min-h-0 px-2 pb-4">
+          <div className="space-y-2 px-2 pb-4">
             {orderedRuns.map((run) => {
               const isSelected = run.run_id === selectedRunId;
               const isCurrent = run.run_id === currentRunId;
-              const isActionNode = buildActionHint(
-                run,
-                (runToolCounts[run.run_id] ?? 0) > 0,
-              );
+              const recordSummary = runRecordSummaries[run.run_id];
+              const fileChangeCount =
+                recordSummary?.fileChangeCount ?? getRunFileChangeCount(run);
+              const replayStepCount = recordSummary?.replayStepCount ?? 0;
+              const isActionNode = buildActionHint(run, replayStepCount > 0);
               const statusTone = getStatusTone(run.status);
               const duration = formatDurationSeconds(run);
-              const fileChanges =
-                run.state_patch?.workspace_state?.file_changes?.length ?? 0;
-              const executionSummaryCount =
-                fileChanges + (runToolCounts[run.run_id] ?? 0);
               const summary = run.last_error
                 ? run.last_error
                 : run.state_patch?.current_step ||
                   (isActionNode
-                    ? t("runTimeline.preview.executionSummary", {
-                        count: executionSummaryCount,
-                      })
+                    ? t("runTimeline.preview.executionSummary")
                     : t("runTimeline.preview.conversationOnly"));
 
               return (
@@ -164,7 +117,7 @@ export function MobileRunSheet({
                     onOpenChange(false);
                   }}
                   className={cn(
-                    "flex w-full items-start gap-3 rounded-2xl border px-3 py-3 text-left transition-colors",
+                    "flex w-full flex-row items-start gap-3 rounded-2xl border px-3 py-3 text-left transition-colors",
                     isSelected
                       ? "border-primary/25 bg-primary/10"
                       : "border-border/60 bg-background hover:bg-muted/40",
@@ -227,9 +180,17 @@ export function MobileRunSheet({
                       </span>
                       <span className="rounded-full bg-muted px-2 py-0.5">
                         {isActionNode
-                          ? t("runTimeline.node.action")
+                          ? t("runTimeline.preview.execution", {
+                              files: fileChangeCount,
+                              steps: replayStepCount,
+                            })
                           : t("runTimeline.node.chat")}
                       </span>
+                      {isActionNode ? (
+                        <span className="rounded-full bg-muted px-2 py-0.5">
+                          {t("runTimeline.node.action")}
+                        </span>
+                      ) : null}
                       {duration ? (
                         <span className="rounded-full bg-muted px-2 py-0.5">
                           {t("runTimeline.preview.duration", {
