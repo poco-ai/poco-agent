@@ -111,7 +111,12 @@ def humanize_model_name(model_id: str) -> str:
     )
 
 
-def get_allowed_model_ids(settings: Settings | None = None) -> list[str]:
+def get_allowed_model_ids(
+    settings: Settings | None = None,
+    *,
+    default_model: str | None = None,
+    model_list: list[str] | None = None,
+) -> list[str]:
     active_settings = settings or get_settings()
     ordered: list[str] = []
     seen: set[str] = set()
@@ -129,8 +134,11 @@ def get_allowed_model_ids(settings: Settings | None = None) -> list[str]:
         seen.add(clean)
         ordered.append(clean)
 
-    push(active_settings.default_model)
-    for item in active_settings.model_list or []:
+    push(default_model if default_model is not None else active_settings.default_model)
+    source_model_list = (
+        model_list if model_list is not None else active_settings.model_list
+    )
+    for item in source_model_list or []:
         push(item)
 
     return ordered
@@ -163,9 +171,22 @@ class ModelConfigService:
     def get_model_config(self, db: Session, user_id: str) -> ModelConfigResponse:
         del user_id
 
+        system_env_values = self.env_var_service.get_system_env_map(db)
+        effective_default_model = (
+            system_env_values.get("DEFAULT_MODEL") or self.settings.default_model or ""
+        ).strip()
+        effective_model_list = self._parse_model_list(
+            system_env_values.get("MODEL_LIST"),
+            fallback=self.settings.model_list,
+        )
+
         models: list[ModelDefinitionResponse] = []
         provider_model_ids: dict[str, list[str]] = {}
-        for model_id in get_allowed_model_ids(self.settings):
+        for model_id in get_allowed_model_ids(
+            self.settings,
+            default_model=effective_default_model,
+            model_list=effective_model_list,
+        ):
             provider_id = infer_provider_id(model_id)
             if not provider_id:
                 continue
@@ -173,7 +194,6 @@ class ModelConfigService:
             provider_model_ids.setdefault(provider_id, []).append(model_id)
 
         providers: list[ModelProviderResponse] = []
-        system_env_values = self.env_var_service.get_system_env_map(db)
         for spec in PROVIDER_SPECS:
             selected_model_ids = provider_model_ids.get(spec.provider_id, [])
             if not selected_model_ids:
@@ -186,12 +206,22 @@ class ModelConfigService:
             providers.append(provider_state)
 
         return ModelConfigResponse(
-            default_model=(self.settings.default_model or "").strip(),
+            default_model=effective_default_model,
             model_list=[model.model_id for model in models],
             mem0_enabled=self.settings.mem0_enabled,
             models=models,
             providers=providers,
         )
+
+    @staticmethod
+    def _parse_model_list(raw_value: str | None, *, fallback: list[str]) -> list[str]:
+        if raw_value is None or not raw_value.strip():
+            return fallback
+        return [
+            item.strip()
+            for item in raw_value.replace("\n", ",").split(",")
+            if item.strip()
+        ]
 
     def _build_provider_response(
         self,

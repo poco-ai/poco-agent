@@ -90,6 +90,8 @@ class SkillService:
             owner_user_id=user_id,
             entry=request.entry or {},
             source={"kind": "manual"},
+            default_enabled=bool(request.default_enabled),
+            force_enabled=bool(request.force_enabled),
         )
 
         SkillRepository.create(db, skill)
@@ -110,7 +112,7 @@ class SkillService:
                 error_code=ErrorCode.SKILL_NOT_FOUND,
                 message=f"Skill not found: {skill_id}",
             )
-        if skill.scope == "system":
+        if skill.scope == "system" and user_id != "__system__":
             raise AppException(
                 error_code=ErrorCode.SKILL_MODIFY_FORBIDDEN,
                 message="Cannot modify system skills",
@@ -157,6 +159,10 @@ class SkillService:
             skill.description = target_description
         if request.entry is not None:
             skill.entry = request.entry
+        if request.default_enabled is not None:
+            skill.default_enabled = bool(request.default_enabled)
+        if request.force_enabled is not None:
+            skill.force_enabled = bool(request.force_enabled)
 
         db.commit()
         db.refresh(skill)
@@ -169,7 +175,7 @@ class SkillService:
                 error_code=ErrorCode.SKILL_NOT_FOUND,
                 message=f"Skill not found: {skill_id}",
             )
-        if skill.scope == "system":
+        if skill.scope == "system" and user_id != "__system__":
             raise AppException(
                 error_code=ErrorCode.SKILL_MODIFY_FORBIDDEN,
                 message="Cannot delete system skills",
@@ -371,6 +377,8 @@ class SkillService:
             source=SourceInfo.model_validate(source_dict),
             scope=skill.scope,
             owner_user_id=skill.owner_user_id,
+            default_enabled=bool(skill.default_enabled),
+            force_enabled=bool(skill.force_enabled),
             created_at=skill.created_at,
             updated_at=skill.updated_at,
         )

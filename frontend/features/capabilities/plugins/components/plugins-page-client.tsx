@@ -57,8 +57,22 @@ export function PluginsPageClient() {
   const handleBatchToggle = useCallback(
     async (enabled: boolean) => {
       try {
+        const targetInstalls = enabled
+          ? installs
+          : installs.filter((install) => {
+              const plugin = plugins.find(
+                (item) => item.id === install.plugin_id,
+              );
+              return !plugin?.force_enabled;
+            });
+        if (targetInstalls.length === 0) {
+          toast.message(
+            t("library.pluginsManager.toasts.noEligibleBatchToggle"),
+          );
+          return;
+        }
         await Promise.all(
-          installs.map((install) =>
+          targetInstalls.map((install) =>
             pluginsService.updateInstall(install.id, { enabled }),
           ),
         );
@@ -68,7 +82,7 @@ export function PluginsPageClient() {
         toast.error(t("library.pluginsManager.toasts.actionFailed"));
       }
     },
-    [installs, refresh, t],
+    [installs, plugins, refresh, t],
   );
 
   const toolbarSlot = (
@@ -98,6 +112,7 @@ export function PluginsPageClient() {
                 installs={installs}
                 loadingId={loadingId}
                 isLoading={isLoading}
+                displayMode="runtime"
                 onInstall={installPlugin}
                 onDeletePlugin={deletePlugin}
                 onToggleEnabled={setEnabled}

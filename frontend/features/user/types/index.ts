@@ -3,6 +3,7 @@ export interface UserProfile {
   email: string | null;
   displayName?: string | null;
   avatar?: string | null;
+  systemRole: "user" | "admin";
   plan: "free" | "pro" | "team";
   planName: string;
 }

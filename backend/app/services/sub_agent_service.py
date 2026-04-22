@@ -7,6 +7,7 @@ from app.core.errors.exceptions import AppException
 from app.models.sub_agent import SubAgent
 from app.repositories.sub_agent_repository import SubAgentRepository
 from app.schemas.sub_agent import (
+    SubAgentAdminResponse,
     SubAgentCreateRequest,
     SubAgentDefinition,
     SubAgentMode,
@@ -14,6 +15,7 @@ from app.schemas.sub_agent import (
     SubAgentResponse,
     SubAgentUpdateRequest,
 )
+from app.services.constants import SYSTEM_USER_ID
 from app.utils.markdown_front_matter import remove_model_from_yaml_front_matter
 
 
@@ -117,8 +119,16 @@ def _extract_raw_front_matter_name(raw_markdown: str) -> str | None:
 
 class SubAgentService:
     def list_subagents(self, db: Session, *, user_id: str) -> list[SubAgentResponse]:
-        items = SubAgentRepository.list_by_user(db, user_id=user_id)
+        items = SubAgentRepository.list_visible_by_user(
+            db, user_id=user_id, system_user_id=SYSTEM_USER_ID
+        )
         return [self._to_response(a) for a in items]
+
+    def list_subagents_for_admin(
+        self, db: Session, *, user_id: str
+    ) -> list[SubAgentAdminResponse]:
+        items = SubAgentRepository.list_by_user(db, user_id=user_id)
+        return [self._to_admin_response(a) for a in items]
 
     def get_subagent(
         self, db: Session, *, user_id: str, subagent_id: int
@@ -200,6 +210,11 @@ class SubAgentService:
             raise AppException(
                 error_code=ErrorCode.SUBAGENT_NOT_FOUND,
                 message=f"Subagent not found: {subagent_id}",
+            )
+        if item.user_id == SYSTEM_USER_ID and user_id != SYSTEM_USER_ID:
+            raise AppException(
+                error_code=ErrorCode.FORBIDDEN,
+                message="Cannot modify system subagents",
             )
 
         if (
@@ -284,6 +299,11 @@ class SubAgentService:
                 error_code=ErrorCode.SUBAGENT_NOT_FOUND,
                 message=f"Subagent not found: {subagent_id}",
             )
+        if item.user_id == SYSTEM_USER_ID and user_id != SYSTEM_USER_ID:
+            raise AppException(
+                error_code=ErrorCode.FORBIDDEN,
+                message="Cannot delete system subagents",
+            )
         SubAgentRepository.delete(db, item)
         db.commit()
 
@@ -295,10 +315,15 @@ class SubAgentService:
         subagent_ids: list[int] | None,
     ) -> SubAgentResolveResponse:
         if subagent_ids is None:
-            items = SubAgentRepository.list_enabled_by_user(db, user_id=user_id)
+            items = SubAgentRepository.list_enabled_visible_by_user(
+                db, user_id=user_id, system_user_id=SYSTEM_USER_ID
+            )
         elif subagent_ids:
-            items = SubAgentRepository.list_by_ids(
-                db, user_id=user_id, subagent_ids=subagent_ids
+            items = SubAgentRepository.list_visible_by_ids(
+                db,
+                user_id=user_id,
+                system_user_id=SYSTEM_USER_ID,
+                subagent_ids=subagent_ids,
             )
             by_id = {a.id: a for a in items}
             ordered: list[SubAgent] = []
@@ -348,6 +373,27 @@ class SubAgentService:
         if mode == "raw" and raw_markdown:
             raw_markdown = remove_model_from_yaml_front_matter(raw_markdown)
         return SubAgentResponse(
+            id=item.id,
+            user_id=item.user_id,
+            name=item.name,
+            enabled=bool(item.enabled),
+            mode=mode,
+            description=item.description,
+            prompt=item.prompt,
+            tools=_normalize_tools(item.tools),
+            model=None,
+            raw_markdown=raw_markdown,
+            created_at=item.created_at,
+            updated_at=item.updated_at,
+        )
+
+    @staticmethod
+    def _to_admin_response(item: SubAgent) -> SubAgentAdminResponse:
+        mode: SubAgentMode = "structured" if item.mode == "structured" else "raw"
+        raw_markdown = item.raw_markdown
+        if mode == "raw" and raw_markdown:
+            raw_markdown = remove_model_from_yaml_front_matter(raw_markdown)
+        return SubAgentAdminResponse(
             id=item.id,
             user_id=item.user_id,
             name=item.name,

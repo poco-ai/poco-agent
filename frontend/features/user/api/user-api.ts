@@ -7,6 +7,7 @@ interface CurrentUserApiResponse {
   email: string | null;
   display_name: string | null;
   avatar_url: string | null;
+  system_role: "user" | "admin";
   created_at: string;
 }
 
@@ -24,6 +25,7 @@ function mapUserProfile(payload: CurrentUserApiResponse): UserProfile {
     email: payload.email,
     displayName: payload.display_name,
     avatar: payload.avatar_url,
+    systemRole: payload.system_role,
     plan: "free",
     planName: "user.plan.free",
   };

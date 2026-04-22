@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 
 from app.api.v1 import (
+    admin,
     auth,
     attachments,
     audio,
@@ -56,6 +57,7 @@ from app.schemas.response import Response
 
 api_v1_router = APIRouter()
 api_v1_router.include_router(auth.router)
+api_v1_router.include_router(admin.router)
 api_v1_router.include_router(sessions.router)
 api_v1_router.include_router(session_queue.router)
 api_v1_router.include_router(tasks.router)

@@ -2030,6 +2030,8 @@
     "descriptionPlaceholder": "Например: поиск issues и pull request в GitHub",
     "descriptionRecommended": "Описание (рекомендуется)",
     "fullJsonConfig": "Полная конфигурация JSON",
+    "fullJsonConfigHint": "Вставьте конфигурацию MCP в стиле Claude, например {\"mcpServers\": {...}}",
+    "maskedJsonConfigHint": "Конфигурации системных MCP маскируются в режиме только для чтения.",
     "mcpName": "Имя MCP",
     "jsonConfig": "Полная конфигурация JSON",
     "invalidJson": "Неверная JSON-конфигурация",

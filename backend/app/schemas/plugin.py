@@ -12,6 +12,8 @@ class PluginCreateRequest(BaseModel):
     description: str | None = None
     version: str | None = None
     manifest: dict | None = None
+    default_enabled: bool | None = None
+    force_enabled: bool | None = None
 
 
 class PluginUpdateRequest(BaseModel):
@@ -21,6 +23,8 @@ class PluginUpdateRequest(BaseModel):
     description: str | None = None
     version: str | None = None
     manifest: dict | None = None
+    default_enabled: bool | None = None
+    force_enabled: bool | None = None
 
 
 class PluginResponse(BaseModel):
@@ -30,8 +34,28 @@ class PluginResponse(BaseModel):
     source: SourceInfo
     scope: str
     owner_user_id: str | None
+    default_enabled: bool
+    force_enabled: bool
     description: str | None = None
     version: str | None = None
     manifest: dict | None = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class PluginAdminResponse(BaseModel):
+    id: int
+    name: str
+    masked_entry: dict
+    masked_manifest: dict | None = None
+    entry_has_sensitive_data: bool
+    manifest_has_sensitive_data: bool
+    source: SourceInfo
+    scope: str
+    owner_user_id: str | None
+    default_enabled: bool
+    force_enabled: bool
+    description: str | None = None
+    version: str | None = None
     created_at: datetime
     updated_at: datetime

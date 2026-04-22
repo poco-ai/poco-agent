@@ -109,22 +109,22 @@ export function SlashCommandDialog({
     } as const;
 
     if (mode === "create") {
-      const created = await onCreate({
+      await onCreate({
         ...base,
         ...(commandMode === "raw"
           ? { raw_markdown: rawMarkdown }
           : { content }),
       });
-      if (created) onOpenChange(false);
+      onOpenChange(false);
       return;
     }
 
     if (!initialCommand) return;
-    const updated = await onUpdate(initialCommand.id, {
+    await onUpdate(initialCommand.id, {
       ...base,
       ...(commandMode === "raw" ? { raw_markdown: rawMarkdown } : { content }),
     });
-    if (updated) onOpenChange(false);
+    onOpenChange(false);
   };
 
   return (

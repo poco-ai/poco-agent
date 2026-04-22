@@ -53,6 +53,10 @@ class SubAgentResponse(BaseModel):
     updated_at: datetime
 
 
+class SubAgentAdminResponse(SubAgentResponse):
+    pass
+
+
 class SubAgentResolveRequest(BaseModel):
     subagent_ids: list[int] | None = None
 

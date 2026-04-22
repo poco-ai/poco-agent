@@ -7,6 +7,8 @@ export interface Plugin {
   source?: SourceInfo | null;
   scope: string;
   owner_user_id: string | null;
+  default_enabled: boolean;
+  force_enabled: boolean;
   description: string | null;
   version: string | null;
   manifest: Record<string, unknown> | null;
@@ -21,6 +23,8 @@ export interface PluginCreateInput {
   description?: string | null;
   version?: string | null;
   manifest?: Record<string, unknown> | null;
+  default_enabled?: boolean | null;
+  force_enabled?: boolean | null;
 }
 
 export interface PluginUpdateInput {
@@ -30,6 +34,8 @@ export interface PluginUpdateInput {
   description?: string | null;
   version?: string | null;
   manifest?: Record<string, unknown> | null;
+  default_enabled?: boolean | null;
+  force_enabled?: boolean | null;
 }
 
 export interface UserPluginInstall {
@@ -111,4 +117,22 @@ export interface PluginImportJobStatusResponse {
   updated_at: string | null;
   started_at: string | null;
   finished_at: string | null;
+}
+
+export interface PluginImportApi {
+  discover: (formData: FormData) => Promise<PluginImportDiscoverResponse>;
+  commit: (
+    input: PluginImportCommitInput,
+  ) => Promise<PluginImportCommitEnqueueResponse>;
+  getJob: (jobId: string) => Promise<PluginImportJobStatusResponse>;
+}
+
+export interface PluginImportServiceLike {
+  importDiscover?: (
+    formData: FormData,
+  ) => Promise<PluginImportDiscoverResponse>;
+  importCommit?: (
+    input: PluginImportCommitInput,
+  ) => Promise<PluginImportCommitEnqueueResponse>;
+  getImportJob?: (jobId: string) => Promise<PluginImportJobStatusResponse>;
 }

@@ -55,19 +55,30 @@ export function McpPageClient() {
   const handleBatchToggle = useCallback(
     async (enabled: boolean) => {
       try {
+        const targetInstalls = enabled
+          ? installs
+          : installs.filter((install) => {
+              const server = servers.find(
+                (item) => item.id === install.server_id,
+              );
+              return !server?.force_enabled;
+            });
+        if (targetInstalls.length === 0) {
+          toast.message(t("library.mcpLibrary.toasts.noEligibleBatchToggle"));
+          return;
+        }
         await Promise.all(
-          installs.map((install) =>
+          targetInstalls.map((install) =>
             mcpService.updateInstall(install.id, { enabled }),
           ),
         );
-        // Refresh the installs list
         refresh();
       } catch (error) {
         console.error("[McpPageClient] Failed to batch toggle:", error);
         toast.error(t("library.mcpLibrary.toasts.actionFailed"));
       }
     },
-    [installs, refresh, t],
+    [installs, refresh, servers, t],
   );
 
   const activeItem = useMemo(() => {
@@ -102,6 +113,7 @@ export function McpPageClient() {
                 installs={installs}
                 loadingId={loadingId}
                 isLoading={isLoading}
+                displayMode="runtime"
                 onToggleInstall={toggleInstall}
                 onDeleteServer={deleteServer}
                 onEditServer={(server) => setSelectedServer(server)}
@@ -120,6 +132,7 @@ export function McpPageClient() {
           item={activeItem}
           open={Boolean(activeItem || isCreating)}
           isNew={isCreating}
+          readOnly={Boolean(activeItem) && !isCreating}
           onClose={() => {
             setSelectedServer(null);
             setIsCreating(false);

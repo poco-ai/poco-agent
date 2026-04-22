@@ -17,6 +17,97 @@ import { useT } from "@/lib/i18n/client";
 import type { McpDisplayItem } from "@/features/capabilities/mcp/hooks/use-mcp-catalog";
 import { CapabilityDialogContent } from "@/features/capabilities/components/capability-dialog-content";
 
+const DEFAULT_MCP_CONFIG = `{
+  "mcpServers": {
+    "server-name": {
+      "command": "npx",
+      "args": ["-y", "your-mcp-server"],
+      "env": {}
+    }
+  }
+}`;
+
+const SENSITIVE_KEYWORDS = [
+  "secret",
+  "token",
+  "password",
+  "passwd",
+  "auth",
+  "bearer",
+  "credential",
+  "credentials",
+  "api_key",
+  "apikey",
+  "api-token",
+  "x-api-key",
+  "access_key",
+  "access_token",
+  "refresh_token",
+  "id_token",
+  "private_key",
+  "secret_key",
+  "app_secret",
+  "app_key",
+  "client_key",
+  "client_secret",
+  "authorization",
+  "sign",
+  "signature",
+  "signing_key",
+  "webhook_secret",
+  "session_key",
+  "session_token",
+  "license_key",
+  "connection_string",
+  "database_url",
+  "dsn",
+  "pat",
+];
+
+function normalizeKey(key: string): string {
+  const trimmed = key.trim();
+  if (!trimmed) return "";
+  return trimmed
+    .replace(/([a-z0-9])([A-Z])/g, "$1_$2")
+    .replace(/[^a-zA-Z0-9]+/g, "_")
+    .replace(/_+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .toLowerCase();
+}
+
+function looksSensitiveKey(key: string): boolean {
+  const normalized = normalizeKey(key);
+  return SENSITIVE_KEYWORDS.some((keyword) => normalized.includes(keyword));
+}
+
+function maskString(value: string): string {
+  const clean = value.trim();
+  if (!clean) return value;
+  if (clean.length <= 8) return "*".repeat(clean.length);
+  return `${clean.slice(0, 4)}...${clean.slice(-4)}`;
+}
+
+function maskSensitiveStructure(value: unknown, parentKey?: string): unknown {
+  if (Array.isArray(value)) {
+    return value.map((item) => maskSensitiveStructure(item, parentKey));
+  }
+
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, item]) => [
+        key,
+        maskSensitiveStructure(item, key),
+      ]),
+    );
+  }
+
+  if (typeof value === "string" && parentKey && looksSensitiveKey(parentKey)) {
+    return maskString(value);
+  }
+
+  return value;
+}
+
 type ValidationItem = {
   path: string;
   message: string;
@@ -59,6 +150,7 @@ interface McpSettingsDialogProps {
   item: McpDisplayItem | null;
   open: boolean;
   isNew?: boolean;
+  readOnly?: boolean;
   onClose: () => void;
   onSave: (payload: {
     serverId?: number;
@@ -72,6 +164,7 @@ export function McpSettingsDialog({
   item,
   open,
   isNew = false,
+  readOnly = false,
   onClose,
   onSave,
 }: McpSettingsDialogProps) {
@@ -87,19 +180,22 @@ export function McpSettingsDialog({
 
   React.useEffect(() => {
     if (item) {
-      const configObj = item.server.server_config || {};
+      const configObj =
+        readOnly && item.server.scope === "system"
+          ? maskSensitiveStructure(item.server.server_config || {})
+          : item.server.server_config || {};
       setJsonConfig(JSON.stringify(configObj, null, 2));
       setName(item.server.name || "");
       setDescription(item.server.description || "");
     } else if (isNew) {
-      setJsonConfig("{}");
+      setJsonConfig(DEFAULT_MCP_CONFIG);
       setName("");
       setDescription("");
     }
     setIsSaving(false);
     setSaveError(null);
     setValidationItems([]);
-  }, [item, isNew]);
+  }, [item, isNew, readOnly]);
 
   if (!item && !isNew) {
     return (
@@ -130,7 +226,7 @@ export function McpSettingsDialog({
             </Button>
             <Button
               className="w-full"
-              disabled={isSaving}
+              disabled={isSaving || readOnly}
               onClick={() => {
                 if (isSaving) return;
                 setSaveError(null);
@@ -144,6 +240,10 @@ export function McpSettingsDialog({
                     const trimmedDescription = description.trim();
                     if (isNew && !trimmedName) {
                       setSaveError(t("mcpSettings.nameRequired"));
+                      return;
+                    }
+                    if (readOnly) {
+                      onClose();
                       return;
                     }
                     await onSave({
@@ -184,7 +284,7 @@ export function McpSettingsDialog({
             </Label>
             <Input
               value={name}
-              disabled={!isNew}
+              disabled={!isNew || readOnly}
               onChange={(e) => {
                 setName(e.target.value);
                 if (saveError || validationItems.length > 0) {
@@ -202,6 +302,7 @@ export function McpSettingsDialog({
             </Label>
             <Input
               value={description}
+              disabled={readOnly}
               onChange={(e) => {
                 setDescription(e.target.value);
                 if (saveError || validationItems.length > 0) {
@@ -221,8 +322,20 @@ export function McpSettingsDialog({
             <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
               {t("mcpSettings.fullJsonConfig")}
             </Label>
+            <p className="text-xs text-muted-foreground">
+              {readOnly && item?.server.scope === "system"
+                ? t(
+                    "mcpSettings.maskedJsonConfigHint",
+                    "System MCP configs are masked in read-only view.",
+                  )
+                : t(
+                    "mcpSettings.fullJsonConfigHint",
+                    'Paste a Claude-style MCP config, e.g. {"mcpServers": {...}}',
+                  )}
+            </p>
             <Textarea
               value={jsonConfig}
+              disabled={readOnly}
               onChange={(e) => {
                 setJsonConfig(e.target.value);
                 if (saveError || validationItems.length > 0) {

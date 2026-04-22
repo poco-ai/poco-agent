@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { useT } from "@/lib/i18n/client";
 import { pluginsService } from "@/features/capabilities/plugins/api/plugins-api";
 import type {
+  PluginImportApi,
   PluginImportCandidate,
   PluginImportCommitResponse,
 } from "@/features/capabilities/plugins/types";
@@ -34,12 +35,14 @@ export interface PluginImportDialogProps {
   open: boolean;
   onClose: () => void;
   onImported?: () => void | Promise<void>;
+  importApi?: PluginImportApi;
 }
 
 export function PluginImportDialog({
   open,
   onClose,
   onImported,
+  importApi,
 }: PluginImportDialogProps) {
   const { t } = useT("translation");
   const [tab, setTab] = useState<SourceTab>("github");
@@ -59,6 +62,15 @@ export function PluginImportDialog({
   const [commitError, setCommitError] = useState<string | null>(null);
   const [commitResult, setCommitResult] =
     useState<PluginImportCommitResponse | null>(null);
+  const api = React.useMemo<PluginImportApi>(
+    () =>
+      importApi ?? {
+        discover: pluginsService.importDiscover,
+        commit: pluginsService.importCommit,
+        getJob: pluginsService.getImportJob,
+      },
+    [importApi],
+  );
 
   const isActiveRef = React.useRef(true);
   React.useEffect(() => {
@@ -156,7 +168,7 @@ export function PluginImportDialog({
         formData.append("github_url", url);
       }
 
-      const resp = await pluginsService.importDiscover(formData);
+      const resp = await api.discover(formData);
       setArchiveKey(resp.archive_key);
       setCandidates(resp.candidates || []);
       setCandidatePage(1);
@@ -198,7 +210,7 @@ export function PluginImportDialog({
         })),
       };
 
-      const enqueue = await pluginsService.importCommit(payload);
+      const enqueue = await api.commit(payload);
 
       const startedAt = Date.now();
       let finalError: string | null = null;
@@ -206,7 +218,7 @@ export function PluginImportDialog({
       while (true) {
         if (!isActiveRef.current) return;
 
-        const job = await pluginsService.getImportJob(enqueue.job_id);
+        const job = await api.getJob(enqueue.job_id);
         if (!isActiveRef.current) return;
 
         setCommitProgress(typeof job.progress === "number" ? job.progress : 0);

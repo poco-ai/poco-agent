@@ -1,4 +1,4 @@
-from sqlalchemy import JSON, String, UniqueConstraint
+from sqlalchemy import Boolean, JSON, String, UniqueConstraint, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base, TimestampMixin
@@ -13,6 +13,18 @@ class McpServer(Base, TimestampMixin):
     scope: Mapped[str] = mapped_column(String(20), default="user", nullable=False)
     owner_user_id: Mapped[str] = mapped_column(String(255), nullable=False)
     server_config: Mapped[dict] = mapped_column(JSON, nullable=False)
+    default_enabled: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default=text("false"),
+    )
+    force_enabled: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default=text("false"),
+    )
 
     __table_args__ = (
         UniqueConstraint("name", "owner_user_id", name="uq_mcp_server_name_owner"),

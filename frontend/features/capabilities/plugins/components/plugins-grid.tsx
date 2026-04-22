@@ -21,6 +21,7 @@ interface PluginsGridProps {
   installs: UserPluginInstall[];
   loadingId?: number | null;
   isLoading?: boolean;
+  displayMode?: "personal" | "runtime" | "admin";
   onInstall?: (pluginId: number) => void;
   onDeletePlugin?: (pluginId: number) => void;
   onToggleEnabled?: (installId: number, enabled: boolean) => void;
@@ -35,6 +36,7 @@ export function PluginsGrid({
   installs,
   loadingId,
   isLoading = false,
+  displayMode = "personal",
   onInstall,
   onDeletePlugin,
   onToggleEnabled,
@@ -56,6 +58,15 @@ export function PluginsGrid({
   }, [installs]);
 
   const enabledCount = installs.filter((i) => i.enabled).length;
+  const visiblePlugins = React.useMemo(() => {
+    if (displayMode === "admin") {
+      return plugins.filter((plugin) => plugin.scope === "system");
+    }
+    if (displayMode === "personal") {
+      return plugins.filter((plugin) => plugin.scope !== "system");
+    }
+    return plugins;
+  }, [displayMode, plugins]);
 
   return (
     <div className="space-y-6">
@@ -88,15 +99,15 @@ export function PluginsGrid({
           />
         ) : null}
 
-        {isLoading && plugins.length === 0 ? (
+        {isLoading && visiblePlugins.length === 0 ? (
           <SkeletonShimmer count={5} itemClassName="min-h-[72px]" gap="md" />
-        ) : !isLoading && plugins.length === 0 ? (
+        ) : !isLoading && visiblePlugins.length === 0 ? (
           <div className="rounded-xl border border-border/50 bg-muted/10 px-4 py-6 text-sm text-muted-foreground text-center">
             {t("library.pluginsManager.empty")}
           </div>
         ) : (
           <StaggeredList
-            items={plugins}
+            items={visiblePlugins}
             show={!isLoading}
             keyExtractor={(plugin) => plugin.id}
             staggerDelay={50}
@@ -145,6 +156,16 @@ export function PluginsGrid({
                           ? t("library.pluginsManager.scope.system")
                           : t("library.pluginsManager.scope.user")}
                       </Badge>
+                      {plugin.default_enabled && !plugin.force_enabled ? (
+                        <Badge variant="secondary" className="text-xs">
+                          {t("common.default")}
+                        </Badge>
+                      ) : null}
+                      {plugin.force_enabled ? (
+                        <Badge variant="destructive" className="text-xs">
+                          {t("common.forced")}
+                        </Badge>
+                      ) : null}
                     </div>
                     {plugin.description && (
                       <p className="text-xs text-muted-foreground mt-1 truncate">
@@ -167,13 +188,15 @@ export function PluginsGrid({
                           <Trash2 className="size-4" />
                         </Button>
                       )}
-                      <Switch
-                        checked={install.enabled}
-                        disabled={isRowLoading}
-                        onCheckedChange={(enabled) =>
-                          onToggleEnabled?.(install.id, enabled)
-                        }
-                      />
+                      {displayMode === "admin" ? null : (
+                        <Switch
+                          checked={install.enabled}
+                          disabled={isRowLoading || plugin.force_enabled}
+                          onCheckedChange={(enabled) =>
+                            onToggleEnabled?.(install.id, enabled)
+                          }
+                        />
+                      )}
                     </div>
                   ) : (
                     <div className="flex items-center gap-2">
@@ -182,7 +205,9 @@ export function PluginsGrid({
                         disabled={isRowLoading}
                         onClick={() => onInstall?.(plugin.id)}
                       >
-                        {t("library.pluginsManager.actions.install")}
+                        {plugin.default_enabled || plugin.force_enabled
+                          ? t("common.enabled")
+                          : t("library.pluginsManager.actions.install")}
                       </Button>
                       {plugin.scope === "user" && (
                         <Button
