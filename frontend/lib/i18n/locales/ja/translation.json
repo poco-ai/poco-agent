@@ -576,7 +576,16 @@
     "chat": "チャット",
     "computer": "コンピューター",
     "artifacts": "アーティファクト",
-    "status": "ステータス"
+    "status": "ステータス",
+    "runs": {
+      "openAll": "すべての Run を表示",
+      "allRuns": "すべての Run",
+      "sheetDescription": "異なる Run のリプレイと成果物をすばやく切り替えます。",
+      "sheetHint": "上下にスクロールして以前の Run を表示・切り替えできます。",
+      "current": "現在",
+      "viewingHistory": "履歴 Run {{number}} を表示中",
+      "backToCurrent": "現在の Run に戻る"
+    }
   },
   "computer": {
     "title": "Pocoコンピューター",
@@ -627,6 +636,20 @@
       "running": "実行中...",
       "exitCode": "終了コード {{code}}",
       "killed": "タイムアウトにより終了しました"
+    }
+  },
+  "runTimeline": {
+    "runLabel": "Run {{number}}",
+    "selectRun": "Run {{number}} を選択",
+    "node": {
+      "action": "実行",
+      "chat": "会話"
+    },
+    "preview": {
+      "executionSummary": "ワークスペース操作を含む実行 Run",
+      "conversationOnly": "会話のみのターン",
+      "execution": "{{files}} 件のファイル変更 · {{steps}} 件のリプレイ手順",
+      "duration": "所要時間 {{duration}}"
     }
   },
   "artifacts": {

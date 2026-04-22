@@ -1,12 +1,12 @@
-import { createSessionAction } from "@/features/chat/actions/session-actions";
-import type { TaskConfig } from "@/features/chat/types/api/session";
-import { normalizeModelSelection } from "@/features/chat/lib/model-catalog";
-import { scheduledTasksService } from "@/features/scheduled-tasks/api/scheduled-tasks-api";
+import { createSessionAction } from "../../chat/actions/session-actions.ts";
+import type { TaskConfig } from "../../chat/types/api/session.ts";
+import { normalizeModelSelection } from "../../chat/lib/model-catalog.ts";
+import { scheduledTasksService } from "../../scheduled-tasks/api/scheduled-tasks-api.ts";
 import type {
   TaskSubmitContext,
   TaskSubmitInput,
   TaskSubmitResult,
-} from "@/features/task-composer/types";
+} from "../types/index.ts";
 
 const DEFAULT_BRANCH = "main";
 const DEFAULT_CRON = "*/5 * * * *";

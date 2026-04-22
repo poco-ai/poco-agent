@@ -576,7 +576,16 @@
     "chat": "Chat",
     "computer": "Computer",
     "artifacts": "Artefakte",
-    "status": "Status"
+    "status": "Status",
+    "runs": {
+      "openAll": "Alle Runs anzeigen",
+      "allRuns": "Alle Runs",
+      "sheetDescription": "Wechsle schnell zwischen Replays und Artefakten verschiedener Runs.",
+      "sheetHint": "Scrolle vertikal, um frühere Runs zu durchsuchen und auszuwählen.",
+      "current": "Aktuell",
+      "viewingHistory": "Verlauf: Run {{number}}",
+      "backToCurrent": "Zurück zum aktuellen"
+    }
   },
   "computer": {
     "title": "Poco-Computer",
@@ -627,6 +636,20 @@
       "running": "Läuft...",
       "exitCode": "Exit-Code {{code}}",
       "killed": "Durch Timeout beendet"
+    }
+  },
+  "runTimeline": {
+    "runLabel": "Run {{number}}",
+    "selectRun": "Run {{number}} auswählen",
+    "node": {
+      "action": "Ausführung",
+      "chat": "Konversation"
+    },
+    "preview": {
+      "executionSummary": "Ausführungs-Run mit Workspace-Aktivität",
+      "conversationOnly": "Nur-Konversationsdurchlauf",
+      "execution": "{{files}} Dateiänderungen · {{steps}} Replay-Schritte",
+      "duration": "Dauer {{duration}}"
     }
   },
   "artifacts": {

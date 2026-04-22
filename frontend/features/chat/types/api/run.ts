@@ -45,6 +45,8 @@ export interface RunResponse {
   workspace_archive_key?: string | null;
   workspace_export_status?: string | null;
   usage?: UsageResponse | null;
+  replay_step_count?: number;
+  file_change_count?: number;
   claimed_by: string | null;
   lease_expires_at: string | null;
   attempts: number;

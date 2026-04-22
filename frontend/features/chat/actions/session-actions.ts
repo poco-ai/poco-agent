@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { chatService } from "@/features/chat/api/chat-api";
+import { chatService } from "../api/chat-api.ts";
 
 const VALIDATION_ERRORS = {
   taskContentRequired: "validation.taskContentRequired",

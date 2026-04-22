@@ -1,4 +1,4 @@
-import { apiClient, API_ENDPOINTS } from "@/services/api-client";
+import { apiClient, API_ENDPOINTS } from "../../../services/api-client.ts";
 import type {
   UserInputRequest,
   UserInputAnswerRequest,

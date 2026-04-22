@@ -35,6 +35,7 @@ export interface WorkspaceState {
   branch?: string | null;
   total_added_lines?: number;
   total_deleted_lines?: number;
+  file_change_count?: number;
   file_changes?: FileChange[];
   last_change: string; // ISO datetime
 }

@@ -581,6 +581,7 @@
       "openAll": "查看全部 Run",
       "allRuns": "全部 Run",
       "sheetDescription": "快速切换查看不同运行轮次的回放与产物。",
+      "sheetHint": "上下滑动可浏览并切换更早的运行记录。",
       "current": "当前",
       "viewingHistory": "正在查看历史 Run {{number}}",
       "backToCurrent": "回到当前"
@@ -2001,9 +2002,9 @@
       "chat": "对话型"
     },
     "preview": {
-      "executionSummary": "{{count}} 个文件变更或回放步骤",
+      "executionSummary": "包含工作区活动的执行轮次",
       "conversationOnly": "纯对话轮次",
-      "execution": "{{count}} 个文件变更或回放步骤",
+      "execution": "{{files}} 个文件变更 · {{steps}} 个回放步骤",
       "duration": "耗时 {{duration}}"
     }
   },

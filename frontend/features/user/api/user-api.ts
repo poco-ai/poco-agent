@@ -1,5 +1,5 @@
-import { ApiError } from "@/lib/errors";
-import { API_ENDPOINTS, apiClient } from "@/services/api-client";
+import { ApiError } from "../../../lib/errors/index.ts";
+import { API_ENDPOINTS, apiClient } from "../../../services/api-client.ts";
 import type { UserCredits, UserProfile } from "@/features/user/types";
 
 interface CurrentUserApiResponse {

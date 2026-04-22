@@ -10,7 +10,7 @@ import type {
   MessageBlock,
   InputFile,
   ConfigSnapshot,
-} from "@/features/chat/types";
+} from "../types/index.ts";
 
 // ---------------------------------------------------------------------------
 // Internal types

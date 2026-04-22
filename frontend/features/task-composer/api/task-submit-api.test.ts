@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { submitScheduledTask } from "./task-submit-api.ts";
-import { scheduledTasksService } from "@/features/scheduled-tasks/api/scheduled-tasks-api";
+import { scheduledTasksService } from "../../scheduled-tasks/api/scheduled-tasks-api.ts";
 
 test("submitScheduledTask preserves false capability overrides in config", async () => {
   const originalCreate = scheduledTasksService.create;

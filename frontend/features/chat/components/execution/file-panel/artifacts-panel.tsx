@@ -14,6 +14,7 @@ import { useT } from "@/lib/i18n/client";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { chatService } from "@/features/chat/api/chat-api";
+import { countFileChanges } from "@/features/chat/lib/run-record-utils";
 
 interface ArtifactsPanelProps {
   fileChanges?: FileChange[];
@@ -113,7 +114,7 @@ export function ArtifactsPanel({
       );
     }
 
-    if (fileChanges.length === 0) {
+    if (countFileChanges(fileChanges) === 0) {
       return (
         <ArtifactsEmpty
           legacySessionArtifactsAvailable={legacySessionArtifactsAvailable}

@@ -1,4 +1,4 @@
-import { ApiError } from "@/lib/errors";
+import { ApiError } from "../lib/errors/index.ts";
 import type { ApiResponse } from "@/types";
 
 // ---------------------------------------------------------------------------

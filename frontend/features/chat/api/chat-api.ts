@@ -9,7 +9,7 @@
  * - `../services/file-tree-builder.ts` - flat file list -> hierarchical tree
  */
 
-import { apiClient, API_ENDPOINTS } from "@/services/api-client";
+import { apiClient, API_ENDPOINTS } from "../../../services/api-client.ts";
 import type {
   ComputerBrowserScreenshotResponse,
   ExecutionSession,
@@ -43,8 +43,8 @@ import {
   parseMessages,
   parseConfigSnapshot,
   type RawApiMessage,
-} from "../services/message-parser";
-import { buildFileTree } from "../services/file-tree-builder";
+} from "../services/message-parser.ts";
+import { buildFileTree } from "../services/file-tree-builder.ts";
 
 function buildQuery(params?: Record<string, string | number | undefined>) {
   if (!params) return "";

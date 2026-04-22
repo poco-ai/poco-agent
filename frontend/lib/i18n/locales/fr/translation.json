@@ -576,7 +576,16 @@
     "chat": "Chat",
     "computer": "Ordinateur",
     "artifacts": "Artefacts",
-    "status": "Statut"
+    "status": "Statut",
+    "runs": {
+      "openAll": "Voir tous les runs",
+      "allRuns": "Tous les runs",
+      "sheetDescription": "Basculez rapidement entre les relectures et les artefacts de différents runs.",
+      "sheetHint": "Faites défiler verticalement pour parcourir et choisir les runs précédents.",
+      "current": "Actuel",
+      "viewingHistory": "Historique : Run {{number}}",
+      "backToCurrent": "Retour au run actuel"
+    }
   },
   "computer": {
     "title": "Ordinateur Poco",
@@ -627,6 +636,20 @@
       "running": "Exécution...",
       "exitCode": "Code de sortie {{code}}",
       "killed": "Tué par timeout"
+    }
+  },
+  "runTimeline": {
+    "runLabel": "Run {{number}}",
+    "selectRun": "Sélectionner le run {{number}}",
+    "node": {
+      "action": "Exécution",
+      "chat": "Conversation"
+    },
+    "preview": {
+      "executionSummary": "Run d’exécution avec activité d’espace de travail",
+      "conversationOnly": "Tour conversationnel uniquement",
+      "execution": "{{files}} modifications de fichiers · {{steps}} étapes de relecture",
+      "duration": "Durée {{duration}}"
     }
   },
   "artifacts": {

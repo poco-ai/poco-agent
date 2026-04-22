@@ -8,6 +8,7 @@ from app.core.errors.exceptions import AppException
 from app.repositories.message_repository import MessageRepository
 from app.repositories.run_repository import RunRepository
 from app.repositories.session_repository import SessionRepository
+from app.repositories.tool_execution_repository import ToolExecutionRepository
 from app.schemas.run import (
     RunClaimRequest,
     RunClaimResponse,
@@ -24,6 +25,17 @@ run_lifecycle_service = RunLifecycleService()
 
 class RunService:
     """Service layer for run queue operations."""
+
+    @staticmethod
+    def _resolve_file_change_count(run: RunResponse) -> int:
+        workspace_state = run.state_patch.workspace_state if run.state_patch else None
+        if workspace_state is None:
+            return 0
+        if workspace_state.file_change_count > 0:
+            return workspace_state.file_change_count
+        return len(
+            {change.path for change in workspace_state.file_changes if change.path}
+        )
 
     def _extract_prompt_from_message(self, message_content: object) -> str | None:
         if not isinstance(message_content, dict):
@@ -51,6 +63,10 @@ class RunService:
             )
         run = RunResponse.model_validate(db_run)
         run.usage = usage_service.get_usage_summary_by_run(db, run_id)
+        run.replay_step_count = ToolExecutionRepository.count_by_run_ids(
+            db, [run_id]
+        ).get(run_id, 0)
+        run.file_change_count = self._resolve_file_change_count(run)
         return run
 
     def list_runs(
@@ -65,8 +81,13 @@ class RunService:
         usage_by_run_id = usage_service.get_usage_summaries_by_run_ids(
             db, [r.id for r in runs]
         )
+        replay_counts_by_run_id = ToolExecutionRepository.count_by_run_ids(
+            db, [r.id for r in runs]
+        )
         for item in responses:
             item.usage = usage_by_run_id.get(item.run_id)
+            item.replay_step_count = replay_counts_by_run_id.get(item.run_id, 0)
+            item.file_change_count = self._resolve_file_change_count(item)
         return responses
 
     def claim_next_run(

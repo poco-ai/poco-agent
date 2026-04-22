@@ -38,6 +38,7 @@ class WorkspaceState(BaseModel):
     branch: str | None = None
     total_added_lines: int = 0
     total_deleted_lines: int = 0
+    file_change_count: int = 0
     file_changes: list[FileChange] = Field(default_factory=list)
     last_change: datetime
 

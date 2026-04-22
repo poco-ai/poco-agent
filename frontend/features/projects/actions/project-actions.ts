@@ -1,8 +1,5 @@
 import { z } from "zod";
-import {
-  projectsService,
-  tasksService,
-} from "@/features/projects/api/projects-api";
+import { projectsService, tasksService } from "../api/projects-api.ts";
 
 // Validation error messages - these will be replaced with proper i18n when the action is called
 // The actual error messages will come from the translation file

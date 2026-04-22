@@ -41,12 +41,11 @@ import { GenericToolViewer } from "./generic-tool-viewer";
 import { TerminalViewer } from "./terminal-viewer";
 import {
   clampIndex,
-  COMPUTER_GENERIC_TOOL_NAMES,
   getBrowserStepLabel,
   getFrameAdvanceDelayMs,
   getGenericToolSummary,
+  getReplayFrameKind,
   normalizeToolName,
-  POCO_PLAYWRIGHT_MCP_PREFIX,
   truncateMiddle,
 } from "@/features/chat/components/execution/computer-panel/replay/replay-utils";
 
@@ -174,9 +173,9 @@ export function ComputerPanel({
     const frames: ReplayFrame[] = [];
     for (const e of executions) {
       const toolName = e.tool_name || "";
-      const normalizedToolName = normalizeToolName(toolName);
+      const frameKind = getReplayFrameKind(e);
 
-      if (normalizedToolName === "bash") {
+      if (frameKind === "terminal") {
         const cmd =
           typeof e.tool_input?.["command"] === "string"
             ? (e.tool_input?.["command"] as string)
@@ -191,7 +190,7 @@ export function ComputerPanel({
         continue;
       }
 
-      if (toolName.startsWith(POCO_PLAYWRIGHT_MCP_PREFIX)) {
+      if (frameKind === "browser") {
         frames.push({
           kind: "browser",
           execution: e,
@@ -200,7 +199,7 @@ export function ComputerPanel({
         continue;
       }
 
-      if (COMPUTER_GENERIC_TOOL_NAMES.has(normalizedToolName)) {
+      if (frameKind === "tool") {
         const summary = getGenericToolSummary(e);
         frames.push({
           kind: "tool",

@@ -16,6 +16,8 @@ import {
   getToolExecutionsAction,
 } from "@/features/chat/actions/query-actions";
 import type { RunResponse } from "@/features/chat/types";
+import { countFileChanges } from "@/features/chat/lib/run-record-utils";
+import { getRunFileChangeCount } from "@/features/chat/components/layout/run-timeline-utils";
 
 interface ExecutionContainerProps {
   sessionId: string;
@@ -41,10 +43,11 @@ export function ExecutionContainer({ sessionId }: ExecutionContainerProps) {
     session?.state_patch?.browser?.enabled,
   );
   const fileChanges = session?.state_patch.workspace_state?.file_changes ?? [];
+  const sessionFileChangeCount = countFileChanges(fileChanges);
   const hasLocalMountArtifacts =
     session?.config_snapshot?.filesystem_mode === "local_mount" &&
     (session.config_snapshot.local_mounts?.length ?? 0) > 0;
-  const hasArtifacts = fileChanges.length > 0 || hasLocalMountArtifacts;
+  const hasArtifacts = sessionFileChangeCount > 0 || hasLocalMountArtifacts;
   const activeRun = React.useMemo(
     () =>
       runs.find((run) =>
@@ -74,6 +77,9 @@ export function ExecutionContainer({ sessionId }: ExecutionContainerProps) {
   const hasComputerRecords = executions.length > 0 || runs.length > 0;
   const selectedRunFileChanges =
     selectedRun?.state_patch?.workspace_state?.file_changes ?? [];
+  const selectedRunFileChangeCount = selectedRun
+    ? getRunFileChangeCount(selectedRun)
+    : 0;
   const hasSelectedRunWorkspace = Boolean(
     selectedRun?.workspace_manifest_key ||
     selectedRun?.workspace_files_prefix ||
@@ -82,7 +88,7 @@ export function ExecutionContainer({ sessionId }: ExecutionContainerProps) {
   );
   const hasAnyRunArtifacts = runs.some(
     (run) =>
-      (run.state_patch?.workspace_state?.file_changes?.length ?? 0) > 0 ||
+      getRunFileChangeCount(run) > 0 ||
       Boolean(
         run.workspace_manifest_key ||
         run.workspace_files_prefix ||
@@ -91,14 +97,14 @@ export function ExecutionContainer({ sessionId }: ExecutionContainerProps) {
       ),
   );
   const hasSelectedRunArtifacts =
-    selectedRunFileChanges.length > 0 ||
+    selectedRunFileChangeCount > 0 ||
     hasSelectedRunWorkspace ||
     hasLocalMountArtifacts;
   const showArtifactsTab =
     hasSelectedRunArtifacts || hasArtifacts || hasAnyRunArtifacts;
   const legacySessionArtifactsAvailable = Boolean(
     !hasSelectedRunArtifacts &&
-    (fileChanges.length > 0 ||
+    (sessionFileChangeCount > 0 ||
       session?.workspace_export_status === "ready" ||
       hasLocalMountArtifacts),
   );
