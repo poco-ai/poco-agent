@@ -52,7 +52,7 @@ DEFAULT_MODEL=""
 API_PROVIDER_MODE=""
 DEPLOYMENT_MODE=""
 # Language setting (en or zh)
-LANG="en"
+UI_LANG="en"
 
 # Colors for output
 RED='\033[0;31m'
@@ -66,90 +66,90 @@ msg() {
   local key="$1"
   case "$key" in
     # Usage messages
-    "usage.header") [[ "$LANG" == "zh" ]] && echo "用法: scripts/quickstart.sh [选项]" || echo "Usage: scripts/quickstart.sh [options]" ;;
-    "usage.options") [[ "$LANG" == "zh" ]] && echo "选项:" || echo "Options:" ;;
-    "usage.interactive") [[ "$LANG" == "zh" ]] && echo "  -i, --interactive         交互模式（在终端运行时默认启用）" || echo "  -i, --interactive         Interactive mode (default when run in a terminal)" ;;
-    "usage.non_interactive") [[ "$LANG" == "zh" ]] && echo "  --non-interactive         禁用交互式提示（推荐用于 CI）" || echo "  --non-interactive         Disable interactive prompts (recommended for CI)" ;;
-    "usage.no_start") [[ "$LANG" == "zh" ]] && echo "  --no-start                仅准备环境和目录" || echo "  --no-start                Only prepare env and directories" ;;
-    "usage.force_env") [[ "$LANG" == "zh" ]] && echo "  --force-env               覆盖环境文件中的现有密钥" || echo "  --force-env               Overwrite existing keys in env file" ;;
-    "usage.llm_api_key") [[ "$LANG" == "zh" ]] && echo "  --llm-api-key KEY         模型 API 密钥（Anthropic 兼容，写入环境文件）" || echo "  --llm-api-key KEY         Model API key (Anthropic-compatible, writes to env)" ;;
-    "usage.llm_base_url") [[ "$LANG" == "zh" ]] && echo "  --llm-base-url URL        模型 API Base URL（写入环境文件）" || echo "  --llm-base-url URL        Model API base URL (writes to env)" ;;
-    "usage.model") [[ "$LANG" == "zh" ]] && echo "  --model MODEL             默认模型 ID（写入环境文件）" || echo "  --model MODEL             Default model ID (writes to env)" ;;
-    "usage.anthropic_key") [[ "$LANG" == "zh" ]] && echo "  --anthropic-key KEY       兼容旧参数，等同于 --llm-api-key" || echo "  --anthropic-key KEY       Legacy alias for --llm-api-key" ;;
-    "usage.lang") [[ "$LANG" == "zh" ]] && echo "  --lang LANG               语言设置 (en 或 zh，默认: en)" || echo "  --lang LANG               Language setting (en or zh, default: en)" ;;
-    "usage.help") [[ "$LANG" == "zh" ]] && echo "  -h, --help                显示此帮助信息" || echo "  -h, --help                Show this help" ;;
-    "usage.advanced") [[ "$LANG" == "zh" ]] && echo "高级选项:" || echo "Advanced options:" ;;
-    "usage.examples") [[ "$LANG" == "zh" ]] && echo "示例:" || echo "Examples:" ;;
-    "usage.example1") [[ "$LANG" == "zh" ]] && echo "  # 交互式设置（默认）" || echo "  # Interactive setup (default)" ;;
-    "usage.example2") [[ "$LANG" == "zh" ]] && echo "  # 交互式设置但不启动服务" || echo "  # Interactive setup without starting services" ;;
-    "usage.example3") [[ "$LANG" == "zh" ]] && echo "  # 通过 CLI 快速设置模型 API" || echo "  # Quick model API setup via CLI" ;;
-    "usage.example4") [[ "$LANG" == "zh" ]] && echo "  # 使用中文界面" || echo "  # Use Chinese interface" ;;
+    "usage.header") [[ "$UI_LANG" == "zh" ]] && echo "用法: scripts/quickstart.sh [选项]" || echo "Usage: scripts/quickstart.sh [options]" ;;
+    "usage.options") [[ "$UI_LANG" == "zh" ]] && echo "选项:" || echo "Options:" ;;
+    "usage.interactive") [[ "$UI_LANG" == "zh" ]] && echo "  -i, --interactive         交互模式（在终端运行时默认启用）" || echo "  -i, --interactive         Interactive mode (default when run in a terminal)" ;;
+    "usage.non_interactive") [[ "$UI_LANG" == "zh" ]] && echo "  --non-interactive         禁用交互式提示（推荐用于 CI）" || echo "  --non-interactive         Disable interactive prompts (recommended for CI)" ;;
+    "usage.no_start") [[ "$UI_LANG" == "zh" ]] && echo "  --no-start                仅准备环境和目录" || echo "  --no-start                Only prepare env and directories" ;;
+    "usage.force_env") [[ "$UI_LANG" == "zh" ]] && echo "  --force-env               覆盖环境文件中的现有密钥" || echo "  --force-env               Overwrite existing keys in env file" ;;
+    "usage.llm_api_key") [[ "$UI_LANG" == "zh" ]] && echo "  --llm-api-key KEY         模型 API 密钥（Anthropic 兼容，写入环境文件）" || echo "  --llm-api-key KEY         Model API key (Anthropic-compatible, writes to env)" ;;
+    "usage.llm_base_url") [[ "$UI_LANG" == "zh" ]] && echo "  --llm-base-url URL        模型 API Base URL（写入环境文件）" || echo "  --llm-base-url URL        Model API base URL (writes to env)" ;;
+    "usage.model") [[ "$UI_LANG" == "zh" ]] && echo "  --model MODEL             默认模型 ID（写入环境文件）" || echo "  --model MODEL             Default model ID (writes to env)" ;;
+    "usage.anthropic_key") [[ "$UI_LANG" == "zh" ]] && echo "  --anthropic-key KEY       兼容旧参数，等同于 --llm-api-key" || echo "  --anthropic-key KEY       Legacy alias for --llm-api-key" ;;
+    "usage.lang") [[ "$UI_LANG" == "zh" ]] && echo "  --lang LANG               语言设置 (en 或 zh，默认: en)" || echo "  --lang LANG               Language setting (en or zh, default: en)" ;;
+    "usage.help") [[ "$UI_LANG" == "zh" ]] && echo "  -h, --help                显示此帮助信息" || echo "  -h, --help                Show this help" ;;
+    "usage.advanced") [[ "$UI_LANG" == "zh" ]] && echo "高级选项:" || echo "Advanced options:" ;;
+    "usage.examples") [[ "$UI_LANG" == "zh" ]] && echo "示例:" || echo "Examples:" ;;
+    "usage.example1") [[ "$UI_LANG" == "zh" ]] && echo "  # 交互式设置（默认）" || echo "  # Interactive setup (default)" ;;
+    "usage.example2") [[ "$UI_LANG" == "zh" ]] && echo "  # 交互式设置但不启动服务" || echo "  # Interactive setup without starting services" ;;
+    "usage.example3") [[ "$UI_LANG" == "zh" ]] && echo "  # 通过 CLI 快速设置模型 API" || echo "  # Quick model API setup via CLI" ;;
+    "usage.example4") [[ "$UI_LANG" == "zh" ]] && echo "  # 使用中文界面" || echo "  # Use Chinese interface" ;;
 
     # Print messages
-    "print.success") [[ "$LANG" == "zh" ]] && echo "成功" || echo "ok" ;;
-    "print.warn") [[ "$LANG" == "zh" ]] && echo "警告" || echo "warn" ;;
-    "print.error") [[ "$LANG" == "zh" ]] && echo "错误" || echo "error" ;;
-    "print.info") [[ "$LANG" == "zh" ]] && echo "信息" || echo "info" ;;
+    "print.success") [[ "$UI_LANG" == "zh" ]] && echo "成功" || echo "ok" ;;
+    "print.warn") [[ "$UI_LANG" == "zh" ]] && echo "警告" || echo "warn" ;;
+    "print.error") [[ "$UI_LANG" == "zh" ]] && echo "错误" || echo "error" ;;
+    "print.info") [[ "$UI_LANG" == "zh" ]] && echo "信息" || echo "info" ;;
 
     # Error messages
-    "error.missing_cmd") [[ "$LANG" == "zh" ]] && echo "缺少命令" || echo "Missing command" ;;
-    "error.unknown_option") [[ "$LANG" == "zh" ]] && echo "未知选项" || echo "Unknown option" ;;
-    "error.docker_not_found") [[ "$LANG" == "zh" ]] && echo "未找到 docker compose" || echo "docker compose not found" ;;
-    "error.anthropic_not_set") [[ "$LANG" == "zh" ]] && echo "未设置模型 API Key（ANTHROPIC_API_KEY）。请在 .env 中设置，或运行 ./scripts/quickstart.sh（交互式）并传递 --llm-api-key。" || echo "Model API key is not set (ANTHROPIC_API_KEY). Configure it in .env, or run ./scripts/quickstart.sh (interactive) / pass --llm-api-key." ;;
+    "error.missing_cmd") [[ "$UI_LANG" == "zh" ]] && echo "缺少命令" || echo "Missing command" ;;
+    "error.unknown_option") [[ "$UI_LANG" == "zh" ]] && echo "未知选项" || echo "Unknown option" ;;
+    "error.docker_not_found") [[ "$UI_LANG" == "zh" ]] && echo "未找到 docker compose" || echo "docker compose not found" ;;
+    "error.anthropic_not_set") [[ "$UI_LANG" == "zh" ]] && echo "未设置模型 API Key（ANTHROPIC_API_KEY）。请在 .env 中设置，或运行 ./scripts/quickstart.sh（交互式）并传递 --llm-api-key。" || echo "Model API key is not set (ANTHROPIC_API_KEY). Configure it in .env, or run ./scripts/quickstart.sh (interactive) / pass --llm-api-key." ;;
 
     # Headers
-    "header.quickstart") [[ "$LANG" == "zh" ]] && echo "Poco 快速启动" || echo "Poco Quickstart" ;;
-    "header.interactive_setup") [[ "$LANG" == "zh" ]] && echo "Poco 交互式设置" || echo "Poco Interactive Setup" ;;
-    "header.required_config") [[ "$LANG" == "zh" ]] && echo "必需配置" || echo "Required Configuration" ;;
-    "header.optional_config") [[ "$LANG" == "zh" ]] && echo "可选配置" || echo "Optional Configuration" ;;
-    "header.s3_endpoint") [[ "$LANG" == "zh" ]] && echo "S3 公共端点配置" || echo "S3 Public Endpoint Configuration" ;;
-    "header.setup_complete") [[ "$LANG" == "zh" ]] && echo "设置完成" || echo "Setup Complete" ;;
-    "header.lang_select") [[ "$LANG" == "zh" ]] && echo "语言选择" || echo "Language Selection" ;;
-    "header.deployment_mode") [[ "$LANG" == "zh" ]] && echo "部署模式" || echo "Deployment Mode" ;;
+    "header.quickstart") [[ "$UI_LANG" == "zh" ]] && echo "Poco 快速启动" || echo "Poco Quickstart" ;;
+    "header.interactive_setup") [[ "$UI_LANG" == "zh" ]] && echo "Poco 交互式设置" || echo "Poco Interactive Setup" ;;
+    "header.required_config") [[ "$UI_LANG" == "zh" ]] && echo "必需配置" || echo "Required Configuration" ;;
+    "header.optional_config") [[ "$UI_LANG" == "zh" ]] && echo "可选配置" || echo "Optional Configuration" ;;
+    "header.s3_endpoint") [[ "$UI_LANG" == "zh" ]] && echo "S3 公共端点配置" || echo "S3 Public Endpoint Configuration" ;;
+    "header.setup_complete") [[ "$UI_LANG" == "zh" ]] && echo "设置完成" || echo "Setup Complete" ;;
+    "header.lang_select") [[ "$UI_LANG" == "zh" ]] && echo "语言选择" || echo "Language Selection" ;;
+    "header.deployment_mode") [[ "$UI_LANG" == "zh" ]] && echo "部署模式" || echo "Deployment Mode" ;;
 
     # Interactive setup
-    "setup.welcome") [[ "$LANG" == "zh" ]] && echo "欢迎使用 Poco！此向导将帮助您配置基本设置。" || echo "Welcome to Poco! This wizard will help you configure the essential settings." ;;
-    "setup.input") [[ "$LANG" == "zh" ]] && echo "请输入" || echo "Input" ;;
-    "setup.keep_current") [[ "$LANG" == "zh" ]] && echo "按 Enter 保留" || echo "Press Enter to keep" ;;
-    "setup.skipping") [[ "$LANG" == "zh" ]] && echo "跳过" || echo "Skipping" ;;
-    "setup.optional") [[ "$LANG" == "zh" ]] && echo "可选" || echo "optional" ;;
-    "setup.required") [[ "$LANG" == "zh" ]] && echo "是必需的" || echo "is required" ;;
+    "setup.welcome") [[ "$UI_LANG" == "zh" ]] && echo "欢迎使用 Poco！此向导将帮助您配置基本设置。" || echo "Welcome to Poco! This wizard will help you configure the essential settings." ;;
+    "setup.input") [[ "$UI_LANG" == "zh" ]] && echo "请输入" || echo "Input" ;;
+    "setup.keep_current") [[ "$UI_LANG" == "zh" ]] && echo "按 Enter 保留" || echo "Press Enter to keep" ;;
+    "setup.skipping") [[ "$UI_LANG" == "zh" ]] && echo "跳过" || echo "Skipping" ;;
+    "setup.optional") [[ "$UI_LANG" == "zh" ]] && echo "可选" || echo "optional" ;;
+    "setup.required") [[ "$UI_LANG" == "zh" ]] && echo "是必需的" || echo "is required" ;;
 
     # API Key prompts
-    "prompt.provider_select") [[ "$LANG" == "zh" ]] && echo "请选择模型 API 端点类型" || echo "Select your model API endpoint type" ;;
-    "prompt.provider_official") [[ "$LANG" == "zh" ]] && echo "1) Anthropic 官方 API（默认）" || echo "1) Anthropic official API (default)" ;;
-    "prompt.provider_compatible") [[ "$LANG" == "zh" ]] && echo "2) Anthropic 兼容 API（代理/第三方网关）" || echo "2) Anthropic-compatible API (proxy/third-party gateway)" ;;
-    "prompt.provider_choice") [[ "$LANG" == "zh" ]] && echo "请输入选择 [1-2]" || echo "Enter choice [1-2]" ;;
-    "prompt.anthropic_key") [[ "$LANG" == "zh" ]] && echo "请输入模型 API 密钥（支持 Anthropic 兼容 API）" || echo "Enter your model API key (Anthropic-compatible)" ;;
-    "prompt.anthropic_warn") [[ "$LANG" == "zh" ]] && echo "您选择了 Anthropic 官方 API，密钥通常以 'sk-ant-' 开头，请确认。" || echo "You selected Anthropic official API. Keys usually start with 'sk-ant-'; please double-check." ;;
+    "prompt.provider_select") [[ "$UI_LANG" == "zh" ]] && echo "请选择模型 API 端点类型" || echo "Select your model API endpoint type" ;;
+    "prompt.provider_official") [[ "$UI_LANG" == "zh" ]] && echo "1) Anthropic 官方 API（默认）" || echo "1) Anthropic official API (default)" ;;
+    "prompt.provider_compatible") [[ "$UI_LANG" == "zh" ]] && echo "2) Anthropic 兼容 API（代理/第三方网关）" || echo "2) Anthropic-compatible API (proxy/third-party gateway)" ;;
+    "prompt.provider_choice") [[ "$UI_LANG" == "zh" ]] && echo "请输入选择 [1-2]" || echo "Enter choice [1-2]" ;;
+    "prompt.anthropic_key") [[ "$UI_LANG" == "zh" ]] && echo "请输入模型 API 密钥（支持 Anthropic 兼容 API）" || echo "Enter your model API key (Anthropic-compatible)" ;;
+    "prompt.anthropic_warn") [[ "$UI_LANG" == "zh" ]] && echo "您选择了 Anthropic 官方 API，密钥通常以 'sk-ant-' 开头，请确认。" || echo "You selected Anthropic official API. Keys usually start with 'sk-ant-'; please double-check." ;;
 
     # Success messages
-    "success.env_created") [[ "$LANG" == "zh" ]] && echo "已从 .env.example 创建 .env" || echo "Created .env from .env.example" ;;
-    "success.anthropic_configured") [[ "$LANG" == "zh" ]] && echo "已配置模型 API 密钥" || echo "Model API key configured" ;;
-    "success.anthropic_base_url") [[ "$LANG" == "zh" ]] && echo "已配置模型 API Base URL" || echo "Model API base URL configured" ;;
-    "success.default_model") [[ "$LANG" == "zh" ]] && echo "已配置默认模型" || echo "Default model configured" ;;
-    "success.s3_endpoint") [[ "$LANG" == "zh" ]] && echo "已配置 S3 公共端点" || echo "S3 public endpoint configured" ;;
-    "success.bootstrap") [[ "$LANG" == "zh" ]] && echo "引导完成！" || echo "Bootstrap completed!" ;;
-    "success.deployment_mode") [[ "$LANG" == "zh" ]] && echo "已配置部署模式" || echo "Deployment mode configured" ;;
+    "success.env_created") [[ "$UI_LANG" == "zh" ]] && echo "已从 .env.example 创建 .env" || echo "Created .env from .env.example" ;;
+    "success.anthropic_configured") [[ "$UI_LANG" == "zh" ]] && echo "已配置模型 API 密钥" || echo "Model API key configured" ;;
+    "success.anthropic_base_url") [[ "$UI_LANG" == "zh" ]] && echo "已配置模型 API Base URL" || echo "Model API base URL configured" ;;
+    "success.default_model") [[ "$UI_LANG" == "zh" ]] && echo "已配置默认模型" || echo "Default model configured" ;;
+    "success.s3_endpoint") [[ "$UI_LANG" == "zh" ]] && echo "已配置 S3 公共端点" || echo "S3 public endpoint configured" ;;
+    "success.bootstrap") [[ "$UI_LANG" == "zh" ]] && echo "引导完成！" || echo "Bootstrap completed!" ;;
+    "success.deployment_mode") [[ "$UI_LANG" == "zh" ]] && echo "已配置部署模式" || echo "Deployment mode configured" ;;
 
     # Info messages
-    "info.anthropic_configured") [[ "$LANG" == "zh" ]] && echo "已配置模型 API 密钥" || echo "Model API key is configured" ;;
-    "info.pulling_images") [[ "$LANG" == "zh" ]] && echo "正在拉取执行器镜像..." || echo "Pulling executor images..." ;;
+    "info.anthropic_configured") [[ "$UI_LANG" == "zh" ]] && echo "已配置模型 API 密钥" || echo "Model API key is configured" ;;
+    "info.pulling_images") [[ "$UI_LANG" == "zh" ]] && echo "正在拉取执行器镜像..." || echo "Pulling executor images..." ;;
 
     # Warnings
-    "warn.docker_gid") [[ "$LANG" == "zh" ]] && echo "未检测到 DOCKER_GID；executor-manager 可能无法访问 docker.sock" || echo "DOCKER_GID not detected; executor-manager may fail to access docker.sock" ;;
-    "warn.chown_failed") [[ "$LANG" == "zh" ]] && echo "chown RustFS 数据目录失败。您可能需要运行: sudo chown -R" || echo "Failed to chown RustFS data dir. You may need to run: sudo chown -R" ;;
-    "warn.chmod_data_failed") [[ "$LANG" == "zh" ]] && echo "chmod RustFS 数据目录失败。您可能需要运行: sudo chown -R" || echo "Failed to chmod RustFS data dir. You may need to run: sudo chown -R" ;;
-    "warn.chmod_workspace_failed") [[ "$LANG" == "zh" ]] && echo "chmod 工作空间目录失败。您可能需要运行: sudo chown -R" || echo "Failed to chmod workspace directories. You may need to run: sudo chown -R" ;;
-    "warn.rustfs_init_failed") [[ "$LANG" == "zh" ]] && echo "rustfs-init 失败；您可以重试: docker compose --profile init up -d rustfs-init" || echo "rustfs-init failed; you can retry: docker compose --profile init up -d rustfs-init" ;;
-    "warn.anthropic_not_set") [[ "$LANG" == "zh" ]] && echo "未设置模型 API Key（ANTHROPIC_API_KEY）！" || echo "Model API key is not set (ANTHROPIC_API_KEY)!" ;;
-    "warn.default_model") [[ "$LANG" == "zh" ]] && echo "您选择了 Anthropic 官方 API，DEFAULT_MODEL 通常应以 'claude-' 开头，请确认模型 ID 是否正确。" || echo "You selected Anthropic official API. DEFAULT_MODEL usually starts with 'claude-'; please verify model ID." ;;
+    "warn.docker_gid") [[ "$UI_LANG" == "zh" ]] && echo "未检测到 DOCKER_GID；executor-manager 可能无法访问 docker.sock" || echo "DOCKER_GID not detected; executor-manager may fail to access docker.sock" ;;
+    "warn.chown_failed") [[ "$UI_LANG" == "zh" ]] && echo "chown RustFS 数据目录失败。您可能需要运行: sudo chown -R" || echo "Failed to chown RustFS data dir. You may need to run: sudo chown -R" ;;
+    "warn.chmod_data_failed") [[ "$UI_LANG" == "zh" ]] && echo "chmod RustFS 数据目录失败。您可能需要运行: sudo chown -R" || echo "Failed to chmod RustFS data dir. You may need to run: sudo chown -R" ;;
+    "warn.chmod_workspace_failed") [[ "$UI_LANG" == "zh" ]] && echo "chmod 工作空间目录失败。您可能需要运行: sudo chown -R" || echo "Failed to chmod workspace directories. You may need to run: sudo chown -R" ;;
+    "warn.rustfs_init_failed") [[ "$UI_LANG" == "zh" ]] && echo "rustfs-init 失败；您可以重试: docker compose --profile init up -d rustfs-init" || echo "rustfs-init failed; you can retry: docker compose --profile init up -d rustfs-init" ;;
+    "warn.anthropic_not_set") [[ "$UI_LANG" == "zh" ]] && echo "未设置模型 API Key（ANTHROPIC_API_KEY）！" || echo "Model API key is not set (ANTHROPIC_API_KEY)!" ;;
+    "warn.default_model") [[ "$UI_LANG" == "zh" ]] && echo "您选择了 Anthropic 官方 API，DEFAULT_MODEL 通常应以 'claude-' 开头，请确认模型 ID 是否正确。" || echo "You selected Anthropic official API. DEFAULT_MODEL usually starts with 'claude-'; please verify model ID." ;;
 
     # Language selection
-    "lang.prompt") [[ "$LANG" == "zh" ]] && echo "请选择语言 / Please select language:" || echo "Please select language / 请选择语言:" ;;
+    "lang.prompt") [[ "$UI_LANG" == "zh" ]] && echo "请选择语言 / Please select language:" || echo "Please select language / 请选择语言:" ;;
     "lang.english") echo "1) English" ;;
     "lang.chinese") echo "2) 中文" ;;
-    "lang.choice") [[ "$LANG" == "zh" ]] && echo "请输入选择 [1-2]" || echo "Enter choice [1-2]" ;;
+    "lang.choice") [[ "$UI_LANG" == "zh" ]] && echo "请输入选择 [1-2]" || echo "Enter choice [1-2]" ;;
 
     *) echo "$key" ;;
   esac
@@ -171,7 +171,7 @@ usage() {
   echo "$(msg "usage.help")"
   echo ""
   echo "$(msg "usage.advanced")"
-  if [[ "$LANG" == "zh" ]]; then
+  if [[ "$UI_LANG" == "zh" ]]; then
     cat <<'ADVANCED'
   --data-dir PATH           RustFS 数据的主机路径（默认: ./oss_data）
   --workspace-dir PATH      工作空间的主机路径（默认: ./tmp_workspace）
@@ -500,7 +500,7 @@ prompt_for_s3_public_endpoint() {
 
   print_header "$(msg "header.s3_endpoint")" >&2
 
-  if [[ "$LANG" == "zh" ]]; then
+  if [[ "$UI_LANG" == "zh" ]]; then
     cat >&2 <<'EOF'
 
 S3 公共端点用于直接从浏览器访问生成的构件（图片、HTML 文件等）。
@@ -559,7 +559,7 @@ EOF
         echo "$current_value"
         return
     fi
-    if [[ "$LANG" == "zh" ]]; then
+    if [[ "$UI_LANG" == "zh" ]]; then
       print_info "跳过 S3 公共端点（本地开发模式）" >&2
     else
       print_info "Skipping S3 public endpoint (local development mode)" >&2
@@ -584,9 +584,9 @@ select_language() {
     read_line choice
 
     case "$choice" in
-      1) LANG="en" ;;
-      2) LANG="zh" ;;
-      *) LANG="en" ;;
+      1) UI_LANG="en" ;;
+      2) UI_LANG="zh" ;;
+      *) UI_LANG="en" ;;
     esac
   fi
 }
@@ -600,7 +600,7 @@ select_deployment_mode() {
 
   print_header "$(msg "header.deployment_mode")"
 
-  if [[ "$LANG" == "zh" ]]; then
+  if [[ "$UI_LANG" == "zh" ]]; then
     echo "选择部署模式："
     echo "  1) 本地开发（默认）— 支持本地目录挂载"
     echo "  2) 云端部署 — 禁用本地目录挂载"
@@ -751,10 +751,10 @@ interactive_setup() {
   fi
 
   # Prompt for model API base URL.
-  local anthropic_label=$([[ "$LANG" == "zh" ]] && echo "模型 API Base URL" || echo "Model API Base URL")
+  local anthropic_label=$([[ "$UI_LANG" == "zh" ]] && echo "模型 API Base URL" || echo "Model API Base URL")
   local base_url_default=""
   if [[ "$API_PROVIDER_MODE" == "official" ]]; then
-    if [[ "$LANG" == "zh" ]]; then
+    if [[ "$UI_LANG" == "zh" ]]; then
       cat <<'EOF'
 
 您选择了 Anthropic 官方 API。
@@ -777,7 +777,7 @@ EOF
     fi
     ANTHROPIC_BASE_URL="$(prompt_for_text "$anthropic_label" "$base_url_default" "true")"
   else
-    if [[ "$LANG" == "zh" ]]; then
+    if [[ "$UI_LANG" == "zh" ]]; then
       cat <<'EOF'
 
 您选择了 Anthropic 兼容 API。
@@ -805,7 +805,7 @@ EOF
   fi
 
   # Prompt for default model (optional).
-  if [[ "$LANG" == "zh" ]]; then
+  if [[ "$UI_LANG" == "zh" ]]; then
     cat <<'EOF'
 
 请输入要使用的默认模型 ID（需与上面的 API 端点兼容）。按 Enter 使用默认值。
@@ -822,7 +822,7 @@ Compatible endpoint example: anthropic/claude-sonnet-4.5
 
 EOF
   fi
-  local model_label=$([[ "$LANG" == "zh" ]] && echo "默认模型 ID" || echo "Default Model ID")
+  local model_label=$([[ "$UI_LANG" == "zh" ]] && echo "默认模型 ID" || echo "Default Model ID")
   DEFAULT_MODEL="$(prompt_for_text "$model_label" "${existing_default_model:-claude-sonnet-4-20250514}" "true")"
   if [[ "$API_PROVIDER_MODE" == "official" ]] && [[ -n "$DEFAULT_MODEL" ]] && [[ "$DEFAULT_MODEL" != claude-* ]]; then
     print_warn "$(msg "warn.default_model")"
@@ -932,7 +932,7 @@ while [[ $# -gt 0 ]]; do
     --default-model)
       DEFAULT_MODEL="$2"; shift 2 ;;
     --lang)
-      LANG="$2"; shift 2 ;;
+      UI_LANG="$2"; shift 2 ;;
     -h|--help)
       usage; exit 0 ;;
     *)
@@ -944,7 +944,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Select language if not specified and in interactive mode
-if [[ "$INTERACTIVE" = true ]] && [[ "$LANG" == "en" ]]; then
+if [[ "$INTERACTIVE" = true ]] && [[ "$UI_LANG" == "en" ]]; then
   select_language
 fi
 
@@ -1121,7 +1121,7 @@ print_header "$(msg "header.setup_complete")"
 anthropic_api_key_state_value="$(anthropic_api_key_state)"
 if [[ "$anthropic_api_key_state_value" == "missing" ]]; then
   print_warn "$(msg "warn.anthropic_not_set")"
-  if [[ "$LANG" == "zh" ]]; then
+  if [[ "$UI_LANG" == "zh" ]]; then
     cat <<EOF
 
   请在 .env 中设置:
@@ -1155,7 +1155,7 @@ fi
 echo ""
 print_success "$(msg "success.bootstrap")"
 echo ""
-if [[ "$LANG" == "zh" ]]; then
+if [[ "$UI_LANG" == "zh" ]]; then
   echo "后续步骤:"
   echo "  1. 确保在 .env 中已设置 ANTHROPIC_API_KEY（支持 Anthropic 兼容服务）"
   if [[ "$START_ALL" = true ]]; then
