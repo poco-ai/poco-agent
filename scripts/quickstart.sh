@@ -94,6 +94,7 @@ msg() {
     # Error messages
     "error.missing_cmd") [[ "$LANG" == "zh" ]] && echo "缺少命令" || echo "Missing command" ;;
     "error.unknown_option") [[ "$LANG" == "zh" ]] && echo "未知选项" || echo "Unknown option" ;;
+    "error.missing_arg") [[ "$LANG" == "zh" ]] && echo "选项缺少参数" || echo "Option requires an argument" ;;
     "error.docker_not_found") [[ "$LANG" == "zh" ]] && echo "未找到 docker compose" || echo "docker compose not found" ;;
     "error.anthropic_not_set") [[ "$LANG" == "zh" ]] && echo "未设置模型 API Key（ANTHROPIC_API_KEY）。请在 .env 中设置，或运行 ./scripts/quickstart.sh（交互式）并传递 --llm-api-key。" || echo "Model API key is not set (ANTHROPIC_API_KEY). Configure it in .env, or run ./scripts/quickstart.sh (interactive) / pass --llm-api-key." ;;
 
@@ -863,6 +864,15 @@ EOF
 # --- MAIN EXECUTION START ---
 
 # First pass: parse CLI args to override defaults
+# Require that the next positional argument exists (for options taking a value).
+require_arg() {
+  if [[ -z "${2:-}" ]] || [[ "$2" == --* ]]; then
+    print_error "$(msg "error.missing_arg"): $1"
+    usage
+    exit 1
+  fi
+}
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --data-dir)
@@ -920,18 +930,25 @@ while [[ $# -gt 0 ]]; do
     --non-interactive|--no-interactive)
       INTERACTIVE=false; shift ;;
     --llm-api-key)
+      require_arg "$1" "${2:-}"
       ANTHROPIC_KEY="$2"; shift 2 ;;
     --llm-base-url)
+      require_arg "$1" "${2:-}"
       ANTHROPIC_BASE_URL="$2"; shift 2 ;;
     --model)
+      require_arg "$1" "${2:-}"
       DEFAULT_MODEL="$2"; shift 2 ;;
     --anthropic-key)
+      require_arg "$1" "${2:-}"
       ANTHROPIC_KEY="$2"; shift 2 ;;
     --anthropic-base-url)
+      require_arg "$1" "${2:-}"
       ANTHROPIC_BASE_URL="$2"; shift 2 ;;
     --default-model)
+      require_arg "$1" "${2:-}"
       DEFAULT_MODEL="$2"; shift 2 ;;
     --lang)
+      require_arg "$1" "${2:-}"
       LANG="$2"; shift 2 ;;
     -h|--help)
       usage; exit 0 ;;
@@ -1009,7 +1026,7 @@ if [[ "$S3_ENDPOINT_SET" = true ]]; then
 fi
 if [[ "$S3_PUBLIC_ENDPOINT_SET" = true ]]; then
   write_env_key "S3_PUBLIC_ENDPOINT" "$S3_PUBLIC_ENDPOINT"
-  print_success "S3 public endpoint configured"
+  print_success "$(msg "success.s3_endpoint")"
 fi
 if [[ "$S3_REGION_SET" = true ]]; then
   write_env_key "S3_REGION" "$S3_REGION"
