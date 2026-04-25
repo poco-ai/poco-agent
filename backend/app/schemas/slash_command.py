@@ -49,3 +49,18 @@ class SlashCommandResponse(BaseModel):
     raw_markdown: str | None = None
     created_at: datetime
     updated_at: datetime
+
+
+class SlashCommandAdminResponse(BaseModel):
+    id: int
+    user_id: str
+    name: str
+    enabled: bool
+    mode: SlashCommandMode
+    description: str | None = None
+    argument_hint: str | None = None
+    allowed_tools: str | None = None
+    content: str | None = None
+    raw_markdown: str | None = None
+    created_at: datetime
+    updated_at: datetime

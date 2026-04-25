@@ -67,19 +67,30 @@ export function SkillsPageClient() {
   const handleBatchToggle = useCallback(
     async (enabled: boolean) => {
       try {
+        const targetInstalls = enabled
+          ? installs
+          : installs.filter((install) => {
+              const skill = skills.find((item) => item.id === install.skill_id);
+              return !skill?.force_enabled;
+            });
+        if (targetInstalls.length === 0) {
+          toast.message(
+            t("library.skillsManager.toasts.noEligibleBatchToggle"),
+          );
+          return;
+        }
         await Promise.all(
-          installs.map((install) =>
+          targetInstalls.map((install) =>
             skillsService.updateInstall(install.id, { enabled }),
           ),
         );
-        // Refresh the installs list
         refresh();
       } catch (error) {
         console.error("[SkillsPageClient] Failed to batch toggle:", error);
         toast.error(t("library.skillsManager.toasts.actionFailed"));
       }
     },
-    [installs, refresh, t],
+    [installs, refresh, skills, t],
   );
 
   const toolbarSlot = (
@@ -109,6 +120,7 @@ export function SkillsPageClient() {
                 installs={installs}
                 loadingId={loadingId}
                 isLoading={isLoading}
+                displayMode="runtime"
                 onInstall={installSkill}
                 onDeleteSkill={deleteSkill}
                 onOpenSkillSettings={(skill) => setSelectedSkillId(skill.id)}

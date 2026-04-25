@@ -41,7 +41,11 @@ class UserMcpInstallService:
         install = UserMcpInstall(
             user_id=user_id,
             server_id=request.server_id,
-            enabled=request.enabled,
+            enabled=(
+                bool(server.force_enabled) or request.enabled
+                if request.enabled is not None
+                else bool(server.default_enabled or server.force_enabled)
+            ),
         )
 
         UserMcpInstallRepository.create(db, install)
@@ -64,6 +68,17 @@ class UserMcpInstallService:
             )
 
         if request.enabled is not None:
+            server = McpServerRepository.get_by_id(db, install.server_id)
+            if (
+                server
+                and server.scope == "system"
+                and server.force_enabled
+                and not request.enabled
+            ):
+                raise AppException(
+                    error_code=ErrorCode.FORBIDDEN,
+                    message="Cannot disable forced system MCP servers",
+                )
             install.enabled = request.enabled
 
         db.commit()
@@ -76,6 +91,27 @@ class UserMcpInstallService:
         user_id: str,
         request: UserMcpInstallBulkUpdateRequest,
     ) -> UserMcpInstallBulkUpdateResponse:
+        if request.enabled is False:
+            installs = UserMcpInstallRepository.list_by_user(db, user_id)
+            target_ids = set(
+                request.install_ids or [install.id for install in installs]
+            )
+            forced_install_ids = {
+                install.id
+                for install in installs
+                if install.id in target_ids
+                and (
+                    (server := McpServerRepository.get_by_id(db, install.server_id))
+                    is not None
+                    and server.scope == "system"
+                    and server.force_enabled
+                )
+            }
+            if forced_install_ids:
+                raise AppException(
+                    error_code=ErrorCode.FORBIDDEN,
+                    message="Cannot disable forced system MCP servers",
+                )
         updated_count = UserMcpInstallRepository.bulk_set_enabled(
             db,
             user_id=user_id,

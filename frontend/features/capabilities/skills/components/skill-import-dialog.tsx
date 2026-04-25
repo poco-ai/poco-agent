@@ -16,6 +16,7 @@ import { CapabilityDialogContent } from "@/features/capabilities/components/capa
 import { skillsService } from "@/features/capabilities/skills/api/skills-api";
 import { markSlashCommandSuggestionsInvalidated } from "@/features/capabilities/slash-commands/api/suggestions-state";
 import type {
+  SkillImportApi,
   SkillImportCandidate,
   SkillImportCommitResponse,
   SkillImportDiscoverResponse,
@@ -160,6 +161,7 @@ export interface SkillImportDialogProps {
   onClose: () => void;
   onImported?: () => void | Promise<void>;
   initialDiscoverResponse?: SkillImportDiscoverResponse | null;
+  importApi?: SkillImportApi;
 }
 
 export function SkillImportDialog({
@@ -167,6 +169,7 @@ export function SkillImportDialog({
   onClose,
   onImported,
   initialDiscoverResponse = null,
+  importApi,
 }: SkillImportDialogProps) {
   const { t } = useT("translation");
   const [tab, setTab] = useState<SourceTab>("github");
@@ -186,6 +189,15 @@ export function SkillImportDialog({
   const [commitError, setCommitError] = useState<string | null>(null);
   const [, setCommitResult] = useState<SkillImportCommitResponse | null>(null);
   const initialDiscoverAppliedArchiveKeyRef = React.useRef<string | null>(null);
+  const api = React.useMemo<SkillImportApi>(
+    () =>
+      importApi ?? {
+        discover: skillsService.importDiscover,
+        commit: skillsService.importCommit,
+        getJob: skillsService.getImportJob,
+      },
+    [importApi],
+  );
 
   const isActiveRef = React.useRef(true);
   React.useEffect(() => {
@@ -334,7 +346,7 @@ export function SkillImportDialog({
         formData.append("github_url", url);
       }
 
-      const response = await skillsService.importDiscover(formData);
+      const response = await api.discover(formData);
       const requestedSkillRaw =
         tab === "github"
           ? parsedGithubInput?.requestedSkill || null
@@ -373,7 +385,7 @@ export function SkillImportDialog({
         })),
       };
 
-      const enqueue = await skillsService.importCommit(payload);
+      const enqueue = await api.commit(payload);
 
       const startedAt = Date.now();
       let finalError: string | null = null;
@@ -381,7 +393,7 @@ export function SkillImportDialog({
       while (true) {
         if (!isActiveRef.current) return;
 
-        const job = await skillsService.getImportJob(enqueue.job_id);
+        const job = await api.getJob(enqueue.job_id);
         if (!isActiveRef.current) return;
 
         setCommitProgress(typeof job.progress === "number" ? job.progress : 0);

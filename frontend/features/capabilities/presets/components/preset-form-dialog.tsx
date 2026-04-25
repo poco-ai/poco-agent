@@ -39,11 +39,17 @@ interface PresetFormDialogProps {
   mode: PresetDialogMode;
   initialPreset?: Preset | null;
   savingKey?: string | null;
-  onCreate: (input: PresetCreateInput) => Promise<Preset | null>;
+  capabilityItemsOverride?: {
+    skills: PresetCapabilityItem[];
+    mcp: PresetCapabilityItem[];
+    plugins: PresetCapabilityItem[];
+  };
+  visualOptionsOverride?: PresetVisualOption[];
+  onCreate: (input: PresetCreateInput) => Promise<Preset | null | void>;
   onUpdate: (
     presetId: number,
     input: PresetUpdateInput,
-  ) => Promise<Preset | null>;
+  ) => Promise<Preset | null | void>;
   onDelete?: (presetId: number) => Promise<void>;
 }
 
@@ -69,6 +75,8 @@ export function PresetFormDialog({
   mode,
   initialPreset,
   savingKey,
+  capabilityItemsOverride,
+  visualOptionsOverride,
   onCreate,
   onUpdate,
   onDelete,
@@ -139,6 +147,13 @@ export function PresetFormDialog({
 
   React.useEffect(() => {
     if (!open) return;
+    if (capabilityItemsOverride && visualOptionsOverride) {
+      setCapabilityItems(capabilityItemsOverride);
+      setVisualOptions(visualOptionsOverride);
+      setIsLoadingCapabilities(false);
+      setIsLoadingVisualOptions(false);
+      return;
+    }
     let active = true;
 
     const loadDialogData = async () => {
@@ -190,7 +205,7 @@ export function PresetFormDialog({
     return () => {
       active = false;
     };
-  }, [open]);
+  }, [capabilityItemsOverride, open, visualOptionsOverride]);
 
   const isSaving =
     mode === "create"
@@ -231,16 +246,18 @@ export function PresetFormDialog({
       })),
     };
 
-    const result =
-      mode === "create"
-        ? await onCreate(payload)
-        : initialPreset
-          ? await onUpdate(initialPreset.preset_id, payload)
-          : null;
-
-    if (result) {
+    if (mode === "create") {
+      await onCreate(payload);
       onOpenChange(false);
+      return;
     }
+
+    if (!initialPreset) {
+      return;
+    }
+
+    await onUpdate(initialPreset.preset_id, payload);
+    onOpenChange(false);
   };
 
   const title =

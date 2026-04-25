@@ -42,7 +42,11 @@ class UserSkillInstallService:
         install = UserSkillInstall(
             user_id=user_id,
             skill_id=request.skill_id,
-            enabled=request.enabled,
+            enabled=(
+                bool(skill.force_enabled) or request.enabled
+                if request.enabled is not None
+                else bool(skill.default_enabled or skill.force_enabled)
+            ),
         )
         UserSkillInstallRepository.create(db, install)
         db.commit()
@@ -65,6 +69,17 @@ class UserSkillInstallService:
             )
 
         if request.enabled is not None:
+            skill = SkillRepository.get_by_id(db, install.skill_id)
+            if (
+                skill
+                and skill.scope == "system"
+                and skill.force_enabled
+                and not request.enabled
+            ):
+                raise AppException(
+                    error_code=ErrorCode.FORBIDDEN,
+                    message="Cannot disable forced system skills",
+                )
             install.enabled = request.enabled
 
         db.commit()
@@ -77,6 +92,27 @@ class UserSkillInstallService:
         user_id: str,
         request: UserSkillInstallBulkUpdateRequest,
     ) -> UserSkillInstallBulkUpdateResponse:
+        if request.enabled is False:
+            installs = UserSkillInstallRepository.list_by_user(db, user_id)
+            target_ids = set(
+                request.install_ids or [install.id for install in installs]
+            )
+            forced_install_ids = {
+                install.id
+                for install in installs
+                if install.id in target_ids
+                and (
+                    (skill := SkillRepository.get_by_id(db, install.skill_id))
+                    is not None
+                    and skill.scope == "system"
+                    and skill.force_enabled
+                )
+            }
+            if forced_install_ids:
+                raise AppException(
+                    error_code=ErrorCode.FORBIDDEN,
+                    message="Cannot disable forced system skills",
+                )
         updated_count = UserSkillInstallRepository.bulk_set_enabled(
             db,
             user_id=user_id,

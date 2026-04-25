@@ -6,6 +6,7 @@ from app.core.errors.exceptions import AppException
 from app.models.claude_md import UserClaudeMdSetting
 from app.repositories.claude_md_repository import ClaudeMdRepository
 from app.schemas.claude_md import ClaudeMdResponse, ClaudeMdUpsertRequest
+from app.services.constants import SYSTEM_USER_ID
 
 
 class ClaudeMdService:
@@ -37,6 +38,31 @@ class ClaudeMdService:
             enabled=enabled,
             content=content,
             updated_at=setting.updated_at,
+        )
+
+    def get_effective_settings(self, db: Session, user_id: str) -> ClaudeMdResponse:
+        setting = ClaudeMdRepository.get_by_user_id(db, user_id=user_id)
+        if setting and ((setting.content or "").strip() or setting.enabled):
+            content = self._normalize_content(setting.content)
+            enabled = bool(setting.enabled) and bool(content.strip())
+            return ClaudeMdResponse(
+                enabled=enabled,
+                content=content,
+                updated_at=setting.updated_at,
+            )
+
+        system_setting = ClaudeMdRepository.get_by_user_id(db, user_id=SYSTEM_USER_ID)
+        if not system_setting:
+            return ClaudeMdResponse(enabled=False, content="", updated_at=None)
+
+        system_content = self._normalize_content(system_setting.content)
+        effective_enabled = bool(system_setting.enabled) and bool(
+            system_content.strip()
+        )
+        return ClaudeMdResponse(
+            enabled=effective_enabled,
+            content=system_content,
+            updated_at=system_setting.updated_at,
         )
 
     def upsert_settings(

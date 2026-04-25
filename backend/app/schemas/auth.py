@@ -11,6 +11,7 @@ class CurrentUserResponse(BaseModel):
     email: str | None = Field(default=None, validation_alias="primary_email")
     display_name: str | None = None
     avatar_url: str | None = None
+    system_role: str
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)

@@ -18,5 +18,5 @@ async def get_claude_md_internal(
     user_id: str = Depends(get_current_user_id),
     db: Session = Depends(get_db),
 ) -> JSONResponse:
-    result = service.get_settings(db, user_id=user_id)
+    result = service.get_effective_settings(db, user_id=user_id)
     return Response.success(data=result, message="CLAUDE.md retrieved")

@@ -14,15 +14,16 @@ from app.schemas.env_var import (
     EnvVarCreateRequest,
     EnvVarPublicResponse,
     EnvVarUpdateRequest,
+    SystemEnvVarAdminResponse,
     SystemEnvVarCreateRequest,
     SystemEnvVarResponse,
     SystemEnvVarUpdateRequest,
 )
+from app.services.constants import SYSTEM_USER_ID
 from app.utils.crypto import decrypt_value, encrypt_value
 
 logger = logging.getLogger(__name__)
 
-SYSTEM_USER_ID = "__system__"
 EnvVarScope = Literal["system", "user"]
 RESERVED_USER_ENV_VAR_KEYS = frozenset(
     {
@@ -280,6 +281,9 @@ class EnvVarService:
         return env_map
 
     def list_system_env_vars(self, db: Session) -> list[SystemEnvVarResponse]:
+        return self.list_system_env_vars_internal(db)
+
+    def list_system_env_vars_internal(self, db: Session) -> list[SystemEnvVarResponse]:
         system_vars = EnvVarRepository.list_by_user_and_scope(
             db, user_id=SYSTEM_USER_ID, scope="system"
         )
@@ -402,3 +406,39 @@ class EnvVarService:
             )
         EnvVarRepository.delete(db, env_var)
         db.commit()
+
+    def _mask_secret_value(self, value: str) -> str:
+        clean = (value or "").strip()
+        if not clean:
+            return ""
+        if len(clean) <= 8:
+            return "*" * len(clean)
+        return f"{clean[:4]}...{clean[-4:]}"
+
+    def list_system_env_vars_for_admin(
+        self, db: Session
+    ) -> list[SystemEnvVarAdminResponse]:
+        system_vars = EnvVarRepository.list_by_user_and_scope(
+            db, user_id=SYSTEM_USER_ID, scope="system"
+        )
+        result: list[SystemEnvVarAdminResponse] = []
+        for ev in system_vars:
+            try:
+                value = self._decrypt(ev.value_ciphertext)
+            except Exception:
+                logger.exception("Failed to decrypt system env var: %s", ev.key)
+                value = ""
+            result.append(
+                SystemEnvVarAdminResponse(
+                    id=ev.id,
+                    user_id=ev.user_id,
+                    key=ev.key,
+                    description=ev.description,
+                    scope=_require_scope(ev.scope),
+                    is_set=bool(value.strip()),
+                    masked_value=self._mask_secret_value(value),
+                    created_at=ev.created_at,
+                    updated_at=ev.updated_at,
+                )
+            )
+        return result
