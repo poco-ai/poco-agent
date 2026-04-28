@@ -216,6 +216,18 @@ services:
       UVICORN_ACCESS_LOG: ${UVICORN_ACCESS_LOG:-false}
     ports:
       - "${BACKEND_PORT:-8000}:8000"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   executor-manager:
     # Default to pulling from GHCR; override via EXECUTOR_MANAGER_IMAGE if needed.
@@ -224,7 +236,7 @@ services:
     user: "${EXECUTOR_UID:-1000}:${EXECUTOR_GID:-1000}"
     depends_on:
       backend:
-        condition: service_started
+        condition: service_healthy
       rustfs:
         condition: service_started
     environment:
@@ -298,6 +310,18 @@ services:
       - "host.docker.internal:host-gateway"
     ports:
       - "${EXECUTOR_MANAGER_PORT:-8001}:8001"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8001/api/v1/health')",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   frontend:
     # Default to pulling from GHCR; override via FRONTEND_IMAGE if needed.
@@ -305,7 +329,7 @@ services:
     restart: unless-stopped
     depends_on:
       backend:
-        condition: service_started
+        condition: service_healthy
     environment:
       # Runtime backend URL for the Next.js API proxy (/api/v1/* -> backend).
       BACKEND_URL: ${BACKEND_URL:-http://backend:8000}
@@ -313,6 +337,12 @@ services:
       NEXT_PUBLIC_AUTH_COOKIE_NAME: ${NEXT_PUBLIC_AUTH_COOKIE_NAME:-poco_session}
     ports:
       - "${FRONTEND_PORT:-3000}:3000"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
 volumes:
   postgres_data:
