@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { KanbanSquare, RefreshCw, Ticket } from "lucide-react";
+import { KanbanSquare, MoreHorizontal, Plus, RefreshCw, Ticket } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -34,13 +35,13 @@ import type {
   WorkspaceBoardInput,
   WorkspaceIssue,
 } from "@/features/issues/model/types";
-import { TeamBoardContextBar } from "@/features/issues/ui/team-board-context-bar";
 import { TeamBoardSettingsDialog } from "@/features/issues/ui/team-board-settings-dialog";
 import { TeamIssueDetailDialog } from "@/features/issues/ui/team-issue-detail-dialog";
 import { TeamKanbanBoard } from "@/features/issues/ui/team-kanban-board";
 import { useLanguage } from "@/hooks/use-language";
 import { useT } from "@/lib/i18n/client";
 import { useWorkspaceContext } from "@/features/workspaces";
+import { useTeamRailContext } from "@/features/workspaces/model/team-rail-context";
 import { TeamContentShell } from "@/features/workspaces/ui/team-content-shell";
 
 interface CreateBoardDialogProps {
@@ -160,12 +161,15 @@ function CreateIssueDialog({
 export function TeamIssuesPageClient() {
   const { t } = useT("translation");
   const lng = useLanguage();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const { currentWorkspace } = useWorkspaceContext();
+  const { setRailContent } = useTeamRailContext();
   const { selectedIssueId, openIssue, closeIssue } = useTeamKanban(lng);
+  const queryBoardId = searchParams.get("board");
 
   const [boards, setBoards] = React.useState<WorkspaceBoard[]>([]);
   const [issues, setIssues] = React.useState<WorkspaceIssue[]>([]);
-  const [selectedBoardId, setSelectedBoardId] = React.useState<string | null>(null);
   const [boardDialogOpen, setBoardDialogOpen] = React.useState(false);
   const [issueBoardId, setIssueBoardId] = React.useState<string | null>(null);
   const [boardSettingsId, setBoardSettingsId] = React.useState<string | null>(null);
@@ -184,6 +188,10 @@ export function TeamIssuesPageClient() {
     () => boards.find((board) => board.board_id === issueBoardId) ?? null,
     [boards, issueBoardId],
   );
+  const selectedBoardId = React.useMemo(
+    () => queryBoardId ?? boards[0]?.board_id ?? null,
+    [boards, queryBoardId],
+  );
   const selectedBoard = React.useMemo(
     () => boards.find((board) => board.board_id === selectedBoardId) ?? boards[0] ?? null,
     [boards, selectedBoardId],
@@ -200,6 +208,113 @@ export function TeamIssuesPageClient() {
           ).totalIssues
         : 0,
     [issues, settingsBoard],
+  );
+  const boardStats = React.useMemo(
+    () =>
+      boards.map((board) => {
+        const boardIssues = issues.filter((issue) => issue.board_id === board.board_id);
+        const pendingCount = boardIssues.filter(
+          (issue) => issue.status !== "done" && issue.status !== "canceled",
+        ).length;
+        return {
+          board,
+          totalCount: boardIssues.length,
+          pendingCount,
+        };
+      }),
+    [boards, issues],
+  );
+
+  const selectBoard = React.useCallback(
+    (boardId: string) => {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("board", boardId);
+      const query = params.toString();
+      router.replace(`/${lng}/team/issues${query ? `?${query}` : ""}`, {
+        scroll: false,
+      });
+    },
+    [lng, router, searchParams],
+  );
+
+  const boardRailContent = React.useMemo(
+    () => (
+      <section className="space-y-2">
+        <div className="flex items-center justify-between px-2">
+          <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
+            {t("issues.boardsTitle")}
+          </p>
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            className="size-8"
+            onClick={() => setBoardDialogOpen(true)}
+            aria-label={t("issues.actions.createBoard")}
+          >
+            <Plus className="size-4" />
+          </Button>
+        </div>
+        <div className="space-y-1">
+          {boardStats.map(({ board, totalCount, pendingCount }) => {
+            const isActive = selectedBoard?.board_id === board.board_id;
+            return (
+              <div
+                key={board.board_id}
+                className={`rounded-md px-3 py-2 transition ${
+                  isActive
+                    ? "bg-muted text-foreground"
+                    : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                }`}
+              >
+                <div className="flex items-start gap-2">
+                  <button
+                    type="button"
+                    onClick={() => selectBoard(board.board_id)}
+                    className="min-w-0 flex-1 text-left"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="size-2 rounded-full bg-primary/70" />
+                      <span className="truncate text-sm font-medium text-foreground">
+                        {board.name}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {pendingCount} pending · {totalCount} total
+                    </p>
+                  </button>
+                  {isActive ? (
+                    <div className="flex items-center gap-0.5">
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        className="size-7"
+                        onClick={() => setIssueBoardId(board.board_id)}
+                        aria-label={t("issues.actions.createIssue")}
+                      >
+                        <Plus className="size-3.5" />
+                      </Button>
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        className="size-7"
+                        onClick={() => setBoardSettingsId(board.board_id)}
+                        aria-label={t("issues.actions.boardSettings")}
+                      >
+                        <MoreHorizontal className="size-3.5" />
+                      </Button>
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+    ),
+    [boardStats, selectBoard, selectedBoard, t],
   );
 
   const mergeIssue = React.useCallback((updatedIssue: WorkspaceIssue) => {
@@ -257,7 +372,12 @@ export function TeamIssuesPageClient() {
 
   React.useEffect(() => {
     if (boards.length > 0 && selectedBoardId && !boardIdSet.has(selectedBoardId)) {
-      setSelectedBoardId(boards[0].board_id);
+      selectBoard(boards[0].board_id);
+      return;
+    }
+    if (boards.length > 0 && !queryBoardId) {
+      selectBoard(boards[0].board_id);
+      return;
     }
     if (issueBoardId && !boardIdSet.has(issueBoardId)) {
       setIssueBoardId(null);
@@ -265,7 +385,20 @@ export function TeamIssuesPageClient() {
     if (boardSettingsId && !boardIdSet.has(boardSettingsId)) {
       setBoardSettingsId(null);
     }
-  }, [boards, selectedBoardId, issueBoardId, boardSettingsId, boardIdSet]);
+  }, [
+    boards,
+    selectedBoardId,
+    queryBoardId,
+    issueBoardId,
+    boardSettingsId,
+    boardIdSet,
+    selectBoard,
+  ]);
+
+  React.useEffect(() => {
+    setRailContent(boardRailContent);
+    return () => setRailContent(null);
+  }, [boardRailContent, setRailContent]);
 
   const createBoard = async (name: string) => {
     if (!currentWorkspace || !name.trim()) {
@@ -276,7 +409,7 @@ export function TeamIssuesPageClient() {
         name: name.trim(),
       });
       setBoards((previousBoards) => [created, ...previousBoards]);
-      setSelectedBoardId(created.board_id);
+      selectBoard(created.board_id);
       setBoardDialogOpen(false);
       toast.success(t("issues.toasts.boardCreated"));
     } catch (error) {
@@ -375,34 +508,10 @@ export function TeamIssuesPageClient() {
     <>
       <TeamContentShell contentClassName="max-w-none">
         <div className="space-y-6">
-          <TeamBoardContextBar
-            boards={boards}
-            selectedBoard={selectedBoard}
-            onSelectBoard={setSelectedBoardId}
-            isRefreshing={isRefreshing}
-            onRefresh={() => void refresh()}
-            onCreateIssue={setIssueBoardId}
-            onOpenBoardSettings={setBoardSettingsId}
-            onCreateBoard={() => setBoardDialogOpen(true)}
-          />
-
           {!hasLoadedBoards && isRefreshing ? (
-            <div className="space-y-6">
-              <div className="border border-border/70 bg-card px-5 py-4 shadow-sm sm:px-6">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="flex items-center gap-3">
-                    <Skeleton className="h-7 w-28" />
-                    <Skeleton className="h-6 w-32" />
-                  </div>
-                  <div className="flex gap-2">
-                    <Skeleton className="h-9 w-24" />
-                    <Skeleton className="h-9 w-28" />
-                  </div>
-                </div>
-              </div>
-              <div className="border border-border/70 bg-card shadow-sm">
-                <Skeleton className="h-48 w-full" />
-              </div>
+            <div className="space-y-4">
+              <Skeleton className="h-10 w-40 rounded-lg" />
+              <Skeleton className="h-48 w-full" />
             </div>
           ) : loadFailed && boards.length === 0 ? (
             <Card className="border-border/60">
@@ -449,15 +558,40 @@ export function TeamIssuesPageClient() {
               </CardContent>
             </Card>
           ) : (
-            <TeamKanbanBoard
-              boards={boards}
-              issues={issues}
-              selectedBoardId={selectedBoardId}
-              presetMap={presetMap}
-              onOpenIssue={openIssue}
-              onToggleIssueStatus={(issueId) => void toggleIssueStatus(issueId)}
-              pendingIssueId={pendingIssueId}
-            />
+            <section className="space-y-4">
+              <div className="flex items-center justify-between gap-3">
+                <div className="space-y-1">
+                  <h2 className="text-2xl font-semibold text-foreground">
+                    {selectedBoard?.name ?? t("issues.boardsTitle")}
+                  </h2>
+                  <p className="text-sm text-muted-foreground">
+                    {selectedBoard?.description || t("issues.emptyDescription")}
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => void refresh()}
+                  disabled={isRefreshing}
+                >
+                  <RefreshCw
+                    className={isRefreshing ? "size-4 animate-spin" : "size-4"}
+                  />
+                  {t("issues.refresh")}
+                </Button>
+              </div>
+
+              <TeamKanbanBoard
+                boards={boards}
+                issues={issues}
+                selectedBoardId={selectedBoardId}
+                presetMap={presetMap}
+                onOpenIssue={openIssue}
+                onToggleIssueStatus={(issueId) => void toggleIssueStatus(issueId)}
+                pendingIssueId={pendingIssueId}
+              />
+            </section>
           )}
         </div>
       </TeamContentShell>

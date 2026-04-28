@@ -1,4 +1,4 @@
-# 团队协作 spec 拆分与 Agent 执行设计决策
+# 团队协作与 Agent 执行设计决策
 
 ## 元数据
 
@@ -43,6 +43,8 @@
 
 5. **定时任务场景**：另一天，Alice 创建了一个 issue："每日检查 staging 环境的错误日志并生成摘要"，分配给"Log Analyzer" preset，选择"定时任务"触发方式，设置 cron 为每天早上 9 点。系统每天自动触发 agent 执行，执行结果作为 issue comment 记录。
 
+   > 团队中的定时任务，与 issue 本身可以独立；也就是 issue 本身可以具有持久/临时性容器
+
 6. **人类和 AI 之间的切换**：Carol 原本被分配了一个 issue，但她请产假了。Alice 将该 issue 的 assignee 从 Carol 切换为"Frontend Fixer" preset。旧的人类 assignee 自动清除，AI preset assignee 接管，无需手动删除旧的分配关系。
 
 7. **自定义字段**：Alice 在 "Sprint 24" 看板的设置中添加了一个自定义字段"影响范围"（select 类型：全局 / 模块 / 组件）。团队成员在创建 issue 时可以选择这个字段，但系统字段（标题、状态、优先级等）不可删除或修改类型。
@@ -55,62 +57,7 @@
 
 ---
 
-## 决策路径
-
-```mermaid
-graph TD
-    A["Issue 需要分配给 AI preset 执行"] --> B{"如何组织 spec？"}
-    B --> C["补充到 collaboration plan 中"]
-    B --> D["collaboration 引用 + 独立第三份 spec"]
-    B --> E["完全合并到 collaboration plan"]
-    C -->|agent execution 涉及 executor_manager 容器管理和调度器改造，与共享资源协作是两个不同的改动域，混在一起会导致 collaboration plan 的预期改动范围从 backend + frontend 膨胀到全部四个服务| X["不采用"]
-    E -->|同上，且 collaboration plan 已有 5 个 Phase，再加入执行触发会超出单份 spec 的管理上限| X
-    D -->|✅ 采纳| F["三份 spec 各司其职，依赖链清晰"]
-
-    F --> G{"Issue assignee 如何设计？"}
-    G --> H["仅人类 assignee"]
-    G --> I["仅 AI preset assignee"]
-    G --> J["人类 + AI 双模 assignee"]
-    H -->|丧失 AI 自动化能力——issue board 退化为纯人工任务管理，无法利用 Poco 的核心 agent 能力| X["不采用"]
-    I -->|丧失人工分配能力——团队成员之间无法互相分配任务，团队协作的基本交互被打断| X["不采用"]
-    J -->|✅ 采纳| K["assignee_user_id 和 assignee_preset_id 互斥，同一时间只有一个活跃 assignee"]
-
-    K --> L{"AI assignee 如何触发执行？"}
-    L --> M["仅持久化 sandbox"]
-    L --> N["仅定时任务"]
-    L --> O["两种都支持"]
-    M -->|"每日检查日志"这类周期性轻量任务不需要一个长期运行的容器，用持久化 sandbox 会浪费资源且增加回收管理复杂度| X["不采用"]
-    N -->|"重构这个模块"这类需要持续阅读代码和保持上下文的长期任务，每次触发都用新容器会丢失工作进度，agent 无法有效完成| X["不采用"]
-    O -->|✅ 采纳| P["用户在分配时选择 trigger_mode，系统根据模式调度不同的执行链路"]
-
-    F --> Q{"Issue board 字段如何设计？"}
-    Q --> R["仅系统字段"]
-    Q --> S["完全自定义字段平台"]
-    Q --> T["系统字段 + 可配置自定义字段"]
-    R -->|游戏团队需要"平台"字段、后端团队需要"服务"字段——固定系统字段无法适配不同团队的协作习惯，团队只能用 description 来 workaround| X["不采用"]
-    S -->|完全自定义字段平台意味着字段类型引擎、字段排列 UI、字段级权限、字段模板导入导出——第一版做不完，且与 Poco 当前后端复杂度不匹配| X["不采用"]
-    T -->|✅ 采纳| U["系统字段不可删改保证稳定性 + board 级自定义字段满足灵活性"]
-
-    F --> V{"团队 project 是否允许直接执行？"}
-    V --> W["仅作为共享资产容器"]
-    V --> X2["允许直接执行 agent 任务"]
-    W -->|用户在团队 project 中只能"查看"和"复制到个人"，无法直接创建 session 执行任务——每次都需要先 fork 再执行，工作流断裂| X["不采用"]
-    X2 -->|✅ 采纳| Y["session 仍 user-owned，但可以引用 workspace project 作为工作上下文"]
-```
-
----
-
 ## 关键论点
-
-### 为什么拆成三份 spec 而非两份
-
-最初的调研建议拆成两份 spec（tenancy foundation + collaboration）。但随着"issue 分配给 preset 让 AI 自动执行"的需求清晰化，两份拆分暴露了问题：
-
-- **collaboration plan 的职责不清**——它既要管"共享什么资源"（preset、project），又要管"issue 怎么执行"（agent assignment、sandbox、scheduler）。这两个问题的改动域完全不同：前者涉及 backend model + frontend feature，后者涉及 executor_manager 容器管理和 APScheduler 调度。
-- **依赖方向混乱**——如果 agent execution 放在 collaboration plan 中，那 collaboration plan 既要依赖 tenancy foundation（需要 workspace 和 membership），又要被 tenancy foundation 的审计日志 Phase 引用（因为 agent assignment 的审计日志在 collaboration plan 中定义），形成循环依赖。
-- **交付节奏不匹配**——tenancy foundation 是 P0 必须先做，但 collaboration plan 中的 issue board 和 agent execution 可以独立推进。如果它们在同一个 spec 中，要么一起等 foundation 完成，要么需要人为标记哪些 Phase 可以先做、哪些必须等。
-
-三份 spec 的依赖链是线性的：`00-foundation` → `01-collaboration` → `02-execution`，每份 spec 有明确的职责边界和改动范围，可以独立推进和交付。
 
 ### 为什么双模 assignee 采用互斥设计而非并存
 
@@ -119,25 +66,6 @@ graph TD
 - **责任归属必须明确**——如果一个 issue 同时分配给了 Bob 和"Backend Specialist" preset，当 issue 被完成时，谁算"完成了这个任务"？如果出问题了，谁负责？并存的语义在责任追踪上会产生歧义。
 - **切换场景需要清晰的状态转换**——Carol 请假时，Alice 把 issue 从 Carol 切换给 AI preset。如果两者并存，Alice 需要先"移除"Carol 再"添加"AI preset，两步操作比一步切换更容易出错。互斥设计让"切换 assignee"变成一个原子操作。
 - **数据模型更简洁**——互斥意味着 `assignee_user_id` 和 `assignee_preset_id` 两个 nullable 字段加上一个 check constraint，不需要额外的"assignee_type"枚举字段或关联表。
-
-### 为什么两种触发方式并存而非只选一种
-
-两种触发方式解决的是不同性质的问题：
-
-- **持久化 sandbox** 解决的是"agent 需要一个持续的工作空间"的问题。典型场景：重构一个跨多个模块的功能——agent 需要反复阅读代码、修改文件、运行测试、根据测试结果调整，整个过程可能持续数小时。如果每次都用新容器，agent 每次都要重新克隆仓库、重建上下文，效率极低。
-- **定时任务** 解决的是"周期性、轻量、独立"的问题。典型场景：每天检查 staging 环境日志——每次执行是独立的，不需要保持上下文，用一个长期容器反而浪费资源。
-
-如果只支持持久化 sandbox，周期性任务会浪费容器资源；如果只支持定时任务，长期开发任务会因为上下文丢失而无法有效完成。两者正交而非互斥，用户根据任务特征在分配时选择。
-
-### 为什么执行结果不自动采纳（不自动创建 PR）
-
-这个决策的核心考量是**信任边界**：
-
-- AI agent 的执行结果可能包含错误代码、非预期的 API 变更、或者虽然能跑但不符合团队编码规范的代码。如果自动创建 PR 并 merge，这些错误会直接进入代码库。
-- 第一版的 AI agent 能力还在早期，自动采纳的风险高于收益。用户需要能检查 agent 做了什么、修改了哪些文件、为什么这样改，然后决定是否采纳。
-- "结果保留在 sandbox workspace 中"是一个安全的中间态：agent 的工作不会丢失，但也不会自动影响代码库。人类审核后手动合并，保留了最终决策权。
-
-后续可以在信任边界建立后（如通过统计 agent 的历史成功率、引入 code review bot 预审核）逐步增加自动化程度。
 
 ### 为什么 issue board 采用"系统字段 + 可配置自定义字段"的两层模型
 
@@ -154,7 +82,6 @@ graph TD
 - 持久化 sandbox 依赖现有 `container_mode: "persistent"` 基础设施（`ContainerPool` 已支持 persistent 容器的创建、复用和销毁），不重新设计容器管理
 - 执行层（executor / executor_manager）不感知 workspace，权限校验留在 backend
 - 定时任务轮询间隔不低于 60 秒，避免对 backend 造成过大压力
-- 第一版不自动创建 PR / merge，执行结果由人类审核
 - 双模 assignee 的互斥约束在数据库层通过 check constraint 保证，不依赖应用层逻辑
 
 ---

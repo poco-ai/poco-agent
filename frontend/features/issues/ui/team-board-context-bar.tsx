@@ -41,7 +41,7 @@ export function TeamBoardContextBar({
     : undefined;
 
   return (
-    <section className="border border-border/70 bg-card shadow-sm">
+    <section className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
       <div className="flex flex-col gap-4 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
         <div className="flex items-center gap-3">
           <h1 className="text-2xl font-semibold text-foreground">

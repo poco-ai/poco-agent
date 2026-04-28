@@ -4,14 +4,14 @@ const GLYPH_VARIANT_CLASS_NAMES: Record<PresetGlyphVariant, string> = {
   card: "size-[88px] rounded-[28px]",
   picker: "size-10 rounded-xl",
   composer: "size-7 rounded-lg",
-  status: "size-6 rounded-lg",
+  status: "size-7 rounded-xl",
 };
 
 const GLYPH_IMAGE_CLASS_NAMES: Record<PresetGlyphVariant, string> = {
   card: "size-[68px]",
   picker: "size-7",
   composer: "size-5",
-  status: "size-4",
+  status: "size-5",
 };
 
 export function getPresetGlyphVariantClassName(

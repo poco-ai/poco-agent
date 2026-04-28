@@ -29,6 +29,7 @@ import {
   buildTeamSections,
   type TeamSectionId,
 } from "@/features/workspaces/lib/team-sections";
+import { TeamRailProvider, useTeamRailContext } from "@/features/workspaces/model/team-rail-context";
 import { useWorkspaceContext } from "@/features/workspaces/model/workspace-context";
 import { TeamSectionRail } from "@/features/workspaces/ui/team-section-rail";
 
@@ -101,7 +102,7 @@ interface TeamLibraryShellProps {
   children: React.ReactNode;
 }
 
-export function TeamLibraryShell({ children }: TeamLibraryShellProps) {
+function TeamLibraryShellContent({ children }: TeamLibraryShellProps) {
   const { t } = useT("translation");
   const lng = useLanguage();
   const pathname = usePathname();
@@ -113,6 +114,7 @@ export function TeamLibraryShell({ children }: TeamLibraryShellProps) {
     isLoading,
     selectWorkspace,
   } = useWorkspaceContext();
+  const { railContent } = useTeamRailContext();
   const [createOpen, setCreateOpen] = React.useState(false);
 
   const activeSection = React.useMemo(
@@ -133,6 +135,13 @@ export function TeamLibraryShell({ children }: TeamLibraryShellProps) {
         issues: t("issues.title"),
       }),
     [lng, t],
+  );
+  const visibleSections = React.useMemo(
+    () =>
+      activeSection === "issues"
+        ? sections.filter((section) => section.id !== "issues")
+        : sections,
+    [activeSection, sections],
   );
 
   const handleSelectSection = React.useCallback(
@@ -222,10 +231,10 @@ export function TeamLibraryShell({ children }: TeamLibraryShellProps) {
       {/* Desktop: sidebar + detail pane */}
       <div className="hidden min-h-0 flex-1 md:grid md:grid-cols-[240px_minmax(0,1fr)]">
         <TeamSectionRail
-          sections={sections}
+          sections={visibleSections}
           activeSectionId={activeSection}
           onSelect={handleSelectSection}
-
+          footer={activeSection === "issues" ? railContent : null}
         />
         <main className="min-h-0 overflow-y-auto">
           {children}
@@ -243,10 +252,10 @@ export function TeamLibraryShell({ children }: TeamLibraryShellProps) {
         ) : (
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
             <TeamSectionRail
-              sections={sections}
+              sections={visibleSections}
               activeSectionId={activeSection}
               onSelect={handleSelectSection}
-    
+              footer={activeSection === "issues" ? railContent : null}
               variant="mobile"
             />
           </div>
@@ -258,5 +267,13 @@ export function TeamLibraryShell({ children }: TeamLibraryShellProps) {
         onOpenChange={setCreateOpen}
       />
     </>
+  );
+}
+
+export function TeamLibraryShell({ children }: TeamLibraryShellProps) {
+  return (
+    <TeamRailProvider>
+      <TeamLibraryShellContent>{children}</TeamLibraryShellContent>
+    </TeamRailProvider>
   );
 }

@@ -8,9 +8,9 @@ const issuesPageSource = readFileSync(
   "utf8",
 );
 
-test("team issues page keeps a reachable board settings entry point", () => {
+test("board rail rows remain fully clickable for board switching", () => {
   assert.match(
     issuesPageSource,
-    /onClick=\{\(\) => setBoardSettingsId\(board\.board_id\)\}/,
+    /onClick=\{\(\) => selectBoard\(board\.board_id\)\}/,
   );
 });

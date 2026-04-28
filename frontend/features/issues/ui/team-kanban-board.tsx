@@ -67,9 +67,9 @@ export function TeamKanbanBoard({
   }
 
   return (
-    <div className="overflow-hidden rounded-[28px] border border-border/70 bg-card shadow-sm">
+    <div className="space-y-4">
       {lane.pendingSections.length === 0 && lane.completedIssues.length === 0 ? (
-        <div className="flex min-h-48 items-center justify-center px-6 py-12 text-center">
+        <div className="flex min-h-48 items-center justify-center rounded-[28px] border border-dashed border-border/70 bg-card px-6 py-12 text-center shadow-sm">
           <div className="space-y-1.5">
             <p className="text-sm font-medium text-foreground">
               {t("issues.lane.emptyTitle")}
@@ -80,10 +80,10 @@ export function TeamKanbanBoard({
           </div>
         </div>
       ) : (
-        <div className="divide-y divide-border/50">
+        <div className="space-y-4">
           {lane.pendingSections.map((section) => (
-            <div key={section.priority}>
-              <div className="flex items-center gap-3 px-5 pt-4 pb-2">
+            <div key={section.priority} className="space-y-2">
+              <div className="flex items-center gap-3 px-1 pb-1">
                 <span
                   className={
                     section.priority === "high"
@@ -100,16 +100,23 @@ export function TeamKanbanBoard({
                   {section.issues.length}
                 </span>
               </div>
-              {section.issues.map((issue) => (
-                <TeamIssueCard
-                  key={issue.issue_id}
-                  issue={issue}
-                  preset={resolvePreset(issue, presetMap)}
-                  onOpen={onOpenIssue}
-                  onToggleStatus={onToggleIssueStatus}
-                  isStatusPending={pendingIssueId === issue.issue_id}
-                />
-              ))}
+              <div className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
+                {section.issues.map((issue) => (
+                  <div
+                    key={issue.issue_id}
+                    className="border-b border-muted last:border-b-0"
+                  >
+                    <TeamIssueCard
+                      issue={issue}
+                      preset={resolvePreset(issue, presetMap)}
+                      onOpen={onOpenIssue}
+                      onToggleStatus={onToggleIssueStatus}
+                      isStatusPending={pendingIssueId === issue.issue_id}
+                      surface="plain"
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
           ))}
 
@@ -145,10 +152,10 @@ function CollapsibleCompletedSection({
   const [expanded, setExpanded] = React.useState(false);
 
   return (
-    <div className="border-t border-dashed border-border/50">
+    <div className="space-y-2 pt-1">
       <button
         type="button"
-        className="flex w-full items-center justify-between px-5 py-2.5 text-sm text-muted-foreground transition hover:bg-muted/30"
+        className="flex w-full items-center justify-between rounded-xl border border-dashed border-border/60 bg-background px-5 py-3 text-sm text-muted-foreground transition hover:bg-muted/30"
         onClick={() => setExpanded((prev) => !prev)}
       >
         <span className="flex items-center gap-2">
@@ -173,16 +180,23 @@ function CollapsibleCompletedSection({
             {t("issues.lane.emptyCompleted")}
           </p>
         ) : (
-          issues.map((issue) => (
-            <TeamIssueCard
-              key={issue.issue_id}
-              issue={issue}
-              preset={resolvePreset(issue, presetMap)}
-              onOpen={onOpenIssue}
-              onToggleStatus={onToggleStatus}
-              isStatusPending={pendingIssueId === issue.issue_id}
-            />
-          ))
+          <div className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
+            {issues.map((issue) => (
+              <div
+                key={issue.issue_id}
+                className="border-b border-muted last:border-b-0"
+              >
+                <TeamIssueCard
+                  issue={issue}
+                  preset={resolvePreset(issue, presetMap)}
+                  onOpen={onOpenIssue}
+                  onToggleStatus={onToggleStatus}
+                  isStatusPending={pendingIssueId === issue.issue_id}
+                  surface="plain"
+                />
+              </div>
+            ))}
+          </div>
         )
       ) : null}
     </div>

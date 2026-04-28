@@ -11,6 +11,7 @@ interface TeamSectionRailProps {
   onSelect?: (sectionId: TeamSectionId) => void;
   variant?: "default" | "mobile";
   header?: React.ReactNode;
+  footer?: React.ReactNode;
 }
 
 export function TeamSectionRail({
@@ -19,6 +20,7 @@ export function TeamSectionRail({
   onSelect,
   variant = "default",
   header,
+  footer,
 }: TeamSectionRailProps) {
   const isMobile = variant === "mobile";
 
@@ -93,6 +95,7 @@ export function TeamSectionRail({
             );
           })}
         </div>
+        {footer ? <div className="mt-4 px-1">{footer}</div> : null}
       </nav>
     </aside>
   );

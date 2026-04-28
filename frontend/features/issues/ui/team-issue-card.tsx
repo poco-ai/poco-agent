@@ -28,6 +28,7 @@ interface TeamIssueCardProps {
   onOpen: (issueId: string) => void;
   onToggleStatus: (issueId: string) => void;
   isStatusPending?: boolean;
+  surface?: "card" | "plain";
 }
 
 export function TeamIssueCard({
@@ -36,6 +37,7 @@ export function TeamIssueCard({
   onOpen,
   onToggleStatus,
   isStatusPending = false,
+  surface = "card",
 }: TeamIssueCardProps) {
   const { t } = useT("translation");
   const isCompleted = issue.status === "done" || issue.status === "canceled";
@@ -43,7 +45,10 @@ export function TeamIssueCard({
   return (
     <article
       className={cn(
-        "group flex items-center gap-3 px-5 py-2.5 transition hover:bg-muted/30",
+        "group flex items-center gap-3 transition hover:bg-muted/20",
+        surface === "card" &&
+          "rounded-xl border border-border/70 bg-card px-5 py-3 shadow-sm hover:border-border",
+        surface === "plain" && "bg-transparent px-5 py-3",
         isCompleted && "opacity-60",
       )}
     >
