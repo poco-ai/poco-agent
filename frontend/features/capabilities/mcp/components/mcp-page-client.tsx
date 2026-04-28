@@ -63,7 +63,9 @@ export function McpPageClient() {
         const syntheticDisables = enabled
           ? []
           : servers.filter((server) => {
-              const install = installs.find((item) => item.server_id === server.id);
+              const install = installs.find(
+                (item) => item.server_id === server.id,
+              );
               const state = getEffectiveInstallState(server, install);
               return state.autoEnabled && !server.force_enabled;
             });
@@ -71,16 +73,14 @@ export function McpPageClient() {
           toast.message(t("library.mcpLibrary.toasts.noEligibleBatchToggle"));
           return;
         }
-        await Promise.all(
-          [
-            ...targetInstalls.map((install) =>
-              mcpService.updateInstall(install.id, { enabled }),
-            ),
-            ...syntheticDisables.map((server) =>
-              mcpService.createInstall({ server_id: server.id, enabled: false }),
-            ),
-          ],
-        );
+        await Promise.all([
+          ...targetInstalls.map((install) =>
+            mcpService.updateInstall(install.id, { enabled }),
+          ),
+          ...syntheticDisables.map((server) =>
+            mcpService.createInstall({ server_id: server.id, enabled: false }),
+          ),
+        ]);
         refresh();
       } catch (error) {
         console.error("[McpPageClient] Failed to batch toggle:", error);

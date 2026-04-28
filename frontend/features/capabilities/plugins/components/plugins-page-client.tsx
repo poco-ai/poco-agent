@@ -65,7 +65,9 @@ export function PluginsPageClient() {
         const syntheticDisables = enabled
           ? []
           : plugins.filter((plugin) => {
-              const install = installs.find((item) => item.plugin_id === plugin.id);
+              const install = installs.find(
+                (item) => item.plugin_id === plugin.id,
+              );
               const state = getEffectiveInstallState(plugin, install);
               return state.autoEnabled && !plugin.force_enabled;
             });
@@ -75,16 +77,17 @@ export function PluginsPageClient() {
           );
           return;
         }
-        await Promise.all(
-          [
-            ...targetInstalls.map((install) =>
-              pluginsService.updateInstall(install.id, { enabled }),
-            ),
-            ...syntheticDisables.map((plugin) =>
-              pluginsService.createInstall({ plugin_id: plugin.id, enabled: false }),
-            ),
-          ],
-        );
+        await Promise.all([
+          ...targetInstalls.map((install) =>
+            pluginsService.updateInstall(install.id, { enabled }),
+          ),
+          ...syntheticDisables.map((plugin) =>
+            pluginsService.createInstall({
+              plugin_id: plugin.id,
+              enabled: false,
+            }),
+          ),
+        ]);
         refresh();
       } catch (error) {
         console.error("[PluginsPageClient] Failed to batch toggle:", error);

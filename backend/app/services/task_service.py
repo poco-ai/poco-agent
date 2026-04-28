@@ -537,8 +537,8 @@ class TaskService:
             merged_base = self._merge_config_map(merged_base, request_config)
 
         # Validate and normalize `model` after merging base + overrides.
-        effective_default_model, allowed_model_ids = self._resolve_effective_model_policy(
-            db
+        effective_default_model, allowed_model_ids = (
+            self._resolve_effective_model_policy(db)
         )
         self._validate_and_normalize_model(
             merged_base,

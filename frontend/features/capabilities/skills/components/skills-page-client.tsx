@@ -75,7 +75,9 @@ export function SkillsPageClient() {
         const syntheticDisables = enabled
           ? []
           : skills.filter((skill) => {
-              const install = installs.find((item) => item.skill_id === skill.id);
+              const install = installs.find(
+                (item) => item.skill_id === skill.id,
+              );
               const state = getEffectiveInstallState(skill, install);
               return state.autoEnabled && !skill.force_enabled;
             });
@@ -85,16 +87,14 @@ export function SkillsPageClient() {
           );
           return;
         }
-        await Promise.all(
-          [
-            ...targetInstalls.map((install) =>
-              skillsService.updateInstall(install.id, { enabled }),
-            ),
-            ...syntheticDisables.map((skill) =>
-              skillsService.createInstall({ skill_id: skill.id, enabled: false }),
-            ),
-          ],
-        );
+        await Promise.all([
+          ...targetInstalls.map((install) =>
+            skillsService.updateInstall(install.id, { enabled }),
+          ),
+          ...syntheticDisables.map((skill) =>
+            skillsService.createInstall({ skill_id: skill.id, enabled: false }),
+          ),
+        ]);
         refresh();
       } catch (error) {
         console.error("[SkillsPageClient] Failed to batch toggle:", error);

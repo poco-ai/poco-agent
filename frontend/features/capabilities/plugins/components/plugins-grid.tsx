@@ -129,7 +129,9 @@ export function PluginsGrid({
                 isLoading ||
                 loadingId === plugin.id ||
                 loadingId === install?.id;
-              const avatarStatus = installState.isEnabled ? "active" : "inactive";
+              const avatarStatus = installState.isEnabled
+                ? "active"
+                : "inactive";
 
               return (
                 <div

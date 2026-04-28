@@ -39,6 +39,8 @@ class TaskServiceTests(unittest.TestCase):
             base_config={},
         )
 
+        self.assertIsNotNone(result)
+        assert result is not None
         self.assertEqual(result["model"], "minimax-coder")
         self.assertEqual(result["model_provider_id"], "minimax")
 
@@ -67,6 +69,8 @@ class TaskServiceTests(unittest.TestCase):
             base_config={},
         )
 
+        self.assertIsNotNone(result)
+        assert result is not None
         self.assertNotIn("model", result)
         self.assertNotIn("model_provider_id", result)
 

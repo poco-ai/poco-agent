@@ -235,7 +235,6 @@ export function SkillsGrid({
         ? t("library.sources.marketplace")
         : t("library.skillsManager.sections.custom");
     const installState = getEffectiveInstallState(skill, install);
-    const hasInstall = installState.hasInstall;
     const isInstalled = installState.isInstalled;
     const isRowLoading =
       isLoading || loadingId === skill.id || loadingId === install?.id;
