@@ -16,9 +16,10 @@ repos:
     hooks:
       - id: pyrefly-check
         name: backend · typecheck
-        exclude: ^backend/assets/
-        pass_filenames: true
+        entry: bash -c 'cd backend && uv run --frozen --with pyrefly==0.47.0 pyrefly check'
+        pass_filenames: false
         language: system
+        always_run: true
       - id: pyrefly-check
         name: executor · typecheck
         entry: bash -c 'cd executor && uv run --frozen --with pyrefly==0.47.0 pyrefly check'
@@ -50,5 +51,5 @@ repos:
     rev: v3.7.4
     hooks:
       - id: prettier
-        name: frontend · format
+        name: repo · format (prettier)
         exclude: ^backend/assets/

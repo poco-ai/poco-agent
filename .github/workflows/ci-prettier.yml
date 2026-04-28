@@ -21,13 +21,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
-          node-version: "20"
+          python-version: "3.12"
 
-      - name: Install Prettier
-        run: npm install -g prettier
+      - name: Install pre-commit
+        run: python -m pip install pre-commit
 
       - name: Run Prettier Check
-        run: prettier --check . --ignore-unknown
+        run: pre-commit run prettier --all-files --show-diff-on-failure
