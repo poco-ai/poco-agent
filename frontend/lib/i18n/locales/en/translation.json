@@ -135,6 +135,7 @@
   "issues": {
     "title": "Issues",
     "subtitle": "Track workspace boards and issue assignments.",
+    "selectBoard": "Select board",
     "boardsTitle": "Boards",
     "listTitle": "Issues",
     "executionTitle": "Execution",
@@ -165,6 +166,8 @@
     "fields": {
       "boardName": "Board name",
       "boardDescription": "Board description",
+      "status": "Status",
+      "priority": "Priority",
       "project": "Related project",
       "agentPreset": "AI preset",
       "triggerMode": "Trigger mode",
@@ -208,7 +211,12 @@
       "low": "Low",
       "medium": "Medium",
       "high": "High",
-      "urgent": "Urgent"
+      "urgent": "High"
+    },
+    "prioritySections": {
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low"
     },
     "assignmentStatuses": {
       "pending": "Pending",
@@ -239,6 +247,11 @@
       "createBoard": "New board",
       "boardSettings": "Board settings",
       "createIssue": "New issue",
+      "saveOverview": "Save issue",
+      "markDone": "Mark done",
+      "reopen": "Reopen",
+      "showCompleted": "Show",
+      "hideCompleted": "Hide",
       "backToList": "Back to list",
       "saveAssignment": "Save assignment",
       "trigger": "Trigger now",
@@ -272,6 +285,8 @@
       "boardDeleteFailed": "Failed to delete board",
       "issueCreated": "Issue created",
       "issueCreateFailed": "Failed to create issue",
+      "issueUpdated": "Issue updated",
+      "issueUpdateFailed": "Failed to update issue",
       "assignmentSaved": "Assignment saved",
       "assignmentSaveFailed": "Failed to save assignment",
       "triggered": "Execution triggered",
@@ -282,6 +297,14 @@
       "issueMoveFailed": "Failed to move issue",
       "issueDeleted": "Issue deleted",
       "issueDeleteFailed": "Failed to delete issue"
+    },
+    "lane": {
+      "pendingCount": "{{count}} pending issues",
+      "completedCount": "{{count}} completed",
+      "completedLabel": "completed",
+      "emptyTitle": "This board has no pending issues",
+      "emptyDescription": "Create a new issue from the header or reopen a completed one below.",
+      "emptyCompleted": "No completed issues yet."
     }
   },
   "hero": {

@@ -135,6 +135,7 @@
   "issues": {
     "title": "事项",
     "subtitle": "跟踪空间看板和事项分配。",
+    "selectBoard": "选择看板",
     "boardsTitle": "看板",
     "listTitle": "事项",
     "executionTitle": "执行状态",
@@ -165,6 +166,8 @@
     "fields": {
       "boardName": "看板名称",
       "boardDescription": "看板描述",
+      "status": "状态",
+      "priority": "优先级",
       "project": "关联项目",
       "agentPreset": "AI preset",
       "triggerMode": "触发方式",
@@ -208,7 +211,12 @@
       "low": "低",
       "medium": "中",
       "high": "高",
-      "urgent": "紧急"
+      "urgent": "高"
+    },
+    "prioritySections": {
+      "high": "高",
+      "medium": "中",
+      "low": "低"
     },
     "assignmentStatuses": {
       "pending": "待触发",
@@ -239,6 +247,11 @@
       "createBoard": "新建看板",
       "boardSettings": "看板设置",
       "createIssue": "新建事项",
+      "saveOverview": "保存事项",
+      "markDone": "标记完成",
+      "reopen": "重新打开",
+      "showCompleted": "显示",
+      "hideCompleted": "隐藏",
       "backToList": "返回列表",
       "saveAssignment": "保存分配",
       "trigger": "立即触发",
@@ -272,6 +285,8 @@
       "boardDeleteFailed": "删除看板失败",
       "issueCreated": "事项已创建",
       "issueCreateFailed": "创建事项失败",
+      "issueUpdated": "事项已更新",
+      "issueUpdateFailed": "更新事项失败",
       "assignmentSaved": "分配已保存",
       "assignmentSaveFailed": "保存分配失败",
       "triggered": "已触发执行",
@@ -282,6 +297,14 @@
       "issueMoveFailed": "移动事项失败",
       "issueDeleted": "事项已删除",
       "issueDeleteFailed": "删除事项失败"
+    },
+    "lane": {
+      "pendingCount": "{{count}} 个待处理事项",
+      "completedCount": "已完成 {{count}}",
+      "completedLabel": "已完成",
+      "emptyTitle": "这个看板还没有待处理事项",
+      "emptyDescription": "从右上角创建新事项，或在已完成事项里重新打开旧事项。",
+      "emptyCompleted": "当前没有已完成事项。"
     }
   },
   "hero": {

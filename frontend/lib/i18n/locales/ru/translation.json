@@ -135,6 +135,7 @@
   "issues": {
     "title": "Issues",
     "subtitle": "Отслеживайте доски пространства и назначения задач.",
+    "selectBoard": "Выбрать доску",
     "boardsTitle": "Доски",
     "listTitle": "Issues",
     "executionTitle": "Execution",
@@ -165,6 +166,8 @@
     "fields": {
       "boardName": "Название доски",
       "boardDescription": "Описание доски",
+      "status": "Статус",
+      "priority": "Приоритет",
       "project": "Related project",
       "agentPreset": "AI preset",
       "triggerMode": "Trigger mode",
@@ -208,7 +211,12 @@
       "low": "Низкий",
       "medium": "Средний",
       "high": "Высокий",
-      "urgent": "Срочный"
+      "urgent": "Высокий"
+    },
+    "prioritySections": {
+      "high": "Высокий",
+      "medium": "Средний",
+      "low": "Низкий"
     },
     "assignmentStatuses": {
       "pending": "Ожидает",
@@ -239,6 +247,11 @@
       "createBoard": "Новая доска",
       "boardSettings": "Настройки доски",
       "createIssue": "Новая issue",
+      "saveOverview": "Сохранить issue",
+      "markDone": "Отметить выполненной",
+      "reopen": "Переоткрыть",
+      "showCompleted": "Показать",
+      "hideCompleted": "Скрыть",
       "backToList": "Назад к списку",
       "saveAssignment": "Save assignment",
       "trigger": "Trigger now",
@@ -272,6 +285,8 @@
       "boardDeleteFailed": "Не удалось удалить доску",
       "issueCreated": "Issue создана",
       "issueCreateFailed": "Не удалось создать issue",
+      "issueUpdated": "Issue обновлена",
+      "issueUpdateFailed": "Не удалось обновить issue",
       "assignmentSaved": "Assignment saved",
       "assignmentSaveFailed": "Failed to save assignment",
       "triggered": "Execution triggered",
@@ -282,6 +297,14 @@
       "issueMoveFailed": "Не удалось переместить issue",
       "issueDeleted": "Issue удалена",
       "issueDeleteFailed": "Не удалось удалить issue"
+    },
+    "lane": {
+      "pendingCount": "{{count}} активных issues",
+      "completedCount": "{{count}} завершено",
+      "completedLabel": "завершено",
+      "emptyTitle": "На этой доске нет активных issues",
+      "emptyDescription": "Создайте новую issue в заголовке доски или переоткройте завершенную ниже.",
+      "emptyCompleted": "Завершенных issues пока нет."
     }
   },
   "hero": {

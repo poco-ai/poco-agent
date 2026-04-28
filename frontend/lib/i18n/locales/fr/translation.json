@@ -135,6 +135,7 @@
   "issues": {
     "title": "Issues",
     "subtitle": "Suivez les tableaux d’équipe et les affectations.",
+    "selectBoard": "Choisir un tableau",
     "boardsTitle": "Tableaux",
     "listTitle": "Issues",
     "executionTitle": "Execution",
@@ -165,6 +166,8 @@
     "fields": {
       "boardName": "Nom du tableau",
       "boardDescription": "Description du tableau",
+      "status": "Statut",
+      "priority": "Priorité",
       "project": "Related project",
       "agentPreset": "AI preset",
       "triggerMode": "Trigger mode",
@@ -208,7 +211,12 @@
       "low": "Basse",
       "medium": "Moyenne",
       "high": "Haute",
-      "urgent": "Urgente"
+      "urgent": "Haute"
+    },
+    "prioritySections": {
+      "high": "Haute",
+      "medium": "Moyenne",
+      "low": "Basse"
     },
     "assignmentStatuses": {
       "pending": "En attente",
@@ -239,6 +247,11 @@
       "createBoard": "Nouveau tableau",
       "boardSettings": "Paramètres du tableau",
       "createIssue": "Nouvelle issue",
+      "saveOverview": "Enregistrer l’issue",
+      "markDone": "Marquer comme terminée",
+      "reopen": "Rouvrir",
+      "showCompleted": "Afficher",
+      "hideCompleted": "Masquer",
       "backToList": "Retour à la liste",
       "saveAssignment": "Save assignment",
       "trigger": "Trigger now",
@@ -272,6 +285,8 @@
       "boardDeleteFailed": "Échec de la suppression du tableau",
       "issueCreated": "Issue créée",
       "issueCreateFailed": "Échec de la création de l’issue",
+      "issueUpdated": "Issue mise à jour",
+      "issueUpdateFailed": "Échec de la mise à jour de l’issue",
       "assignmentSaved": "Assignment saved",
       "assignmentSaveFailed": "Failed to save assignment",
       "triggered": "Execution triggered",
@@ -282,6 +297,14 @@
       "issueMoveFailed": "Échec du déplacement de l’issue",
       "issueDeleted": "Issue supprimée",
       "issueDeleteFailed": "Échec de la suppression de l’issue"
+    },
+    "lane": {
+      "pendingCount": "{{count}} issues en attente",
+      "completedCount": "{{count}} terminées",
+      "completedLabel": "terminées",
+      "emptyTitle": "Ce tableau n’a aucune issue en attente",
+      "emptyDescription": "Créez une nouvelle issue depuis l’en-tête ou rouvrez-en une terminée ci-dessous.",
+      "emptyCompleted": "Aucune issue terminée pour le moment."
     }
   },
   "hero": {

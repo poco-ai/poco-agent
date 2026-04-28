@@ -135,6 +135,7 @@
   "issues": {
     "title": "Issues",
     "subtitle": "Workspace-Boards und Zuweisungen verfolgen.",
+    "selectBoard": "Board wählen",
     "boardsTitle": "Boards",
     "listTitle": "Issues",
     "executionTitle": "Execution",
@@ -165,6 +166,8 @@
     "fields": {
       "boardName": "Board-Name",
       "boardDescription": "Board-Beschreibung",
+      "status": "Status",
+      "priority": "Priorität",
       "project": "Related project",
       "agentPreset": "AI preset",
       "triggerMode": "Trigger mode",
@@ -208,7 +211,12 @@
       "low": "Niedrig",
       "medium": "Mittel",
       "high": "Hoch",
-      "urgent": "Dringend"
+      "urgent": "Hoch"
+    },
+    "prioritySections": {
+      "high": "Hoch",
+      "medium": "Mittel",
+      "low": "Niedrig"
     },
     "assignmentStatuses": {
       "pending": "Ausstehend",
@@ -239,6 +247,11 @@
       "createBoard": "Neues Board",
       "boardSettings": "Board-Einstellungen",
       "createIssue": "Neue Issue",
+      "saveOverview": "Issue speichern",
+      "markDone": "Als erledigt markieren",
+      "reopen": "Wieder öffnen",
+      "showCompleted": "Anzeigen",
+      "hideCompleted": "Ausblenden",
       "backToList": "Zurück zur Liste",
       "saveAssignment": "Save assignment",
       "trigger": "Trigger now",
@@ -272,6 +285,8 @@
       "boardDeleteFailed": "Board konnte nicht gelöscht werden",
       "issueCreated": "Issue erstellt",
       "issueCreateFailed": "Issue konnte nicht erstellt werden",
+      "issueUpdated": "Issue aktualisiert",
+      "issueUpdateFailed": "Issue konnte nicht aktualisiert werden",
       "assignmentSaved": "Assignment saved",
       "assignmentSaveFailed": "Failed to save assignment",
       "triggered": "Execution triggered",
@@ -282,6 +297,14 @@
       "issueMoveFailed": "Issue konnte nicht verschoben werden",
       "issueDeleted": "Issue gelöscht",
       "issueDeleteFailed": "Issue konnte nicht gelöscht werden"
+    },
+    "lane": {
+      "pendingCount": "{{count}} offene Issues",
+      "completedCount": "{{count}} erledigt",
+      "completedLabel": "erledigt",
+      "emptyTitle": "Dieses Board hat keine offenen Issues",
+      "emptyDescription": "Erstellen Sie oben rechts eine neue Issue oder öffnen Sie eine erledigte wieder.",
+      "emptyCompleted": "Noch keine erledigten Issues."
     }
   },
   "hero": {

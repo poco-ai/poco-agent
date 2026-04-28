@@ -24,28 +24,22 @@ import {
 } from "@/components/ui/empty";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useT } from "@/lib/i18n/client";
-import { useLanguage } from "@/hooks/use-language";
 import { issuesApi } from "@/features/issues/api/issues-api";
-import {
-  mergeMovedIssue,
-  moveKanbanIssue,
-} from "@/features/issues/lib/kanban-columns";
-import {
-  filterIssuesByQuery,
-  summarizeBoardIssues,
-} from "@/features/issues/lib/issues-index-view";
+import { summarizeBoardIssues } from "@/features/issues/lib/issues-index-view";
+import type { Preset } from "@/features/capabilities/presets/lib/preset-types";
+import { presetsService } from "@/features/capabilities/presets/api/presets-api";
 import { useTeamKanban } from "@/features/issues/model/use-team-kanban";
 import type {
   WorkspaceBoard,
   WorkspaceBoardInput,
   WorkspaceIssue,
-  WorkspaceIssueStatus,
 } from "@/features/issues/model/types";
 import { TeamBoardContextBar } from "@/features/issues/ui/team-board-context-bar";
 import { TeamBoardSettingsDialog } from "@/features/issues/ui/team-board-settings-dialog";
 import { TeamIssueDetailDialog } from "@/features/issues/ui/team-issue-detail-dialog";
 import { TeamKanbanBoard } from "@/features/issues/ui/team-kanban-board";
+import { useLanguage } from "@/hooks/use-language";
+import { useT } from "@/lib/i18n/client";
 import { useWorkspaceContext } from "@/features/workspaces";
 import { TeamContentShell } from "@/features/workspaces/ui/team-content-shell";
 
@@ -167,96 +161,111 @@ export function TeamIssuesPageClient() {
   const { t } = useT("translation");
   const lng = useLanguage();
   const { currentWorkspace } = useWorkspaceContext();
-  const [boards, setBoards] = React.useState<WorkspaceBoard[]>([]);
-  const [issues, setIssues] = React.useState<WorkspaceIssue[]>([]);
-  const [selectedBoardId, setSelectedBoardId] = React.useState<string | null>(
-    null,
-  );
-  const [boardDialogOpen, setBoardDialogOpen] = React.useState(false);
-  const [boardSettingsOpen, setBoardSettingsOpen] = React.useState(false);
-  const [issueDialogOpen, setIssueDialogOpen] = React.useState(false);
-  const [isRefreshing, setIsRefreshing] = React.useState(false);
-  const [hasLoadedBoards, setHasLoadedBoards] = React.useState(false);
-  const [boardLoadFailed, setBoardLoadFailed] = React.useState(false);
-  const [issuesLoadFailed, setIssuesLoadFailed] = React.useState(false);
-  const [isMovePending, setIsMovePending] = React.useState(false);
-  const [query, setQuery] = React.useState("");
   const { selectedIssueId, openIssue, closeIssue } = useTeamKanban(lng);
 
-  const loadBoards = React.useCallback(async () => {
-    if (!currentWorkspace) {
-      return;
-    }
-    const nextBoards = await issuesApi.listBoards(currentWorkspace.id);
-    setBoards(nextBoards);
-    setSelectedBoardId((previousBoardId) =>
-      previousBoardId &&
-      nextBoards.some((board) => board.board_id === previousBoardId)
-        ? previousBoardId
-        : nextBoards[0]?.board_id ?? null,
-    );
-  }, [currentWorkspace]);
+  const [boards, setBoards] = React.useState<WorkspaceBoard[]>([]);
+  const [issues, setIssues] = React.useState<WorkspaceIssue[]>([]);
+  const [selectedBoardId, setSelectedBoardId] = React.useState<string | null>(null);
+  const [boardDialogOpen, setBoardDialogOpen] = React.useState(false);
+  const [issueBoardId, setIssueBoardId] = React.useState<string | null>(null);
+  const [boardSettingsId, setBoardSettingsId] = React.useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = React.useState(false);
+  const [hasLoadedBoards, setHasLoadedBoards] = React.useState(false);
+  const [loadFailed, setLoadFailed] = React.useState(false);
+  const [pendingIssueId, setPendingIssueId] = React.useState<string | null>(null);
+  const [presets, setPresets] = React.useState<Preset[]>([]);
 
-  const loadIssues = React.useCallback(async () => {
-    if (!selectedBoardId) {
-      setIssues([]);
-      return;
-    }
-    setIssues(await issuesApi.listIssues(selectedBoardId));
-  }, [selectedBoardId]);
+  const presetMap = React.useMemo(
+    () => new Map(presets.map((p) => [p.preset_id, p])),
+    [presets],
+  );
+
+  const issueBoard = React.useMemo(
+    () => boards.find((board) => board.board_id === issueBoardId) ?? null,
+    [boards, issueBoardId],
+  );
+  const selectedBoard = React.useMemo(
+    () => boards.find((board) => board.board_id === selectedBoardId) ?? boards[0] ?? null,
+    [boards, selectedBoardId],
+  );
+  const settingsBoard = React.useMemo(
+    () => boards.find((board) => board.board_id === boardSettingsId) ?? null,
+    [boards, boardSettingsId],
+  );
+  const settingsBoardIssueCount = React.useMemo(
+    () =>
+      settingsBoard
+        ? summarizeBoardIssues(
+            issues.filter((issue) => issue.board_id === settingsBoard.board_id),
+          ).totalIssues
+        : 0,
+    [issues, settingsBoard],
+  );
+
+  const mergeIssue = React.useCallback((updatedIssue: WorkspaceIssue) => {
+    setIssues((currentIssues) => {
+      const hasExisting = currentIssues.some(
+        (issue) => issue.issue_id === updatedIssue.issue_id,
+      );
+      if (!hasExisting) {
+        return [updatedIssue, ...currentIssues];
+      }
+      return currentIssues.map((issue) =>
+        issue.issue_id === updatedIssue.issue_id ? updatedIssue : issue,
+      );
+    });
+  }, []);
 
   const refresh = React.useCallback(async () => {
     if (!currentWorkspace) {
       return;
     }
+
     setIsRefreshing(true);
-    setBoardLoadFailed(false);
+    setLoadFailed(false);
     try {
-      await loadBoards();
+      const [nextBoards, nextPresets] = await Promise.all([
+        issuesApi.listBoards(currentWorkspace.id),
+        presetsService.listPresets(),
+      ]);
+      const nextIssueGroups = await Promise.all(
+        nextBoards.map((board) => issuesApi.listIssues(board.board_id)),
+      );
+      setBoards(nextBoards);
+      setIssues(nextIssueGroups.flat());
+      setPresets(
+        nextPresets.filter((p) => p.scope !== "personal" || p.user_id),
+      );
       setHasLoadedBoards(true);
     } catch (error) {
       console.error("[Issues] refresh failed", error);
-      setBoardLoadFailed(true);
+      setLoadFailed(true);
       toast.error(t("issues.toasts.loadFailed"));
     } finally {
       setIsRefreshing(false);
     }
-  }, [currentWorkspace, loadBoards, t]);
+  }, [currentWorkspace, t]);
 
   React.useEffect(() => {
     void refresh();
   }, [refresh]);
 
-  React.useEffect(() => {
-    const load = async () => {
-      setIssuesLoadFailed(false);
-      try {
-        await loadIssues();
-      } catch (error) {
-        console.error("[Issues] load issues failed", error);
-        setIssuesLoadFailed(true);
-        toast.error(t("issues.toasts.loadFailed"));
-      }
-    };
-    void load();
-  }, [loadIssues, t]);
-
-  const selectedBoard = React.useMemo(
-    () => boards.find((board) => board.board_id === selectedBoardId) ?? null,
-    [boards, selectedBoardId],
+  const boardIdSet = React.useMemo(
+    () => new Set(boards.map((b) => b.board_id)),
+    [boards],
   );
 
   React.useEffect(() => {
-    if (!selectedBoard) {
-      setBoardSettingsOpen(false);
+    if (boards.length > 0 && selectedBoardId && !boardIdSet.has(selectedBoardId)) {
+      setSelectedBoardId(boards[0].board_id);
     }
-  }, [selectedBoard]);
-
-  const filteredIssues = React.useMemo(
-    () => filterIssuesByQuery(issues, query),
-    [issues, query],
-  );
-  const boardSummary = React.useMemo(() => summarizeBoardIssues(issues), [issues]);
+    if (issueBoardId && !boardIdSet.has(issueBoardId)) {
+      setIssueBoardId(null);
+    }
+    if (boardSettingsId && !boardIdSet.has(boardSettingsId)) {
+      setBoardSettingsId(null);
+    }
+  }, [boards, selectedBoardId, issueBoardId, boardSettingsId, boardIdSet]);
 
   const createBoard = async (name: string) => {
     if (!currentWorkspace || !name.trim()) {
@@ -277,15 +286,15 @@ export function TeamIssuesPageClient() {
   };
 
   const createIssue = async (title: string) => {
-    if (!selectedBoardId || !title.trim()) {
+    if (!issueBoardId || !title.trim()) {
       return;
     }
     try {
-      const created = await issuesApi.createIssue(selectedBoardId, {
+      const created = await issuesApi.createIssue(issueBoardId, {
         title: title.trim(),
       });
       setIssues((previousIssues) => [created, ...previousIssues]);
-      setIssueDialogOpen(false);
+      setIssueBoardId(null);
       toast.success(t("issues.toasts.issueCreated"));
     } catch (error) {
       console.error("[Issues] create issue failed", error);
@@ -294,14 +303,14 @@ export function TeamIssuesPageClient() {
   };
 
   const saveBoardSettings = async (input: WorkspaceBoardInput) => {
-    if (!currentWorkspace || !selectedBoard) {
+    if (!currentWorkspace || !settingsBoard) {
       return;
     }
 
     try {
       const updatedBoard = await issuesApi.updateBoard(
         currentWorkspace.id,
-        selectedBoard.board_id,
+        settingsBoard.board_id,
         input,
       );
       setBoards((previousBoards) =>
@@ -309,7 +318,7 @@ export function TeamIssuesPageClient() {
           board.board_id === updatedBoard.board_id ? updatedBoard : board,
         ),
       );
-      setBoardSettingsOpen(false);
+      setBoardSettingsId(null);
       toast.success(t("issues.toasts.boardUpdated"));
     } catch (error) {
       console.error("[Issues] update board failed", error);
@@ -318,24 +327,19 @@ export function TeamIssuesPageClient() {
   };
 
   const deleteBoard = async () => {
-    if (!currentWorkspace || !selectedBoard) {
+    if (!currentWorkspace || !settingsBoard) {
       return;
     }
 
     try {
-      await issuesApi.deleteBoard(currentWorkspace.id, selectedBoard.board_id);
-      const deletedBoardId = selectedBoard.board_id;
-      const deletedBoardIndex = boards.findIndex(
-        (board) => board.board_id === deletedBoardId,
+      await issuesApi.deleteBoard(currentWorkspace.id, settingsBoard.board_id);
+      setBoards((previousBoards) =>
+        previousBoards.filter((board) => board.board_id !== settingsBoard.board_id),
       );
-      const nextBoards = boards.filter((board) => board.board_id !== deletedBoardId);
-      const fallbackBoard =
-        nextBoards[deletedBoardIndex] ?? nextBoards[deletedBoardIndex - 1] ?? null;
-
-      setBoards(nextBoards);
-      setSelectedBoardId(fallbackBoard?.board_id ?? null);
-      setIssues([]);
-      setBoardSettingsOpen(false);
+      setIssues((previousIssues) =>
+        previousIssues.filter((issue) => issue.board_id !== settingsBoard.board_id),
+      );
+      setBoardSettingsId(null);
       closeIssue();
       toast.success(t("issues.toasts.boardDeleted"));
     } catch (error) {
@@ -344,40 +348,27 @@ export function TeamIssuesPageClient() {
     }
   };
 
-  const moveIssue = React.useCallback(
-    async (issueId: string, status: WorkspaceIssueStatus, position: number) => {
-      if (isMovePending) {
+  const toggleIssueStatus = React.useCallback(
+    async (issueId: string) => {
+      const issue = issues.find((item) => item.issue_id === issueId);
+      if (!issue || pendingIssueId) {
         return;
       }
 
-      const previousIssues = issues;
-      const optimisticIssues = moveKanbanIssue(previousIssues, {
-        issueId,
-        status,
-        position,
-      });
-      if (optimisticIssues === previousIssues) {
-        return;
-      }
-
-      setIssues(optimisticIssues);
-      setIsMovePending(true);
-
+      setPendingIssueId(issueId);
       try {
-        const updatedIssue = await issuesApi.moveIssue(issueId, {
-          status,
-          position,
+        const updated = await issuesApi.updateIssue(issue.board_id, issue.issue_id, {
+          status: issue.status === "done" || issue.status === "canceled" ? "todo" : "done",
         });
-        setIssues((currentIssues) => mergeMovedIssue(currentIssues, updatedIssue));
+        mergeIssue(updated);
       } catch (error) {
-        console.error("[Issues] move issue failed", error);
-        setIssues(previousIssues);
-        toast.error(t("issues.toasts.issueMoveFailed"));
+        console.error("[Issues] toggle issue status failed", error);
+        toast.error(t("issues.toasts.issueUpdateFailed"));
       } finally {
-        setIsMovePending(false);
+        setPendingIssueId(null);
       }
     },
-    [isMovePending, issues, t],
+    [issues, mergeIssue, pendingIssueId, t],
   );
 
   return (
@@ -386,41 +377,33 @@ export function TeamIssuesPageClient() {
         <div className="space-y-6">
           <TeamBoardContextBar
             boards={boards}
-            selectedBoardId={selectedBoardId}
             selectedBoard={selectedBoard}
-            totalIssues={boardSummary.totalIssues}
-            aiAssignedIssues={boardSummary.aiAssignedIssues}
-            runningIssues={boardSummary.runningIssues}
+            onSelectBoard={setSelectedBoardId}
             isRefreshing={isRefreshing}
-            onBoardChange={setSelectedBoardId}
             onRefresh={() => void refresh()}
+            onCreateIssue={setIssueBoardId}
             onCreateBoard={() => setBoardDialogOpen(true)}
-            onOpenSettings={() => setBoardSettingsOpen(true)}
           />
 
           {!hasLoadedBoards && isRefreshing ? (
             <div className="space-y-6">
-              <div className="rounded-[32px] border border-border/70 bg-card px-5 py-5 sm:px-6">
-                <div className="grid gap-3 md:grid-cols-3">
-                  <Skeleton className="h-24 rounded-3xl" />
-                  <Skeleton className="h-24 rounded-3xl" />
-                  <Skeleton className="h-24 rounded-3xl" />
+              <div className="border border-border/70 bg-card px-5 py-4 shadow-sm sm:px-6">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-center gap-3">
+                    <Skeleton className="h-7 w-28" />
+                    <Skeleton className="h-6 w-32" />
+                  </div>
+                  <div className="flex gap-2">
+                    <Skeleton className="h-9 w-24" />
+                    <Skeleton className="h-9 w-28" />
+                  </div>
                 </div>
               </div>
-              <div className="rounded-[32px] border border-border/70 bg-card px-5 py-4 sm:px-6">
-                <div className="flex flex-col gap-3 sm:flex-row">
-                  <Skeleton className="h-10 flex-1 rounded-2xl" />
-                  <Skeleton className="h-10 w-40 rounded-2xl" />
-                </div>
+              <div className="border border-border/70 bg-card shadow-sm">
+                <Skeleton className="h-48 w-full" />
               </div>
-              <div className="hidden gap-4 md:flex">
-                <Skeleton className="h-[28rem] w-[20rem] rounded-[28px]" />
-                <Skeleton className="h-[28rem] w-[20rem] rounded-[28px]" />
-                <Skeleton className="h-[28rem] w-[20rem] rounded-[28px]" />
-              </div>
-              <Skeleton className="h-[28rem] rounded-[28px] md:hidden" />
             </div>
-          ) : boardLoadFailed && boards.length === 0 ? (
+          ) : loadFailed && boards.length === 0 ? (
             <Card className="border-border/60">
               <CardContent className="p-6">
                 <Empty className="min-h-72 rounded-2xl border border-dashed border-border/70 bg-muted/10">
@@ -446,129 +429,34 @@ export function TeamIssuesPageClient() {
                 </Empty>
               </CardContent>
             </Card>
+          ) : boards.length === 0 ? (
+            <Card className="border-border/60">
+              <CardContent className="p-6">
+                <Empty className="min-h-72 rounded-2xl border border-dashed border-border/70 bg-muted/10">
+                  <EmptyContent>
+                    <EmptyMedia variant="icon">
+                      <KanbanSquare className="size-5" />
+                    </EmptyMedia>
+                    <EmptyHeader>
+                      <EmptyTitle>{t("issues.boardsTitle")}</EmptyTitle>
+                      <EmptyDescription>
+                        {t("issues.emptyBoards")}
+                      </EmptyDescription>
+                    </EmptyHeader>
+                  </EmptyContent>
+                </Empty>
+              </CardContent>
+            </Card>
           ) : (
-            <div className="space-y-6">
-              <section className="rounded-[28px] border border-border/70 bg-card px-5 py-4 sm:px-6">
-                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                  <div className="space-y-1.5">
-                    <p className="text-sm font-semibold text-foreground">
-                      {t("issues.toolbar.title")}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {t("issues.toolbar.description", {
-                        count: filteredIssues.length,
-                      })}
-                    </p>
-                  </div>
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                    <Input
-                      value={query}
-                      onChange={(event) => setQuery(event.target.value)}
-                      placeholder={t("issues.searchPlaceholder")}
-                      className="min-w-0 sm:w-72"
-                    />
-                    <Button
-                      type="button"
-                      size="sm"
-                      onClick={() => setIssueDialogOpen(true)}
-                      disabled={!selectedBoardId}
-                    >
-                      <Ticket className="size-4" />
-                      {t("issues.actions.createIssue")}
-                    </Button>
-                  </div>
-                </div>
-              </section>
-
-              {!selectedBoardId ? (
-                <Card className="border-border/60">
-                  <CardContent className="p-6">
-                    <Empty className="min-h-72 rounded-2xl border border-dashed border-border/70 bg-muted/10">
-                      <EmptyContent>
-                        <EmptyMedia variant="icon">
-                          <KanbanSquare className="size-5" />
-                        </EmptyMedia>
-                        <EmptyHeader>
-                          <EmptyTitle>{t("issues.boardsTitle")}</EmptyTitle>
-                          <EmptyDescription>
-                            {t("issues.emptyBoards")}
-                          </EmptyDescription>
-                        </EmptyHeader>
-                      </EmptyContent>
-                    </Empty>
-                  </CardContent>
-                </Card>
-              ) : issuesLoadFailed ? (
-                <Card className="border-border/60">
-                  <CardContent className="p-6">
-                    <Empty className="min-h-72 rounded-2xl border border-dashed border-border/70 bg-muted/10">
-                      <EmptyContent>
-                        <EmptyMedia variant="icon">
-                          <Ticket className="size-5" />
-                        </EmptyMedia>
-                        <EmptyHeader>
-                          <EmptyTitle>{t("issues.states.loadErrorTitle")}</EmptyTitle>
-                          <EmptyDescription>
-                            {t("issues.states.loadErrorDescription")}
-                          </EmptyDescription>
-                        </EmptyHeader>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() => void loadIssues()}
-                        >
-                          <RefreshCw className="size-4" />
-                          {t("issues.actions.retryLoad")}
-                        </Button>
-                      </EmptyContent>
-                    </Empty>
-                  </CardContent>
-                </Card>
-              ) : issues.length === 0 ? (
-                <Card className="border-border/60">
-                  <CardContent className="p-6">
-                    <Empty className="min-h-72 rounded-2xl border border-dashed border-border/70 bg-muted/10">
-                      <EmptyContent>
-                        <EmptyMedia variant="icon">
-                          <Ticket className="size-5" />
-                        </EmptyMedia>
-                        <EmptyHeader>
-                          <EmptyTitle>{t("issues.listTitle")}</EmptyTitle>
-                          <EmptyDescription>
-                            {t("issues.emptyIssues")}
-                          </EmptyDescription>
-                        </EmptyHeader>
-                      </EmptyContent>
-                    </Empty>
-                  </CardContent>
-                </Card>
-              ) : filteredIssues.length === 0 ? (
-                <Card className="border-border/60">
-                  <CardContent className="p-6">
-                    <Empty className="min-h-56 rounded-2xl border border-dashed border-border/70 bg-muted/10">
-                      <EmptyContent>
-                        <EmptyMedia variant="icon">
-                          <Ticket className="size-5" />
-                        </EmptyMedia>
-                        <EmptyHeader>
-                          <EmptyTitle>{t("issues.listTitle")}</EmptyTitle>
-                          <EmptyDescription>
-                            {t("issues.emptySearch")}
-                          </EmptyDescription>
-                        </EmptyHeader>
-                      </EmptyContent>
-                    </Empty>
-                  </CardContent>
-                </Card>
-              ) : (
-                <TeamKanbanBoard
-                  issues={filteredIssues}
-                  onOpenIssue={openIssue}
-                  onMoveIssue={moveIssue}
-                  isMovePending={isMovePending}
-                />
-              )}
-            </div>
+            <TeamKanbanBoard
+              boards={boards}
+              issues={issues}
+              selectedBoardId={selectedBoardId}
+              presetMap={presetMap}
+              onOpenIssue={openIssue}
+              onToggleIssueStatus={(issueId) => void toggleIssueStatus(issueId)}
+              pendingIssueId={pendingIssueId}
+            />
           )}
         </div>
       </TeamContentShell>
@@ -579,16 +467,16 @@ export function TeamIssuesPageClient() {
         onCreate={createBoard}
       />
       <CreateIssueDialog
-        open={issueDialogOpen}
-        onOpenChange={setIssueDialogOpen}
-        boardName={selectedBoard?.name ?? null}
+        open={Boolean(issueBoardId)}
+        onOpenChange={(open) => !open && setIssueBoardId(null)}
+        boardName={issueBoard?.name ?? null}
         onCreate={createIssue}
       />
       <TeamBoardSettingsDialog
-        board={selectedBoard}
-        issueCount={boardSummary.totalIssues}
-        open={boardSettingsOpen}
-        onOpenChange={setBoardSettingsOpen}
+        board={settingsBoard}
+        issueCount={settingsBoardIssueCount}
+        open={Boolean(boardSettingsId)}
+        onOpenChange={(open) => !open && setBoardSettingsId(null)}
         onSave={saveBoardSettings}
         onDelete={deleteBoard}
       />
@@ -601,6 +489,7 @@ export function TeamIssuesPageClient() {
           );
           closeIssue();
         }}
+        onUpdated={mergeIssue}
       />
     </>
   );

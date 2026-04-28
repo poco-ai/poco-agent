@@ -15,12 +15,14 @@ interface TeamIssueDetailDialogProps {
   issueId: string | null;
   onClose: () => void;
   onDeleted: (issueId: string) => void;
+  onUpdated: (issue: import("@/features/issues/model/types").WorkspaceIssue) => void;
 }
 
 export function TeamIssueDetailDialog({
   issueId,
   onClose,
   onDeleted,
+  onUpdated,
 }: TeamIssueDetailDialogProps) {
   const { t } = useT("translation");
 
@@ -38,6 +40,7 @@ export function TeamIssueDetailDialog({
           <TeamIssueDetailContent
             issueId={issueId}
             onDeleted={onDeleted}
+            onUpdated={onUpdated}
           />
         ) : null}
       </DialogContent>

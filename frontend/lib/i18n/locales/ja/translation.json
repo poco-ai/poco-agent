@@ -135,6 +135,7 @@
   "issues": {
     "title": "Issues",
     "subtitle": "ワークスペースのボードと担当を追跡します。",
+    "selectBoard": "ボードを選択",
     "boardsTitle": "ボード",
     "listTitle": "Issues",
     "executionTitle": "Execution",
@@ -165,6 +166,8 @@
     "fields": {
       "boardName": "ボード名",
       "boardDescription": "ボードの説明",
+      "status": "状態",
+      "priority": "優先度",
       "project": "Related project",
       "agentPreset": "AI preset",
       "triggerMode": "Trigger mode",
@@ -208,7 +211,12 @@
       "low": "低",
       "medium": "中",
       "high": "高",
-      "urgent": "緊急"
+      "urgent": "高"
+    },
+    "prioritySections": {
+      "high": "高",
+      "medium": "中",
+      "low": "低"
     },
     "assignmentStatuses": {
       "pending": "待機中",
@@ -239,6 +247,11 @@
       "createBoard": "新しいボード",
       "boardSettings": "ボード設定",
       "createIssue": "新しい Issue",
+      "saveOverview": "Issue を保存",
+      "markDone": "完了にする",
+      "reopen": "再オープン",
+      "showCompleted": "表示",
+      "hideCompleted": "非表示",
       "backToList": "一覧に戻る",
       "saveAssignment": "Save assignment",
       "trigger": "Trigger now",
@@ -272,6 +285,8 @@
       "boardDeleteFailed": "ボードの削除に失敗しました",
       "issueCreated": "Issue を作成しました",
       "issueCreateFailed": "Issue の作成に失敗しました",
+      "issueUpdated": "Issue を更新しました",
+      "issueUpdateFailed": "Issue の更新に失敗しました",
       "assignmentSaved": "Assignment saved",
       "assignmentSaveFailed": "Failed to save assignment",
       "triggered": "Execution triggered",
@@ -282,6 +297,14 @@
       "issueMoveFailed": "Issue の移動に失敗しました",
       "issueDeleted": "Issue を削除しました",
       "issueDeleteFailed": "Issue の削除に失敗しました"
+    },
+    "lane": {
+      "pendingCount": "未完了 {{count}} 件",
+      "completedCount": "完了 {{count}} 件",
+      "completedLabel": "件完了",
+      "emptyTitle": "このボードに未完了の Issue はありません",
+      "emptyDescription": "右上から新しい Issue を作成するか、下の完了済み Issue を再オープンしてください。",
+      "emptyCompleted": "完了済み Issue はまだありません。"
     }
   },
   "hero": {

@@ -1,11 +1,26 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import type { WorkspaceIssue } from "../model/types.ts";
+import type { WorkspaceBoard, WorkspaceIssue } from "../model/types.ts";
 import {
-  filterIssuesByQuery,
-  summarizeBoardIssues,
+  BOARD_PRIORITY_ORDER,
+  buildBoardLanes,
+  getIssuePriorityBucket,
 } from "./issues-index-view.ts";
+
+function createBoard(overrides: Partial<WorkspaceBoard> = {}): WorkspaceBoard {
+  return {
+    board_id: "board-1",
+    workspace_id: "workspace-1",
+    name: "Product polish",
+    description: null,
+    created_by: "user-1",
+    updated_by: null,
+    created_at: "2026-04-16T09:00:00Z",
+    updated_at: "2026-04-16T09:00:00Z",
+    ...overrides,
+  };
+}
 
 function createIssue(overrides: Partial<WorkspaceIssue> = {}): WorkspaceIssue {
   return {
@@ -32,76 +47,92 @@ function createIssue(overrides: Partial<WorkspaceIssue> = {}): WorkspaceIssue {
   };
 }
 
-test("filterIssuesByQuery matches issue title and description", () => {
-  const issues = [
-    createIssue({ issue_id: "issue-1", title: "Fix login flicker" }),
-    createIssue({
-      issue_id: "issue-2",
-      title: "Refine board shell",
-      description: "Improve issue browsing density",
-    }),
-  ];
+test("getIssuePriorityBucket treats medium issues as the default unprioritized bucket", () => {
+  assert.equal(getIssuePriorityBucket("medium"), "medium");
+  assert.equal(getIssuePriorityBucket("high"), "high");
+  assert.equal(getIssuePriorityBucket("urgent"), "high");
+  assert.equal(getIssuePriorityBucket("low"), "low");
+});
+
+test("buildBoardLanes keeps board order and groups pending issues by priority bucket", () => {
+  const lanes = buildBoardLanes(
+    [
+      createBoard({ board_id: "board-1", name: "Design debt" }),
+      createBoard({ board_id: "board-2", name: "Runtime hardening" }),
+    ],
+    [
+      createIssue({
+        issue_id: "issue-1",
+        board_id: "board-2",
+        priority: "high",
+        position: 1,
+      }),
+      createIssue({
+        issue_id: "issue-2",
+        board_id: "board-1",
+        priority: "medium",
+        position: 0,
+      }),
+      createIssue({
+        issue_id: "issue-3",
+        board_id: "board-1",
+        priority: "urgent",
+        position: 1,
+      }),
+      createIssue({
+        issue_id: "issue-4",
+        board_id: "board-1",
+        priority: "high",
+        position: 2,
+      }),
+    ],
+  );
 
   assert.deepEqual(
-    filterIssuesByQuery(issues, "shell").map((issue) => issue.issue_id),
-    ["issue-2"],
+    lanes.map((lane) => lane.board.board_id),
+    ["board-1", "board-2"],
+  );
+  assert.deepEqual(BOARD_PRIORITY_ORDER, ["high", "medium", "low"]);
+  assert.deepEqual(
+    lanes[0].pendingSections.map((section) => ({
+      priority: section.priority,
+      issues: section.issues.map((issue) => issue.issue_id),
+    })),
+    [
+      { priority: "high", issues: ["issue-3", "issue-4"] },
+      { priority: "medium", issues: ["issue-2"] },
+    ],
   );
   assert.deepEqual(
-    filterIssuesByQuery(issues, "login").map((issue) => issue.issue_id),
-    ["issue-1"],
+    lanes[1].pendingSections.map((section) => ({
+      priority: section.priority,
+      issues: section.issues.map((issue) => issue.issue_id),
+    })),
+    [{ priority: "high", issues: ["issue-1"] }],
   );
 });
 
-test("summarizeBoardIssues reports totals, ai assignments, and running executions", () => {
-  const issues = [
-    createIssue({ issue_id: "issue-1" }),
-    createIssue({
-      issue_id: "issue-2",
-      assignee_preset_id: 3,
-      agent_assignment: {
-        assignment_id: "assignment-2",
-        workspace_id: "workspace-1",
-        issue_id: "issue-2",
-        preset_id: 3,
-        trigger_mode: "persistent_sandbox",
-        session_id: null,
-        container_id: null,
-        status: "pending",
-        prompt: "Prompt",
-        schedule_cron: null,
-        last_triggered_at: null,
-        last_completed_at: null,
-        created_by: "user-1",
-        created_at: "2026-04-16T09:00:00Z",
-        updated_at: "2026-04-16T09:00:00Z",
-      },
-    }),
-    createIssue({
-      issue_id: "issue-3",
-      assignee_preset_id: 4,
-      agent_assignment: {
-        assignment_id: "assignment-3",
-        workspace_id: "workspace-1",
-        issue_id: "issue-3",
-        preset_id: 4,
-        trigger_mode: "scheduled_task",
-        session_id: null,
-        container_id: null,
-        status: "running",
-        prompt: "Prompt",
-        schedule_cron: "0 * * * *",
-        last_triggered_at: null,
-        last_completed_at: null,
-        created_by: "user-1",
-        created_at: "2026-04-16T09:00:00Z",
-        updated_at: "2026-04-16T09:00:00Z",
-      },
-    }),
-  ];
+test("buildBoardLanes collapses done and canceled issues into the completed bucket", () => {
+  const lanes = buildBoardLanes(
+    [createBoard()],
+    [
+      createIssue({ issue_id: "issue-1", status: "todo", position: 0 }),
+      createIssue({ issue_id: "issue-2", status: "done", position: 0 }),
+      createIssue({ issue_id: "issue-3", status: "canceled", position: 1 }),
+      createIssue({ issue_id: "issue-4", status: "in_progress", position: 1 }),
+    ],
+  );
 
-  assert.deepEqual(summarizeBoardIssues(issues), {
-    totalIssues: 3,
-    aiAssignedIssues: 2,
-    runningIssues: 1,
-  });
+  assert.deepEqual(
+    lanes[0].pendingSections.flatMap((section) =>
+      section.issues.map((issue) => issue.issue_id),
+    ),
+    ["issue-1", "issue-4"],
+  );
+  assert.deepEqual(
+    lanes[0].completedIssues.map((issue) => issue.issue_id),
+    ["issue-2", "issue-3"],
+  );
+  assert.equal(lanes[0].pendingCount, 2);
+  assert.equal(lanes[0].completedCount, 2);
 });

@@ -1,233 +1,190 @@
 "use client";
 
 import * as React from "react";
-import {
-  closestCorners,
-  DndContext,
-  DragOverlay,
-  KeyboardSensor,
-  PointerSensor,
-  type DragEndEvent,
-  type DragStartEvent,
-  useSensor,
-  useSensors,
-} from "@dnd-kit/core";
-import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
+import { ChevronDown } from "lucide-react";
 
-import {
-  buildKanbanColumns,
-  getNextMobileKanbanStatus,
-} from "@/features/issues/lib/kanban-columns";
-import { formatIssueStatus } from "@/features/issues/lib/issue-presentation";
-import type {
-  WorkspaceIssue,
-  WorkspaceIssueStatus,
-} from "@/features/issues/model/types";
+import type { Preset } from "@/features/capabilities/presets/lib/preset-types";
+import { buildBoardLanes } from "@/features/issues/lib/issues-index-view";
+import type { WorkspaceBoard, WorkspaceIssue } from "@/features/issues/model/types";
 import { useT } from "@/lib/i18n/client";
 import { cn } from "@/lib/utils";
 
-import { TeamKanbanColumn } from "./team-kanban-column";
 import { TeamIssueCard } from "./team-issue-card";
 
+export const LANE_COLORS = [
+  "oklch(0.8348 0.1302 160.908)",
+  "oklch(0.7686 0.1647 70.0804)",
+  "oklch(0.6231 0.188 259.8145)",
+  "oklch(0.6056 0.2189 292.7172)",
+  "oklch(0.6959 0.1491 162.4796)",
+  "oklch(0.5523 0.1927 32.7272)",
+];
+
+function resolvePreset(
+  issue: WorkspaceIssue,
+  presetMap: Map<number, Preset>,
+): Preset | null {
+  return issue.assignee_preset_id
+    ? presetMap.get(issue.assignee_preset_id) ?? null
+    : null;
+}
+
+export function hashCode(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = (hash << 5) - hash + char;
+    hash |= 0;
+  }
+  return hash;
+}
+
 interface TeamKanbanBoardProps {
+  boards: WorkspaceBoard[];
   issues: WorkspaceIssue[];
+  selectedBoardId: string | null;
+  presetMap: Map<number, Preset>;
   onOpenIssue: (issueId: string) => void;
-  onMoveIssue: (
-    issueId: string,
-    status: WorkspaceIssueStatus,
-    position: number,
-  ) => void;
-  isMovePending?: boolean;
+  onToggleIssueStatus: (issueId: string) => void;
+  pendingIssueId?: string | null;
 }
 
 export function TeamKanbanBoard({
+  boards,
   issues,
+  selectedBoardId,
+  presetMap,
   onOpenIssue,
-  onMoveIssue,
-  isMovePending = false,
+  onToggleIssueStatus,
+  pendingIssueId,
 }: TeamKanbanBoardProps) {
   const { t } = useT("translation");
-  const columns = React.useMemo(() => buildKanbanColumns(issues), [issues]);
-  const [mobileStatus, setMobileStatus] = React.useState(
-    getNextMobileKanbanStatus(undefined),
-  );
-  const [activeIssueId, setActiveIssueId] = React.useState<string | null>(null);
-  const activeIssue = React.useMemo(
-    () => issues.find((issue) => issue.issue_id === activeIssueId) ?? null,
-    [activeIssueId, issues],
-  );
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    }),
-  );
+  const lanes = React.useMemo(() => buildBoardLanes(boards, issues), [boards, issues]);
+  const lane = lanes.find((l) => l.board.board_id === selectedBoardId) ?? lanes[0];
 
-  React.useEffect(() => {
-    setMobileStatus((currentStatus) => getNextMobileKanbanStatus(currentStatus));
-  }, [columns]);
-
-  const activeMobileColumn =
-    columns.find((column) => column.status === mobileStatus) ?? columns[0];
-
-  const resolveMove = React.useCallback(
-    (event: DragEndEvent) => {
-      const { active, over } = event;
-      if (!over) {
-        return null;
-      }
-
-      const activeId = String(active.id);
-      const activeIssueMeta = active.data.current;
-      const activeStatus = activeIssueMeta?.status as WorkspaceIssueStatus | undefined;
-      if (!activeStatus) {
-        return null;
-      }
-
-      const activeColumn = columns.find((column) => column.status === activeStatus);
-      const activePosition =
-        activeColumn?.issues.findIndex((issue) => issue.issue_id === activeId) ?? -1;
-      if (activePosition < 0) {
-        return null;
-      }
-
-      const overType = over.data.current?.type;
-      if (overType === "column") {
-        const targetStatus = over.data.current?.status as
-          | WorkspaceIssueStatus
-          | undefined;
-        const targetColumn = columns.find((column) => column.status === targetStatus);
-        if (!targetStatus || !targetColumn) {
-          return null;
-        }
-        const targetPosition = targetColumn.issues.length;
-        if (activeStatus === targetStatus && activePosition === targetPosition - 1) {
-          return null;
-        }
-        return {
-          issueId: activeId,
-          status: targetStatus,
-          position: targetPosition,
-        };
-      }
-
-      if (overType === "issue") {
-        const targetStatus = over.data.current?.status as
-          | WorkspaceIssueStatus
-          | undefined;
-        const targetIssueId = over.data.current?.issueId as string | undefined;
-        const targetColumn = columns.find((column) => column.status === targetStatus);
-        const targetPosition =
-          targetColumn?.issues.findIndex((issue) => issue.issue_id === targetIssueId) ??
-          -1;
-        if (!targetStatus || !targetIssueId || targetPosition < 0) {
-          return null;
-        }
-        if (activeStatus === targetStatus && activePosition === targetPosition) {
-          return null;
-        }
-        return {
-          issueId: activeId,
-          status: targetStatus,
-          position: targetPosition,
-        };
-      }
-
-      return null;
-    },
-    [columns],
-  );
-
-  const handleDragStart = React.useCallback(
-    (event: DragStartEvent) => {
-      setActiveIssueId(String(event.active.id));
-    },
-    [],
-  );
-
-  const handleDragCancel = React.useCallback(() => {
-    setActiveIssueId(null);
-  }, []);
-
-  const handleDragEnd = React.useCallback(
-    (event: DragEndEvent) => {
-      setActiveIssueId(null);
-      const nextMove = resolveMove(event);
-      if (!nextMove) {
-        return;
-      }
-      onMoveIssue(nextMove.issueId, nextMove.status, nextMove.position);
-    },
-    [onMoveIssue, resolveMove],
-  );
+  if (!lane) {
+    return null;
+  }
 
   return (
-    <DndContext
-      sensors={sensors}
-      collisionDetection={closestCorners}
-      onDragStart={handleDragStart}
-      onDragCancel={handleDragCancel}
-      onDragEnd={handleDragEnd}
-    >
-      <div className="space-y-6">
-        <div className="grid grid-cols-2 gap-2 md:hidden">
-          {columns.map((column) => (
-            <button
-              key={column.status}
-              type="button"
-              onClick={() => setMobileStatus(column.status)}
-              className={cn(
-                "rounded-2xl border px-3 py-2 text-left transition",
-                mobileStatus === column.status
-                  ? "border-foreground/15 bg-accent/70 text-foreground"
-                  : "border-border/70 bg-background text-muted-foreground hover:bg-muted/20",
-              )}
-            >
-              <p className="text-sm font-medium">
-                {formatIssueStatus(t, column.status)}
-              </p>
-              <p className="text-xs">{column.issues.length}</p>
-            </button>
-          ))}
-        </div>
-
-        <div className="md:hidden">
-          <TeamKanbanColumn
-            status={activeMobileColumn.status}
-            issues={activeMobileColumn.issues}
-            onOpenIssue={onOpenIssue}
-            className={cn(isMovePending && "pointer-events-none")}
-          />
-        </div>
-
-        <div className="hidden gap-4 overflow-x-auto pb-2 md:flex">
-          {columns.map((column) => (
-            <TeamKanbanColumn
-              key={column.status}
-              status={column.status}
-              issues={column.issues}
-              onOpenIssue={onOpenIssue}
-              className={cn("w-[20rem] shrink-0", isMovePending && "pointer-events-none")}
-            />
-          ))}
-        </div>
-      </div>
-      <DragOverlay>
-        {activeIssue ? (
-          <div className="w-[20rem]">
-            <TeamIssueCard
-              issue={activeIssue}
-              onOpen={() => {}}
-              disabled
-              className="shadow-2xl ring-2 ring-primary/20"
-            />
+    <div className="overflow-hidden rounded-[28px] border border-border/70 bg-card shadow-sm">
+      {lane.pendingSections.length === 0 && lane.completedIssues.length === 0 ? (
+        <div className="flex min-h-48 items-center justify-center px-6 py-12 text-center">
+          <div className="space-y-1.5">
+            <p className="text-sm font-medium text-foreground">
+              {t("issues.lane.emptyTitle")}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              {t("issues.lane.emptyDescription")}
+            </p>
           </div>
-        ) : null}
-      </DragOverlay>
-    </DndContext>
+        </div>
+      ) : (
+        <div className="divide-y divide-border/50">
+          {lane.pendingSections.map((section) => (
+            <div key={section.priority}>
+              <div className="flex items-center gap-3 px-5 pt-4 pb-2">
+                <span
+                  className={
+                    section.priority === "high"
+                      ? "size-2 rounded-full bg-primary"
+                      : section.priority === "low"
+                        ? "size-2 rounded-full bg-muted-foreground/55"
+                        : "size-2 rounded-full bg-foreground/70"
+                  }
+                />
+                <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                  {t(`issues.prioritySections.${section.priority}`)}
+                </p>
+                <span className="text-xs tabular-nums text-muted-foreground/60">
+                  {section.issues.length}
+                </span>
+              </div>
+              {section.issues.map((issue) => (
+                <TeamIssueCard
+                  key={issue.issue_id}
+                  issue={issue}
+                  preset={resolvePreset(issue, presetMap)}
+                  onOpen={onOpenIssue}
+                  onToggleStatus={onToggleIssueStatus}
+                  isStatusPending={pendingIssueId === issue.issue_id}
+                />
+              ))}
+            </div>
+          ))}
+
+          {lane.completedIssues.length > 0 ? (
+            <CollapsibleCompletedSection
+              issues={lane.completedIssues}
+              presetMap={presetMap}
+              onOpenIssue={onOpenIssue}
+              onToggleStatus={onToggleIssueStatus}
+              pendingIssueId={pendingIssueId}
+            />
+          ) : null}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CollapsibleCompletedSection({
+  issues,
+  presetMap,
+  onOpenIssue,
+  onToggleStatus,
+  pendingIssueId,
+}: {
+  issues: WorkspaceIssue[];
+  presetMap: Map<number, Preset>;
+  onOpenIssue: (issueId: string) => void;
+  onToggleStatus: (issueId: string) => void;
+  pendingIssueId?: string | null;
+}) {
+  const { t } = useT("translation");
+  const [expanded, setExpanded] = React.useState(false);
+
+  return (
+    <div className="border-t border-dashed border-border/50">
+      <button
+        type="button"
+        className="flex w-full items-center justify-between px-5 py-2.5 text-sm text-muted-foreground transition hover:bg-muted/30"
+        onClick={() => setExpanded((prev) => !prev)}
+      >
+        <span className="flex items-center gap-2">
+          <span className="font-semibold tabular-nums">{issues.length}</span>
+          {t("issues.lane.completedLabel")}
+        </span>
+        <span className="flex items-center gap-1 text-xs">
+          {expanded
+            ? t("issues.actions.hideCompleted")
+            : t("issues.actions.showCompleted")}
+          <ChevronDown
+            className={cn(
+              "size-3.5 transition-transform",
+              expanded && "rotate-180",
+            )}
+          />
+        </span>
+      </button>
+      {expanded ? (
+        issues.length === 0 ? (
+          <p className="px-5 pb-3 text-sm text-muted-foreground">
+            {t("issues.lane.emptyCompleted")}
+          </p>
+        ) : (
+          issues.map((issue) => (
+            <TeamIssueCard
+              key={issue.issue_id}
+              issue={issue}
+              preset={resolvePreset(issue, presetMap)}
+              onOpen={onOpenIssue}
+              onToggleStatus={onToggleStatus}
+              isStatusPending={pendingIssueId === issue.issue_id}
+            />
+          ))
+        )
+      ) : null}
+    </div>
   );
 }

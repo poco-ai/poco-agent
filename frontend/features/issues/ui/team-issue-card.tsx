@@ -1,113 +1,127 @@
 "use client";
 
-import * as React from "react";
-import { Bot } from "lucide-react";
+import { Check, Clock3, MoreHorizontal, RotateCcw } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
-import { formatAssignmentStatus, formatIssuePriority } from "@/features/issues/lib/issue-presentation";
+import { Button } from "@/components/ui/button";
+import type { Preset } from "@/features/capabilities/presets/lib/preset-types";
+import { PresetGlyph } from "@/features/capabilities/presets/components/preset-glyph";
 import type { WorkspaceIssue } from "@/features/issues/model/types";
 import { useT } from "@/lib/i18n/client";
 import { cn } from "@/lib/utils";
 
-function formatDateTime(value: string): string {
+function formatRelativeTime(value: string): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
     return value;
   }
   return new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
   }).format(date);
-}
-
-function formatIssuePosition(position: number): string | null {
-  if (!Number.isFinite(position)) {
-    return null;
-  }
-
-  return `#${position + 1}`;
 }
 
 interface TeamIssueCardProps {
   issue: WorkspaceIssue;
+  preset: Preset | null;
   onOpen: (issueId: string) => void;
-  className?: string;
-  style?: React.CSSProperties;
-  disabled?: boolean;
-  isDragging?: boolean;
-  dragHandleProps?: React.HTMLAttributes<HTMLButtonElement>;
+  onToggleStatus: (issueId: string) => void;
+  isStatusPending?: boolean;
 }
 
-export const TeamIssueCard = React.forwardRef<HTMLButtonElement, TeamIssueCardProps>(
-  function TeamIssueCard(
-    {
-      issue,
-      onOpen,
-      className,
-      style,
-      disabled,
-      isDragging,
-      dragHandleProps,
-    },
-    ref,
-  ) {
-    const { t } = useT("translation");
-    const positionLabel = formatIssuePosition(issue.position);
+export function TeamIssueCard({
+  issue,
+  preset,
+  onOpen,
+  onToggleStatus,
+  isStatusPending = false,
+}: TeamIssueCardProps) {
+  const { t } = useT("translation");
+  const isCompleted = issue.status === "done" || issue.status === "canceled";
 
-    return (
+  return (
+    <article
+      className={cn(
+        "group flex items-center gap-3 px-5 py-2.5 transition hover:bg-muted/30",
+        isCompleted && "opacity-60",
+      )}
+    >
       <button
-        ref={ref}
         type="button"
         onClick={() => onOpen(issue.issue_id)}
-        className={cn(
-          "group flex w-full flex-col gap-4 rounded-3xl border border-border/70 bg-background/95 px-4 py-4 text-left transition hover:border-foreground/15 hover:bg-muted/20",
-          isDragging && "opacity-60 shadow-lg ring-2 ring-primary/15",
-          disabled && "cursor-default",
-          className,
-        )}
-        style={style}
-        disabled={disabled}
-        {...dragHandleProps}
+        className="min-w-0 flex-1 text-left"
       >
-        <div className="space-y-2">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0 space-y-1.5">
-              <p className="line-clamp-2 text-sm font-semibold text-foreground">
-                {issue.title}
-              </p>
-              <p className="line-clamp-2 text-sm text-muted-foreground">
-                {issue.description || t("issues.emptyDescription")}
-              </p>
-            </div>
-            {issue.agent_assignment ? (
-              <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                <Bot className="size-4" />
+        <p
+          className={cn(
+            "truncate text-sm font-medium",
+            isCompleted
+              ? "text-muted-foreground line-through"
+              : "text-foreground",
+          )}
+        >
+          {issue.title}
+        </p>
+        {issue.description ? (
+          <p className="mt-0.5 truncate text-xs text-muted-foreground">
+            {issue.description}
+          </p>
+        ) : null}
+        <div className="mt-1 flex flex-wrap items-center gap-1.5">
+          {issue.status === "in_progress" && !isCompleted ? (
+            <span className="inline-flex items-center gap-1 rounded bg-primary/12 px-1.5 py-px text-[0.6875rem] font-medium text-primary">
+              <span className="relative flex size-1.5">
+                <span className="absolute inline-flex size-full animate-ping rounded-full bg-primary/60" />
+                <span className="relative inline-flex size-1.5 rounded-full bg-primary" />
               </span>
-            ) : null}
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Badge variant="outline">
-              {formatIssuePriority(t, issue.priority)}
-            </Badge>
-            {issue.related_project_id ? (
-              <Badge variant="secondary">
-                {t("issues.fields.project")}
-              </Badge>
-            ) : null}
-            {issue.agent_assignment ? (
-              <Badge variant="secondary">
-                {formatAssignmentStatus(t, issue.agent_assignment.status)}
-              </Badge>
-            ) : null}
-          </div>
-        </div>
-        <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
-          <span>
-            {t("issues.fields.updatedAt")} · {formatDateTime(issue.updated_at)}
-          </span>
-          {positionLabel ? <span>{positionLabel}</span> : null}
+              {t("issues.statuses.in_progress")}
+            </span>
+          ) : null}
         </div>
       </button>
-    );
-  },
-);
+
+      <div className="flex shrink-0 items-center gap-2.5">
+        {preset ? (
+          <PresetGlyph
+            preset={preset}
+            variant="status"
+          />
+        ) : null}
+        <span className="flex items-center gap-1 text-xs text-muted-foreground">
+          <Clock3 className="size-3" />
+          {formatRelativeTime(issue.created_at)}
+        </span>
+        <div className="flex items-center gap-0.5 opacity-0 transition group-hover:opacity-100">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="size-7"
+            onClick={() => onOpen(issue.issue_id)}
+          >
+            <MoreHorizontal className="size-3.5" />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="size-7"
+            onClick={() => onToggleStatus(issue.issue_id)}
+            disabled={isStatusPending}
+            aria-label={
+              isCompleted
+                ? t("issues.actions.reopen")
+                : t("issues.actions.markDone")
+            }
+          >
+            {isCompleted ? (
+              <RotateCcw className="size-3.5" />
+            ) : (
+              <Check className="size-3.5" />
+            )}
+          </Button>
+        </div>
+      </div>
+    </article>
+  );
+}

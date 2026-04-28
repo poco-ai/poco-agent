@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Bot, RefreshCw, Ticket, Trash2 } from "lucide-react";
+import { RefreshCw, Ticket, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -48,7 +48,6 @@ import { issuesApi } from "@/features/issues/api/issues-api";
 import { getAssignmentExecutionMeta } from "@/features/issues/lib/issue-detail-view";
 import {
   formatAssignmentStatus,
-  formatIssuePriority,
   formatIssueStatus,
 } from "@/features/issues/lib/issue-presentation";
 import type {
@@ -59,6 +58,38 @@ import { projectsService } from "@/features/projects/api/projects-api";
 import type { ProjectItem } from "@/features/projects/types";
 import { useLanguage } from "@/hooks/use-language";
 import { useT } from "@/lib/i18n/client";
+
+const dateTimeFormatter = new Intl.DateTimeFormat(undefined, {
+  dateStyle: "medium",
+  timeStyle: "short",
+});
+
+function formatDateTime(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+  return dateTimeFormatter.format(date);
+}
+
+const ACTION_TOAST_KEYS = {
+  trigger: "issues.toasts.triggered",
+  retry: "issues.toasts.retried",
+  cancel: "issues.toasts.cancelled",
+  release: "issues.toasts.released",
+} as const;
+
+type TriggerMode = "persistent_sandbox" | "scheduled_task";
+
+interface FormData {
+  status: WorkspaceIssue["status"];
+  priority: WorkspaceIssue["priority"];
+  relatedProjectId: string;
+  selectedPresetId: string;
+  triggerMode: TriggerMode;
+  scheduleCron: string;
+  prompt: string;
+}
 
 function AssignmentBadge({
   assignment,
@@ -76,47 +107,113 @@ function AssignmentBadge({
   );
 }
 
-function formatDateTime(value: string): string {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(date);
+function InfoRow({
+  label,
+  value,
+  mono,
+}: {
+  label: string;
+  value: string;
+  mono?: boolean;
+}) {
+  const { t } = useT("translation");
+  return (
+    <>
+      <p className="text-sm font-medium">{label}</p>
+      <p className={`mt-1 text-sm text-muted-foreground ${mono ? "break-all" : ""}`}>
+        {value || t("issues.none")}
+      </p>
+    </>
+  );
+}
+
+function FieldSelect({
+  label,
+  value,
+  onValueChange,
+  placeholder,
+  children,
+}: {
+  label: string;
+  value: string;
+  onValueChange: (value: string) => void;
+  placeholder?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="space-y-2">
+      <p className="text-xs font-medium text-muted-foreground">{label}</p>
+      <Select value={value} onValueChange={onValueChange}>
+        <SelectTrigger>
+          <SelectValue placeholder={placeholder} />
+        </SelectTrigger>
+        <SelectContent>{children}</SelectContent>
+      </Select>
+    </div>
+  );
+}
+
+function initFormData(issue: WorkspaceIssue): FormData {
+  return {
+    status: issue.status,
+    priority: issue.priority === "urgent" ? "high" : issue.priority,
+    relatedProjectId: issue.related_project_id ?? "none",
+    selectedPresetId: issue.assignee_preset_id
+      ? String(issue.assignee_preset_id)
+      : "none",
+    triggerMode: issue.agent_assignment?.trigger_mode ?? "persistent_sandbox",
+    scheduleCron: issue.agent_assignment?.schedule_cron ?? "0 * * * *",
+    prompt: issue.agent_assignment?.prompt ?? issue.description ?? "",
+  };
 }
 
 interface TeamIssueDetailContentProps {
   issueId: string;
   onDeleted: (issueId: string) => void;
+  onUpdated: (issue: WorkspaceIssue) => void;
 }
 
 export function TeamIssueDetailContent({
   issueId,
   onDeleted,
+  onUpdated,
 }: TeamIssueDetailContentProps) {
   const { t } = useT("translation");
   const lng = useLanguage() || "en";
+
   const [issue, setIssue] = React.useState<WorkspaceIssue | null>(null);
   const [presets, setPresets] = React.useState<Preset[]>([]);
   const [projects, setProjects] = React.useState<ProjectItem[]>([]);
-  const [selectedPresetId, setSelectedPresetId] = React.useState<string>("none");
-  const [triggerMode, setTriggerMode] = React.useState<
-    "persistent_sandbox" | "scheduled_task"
-  >("persistent_sandbox");
-  const [scheduleCron, setScheduleCron] = React.useState("0 * * * *");
-  const [prompt, setPrompt] = React.useState("");
-  const [relatedProjectId, setRelatedProjectId] = React.useState<string>("none");
-  const [isLoading, setIsLoading] = React.useState(true);
-  const [loadFailed, setLoadFailed] = React.useState(false);
+  const [form, setForm] = React.useState<FormData>({
+    status: "todo",
+    priority: "medium",
+    relatedProjectId: "none",
+    selectedPresetId: "none",
+    triggerMode: "persistent_sandbox",
+    scheduleCron: "0 * * * *",
+    prompt: "",
+  });
+  const [loadState, setLoadState] = React.useState<
+    "loading" | "error" | "loaded"
+  >("loading");
   const [isSaving, setIsSaving] = React.useState(false);
   const [isDeleting, setIsDeleting] = React.useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
 
-  const load = React.useCallback(async () => {
-    setIsLoading(true);
-    setLoadFailed(false);
+  const formRef = React.useRef(form);
+  formRef.current = form;
+  const isSavingRef = React.useRef(false);
+  const issueRef = React.useRef(issue);
+  issueRef.current = issue;
+  const onUpdatedRef = React.useRef(onUpdated);
+  onUpdatedRef.current = onUpdated;
+
+  const updateForm = React.useCallback((patch: Partial<FormData>) => {
+    setForm((prev) => ({ ...prev, ...patch }));
+  }, []);
+
+  const loadIssue = React.useCallback(async () => {
+    setLoadState("loading");
     try {
       const [nextIssue, nextPresets, nextProjects] = await Promise.all([
         issuesApi.getIssue(issueId),
@@ -128,52 +225,86 @@ export function TeamIssueDetailContent({
         nextPresets.filter((item) => item.scope !== "personal" || item.user_id),
       );
       setProjects(nextProjects);
-      setSelectedPresetId(
-        nextIssue.assignee_preset_id ? String(nextIssue.assignee_preset_id) : "none",
-      );
-      setTriggerMode(nextIssue.agent_assignment?.trigger_mode ?? "persistent_sandbox");
-      setScheduleCron(nextIssue.agent_assignment?.schedule_cron ?? "0 * * * *");
-      setPrompt(nextIssue.agent_assignment?.prompt ?? nextIssue.description ?? "");
-      setRelatedProjectId(nextIssue.related_project_id ?? "none");
+      setForm(initFormData(nextIssue));
+      setLoadState("loaded");
     } catch (error) {
       console.error("[Issues] load detail failed", error);
-      setLoadFailed(true);
+      setLoadState("error");
       toast.error(t("issues.toasts.loadFailed"));
-    } finally {
-      setIsLoading(false);
     }
   }, [issueId, t]);
 
   React.useEffect(() => {
-    void load();
-  }, [load]);
+    void loadIssue();
+  }, [loadIssue]);
 
-  const saveAssignment = async () => {
-    if (!issue) {
-      return;
+  const refreshIssue = React.useCallback(async () => {
+    try {
+      const nextIssue = await issuesApi.getIssue(issueId);
+      setIssue(nextIssue);
+      setForm((prev) => ({
+        ...prev,
+        ...initFormData(nextIssue),
+      }));
+    } catch {
+      toast.error(t("issues.toasts.loadFailed"));
     }
+  }, [issueId, t]);
+
+  const autoSave = React.useCallback(async (currentForm: FormData) => {
+    const currentIssue = issueRef.current;
+    if (!currentIssue || isSavingRef.current) return;
+    isSavingRef.current = true;
     setIsSaving(true);
     try {
-      const updated = await issuesApi.updateIssue(issue.board_id, issue.issue_id, {
-        assignee_preset_id:
-          selectedPresetId === "none" ? null : Number(selectedPresetId),
-        trigger_mode: selectedPresetId === "none" ? undefined : triggerMode,
-        schedule_cron:
-          selectedPresetId === "none" || triggerMode !== "scheduled_task"
-            ? null
-            : scheduleCron,
-        assignment_prompt: selectedPresetId === "none" ? null : prompt,
-        related_project_id: relatedProjectId === "none" ? null : relatedProjectId,
-      });
+      const updated = await issuesApi.updateIssue(
+        currentIssue.board_id,
+        currentIssue.issue_id,
+        {
+          status: currentForm.status,
+          priority: currentForm.priority,
+          related_project_id:
+            currentForm.relatedProjectId === "none"
+              ? null
+              : currentForm.relatedProjectId,
+          assignee_preset_id:
+            currentForm.selectedPresetId === "none"
+              ? null
+              : Number(currentForm.selectedPresetId),
+          trigger_mode:
+            currentForm.selectedPresetId === "none"
+              ? undefined
+              : currentForm.triggerMode,
+          schedule_cron:
+            currentForm.selectedPresetId === "none" ||
+            currentForm.triggerMode !== "scheduled_task"
+              ? null
+              : currentForm.scheduleCron,
+          assignment_prompt:
+            currentForm.selectedPresetId === "none"
+              ? null
+              : currentForm.prompt,
+        },
+      );
       setIssue(updated);
-      toast.success(t("issues.toasts.assignmentSaved"));
+      issueRef.current = updated;
+      onUpdatedRef.current(updated);
     } catch (error) {
-      console.error("[Issues] save assignment failed", error);
-      toast.error(t("issues.toasts.assignmentSaveFailed"));
+      console.error("[Issues] auto-save failed", error);
+      toast.error(t("issues.toasts.issueUpdateFailed"));
     } finally {
+      isSavingRef.current = false;
       setIsSaving(false);
     }
-  };
+  }, [t]);
+
+  React.useEffect(() => {
+    if (loadState !== "loaded") return;
+    const timer = setTimeout(() => {
+      void autoSave(formRef.current);
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [form, loadState, autoSave]);
 
   const runAction = async (
     action: "trigger" | "retry" | "cancel" | "release",
@@ -188,18 +319,8 @@ export function TeamIssueDetailContent({
       } else {
         await issuesApi.releaseAssignment(issueId);
       }
-      await load();
-      toast.success(
-        t(
-          action === "trigger"
-            ? "issues.toasts.triggered"
-            : action === "retry"
-              ? "issues.toasts.retried"
-              : action === "cancel"
-                ? "issues.toasts.cancelled"
-                : "issues.toasts.released",
-        ),
-      );
+      await refreshIssue();
+      toast.success(t(ACTION_TOAST_KEYS[action]));
     } catch (error) {
       console.error(`[Issues] ${action} assignment failed`, error);
       toast.error(t("issues.toasts.actionFailed"));
@@ -207,9 +328,7 @@ export function TeamIssueDetailContent({
   };
 
   const deleteIssue = async () => {
-    if (!issue) {
-      return;
-    }
+    if (!issue) return;
     setIsDeleting(true);
     try {
       await issuesApi.deleteIssue(issue.board_id, issue.issue_id);
@@ -233,9 +352,17 @@ export function TeamIssueDetailContent({
         <div className="border-b border-border/70 px-5 py-4 sm:px-6">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div className="space-y-1">
-              <h2 className="text-xl font-semibold text-foreground">
-                {issue?.title ?? t("issues.detailTitle")}
-              </h2>
+              <div className="flex items-center gap-2">
+                <h2 className="text-xl font-semibold text-foreground">
+                  {issue?.title ?? t("issues.detailTitle")}
+                </h2>
+                {isSaving ? (
+                  <span className="relative flex size-2">
+                    <span className="absolute inline-flex size-full animate-ping rounded-full bg-primary/60" />
+                    <span className="relative inline-flex size-2 rounded-full bg-primary" />
+                  </span>
+                ) : null}
+              </div>
               <p className="text-sm text-muted-foreground">
                 {t("issues.detailSubtitle", { issueId })}
               </p>
@@ -255,7 +382,7 @@ export function TeamIssueDetailContent({
         </div>
 
         <div className="flex-1 overflow-y-auto px-5 py-5 sm:px-6">
-          {isLoading ? (
+          {loadState === "loading" ? (
             <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
               <div className="space-y-6">
                 <Card className="border-border/60">
@@ -314,7 +441,7 @@ export function TeamIssueDetailContent({
                 </Card>
               </div>
             </div>
-          ) : loadFailed && !issue ? (
+          ) : loadState === "error" && !issue ? (
             <Card className="border-border/60">
               <CardContent className="p-6">
                 <Empty className="min-h-72 rounded-2xl border border-dashed border-border/70 bg-muted/10">
@@ -328,7 +455,11 @@ export function TeamIssueDetailContent({
                         {t("issues.states.loadErrorDescription")}
                       </EmptyDescription>
                     </EmptyHeader>
-                    <Button type="button" variant="outline" onClick={() => void load()}>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => void loadIssue()}
+                    >
                       <RefreshCw className="size-4" />
                       {t("issues.actions.retryLoad")}
                     </Button>
@@ -351,37 +482,67 @@ export function TeamIssueDetailContent({
                       <Badge variant="outline">
                         {formatIssueStatus(t, issue.status)}
                       </Badge>
-                      <Badge variant="outline">
-                        {formatIssuePriority(t, issue.priority)}
-                      </Badge>
-                      {assignment ? <AssignmentBadge assignment={assignment} /> : null}
+                      {assignment ? (
+                        <AssignmentBadge assignment={assignment} />
+                      ) : null}
                     </div>
                     <p className="text-sm text-muted-foreground">
                       {issue.description || t("issues.emptyDescription")}
                     </p>
-                    <div className="space-y-2">
-                      <p className="text-xs font-medium text-muted-foreground">
-                        {t("issues.fields.project")}
-                      </p>
-                      <Select
-                        value={relatedProjectId}
-                        onValueChange={setRelatedProjectId}
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <FieldSelect
+                        label={t("issues.fields.status")}
+                        value={form.status}
+                        onValueChange={(v) =>
+                          updateForm({ status: v as WorkspaceIssue["status"] })
+                        }
                       >
-                        <SelectTrigger>
-                          <SelectValue
-                            placeholder={t("issues.placeholders.project")}
-                          />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">{t("issues.none")}</SelectItem>
-                          {projects.map((project) => (
-                            <SelectItem key={project.id} value={project.id}>
-                              {project.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                        <SelectItem value="todo">
+                          {t("issues.statuses.todo")}
+                        </SelectItem>
+                        <SelectItem value="in_progress">
+                          {t("issues.statuses.in_progress")}
+                        </SelectItem>
+                        <SelectItem value="done">
+                          {t("issues.statuses.done")}
+                        </SelectItem>
+                        <SelectItem value="canceled">
+                          {t("issues.statuses.canceled")}
+                        </SelectItem>
+                      </FieldSelect>
+                      <FieldSelect
+                        label={t("issues.fields.priority")}
+                        value={form.priority}
+                        onValueChange={(v) =>
+                          updateForm({
+                            priority: v as WorkspaceIssue["priority"],
+                          })
+                        }
+                      >
+                        <SelectItem value="medium">
+                          {t("issues.priorities.medium")}
+                        </SelectItem>
+                        <SelectItem value="high">
+                          {t("issues.priorities.high")}
+                        </SelectItem>
+                        <SelectItem value="low">
+                          {t("issues.priorities.low")}
+                        </SelectItem>
+                      </FieldSelect>
                     </div>
+                    <FieldSelect
+                      label={t("issues.fields.project")}
+                      value={form.relatedProjectId}
+                      onValueChange={(v) => updateForm({ relatedProjectId: v })}
+                      placeholder={t("issues.placeholders.project")}
+                    >
+                      <SelectItem value="none">{t("issues.none")}</SelectItem>
+                      {projects.map((project) => (
+                        <SelectItem key={project.id} value={project.id}>
+                          {project.name}
+                        </SelectItem>
+                      ))}
+                    </FieldSelect>
                   </CardContent>
                 </Card>
 
@@ -394,55 +555,38 @@ export function TeamIssueDetailContent({
                   </CardHeader>
                   <CardContent className="space-y-4 pb-6">
                     <div className="grid gap-4 md:grid-cols-2">
-                      <div className="space-y-2">
-                        <p className="text-xs font-medium text-muted-foreground">
-                          {t("issues.fields.agentPreset")}
-                        </p>
-                        <Select
-                          value={selectedPresetId}
-                          onValueChange={setSelectedPresetId}
-                        >
-                          <SelectTrigger>
-                            <SelectValue
-                              placeholder={t("issues.placeholders.preset")}
-                            />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">{t("issues.none")}</SelectItem>
-                            {presets.map((preset) => (
-                              <SelectItem
-                                key={preset.preset_id}
-                                value={String(preset.preset_id)}
-                              >
-                                {preset.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <p className="text-xs font-medium text-muted-foreground">
-                          {t("issues.fields.triggerMode")}
-                        </p>
-                        <Select
-                          value={triggerMode}
-                          onValueChange={(value) =>
-                            setTriggerMode(value as typeof triggerMode)
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="persistent_sandbox">
-                              {t("issues.triggerModes.persistent_sandbox")}
-                            </SelectItem>
-                            <SelectItem value="scheduled_task">
-                              {t("issues.triggerModes.scheduled_task")}
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
+                      <FieldSelect
+                        label={t("issues.fields.agentPreset")}
+                        value={form.selectedPresetId}
+                        onValueChange={(v) =>
+                          updateForm({ selectedPresetId: v })
+                        }
+                        placeholder={t("issues.placeholders.preset")}
+                      >
+                        <SelectItem value="none">{t("issues.none")}</SelectItem>
+                        {presets.map((preset) => (
+                          <SelectItem
+                            key={preset.preset_id}
+                            value={String(preset.preset_id)}
+                          >
+                            {preset.name}
+                          </SelectItem>
+                        ))}
+                      </FieldSelect>
+                      <FieldSelect
+                        label={t("issues.fields.triggerMode")}
+                        value={form.triggerMode}
+                        onValueChange={(v) =>
+                          updateForm({ triggerMode: v as TriggerMode })
+                        }
+                      >
+                        <SelectItem value="persistent_sandbox">
+                          {t("issues.triggerModes.persistent_sandbox")}
+                        </SelectItem>
+                        <SelectItem value="scheduled_task">
+                          {t("issues.triggerModes.scheduled_task")}
+                        </SelectItem>
+                      </FieldSelect>
                     </div>
 
                     <div className="space-y-2">
@@ -450,21 +594,14 @@ export function TeamIssueDetailContent({
                         {t("issues.fields.schedule")}
                       </p>
                       <Input
-                        value={scheduleCron}
-                        onChange={(event) => setScheduleCron(event.target.value)}
-                        disabled={triggerMode !== "scheduled_task"}
+                        value={form.scheduleCron}
+                        onChange={(e) =>
+                          updateForm({ scheduleCron: e.target.value })
+                        }
+                        disabled={form.triggerMode !== "scheduled_task"}
                         placeholder="0 * * * *"
                       />
                     </div>
-
-                    <Button
-                      type="button"
-                      onClick={() => void saveAssignment()}
-                      disabled={isSaving}
-                    >
-                      <Bot className="size-4" />
-                      {t("issues.actions.saveAssignment")}
-                    </Button>
                   </CardContent>
                 </Card>
 
@@ -477,8 +614,8 @@ export function TeamIssueDetailContent({
                   </CardHeader>
                   <CardContent className="space-y-2 pb-6">
                     <Textarea
-                      value={prompt}
-                      onChange={(event) => setPrompt(event.target.value)}
+                      value={form.prompt}
+                      onChange={(e) => updateForm({ prompt: e.target.value })}
                       rows={10}
                       placeholder={t("issues.placeholders.prompt")}
                     />
@@ -495,46 +632,47 @@ export function TeamIssueDetailContent({
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4 pb-6">
-                    <div className="rounded-2xl border border-border/60 p-4">
-                      <p className="text-sm font-medium">
-                        {t("issues.fields.assignmentStatus")}
-                      </p>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        {assignment
-                          ? formatAssignmentStatus(t, assignment.status)
-                          : t("issues.unassigned")}
-                      </p>
-                      <p className="mt-3 text-sm font-medium">
-                        {t("issues.fields.session")}
-                      </p>
-                      <p className="mt-1 break-all text-sm text-muted-foreground">
-                        {assignment?.session_id ?? t("issues.none")}
-                      </p>
-                      <p className="mt-3 text-sm font-medium">
-                        {t("issues.fields.container")}
-                      </p>
-                      <p className="mt-1 break-all text-sm text-muted-foreground">
-                        {assignment?.container_id ?? t("issues.none")}
-                      </p>
-                      <p className="mt-3 text-sm font-medium">
-                        {t("issues.fields.lastTriggeredAt")}
-                      </p>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        {executionMeta.lastTriggeredAt
-                          ? formatDateTime(executionMeta.lastTriggeredAt)
-                          : t("issues.none")}
-                      </p>
-                      <p className="mt-3 text-sm font-medium">
-                        {t("issues.fields.lastCompletedAt")}
-                      </p>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        {executionMeta.lastCompletedAt
-                          ? formatDateTime(executionMeta.lastCompletedAt)
-                          : t("issues.none")}
-                      </p>
+                    <div className="space-y-3 rounded-2xl border border-border/60 p-4">
+                      <InfoRow
+                        label={t("issues.fields.assignmentStatus")}
+                        value={
+                          assignment
+                            ? formatAssignmentStatus(t, assignment.status)
+                            : t("issues.unassigned")
+                        }
+                      />
+                      <InfoRow
+                        label={t("issues.fields.session")}
+                        value={assignment?.session_id ?? ""}
+                        mono
+                      />
+                      <InfoRow
+                        label={t("issues.fields.container")}
+                        value={assignment?.container_id ?? ""}
+                        mono
+                      />
+                      <InfoRow
+                        label={t("issues.fields.lastTriggeredAt")}
+                        value={
+                          executionMeta.lastTriggeredAt
+                            ? formatDateTime(executionMeta.lastTriggeredAt)
+                            : ""
+                        }
+                      />
+                      <InfoRow
+                        label={t("issues.fields.lastCompletedAt")}
+                        value={
+                          executionMeta.lastCompletedAt
+                            ? formatDateTime(executionMeta.lastCompletedAt)
+                            : ""
+                        }
+                      />
                     </div>
                     <div className="grid gap-2">
-                      <Button type="button" onClick={() => void runAction("trigger")}>
+                      <Button
+                        type="button"
+                        onClick={() => void runAction("trigger")}
+                      >
                         {t("issues.actions.trigger")}
                       </Button>
                       <Button
@@ -568,42 +706,6 @@ export function TeamIssueDetailContent({
                     </div>
                   </CardContent>
                 </Card>
-
-                <Card className="border-border/60">
-                  <CardHeader>
-                    <CardTitle>{t("issues.sections.executionPreview")}</CardTitle>
-                    <CardDescription>
-                      {t("issues.sections.executionPreviewDescription")}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-3 pb-6">
-                    <div className="rounded-2xl border border-dashed border-border/70 bg-muted/10 p-4 text-sm text-muted-foreground">
-                      <p>
-                        {t("issues.preview.executionMode")}:{" "}
-                        {t(`issues.triggerModes.${triggerMode}`)}
-                      </p>
-                      <p className="mt-2">
-                        {executionMeta.isScheduled
-                          ? `${t("issues.fields.schedule")}: ${
-                              scheduleCron || t("issues.none")
-                            }`
-                          : `${t("issues.fields.container")}: ${
-                              executionMeta.hasRetainedContainer
-                                ? assignment?.container_id
-                                : t("issues.none")
-                            }`}
-                      </p>
-                      <p className="mt-2">
-                        {executionMeta.hasSession
-                          ? `${t("issues.fields.session")}: ${assignment?.session_id}`
-                          : t("issues.preview.pendingImpact")}
-                      </p>
-                      <p className="mt-3 text-xs text-muted-foreground">
-                        {t("issues.preview.releaseHint")}
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
               </div>
             </div>
           ) : null}
@@ -613,7 +715,9 @@ export function TeamIssueDetailContent({
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{t("issues.dialogs.deleteIssueTitle")}</AlertDialogTitle>
+            <AlertDialogTitle>
+              {t("issues.dialogs.deleteIssueTitle")}
+            </AlertDialogTitle>
             <AlertDialogDescription>
               {t("issues.dialogs.deleteIssueDescription")}
             </AlertDialogDescription>
@@ -623,7 +727,9 @@ export function TeamIssueDetailContent({
               {t("common.cancel")}
             </AlertDialogCancel>
             <AlertDialogAction onClick={() => void deleteIssue()}>
-              {isDeleting ? t("issues.actions.deletingIssue") : t("common.delete")}
+              {isDeleting
+                ? t("issues.actions.deletingIssue")
+                : t("common.delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
