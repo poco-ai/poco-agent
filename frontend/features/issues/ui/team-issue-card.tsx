@@ -91,7 +91,7 @@ export function TeamIssueCard({
           <Clock3 className="size-3" />
           {formatRelativeTime(issue.created_at)}
         </span>
-        <div className="flex items-center gap-0.5 opacity-0 transition group-hover:opacity-100">
+        <div className="flex items-center gap-0.5 opacity-100 transition sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
           <Button
             type="button"
             variant="ghost"
