@@ -108,7 +108,7 @@ export function SubAgentDialog({
     const toolsValue = parseTools(tools);
 
     if (mode === "create") {
-      const created = await onCreate({
+      await onCreate({
         name: trimmedName,
         enabled,
         mode: agentMode,
@@ -123,12 +123,12 @@ export function SubAgentDialog({
               tools: toolsValue,
             }),
       });
-      if (created) onOpenChange(false);
+      onOpenChange(false);
       return;
     }
 
     if (!initialAgent) return;
-    const updated = await onUpdate(initialAgent.id, {
+    await onUpdate(initialAgent.id, {
       name: trimmedName,
       enabled,
       mode: agentMode,
@@ -143,7 +143,7 @@ export function SubAgentDialog({
             tools: toolsValue,
           }),
     });
-    if (updated) onOpenChange(false);
+    onOpenChange(false);
   };
 
   return (

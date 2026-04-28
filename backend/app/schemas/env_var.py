@@ -51,3 +51,15 @@ class SystemEnvVarResponse(BaseModel):
     scope: EnvVarScope
     created_at: datetime
     updated_at: datetime
+
+
+class SystemEnvVarAdminResponse(BaseModel):
+    id: int
+    user_id: str
+    key: str
+    description: str | None
+    scope: EnvVarScope
+    is_set: bool
+    masked_value: str
+    created_at: datetime
+    updated_at: datetime

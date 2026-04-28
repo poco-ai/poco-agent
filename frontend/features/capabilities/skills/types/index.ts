@@ -8,6 +8,8 @@ export interface Skill {
   source?: SourceInfo | null;
   scope: string;
   owner_user_id: string | null;
+  default_enabled: boolean;
+  force_enabled: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -17,6 +19,8 @@ export interface SkillCreateInput {
   entry: Record<string, unknown>;
   description?: string | null;
   scope?: string | null;
+  default_enabled?: boolean | null;
+  force_enabled?: boolean | null;
 }
 
 export interface SkillUpdateInput {
@@ -24,6 +28,8 @@ export interface SkillUpdateInput {
   entry?: Record<string, unknown> | null;
   description?: string | null;
   scope?: string | null;
+  default_enabled?: boolean | null;
+  force_enabled?: boolean | null;
 }
 
 export interface UserSkillInstall {
@@ -148,4 +154,20 @@ export interface SkillsMpMarketplaceStatusResponse {
 
 export interface SkillsMpImportDiscoverInput {
   item: SkillsMpSkillItem;
+}
+
+export interface SkillImportApi {
+  discover: (formData: FormData) => Promise<SkillImportDiscoverResponse>;
+  commit: (
+    input: SkillImportCommitInput,
+  ) => Promise<SkillImportCommitEnqueueResponse>;
+  getJob: (jobId: string) => Promise<SkillImportJobStatusResponse>;
+}
+
+export interface SkillImportServiceLike {
+  importDiscover?: (formData: FormData) => Promise<SkillImportDiscoverResponse>;
+  importCommit?: (
+    input: SkillImportCommitInput,
+  ) => Promise<SkillImportCommitEnqueueResponse>;
+  getImportJob?: (jobId: string) => Promise<SkillImportJobStatusResponse>;
 }

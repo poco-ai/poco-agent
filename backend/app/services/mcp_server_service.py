@@ -5,10 +5,12 @@ from app.core.errors.exceptions import AppException
 from app.models.mcp_server import McpServer
 from app.repositories.mcp_server_repository import McpServerRepository
 from app.schemas.mcp_server import (
+    McpServerAdminResponse,
     McpServerCreateRequest,
     McpServerResponse,
     McpServerUpdateRequest,
 )
+from app.services.admin_masking import mask_sensitive_structure
 from app.utils.mcp_server_config import (
     extract_single_mcp_server_key,
     normalize_mcp_server_config,
@@ -26,6 +28,12 @@ class McpServerService:
     def list_servers(self, db: Session, user_id: str) -> list[McpServerResponse]:
         servers = McpServerRepository.list_visible(db, user_id=user_id)
         return [self._to_response(s) for s in servers]
+
+    def list_servers_for_admin(
+        self, db: Session, user_id: str
+    ) -> list[McpServerAdminResponse]:
+        servers = McpServerRepository.list_visible(db, user_id=user_id)
+        return [self._to_admin_response(server) for server in servers]
 
     def get_server(
         self, db: Session, user_id: str, server_id: int
@@ -59,6 +67,8 @@ class McpServerService:
             scope=scope,
             owner_user_id=user_id,
             server_config=normalized_config,
+            default_enabled=bool(request.default_enabled),
+            force_enabled=bool(request.force_enabled),
         )
 
         McpServerRepository.create(db, server)
@@ -79,7 +89,7 @@ class McpServerService:
                 error_code=ErrorCode.MCP_SERVER_NOT_FOUND,
                 message=f"MCP server not found: {server_id}",
             )
-        if server.scope == "system":
+        if server.scope == "system" and user_id != "__system__":
             raise AppException(
                 error_code=ErrorCode.FORBIDDEN,
                 message="Cannot modify system MCP servers",
@@ -110,6 +120,10 @@ class McpServerService:
                 request.server_config,
                 default_server_key=default_key,
             )
+        if request.default_enabled is not None:
+            server.default_enabled = bool(request.default_enabled)
+        if request.force_enabled is not None:
+            server.force_enabled = bool(request.force_enabled)
 
         db.commit()
         db.refresh(server)
@@ -122,7 +136,7 @@ class McpServerService:
                 error_code=ErrorCode.MCP_SERVER_NOT_FOUND,
                 message=f"MCP server not found: {server_id}",
             )
-        if server.scope == "system":
+        if server.scope == "system" and user_id != "__system__":
             raise AppException(
                 error_code=ErrorCode.FORBIDDEN,
                 message="Cannot delete system MCP servers",
@@ -137,13 +151,42 @@ class McpServerService:
 
     @staticmethod
     def _to_response(server: McpServer) -> McpServerResponse:
+        response_server_config = server.server_config
+        has_sensitive_data = False
+        if server.scope == "system":
+            response_server_config, has_sensitive_data = mask_sensitive_structure(
+                server.server_config
+            )
         return McpServerResponse(
             id=server.id,
             name=server.name,
             description=server.description,
             scope=server.scope,
             owner_user_id=server.owner_user_id,
+            server_config=response_server_config,
+            has_sensitive_data=has_sensitive_data,
+            default_enabled=bool(server.default_enabled),
+            force_enabled=bool(server.force_enabled),
+            created_at=server.created_at,
+            updated_at=server.updated_at,
+        )
+
+    @staticmethod
+    def _to_admin_response(server: McpServer) -> McpServerAdminResponse:
+        masked_server_config, has_sensitive_data = mask_sensitive_structure(
+            server.server_config
+        )
+        return McpServerAdminResponse(
+            id=server.id,
+            name=server.name,
+            description=server.description,
             server_config=server.server_config,
+            scope=server.scope,
+            owner_user_id=server.owner_user_id,
+            default_enabled=bool(server.default_enabled),
+            force_enabled=bool(server.force_enabled),
+            masked_server_config=masked_server_config,
+            has_sensitive_data=has_sensitive_data,
             created_at=server.created_at,
             updated_at=server.updated_at,
         )

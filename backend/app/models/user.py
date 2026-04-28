@@ -26,6 +26,12 @@ class User(Base, TimestampMixin):
         server_default=text("'active'"),
         nullable=False,
     )
+    system_role: Mapped[str] = mapped_column(
+        String(50),
+        default="user",
+        server_default=text("'user'"),
+        nullable=False,
+    )
 
     identities: Mapped[list["AuthIdentity"]] = relationship(
         back_populates="user",

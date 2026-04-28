@@ -24,11 +24,8 @@ class McpConfigService:
             MCP config dict compatible with Claude Agent SDK mcp_servers option:
             {server_name: server_config, ...}
         """
-        if not server_ids:
-            return {}
-
         installs = UserMcpInstallRepository.list_by_user(db, user_id)
-        installed_ids = {i.server_id for i in installs}
+        installs_by_server_id = {install.server_id: install for install in installs}
 
         # Preserve caller ordering but avoid duplicates.
         ordered_ids: list[int] = []
@@ -41,10 +38,33 @@ class McpConfigService:
 
         resolved: dict = {}
         for server_id in ordered_ids:
-            if server_id not in installed_ids:
-                continue
             server = McpServerRepository.get_by_id(db, server_id)
             if not server or not isinstance(server.server_config, dict):
+                continue
+            install = installs_by_server_id.get(server_id)
+            is_enabled = bool(server.force_enabled) or bool(
+                install.enabled if install is not None else server.default_enabled
+            )
+            if not is_enabled:
+                continue
+            server_mcp = server.server_config.get("mcpServers")
+            if not isinstance(server_mcp, dict):
+                continue
+            resolved = {**resolved, **server_mcp}
+
+        if server_ids:
+            requested_ids = set(ordered_ids)
+        else:
+            requested_ids = set()
+
+        for server in McpServerRepository.list_visible(db, user_id=user_id):
+            if server.scope != "system" or server.id in requested_ids:
+                continue
+            install = installs_by_server_id.get(server.id)
+            is_enabled = bool(server.force_enabled) or bool(
+                install.enabled if install is not None else server.default_enabled
+            )
+            if not is_enabled:
                 continue
             server_mcp = server.server_config.get("mcpServers")
             if not isinstance(server_mcp, dict):

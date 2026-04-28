@@ -7,11 +7,13 @@ from app.core.errors.exceptions import AppException
 from app.models.slash_command import SlashCommand
 from app.repositories.slash_command_repository import SlashCommandRepository
 from app.schemas.slash_command import (
+    SlashCommandAdminResponse,
     SlashCommandCreateRequest,
     SlashCommandMode,
     SlashCommandResponse,
     SlashCommandUpdateRequest,
 )
+from app.services.constants import SYSTEM_USER_ID
 
 
 _COMMAND_NAME_PATTERN = re.compile(r"^[A-Za-z0-9._-]+$")
@@ -58,8 +60,16 @@ def _require_non_empty(value: str | None, *, field: str) -> str:
 
 class SlashCommandService:
     def list_commands(self, db: Session, user_id: str) -> list[SlashCommandResponse]:
-        commands = SlashCommandRepository.list_by_user(db, user_id=user_id)
+        commands = SlashCommandRepository.list_visible_by_user(
+            db, user_id=user_id, system_user_id=SYSTEM_USER_ID
+        )
         return [self._to_response(c) for c in commands]
+
+    def list_commands_for_admin(
+        self, db: Session, user_id: str
+    ) -> list[SlashCommandAdminResponse]:
+        commands = SlashCommandRepository.list_by_user(db, user_id=user_id)
+        return [self._to_admin_response(c) for c in commands]
 
     def get_command(
         self, db: Session, user_id: str, command_id: int
@@ -122,6 +132,12 @@ class SlashCommandService:
             raise AppException(
                 error_code=ErrorCode.SLASH_COMMAND_NOT_FOUND,
                 message=f"Slash command not found: {command_id}",
+            )
+
+        if command.user_id == SYSTEM_USER_ID and user_id != SYSTEM_USER_ID:
+            raise AppException(
+                error_code=ErrorCode.FORBIDDEN,
+                message="Cannot modify system slash commands",
             )
 
         if (
@@ -188,6 +204,11 @@ class SlashCommandService:
                 error_code=ErrorCode.SLASH_COMMAND_NOT_FOUND,
                 message=f"Slash command not found: {command_id}",
             )
+        if command.user_id == SYSTEM_USER_ID and user_id != SYSTEM_USER_ID:
+            raise AppException(
+                error_code=ErrorCode.FORBIDDEN,
+                message="Cannot delete system slash commands",
+            )
         SlashCommandRepository.delete(db, command)
         db.commit()
 
@@ -195,6 +216,24 @@ class SlashCommandService:
     def _to_response(command: SlashCommand) -> SlashCommandResponse:
         mode: SlashCommandMode = "structured" if command.mode == "structured" else "raw"
         return SlashCommandResponse(
+            id=command.id,
+            user_id=command.user_id,
+            name=command.name,
+            enabled=bool(command.enabled),
+            mode=mode,
+            description=command.description,
+            argument_hint=command.argument_hint,
+            allowed_tools=command.allowed_tools,
+            content=command.content,
+            raw_markdown=command.raw_markdown,
+            created_at=command.created_at,
+            updated_at=command.updated_at,
+        )
+
+    @staticmethod
+    def _to_admin_response(command: SlashCommand) -> SlashCommandAdminResponse:
+        mode: SlashCommandMode = "structured" if command.mode == "structured" else "raw"
+        return SlashCommandAdminResponse(
             id=command.id,
             user_id=command.user_id,
             name=command.name,

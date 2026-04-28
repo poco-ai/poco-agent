@@ -13,6 +13,7 @@ import { mcpService } from "@/features/capabilities/mcp/api/mcp-api";
 import { useT } from "@/lib/i18n/client";
 import { CapabilityContentShell } from "@/features/capabilities/components/capability-content-shell";
 import { HeaderSearchInput } from "@/components/shared/header-search-input";
+import { getEffectiveInstallState } from "@/features/capabilities/lib/install-policy";
 
 const PAGE_SIZE = 10;
 
@@ -55,19 +56,38 @@ export function McpPageClient() {
   const handleBatchToggle = useCallback(
     async (enabled: boolean) => {
       try {
-        await Promise.all(
-          installs.map((install) =>
+        const targetInstalls = installs.filter((install) => {
+          const server = servers.find((item) => item.id === install.server_id);
+          return enabled || !server?.force_enabled;
+        });
+        const syntheticDisables = enabled
+          ? []
+          : servers.filter((server) => {
+              const install = installs.find(
+                (item) => item.server_id === server.id,
+              );
+              const state = getEffectiveInstallState(server, install);
+              return state.autoEnabled && !server.force_enabled;
+            });
+        if (targetInstalls.length === 0 && syntheticDisables.length === 0) {
+          toast.message(t("library.mcpLibrary.toasts.noEligibleBatchToggle"));
+          return;
+        }
+        await Promise.all([
+          ...targetInstalls.map((install) =>
             mcpService.updateInstall(install.id, { enabled }),
           ),
-        );
-        // Refresh the installs list
+          ...syntheticDisables.map((server) =>
+            mcpService.createInstall({ server_id: server.id, enabled: false }),
+          ),
+        ]);
         refresh();
       } catch (error) {
         console.error("[McpPageClient] Failed to batch toggle:", error);
         toast.error(t("library.mcpLibrary.toasts.actionFailed"));
       }
     },
-    [installs, refresh, t],
+    [installs, refresh, servers, t],
   );
 
   const activeItem = useMemo(() => {
@@ -102,6 +122,7 @@ export function McpPageClient() {
                 installs={installs}
                 loadingId={loadingId}
                 isLoading={isLoading}
+                displayMode="runtime"
                 onToggleInstall={toggleInstall}
                 onDeleteServer={deleteServer}
                 onEditServer={(server) => setSelectedServer(server)}
@@ -120,6 +141,7 @@ export function McpPageClient() {
           item={activeItem}
           open={Boolean(activeItem || isCreating)}
           isNew={isCreating}
+          readOnly={Boolean(activeItem) && !isCreating}
           onClose={() => {
             setSelectedServer(null);
             setIsCreating(false);

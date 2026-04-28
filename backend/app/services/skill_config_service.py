@@ -19,9 +19,7 @@ class SkillConfigService:
         {skill_name: {"enabled": True, "entry": {...}}, ...}
         """
         installs = UserSkillInstallRepository.list_by_user(db, user_id)
-        enabled_installs_by_skill_id = {
-            install.skill_id: install for install in installs if install.enabled
-        }
+        installs_by_skill_id = {install.skill_id: install for install in installs}
 
         # Preserve caller ordering but avoid duplicates.
         ordered_ids: list[int] = []
@@ -34,10 +32,14 @@ class SkillConfigService:
 
         selected: dict[str, tuple[str, dict]] = {}
         for skill_id in ordered_ids:
-            if skill_id not in enabled_installs_by_skill_id:
-                continue
             skill = SkillRepository.get_by_id(db, skill_id)
             if not skill or not isinstance(skill.entry, dict):
+                continue
+            install = installs_by_skill_id.get(skill_id)
+            is_enabled = bool(skill.force_enabled) or bool(
+                install.enabled if install is not None else skill.default_enabled
+            )
+            if not is_enabled:
                 continue
 
             # If both user and system skills share the same name, prefer the user one.
@@ -51,6 +53,12 @@ class SkillConfigService:
 
         for skill in SkillRepository.list_visible(db, user_id=user_id):
             if skill.scope != "system" or not isinstance(skill.entry, dict):
+                continue
+            install = installs_by_skill_id.get(skill.id)
+            is_enabled = bool(skill.force_enabled) or bool(
+                install.enabled if install is not None else skill.default_enabled
+            )
+            if not is_enabled:
                 continue
             selected.setdefault(skill.name, (skill.scope, skill.entry))
 

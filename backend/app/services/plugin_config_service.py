@@ -18,11 +18,8 @@ class PluginConfigService:
         Returns a dict compatible with executor_manager PluginStager:
         {plugin_name: {"enabled": True, "entry": {...}, "manifest": {...}}, ...}
         """
-        if not plugin_ids:
-            return {}
-
         installs = UserPluginInstallRepository.list_by_user(db, user_id)
-        installed_ids = {i.plugin_id for i in installs}
+        installs_by_plugin_id = {install.plugin_id: install for install in installs}
 
         ordered_ids: list[int] = []
         seen: set[int] = set()
@@ -34,10 +31,14 @@ class PluginConfigService:
 
         selected: dict[str, tuple[str, dict, dict | None, str | None, str | None]] = {}
         for plugin_id in ordered_ids:
-            if plugin_id not in installed_ids:
-                continue
             plugin = PluginRepository.get_by_id(db, plugin_id)
             if not plugin or not isinstance(plugin.entry, dict):
+                continue
+            install = installs_by_plugin_id.get(plugin_id)
+            is_enabled = bool(plugin.force_enabled) or bool(
+                install.enabled if install is not None else plugin.default_enabled
+            )
+            if not is_enabled:
                 continue
 
             existing = selected.get(plugin.name)
@@ -59,6 +60,29 @@ class PluginConfigService:
                     plugin.version,
                     plugin.description,
                 )
+
+        requested_ids = set(ordered_ids)
+        for plugin in PluginRepository.list_visible(db, user_id=user_id):
+            if plugin.scope != "system" or not isinstance(plugin.entry, dict):
+                continue
+            if plugin.id in requested_ids:
+                continue
+            install = installs_by_plugin_id.get(plugin.id)
+            is_enabled = bool(plugin.force_enabled) or bool(
+                install.enabled if install is not None else plugin.default_enabled
+            )
+            if not is_enabled:
+                continue
+            selected.setdefault(
+                plugin.name,
+                (
+                    plugin.scope,
+                    plugin.entry,
+                    plugin.manifest,
+                    plugin.version,
+                    plugin.description,
+                ),
+            )
 
         return {
             name: {

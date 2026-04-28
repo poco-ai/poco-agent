@@ -31,6 +31,7 @@ from app.schemas.skill_import import (
     SkillImportDiscoverResponse,
     SkillImportResultItem,
 )
+from app.services.constants import SYSTEM_USER_ID
 from app.services.storage_service import S3StorageService
 from app.utils.markdown_front_matter import parse_yaml_front_matter
 
@@ -995,11 +996,12 @@ class SkillImportService:
 
         existing = SkillRepository.get_by_name(db, skill_name, user_id)
         overwritten = existing is not None
+        skill_scope = "system" if user_id == SYSTEM_USER_ID else "user"
         if existing is None:
             skill = Skill(
                 name=skill_name,
                 description=skill_description,
-                scope="user",
+                scope=skill_scope,
                 owner_user_id=user_id,
                 entry=entry,
                 source=dict(archive_source or {}),
@@ -1012,18 +1014,23 @@ class SkillImportService:
             skill.description = skill_description
             skill.source = dict(archive_source or {})
 
-        install = UserSkillInstallRepository.get_by_user_and_skill(
-            db, user_id, skill.id
-        )
-        if install is None:
-            install = UserSkillInstall(user_id=user_id, skill_id=skill.id, enabled=True)
-            UserSkillInstallRepository.create(db, install)
-        else:
-            install.enabled = True
+        install = None
+        if skill_scope != "system":
+            install = UserSkillInstallRepository.get_by_user_and_skill(
+                db, user_id, skill.id
+            )
+            if install is None:
+                install = UserSkillInstall(
+                    user_id=user_id, skill_id=skill.id, enabled=True
+                )
+                UserSkillInstallRepository.create(db, install)
+            else:
+                install.enabled = True
 
         db.commit()
         db.refresh(skill)
-        db.refresh(install)
+        if install is not None:
+            db.refresh(install)
 
         return SkillImportResultItem(
             relative_path=relative_path,

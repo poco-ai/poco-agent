@@ -115,6 +115,26 @@ class ConfigResolverTests(unittest.TestCase):
             },
         )
 
+    def test_resolve_model_env_overrides_uses_system_default_model(self) -> None:
+        resolver = ConfigResolver(backend_client=MagicMock())
+
+        overrides = resolver._resolve_model_env_overrides(
+            {},
+            {
+                "DEFAULT_MODEL": "minimax-default",
+                "MINIMAX_API_KEY": "minimax-key",
+                "MINIMAX_BASE_URL": "https://minimax.example.com/anthropic",
+            },
+            user_id="user-1",
+        )
+
+        self.assertEqual(overrides["DEFAULT_MODEL"], "minimax-default")
+        self.assertEqual(overrides["ANTHROPIC_API_KEY"], "minimax-key")
+        self.assertEqual(
+            overrides["ANTHROPIC_BASE_URL"],
+            "https://minimax.example.com/anthropic",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

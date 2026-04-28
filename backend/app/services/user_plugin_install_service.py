@@ -43,7 +43,11 @@ class UserPluginInstallService:
         install = UserPluginInstall(
             user_id=user_id,
             plugin_id=request.plugin_id,
-            enabled=request.enabled,
+            enabled=(
+                bool(plugin.force_enabled) or request.enabled
+                if request.enabled is not None
+                else bool(plugin.default_enabled or plugin.force_enabled)
+            ),
         )
         UserPluginInstallRepository.create(db, install)
         db.commit()
@@ -65,6 +69,17 @@ class UserPluginInstallService:
             )
 
         if request.enabled is not None:
+            plugin = PluginRepository.get_by_id(db, install.plugin_id)
+            if (
+                plugin
+                and plugin.scope == "system"
+                and plugin.force_enabled
+                and not request.enabled
+            ):
+                raise AppException(
+                    error_code=ErrorCode.FORBIDDEN,
+                    message="Cannot disable forced system plugins",
+                )
             install.enabled = request.enabled
 
         db.commit()
@@ -77,6 +92,27 @@ class UserPluginInstallService:
         user_id: str,
         request: UserPluginInstallBulkUpdateRequest,
     ) -> UserPluginInstallBulkUpdateResponse:
+        if request.enabled is False:
+            installs = UserPluginInstallRepository.list_by_user(db, user_id)
+            target_ids = set(
+                request.install_ids or [install.id for install in installs]
+            )
+            forced_install_ids = {
+                install.id
+                for install in installs
+                if install.id in target_ids
+                and (
+                    (plugin := PluginRepository.get_by_id(db, install.plugin_id))
+                    is not None
+                    and plugin.scope == "system"
+                    and plugin.force_enabled
+                )
+            }
+            if forced_install_ids:
+                raise AppException(
+                    error_code=ErrorCode.FORBIDDEN,
+                    message="Cannot disable forced system plugins",
+                )
         updated_count = UserPluginInstallRepository.bulk_set_enabled(
             db,
             user_id=user_id,

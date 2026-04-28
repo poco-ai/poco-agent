@@ -95,6 +95,26 @@ class AuthService:
     def _get_settings(self) -> Settings:
         return get_settings()
 
+    def _normalize_admin_emails(self) -> set[str]:
+        settings = self._get_settings()
+        normalized: set[str] = set()
+        for item in settings.system_admin_emails or []:
+            if not isinstance(item, str):
+                continue
+            for raw_part in item.split(","):
+                value = self.normalize_email(raw_part)
+                if value:
+                    normalized.add(value)
+        return normalized
+
+    def _resolve_system_role(self, email: str | None) -> str:
+        if self.is_single_user_mode_effective():
+            return "admin"
+        normalized_email = self.normalize_email(email)
+        if normalized_email and normalized_email in self._normalize_admin_emails():
+            return "admin"
+        return "user"
+
     def _get_client(self, provider: str):
         client = get_oauth_registry().create_client(provider)
         if client is None:
@@ -406,6 +426,7 @@ class AuthService:
                     primary_email=verified_email,
                     display_name=profile.display_name,
                     avatar_url=profile.avatar_url,
+                    system_role=self._resolve_system_role(verified_email),
                 )
                 db.flush()
             AuthIdentityRepository.create(
@@ -420,6 +441,11 @@ class AuthService:
 
         if verified_email and user.primary_email != verified_email:
             user.primary_email = verified_email
+        resolved_system_role = self._resolve_system_role(
+            verified_email or user.primary_email
+        )
+        if user.system_role != resolved_system_role:
+            user.system_role = resolved_system_role
         if profile.display_name:
             user.display_name = profile.display_name
         if profile.avatar_url:
@@ -717,6 +743,7 @@ class AuthService:
                 display_name=display_name,
                 avatar_url=None,
                 status="active",
+                system_role="admin",
             )
             db.commit()
             return user
@@ -730,6 +757,9 @@ class AuthService:
             updated = True
         if user.status != "active":
             user.status = "active"
+            updated = True
+        if user.system_role != "admin":
+            user.system_role = "admin"
             updated = True
         if updated:
             db.commit()

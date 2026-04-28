@@ -19,6 +19,7 @@ import {
 } from "@/lib/startup-preload";
 import { CheckCircle2, CircleOff } from "lucide-react";
 import { playInstallSound } from "@/lib/utils/sound";
+import { getEffectiveInstallState } from "@/features/capabilities/lib/install-policy";
 
 export interface McpDisplayItem {
   server: McpServer;
@@ -121,10 +122,19 @@ export function useMcpCatalog() {
   const toggleInstall = useCallback(
     async (serverId: number) => {
       const install = installs.find((entry) => entry.server_id === serverId);
+      const server = servers.find((entry) => entry.id === serverId);
+      const installState = server
+        ? getEffectiveInstallState(server, install)
+        : {
+            autoEnabled: false,
+            hasInstall: Boolean(install),
+            isInstalled: Boolean(install),
+            isEnabled: install?.enabled ?? false,
+          };
       setLoadingId(serverId);
 
       // Optimistic update - update UI immediately
-      const optimisticEnabled = install ? !install.enabled : true;
+      const optimisticEnabled = !installState.isEnabled;
       if (install) {
         setInstalls((prev) =>
           prev.map((item) =>
@@ -139,7 +149,7 @@ export function useMcpCatalog() {
           id: -1, // temporary ID
           user_id: "", // temporary user_id
           server_id: serverId,
-          enabled: true,
+          enabled: optimisticEnabled,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         };
@@ -147,7 +157,6 @@ export function useMcpCatalog() {
       }
 
       try {
-        const server = servers.find((s) => s.id === serverId);
         const serverName = server?.name || "";
 
         if (install) {
@@ -186,7 +195,7 @@ export function useMcpCatalog() {
         } else {
           const created = await mcpService.createInstall({
             server_id: serverId,
-            enabled: true,
+            enabled: optimisticEnabled,
           });
           // Replace temporary install with real one
           setInstalls((prev) =>
@@ -195,15 +204,24 @@ export function useMcpCatalog() {
             ),
           );
           toast.success(
-            `${serverName} MCP ${t("library.mcpLibrary.toasts.enabled")}`,
+            `${serverName} MCP ${
+              created.enabled
+                ? t("library.mcpLibrary.toasts.enabled")
+                : t("library.mcpLibrary.toasts.disabled")
+            }`,
             {
-              icon: React.createElement(CheckCircle2, {
-                className: "size-4 text-primary",
-              }),
+              icon: created.enabled
+                ? React.createElement(CheckCircle2, {
+                    className: "size-4 text-primary",
+                  })
+                : React.createElement(CircleOff, {
+                    className: "size-4 text-muted-foreground",
+                  }),
             },
           );
-          // Play sound on installation
-          playInstallSound();
+          if (created.enabled) {
+            playInstallSound();
+          }
           // Trigger success haptic feedback
           if (typeof window !== "undefined" && "vibrate" in navigator) {
             navigator.vibrate(50);

@@ -1,3 +1,4 @@
+from sqlalchemy import and_, or_
 from typing import Any
 
 from sqlalchemy.orm import Session
@@ -39,6 +40,46 @@ class PresetRepository:
         if not include_deleted:
             query = query.filter(Preset.is_deleted.is_(False))
         return query.order_by(Preset.created_at.desc()).all()
+
+    @staticmethod
+    def list_visible(
+        session_db: Session,
+        *,
+        user_id: str,
+        system_user_id: str,
+        include_deleted: bool = False,
+    ) -> list[Preset]:
+        query = session_db.query(Preset).filter(
+            or_(
+                Preset.user_id == user_id,
+                and_(
+                    Preset.user_id == system_user_id,
+                ),
+            )
+        )
+        if not include_deleted:
+            query = query.filter(Preset.is_deleted.is_(False))
+        return query.order_by(Preset.created_at.desc()).all()
+
+    @staticmethod
+    def get_visible_by_id(
+        session_db: Session,
+        *,
+        preset_id: int,
+        user_id: str,
+        system_user_id: str,
+        include_deleted: bool = False,
+    ) -> Preset | None:
+        query = session_db.query(Preset).filter(
+            Preset.id == preset_id,
+            or_(
+                Preset.user_id == user_id,
+                Preset.user_id == system_user_id,
+            ),
+        )
+        if not include_deleted:
+            query = query.filter(Preset.is_deleted.is_(False))
+        return query.first()
 
     @staticmethod
     def update(

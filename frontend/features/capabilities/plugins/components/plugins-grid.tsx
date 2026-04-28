@@ -12,6 +12,7 @@ import type {
   Plugin,
   UserPluginInstall,
 } from "@/features/capabilities/plugins/types";
+import { getEffectiveInstallState } from "@/features/capabilities/lib/install-policy";
 import { useT } from "@/lib/i18n/client";
 import { CapabilityCreateCard } from "@/features/capabilities/components/capability-create-card";
 import { CapabilitySourceAvatar } from "@/features/capabilities/components/capability-source-avatar";
@@ -21,7 +22,8 @@ interface PluginsGridProps {
   installs: UserPluginInstall[];
   loadingId?: number | null;
   isLoading?: boolean;
-  onInstall?: (pluginId: number) => void;
+  displayMode?: "personal" | "runtime" | "admin";
+  onInstall?: (pluginId: number, enabled?: boolean) => void;
   onDeletePlugin?: (pluginId: number) => void;
   onToggleEnabled?: (installId: number, enabled: boolean) => void;
   onBatchToggle?: (enabled: boolean) => void;
@@ -35,6 +37,7 @@ export function PluginsGrid({
   installs,
   loadingId,
   isLoading = false,
+  displayMode = "personal",
   onInstall,
   onDeletePlugin,
   onToggleEnabled,
@@ -54,8 +57,25 @@ export function PluginsGrid({
     }
     return map;
   }, [installs]);
-
-  const enabledCount = installs.filter((i) => i.enabled).length;
+  const visiblePlugins = React.useMemo(() => {
+    if (displayMode === "admin") {
+      return plugins.filter((plugin) => plugin.scope === "system");
+    }
+    if (displayMode === "personal") {
+      return plugins.filter((plugin) => plugin.scope !== "system");
+    }
+    return plugins;
+  }, [displayMode, plugins]);
+  const enabledCount = React.useMemo(
+    () =>
+      visiblePlugins.reduce((count, plugin) => {
+        const install = installByPluginId.get(plugin.id);
+        return (
+          count + (getEffectiveInstallState(plugin, install).isEnabled ? 1 : 0)
+        );
+      }, 0),
+    [installByPluginId, visiblePlugins],
+  );
 
   return (
     <div className="space-y-6">
@@ -64,7 +84,7 @@ export function PluginsGrid({
           {t("library.pluginsManager.stats.enabled")}: {enabledCount}
         </span>
         <div className="flex flex-1 flex-nowrap items-center justify-end gap-2 overflow-x-auto">
-          {installs.length > 0 && (
+          {enabledCount > 0 && (
             <Button
               variant="ghost"
               size="sm"
@@ -88,28 +108,30 @@ export function PluginsGrid({
           />
         ) : null}
 
-        {isLoading && plugins.length === 0 ? (
+        {isLoading && visiblePlugins.length === 0 ? (
           <SkeletonShimmer count={5} itemClassName="min-h-[72px]" gap="md" />
-        ) : !isLoading && plugins.length === 0 ? (
+        ) : !isLoading && visiblePlugins.length === 0 ? (
           <div className="rounded-xl border border-border/50 bg-muted/10 px-4 py-6 text-sm text-muted-foreground text-center">
             {t("library.pluginsManager.empty")}
           </div>
         ) : (
           <StaggeredList
-            items={plugins}
+            items={visiblePlugins}
             show={!isLoading}
             keyExtractor={(plugin) => plugin.id}
             staggerDelay={50}
             duration={400}
             renderItem={(plugin) => {
               const install = installByPluginId.get(plugin.id);
-              const isInstalled = Boolean(install);
+              const installState = getEffectiveInstallState(plugin, install);
+              const isInstalled = installState.isInstalled;
               const isRowLoading =
                 isLoading ||
                 loadingId === plugin.id ||
                 loadingId === install?.id;
-              const avatarStatus =
-                isInstalled && install?.enabled ? "active" : "inactive";
+              const avatarStatus = installState.isEnabled
+                ? "active"
+                : "inactive";
 
               return (
                 <div
@@ -145,6 +167,16 @@ export function PluginsGrid({
                           ? t("library.pluginsManager.scope.system")
                           : t("library.pluginsManager.scope.user")}
                       </Badge>
+                      {plugin.default_enabled && !plugin.force_enabled ? (
+                        <Badge variant="secondary" className="text-xs">
+                          {t("common.default")}
+                        </Badge>
+                      ) : null}
+                      {plugin.force_enabled ? (
+                        <Badge variant="destructive" className="text-xs">
+                          {t("common.forced")}
+                        </Badge>
+                      ) : null}
                     </div>
                     {plugin.description && (
                       <p className="text-xs text-muted-foreground mt-1 truncate">
@@ -167,13 +199,17 @@ export function PluginsGrid({
                           <Trash2 className="size-4" />
                         </Button>
                       )}
-                      <Switch
-                        checked={install.enabled}
-                        disabled={isRowLoading}
-                        onCheckedChange={(enabled) =>
-                          onToggleEnabled?.(install.id, enabled)
-                        }
-                      />
+                      {displayMode === "admin" ? null : (
+                        <Switch
+                          checked={installState.isEnabled}
+                          disabled={isRowLoading || plugin.force_enabled}
+                          onCheckedChange={(enabled) =>
+                            install
+                              ? onToggleEnabled?.(install.id, enabled)
+                              : onInstall?.(plugin.id, enabled)
+                          }
+                        />
+                      )}
                     </div>
                   ) : (
                     <div className="flex items-center gap-2">
@@ -182,7 +218,9 @@ export function PluginsGrid({
                         disabled={isRowLoading}
                         onClick={() => onInstall?.(plugin.id)}
                       >
-                        {t("library.pluginsManager.actions.install")}
+                        {plugin.default_enabled || plugin.force_enabled
+                          ? t("common.enabled")
+                          : t("library.pluginsManager.actions.install")}
                       </Button>
                       {plugin.scope === "user" && (
                         <Button

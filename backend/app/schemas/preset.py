@@ -70,3 +70,7 @@ class PresetResponse(BaseModel):
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
+
+class PresetAdminResponse(PresetResponse):
+    pass

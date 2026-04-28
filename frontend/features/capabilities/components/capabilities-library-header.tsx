@@ -3,6 +3,7 @@
 import type * as React from "react";
 
 import { Sparkles } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 import { PageHeaderShell } from "@/components/shared/page-header-shell";
 import { useT } from "@/lib/i18n/client";
@@ -12,6 +13,7 @@ interface CapabilitiesLibraryHeaderProps {
   hideSidebarTrigger?: boolean;
   title?: string;
   subtitle?: string;
+  icon?: LucideIcon;
 }
 
 export function CapabilitiesLibraryHeader({
@@ -19,6 +21,7 @@ export function CapabilitiesLibraryHeader({
   hideSidebarTrigger,
   title,
   subtitle,
+  icon: Icon = Sparkles,
 }: CapabilitiesLibraryHeaderProps) {
   const { t } = useT("translation");
   const headerTitle = title ?? t("library.title");
@@ -30,7 +33,7 @@ export function CapabilitiesLibraryHeader({
       mobileLeading={mobileLeading}
       left={
         <div className="flex min-w-0 items-center gap-3">
-          <Sparkles
+          <Icon
             className="hidden size-5 text-muted-foreground md:block"
             aria-hidden="true"
           />

@@ -9,6 +9,7 @@ from app.repositories.skill_repository import SkillRepository
 from app.repositories.slash_command_repository import SlashCommandRepository
 from app.repositories.user_skill_install_repository import UserSkillInstallRepository
 from app.schemas.slash_command_config import SlashCommandSuggestionResponse
+from app.services.constants import SYSTEM_USER_ID
 from app.utils.markdown_front_matter import remove_model_from_yaml_front_matter
 
 
@@ -31,7 +32,9 @@ class SlashCommandConfigService:
     ) -> list[SlashCommandSuggestionResponse]:
         suggestions: dict[str, SlashCommandSuggestionResponse] = {}
 
-        commands = SlashCommandRepository.list_enabled_by_user(db, user_id=user_id)
+        commands = SlashCommandRepository.list_enabled_visible_by_user(
+            db, user_id=user_id, system_user_id=SYSTEM_USER_ID
+        )
         for cmd in commands:
             name = self._normalize_command_name(cmd.name)
             if not name or name in _RESERVED_COMMAND_NAMES:
@@ -69,7 +72,9 @@ class SlashCommandConfigService:
     ) -> dict[str, str]:
         name_set = self._normalize_requested_name_set(names)
 
-        commands = SlashCommandRepository.list_enabled_by_user(db, user_id=user_id)
+        commands = SlashCommandRepository.list_enabled_visible_by_user(
+            db, user_id=user_id, system_user_id=SYSTEM_USER_ID
+        )
         rendered: dict[str, str] = {}
         for cmd in commands:
             name = self._normalize_command_name(cmd.name)

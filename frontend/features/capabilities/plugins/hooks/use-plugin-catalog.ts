@@ -114,9 +114,11 @@ export function usePluginCatalog() {
   }, [refresh]);
 
   const installPlugin = useCallback(
-    async (pluginId: number) => {
+    async (pluginId: number, enabled = true) => {
       setLoadingId(pluginId);
-      const previouslyEnabled = installs.filter((install) => install.enabled);
+      const previouslyEnabled = enabled
+        ? installs.filter((install) => install.enabled)
+        : [];
       try {
         if (previouslyEnabled.length > 0) {
           await pluginsService.bulkUpdateInstalls({
@@ -126,7 +128,7 @@ export function usePluginCatalog() {
         }
         const created = await pluginsService.createInstall({
           plugin_id: pluginId,
-          enabled: true,
+          enabled,
         });
         setInstalls((prev) => [
           created,
@@ -141,9 +143,13 @@ export function usePluginCatalog() {
             ? ` ${t("library.pluginsManager.toasts.exclusiveEnabled")}`
             : "";
         toast.success(
-          `${t("library.pluginsManager.toasts.installed")}${installNote}`,
+          enabled
+            ? `${t("library.pluginsManager.toasts.installed")}${installNote}`
+            : t("library.pluginsManager.toasts.disabled"),
         );
-        playInstallSound();
+        if (enabled) {
+          playInstallSound();
+        }
         invalidateStartupPreloadValues(["pluginInstalls"]);
       } catch (error) {
         console.error("[Plugins] install failed:", error);

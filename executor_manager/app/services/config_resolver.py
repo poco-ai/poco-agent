@@ -324,23 +324,30 @@ class ConfigResolver:
         session_id: str | None = None,
         run_id: str | None = None,
     ) -> dict[str, str]:
-        selected_model = str(
-            config_snapshot.get("model") or self.settings.default_model or ""
+        effective_default_model = str(
+            env_map.get("DEFAULT_MODEL") or self.settings.default_model or ""
         ).strip()
+        selected_model = str(
+            config_snapshot.get("model") or effective_default_model
+        ).strip()
+        env_overrides: dict[str, str] = {}
+        if effective_default_model:
+            env_overrides["DEFAULT_MODEL"] = effective_default_model
+
         explicit_provider_id = str(
             config_snapshot.get("model_provider_id") or ""
         ).strip()
         inferred_provider_id = self._infer_provider_id(selected_model)
         provider_id = explicit_provider_id or inferred_provider_id
         if not provider_id:
-            return {}
+            return env_overrides
 
         spec = _PROVIDER_RUNTIME_SPECS.get(provider_id)
         if not spec and explicit_provider_id and inferred_provider_id:
             provider_id = inferred_provider_id
             spec = _PROVIDER_RUNTIME_SPECS.get(provider_id)
         if not spec:
-            return {}
+            return env_overrides
 
         api_key = self._get_first_env_value(
             env_map, spec["source_api_key_env_keys"]
@@ -356,10 +363,9 @@ class ConfigResolver:
             or self._get_first_settings_value(spec["source_base_url_settings_fields"])
             or spec["default_base_url"]
         )
-        return {
-            spec["runtime_api_key_env_key"]: api_key,
-            spec["runtime_base_url_env_key"]: base_url,
-        }
+        env_overrides[spec["runtime_api_key_env_key"]] = api_key
+        env_overrides[spec["runtime_base_url_env_key"]] = base_url
+        return env_overrides
 
     @staticmethod
     def _infer_provider_id(model_id: str) -> str | None:

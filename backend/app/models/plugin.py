@@ -1,4 +1,4 @@
-from sqlalchemy import JSON, String, Text, UniqueConstraint
+from sqlalchemy import Boolean, JSON, String, Text, UniqueConstraint, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base, TimestampMixin
@@ -20,6 +20,18 @@ class Plugin(Base, TimestampMixin):
     # (e.g. {"s3_key": ".../", "is_prefix": true}).
     entry: Mapped[dict] = mapped_column(JSON, nullable=False)
     source: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    default_enabled: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default=text("false"),
+    )
+    force_enabled: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default=text("false"),
+    )
 
     __table_args__ = (
         UniqueConstraint("name", "owner_user_id", name="uq_plugin_name_owner"),

@@ -200,6 +200,35 @@ export const API_ENDPOINTS = {
   authMe: "/auth/me",
   authLogout: "/auth/logout",
 
+  // Admin
+  adminSystemEnvVars: "/admin/system-env-vars",
+  adminSystemEnvVar: (envVarId: number) => `/admin/system-env-vars/${envVarId}`,
+  adminModelConfig: "/admin/model-config",
+  adminSkills: "/admin/skills",
+  adminSkill: (skillId: number) => `/admin/skills/${skillId}`,
+  adminSkillImportDiscover: "/admin/skills/import/discover",
+  adminSkillImportCommit: "/admin/skills/import/commit",
+  adminSkillImportJob: (jobId: string) => `/admin/skills/import/jobs/${jobId}`,
+  adminMcpServers: "/admin/mcp-servers",
+  adminMcpServer: (serverId: number) => `/admin/mcp-servers/${serverId}`,
+  adminPlugins: "/admin/plugins",
+  adminPlugin: (pluginId: number) => `/admin/plugins/${pluginId}`,
+  adminPluginImportDiscover: "/admin/plugins/import/discover",
+  adminPluginImportCommit: "/admin/plugins/import/commit",
+  adminPluginImportJob: (jobId: string) =>
+    `/admin/plugins/import/jobs/${jobId}`,
+  adminSlashCommands: "/admin/slash-commands",
+  adminSlashCommand: (commandId: number) =>
+    `/admin/slash-commands/${commandId}`,
+  adminClaudeMd: "/admin/claude-md",
+  adminSubAgents: "/admin/subagents",
+  adminSubAgent: (subAgentId: number) => `/admin/subagents/${subAgentId}`,
+  adminPresetVisuals: "/admin/preset-visuals",
+  adminPresets: "/admin/presets",
+  adminPreset: (presetId: number) => `/admin/presets/${presetId}`,
+  adminUsers: "/admin/users",
+  adminUserSystemRole: (userId: string) => `/admin/users/${userId}/system-role`,
+
   // Health
   health: "/health",
   root: "/",

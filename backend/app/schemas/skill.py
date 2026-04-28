@@ -10,6 +10,8 @@ class SkillCreateRequest(BaseModel):
     entry: dict
     description: str | None = None
     scope: str | None = None
+    default_enabled: bool | None = None
+    force_enabled: bool | None = None
 
 
 class SkillUpdateRequest(BaseModel):
@@ -17,6 +19,8 @@ class SkillUpdateRequest(BaseModel):
     entry: dict | None = None
     description: str | None = None
     scope: str | None = None
+    default_enabled: bool | None = None
+    force_enabled: bool | None = None
 
 
 class SkillResponse(BaseModel):
@@ -27,5 +31,7 @@ class SkillResponse(BaseModel):
     source: SourceInfo
     scope: str
     owner_user_id: str | None
+    default_enabled: bool
+    force_enabled: bool
     created_at: datetime
     updated_at: datetime

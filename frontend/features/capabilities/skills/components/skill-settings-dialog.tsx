@@ -21,12 +21,14 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n/client";
 import { ApiError } from "@/lib/errors";
 import { skillsService } from "@/features/capabilities/skills/api/skills-api";
 import type { Skill } from "@/features/capabilities/skills/types";
+import type { SkillUpdateInput } from "@/features/capabilities/skills/types";
 import { DocumentViewer, FileSidebar, type FileNode } from "@/features/chat";
 
 interface SkillSettingsDialogProps {
@@ -35,6 +37,12 @@ interface SkillSettingsDialogProps {
   open: boolean;
   onClose: () => void;
   onSaved?: (skill: Skill) => Promise<void> | void;
+  onSaveSkill?: (
+    skillId: number,
+    input: SkillUpdateInput,
+  ) => Promise<Skill | void>;
+  allowSystemEdit?: boolean;
+  showPolicyControls?: boolean;
 }
 
 function flattenFiles(nodes: FileNode[]): FileNode[] {
@@ -114,6 +122,9 @@ export function SkillSettingsDialog({
   open,
   onClose,
   onSaved,
+  onSaveSkill,
+  allowSystemEdit = false,
+  showPolicyControls = false,
 }: SkillSettingsDialogProps) {
   const { t } = useT("translation");
   const [name, setName] = React.useState("");
@@ -124,8 +135,10 @@ export function SkillSettingsDialog({
   const [isPreviewVisible, setIsPreviewVisible] = React.useState(false);
   const [isSaving, setIsSaving] = React.useState(false);
   const [saveError, setSaveError] = React.useState<string | null>(null);
+  const [defaultEnabled, setDefaultEnabled] = React.useState(false);
+  const [forceEnabled, setForceEnabled] = React.useState(false);
 
-  const isSystemSkill = skill?.scope === "system";
+  const isSystemSkill = skill?.scope === "system" && !allowSystemEdit;
   const trimmedName = name.trim();
   const trimmedDescription = description.trim();
   const storagePath = getEntryS3Key(skill);
@@ -149,9 +162,19 @@ export function SkillSettingsDialog({
 
     return (
       trimmedName !== skill.name ||
-      trimmedDescription !== (skill.description ?? "")
+      trimmedDescription !== (skill.description ?? "") ||
+      (showPolicyControls &&
+        (defaultEnabled !== skill.default_enabled ||
+          forceEnabled !== skill.force_enabled))
     );
-  }, [skill, trimmedDescription, trimmedName]);
+  }, [
+    defaultEnabled,
+    forceEnabled,
+    showPolicyControls,
+    skill,
+    trimmedDescription,
+    trimmedName,
+  ]);
 
   const refreshFiles = React.useCallback(
     async (preferredPath?: string): Promise<FileNode[]> => {
@@ -181,6 +204,8 @@ export function SkillSettingsDialog({
 
     setName(skill.name);
     setDescription(skill.description ?? "");
+    setDefaultEnabled(skill.default_enabled);
+    setForceEnabled(skill.force_enabled);
     setSaveError(null);
     setIsSaving(false);
     setIsPreviewVisible(false);
@@ -259,12 +284,24 @@ export function SkillSettingsDialog({
     setSaveError(null);
     setIsSaving(true);
     try {
-      const updated = await skillsService.updateSkill(skill.id, {
+      const saveSkill = onSaveSkill ?? skillsService.updateSkill;
+      const updated = await saveSkill(skill.id, {
         name: trimmedName,
         description: trimmedDescription || null,
+        default_enabled: showPolicyControls ? defaultEnabled : undefined,
+        force_enabled: showPolicyControls ? forceEnabled : undefined,
       });
+      const nextSkill = updated ?? {
+        ...skill,
+        name: trimmedName,
+        description: trimmedDescription || null,
+        default_enabled: showPolicyControls
+          ? defaultEnabled
+          : skill.default_enabled,
+        force_enabled: showPolicyControls ? forceEnabled : skill.force_enabled,
+      };
       toast.success(t("library.skillSettings.toasts.saved"));
-      await onSaved?.(updated);
+      await onSaved?.(nextSkill);
       onClose();
     } catch (error) {
       console.error("[SkillSettingsDialog] Failed to save skill", error);
@@ -442,6 +479,31 @@ export function SkillSettingsDialog({
                       <div className="flex items-start gap-2">
                         <TriangleAlert className="mt-0.5 size-4 shrink-0" />
                         <div>{t("library.skillSettings.nameConflict")}</div>
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {showPolicyControls ? (
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label>
+                          {t("settings.admin.policyDefaultEnabled")}
+                        </Label>
+                        <div className="flex items-center gap-3 rounded-md border border-border px-3 py-2">
+                          <Switch
+                            checked={defaultEnabled}
+                            onCheckedChange={setDefaultEnabled}
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>{t("settings.admin.policyForceEnabled")}</Label>
+                        <div className="flex items-center gap-3 rounded-md border border-border px-3 py-2">
+                          <Switch
+                            checked={forceEnabled}
+                            onCheckedChange={setForceEnabled}
+                          />
+                        </div>
                       </div>
                     </div>
                   ) : null}

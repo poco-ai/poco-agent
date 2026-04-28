@@ -3,6 +3,7 @@ from uuid import uuid4
 from unittest.mock import MagicMock, patch
 
 from app.schemas.input_file import InputFile
+from app.schemas.session import TaskConfig
 from app.schemas.task import TaskEnqueueRequest
 from app.services.task_service import TaskService
 
@@ -12,6 +13,66 @@ class TaskServiceTests(unittest.TestCase):
         self.service = TaskService()
         self.db = MagicMock()
         self.user_id = "user-1"
+
+    @patch("app.services.task_service.env_var_service.get_system_env_map")
+    @patch.object(TaskService, "_build_user_mcp_server_ids_defaults", return_value=[])
+    @patch.object(TaskService, "_build_user_skill_ids_defaults", return_value=[])
+    @patch.object(TaskService, "_build_user_plugin_ids_defaults", return_value=[])
+    @patch.object(TaskService, "_build_user_subagent_ids_defaults", return_value=[])
+    def test_build_config_snapshot_accepts_models_from_system_env_catalog(
+        self,
+        _: MagicMock,
+        __: MagicMock,
+        ___: MagicMock,
+        ____: MagicMock,
+        get_system_env_map: MagicMock,
+    ) -> None:
+        get_system_env_map.return_value = {
+            "DEFAULT_MODEL": "minimax-default",
+            "MODEL_LIST": "minimax-default,minimax-coder",
+        }
+
+        result = self.service._build_config_snapshot(
+            self.db,
+            self.user_id,
+            TaskConfig(model="minimax-coder"),
+            base_config={},
+        )
+
+        self.assertIsNotNone(result)
+        assert result is not None
+        self.assertEqual(result["model"], "minimax-coder")
+        self.assertEqual(result["model_provider_id"], "minimax")
+
+    @patch("app.services.task_service.env_var_service.get_system_env_map")
+    @patch.object(TaskService, "_build_user_mcp_server_ids_defaults", return_value=[])
+    @patch.object(TaskService, "_build_user_skill_ids_defaults", return_value=[])
+    @patch.object(TaskService, "_build_user_plugin_ids_defaults", return_value=[])
+    @patch.object(TaskService, "_build_user_subagent_ids_defaults", return_value=[])
+    def test_build_config_snapshot_normalizes_system_default_model_override(
+        self,
+        _: MagicMock,
+        __: MagicMock,
+        ___: MagicMock,
+        ____: MagicMock,
+        get_system_env_map: MagicMock,
+    ) -> None:
+        get_system_env_map.return_value = {
+            "DEFAULT_MODEL": "minimax-default",
+            "MODEL_LIST": "minimax-default,minimax-coder",
+        }
+
+        result = self.service._build_config_snapshot(
+            self.db,
+            self.user_id,
+            TaskConfig(model="minimax-default"),
+            base_config={},
+        )
+
+        self.assertIsNotNone(result)
+        assert result is not None
+        self.assertNotIn("model", result)
+        self.assertNotIn("model_provider_id", result)
 
     @patch.object(TaskService, "_build_project_input_files")
     @patch.object(TaskService, "_apply_project_repo_defaults")

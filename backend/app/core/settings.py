@@ -1,8 +1,8 @@
 from functools import lru_cache
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import Field
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import Field, field_validator
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -44,6 +44,9 @@ class Settings(BaseSettings):
     github_client_secret: str | None = Field(default=None, alias="GITHUB_CLIENT_SECRET")
     single_user_id: str = Field(default="default", alias="SINGLE_USER_ID")
     single_user_name: str = Field(default="Local User", alias="SINGLE_USER_NAME")
+    system_admin_emails: Annotated[list[str], NoDecode] = Field(
+        default_factory=list, alias="SYSTEM_ADMIN_EMAILS"
+    )
     internal_api_token: str = Field(
         default="change-this-token-in-production", alias="INTERNAL_API_TOKEN"
     )
@@ -226,6 +229,23 @@ class Settings(BaseSettings):
     mem0_history_db_path: str = Field(
         default="/tmp/poco/memory/history.db", alias="MEM0_HISTORY_DB_PATH"
     )
+
+    @field_validator("system_admin_emails", mode="before")
+    @classmethod
+    def _parse_system_admin_emails(cls, value: object) -> list[str]:
+        if value is None:
+            return []
+        if isinstance(value, str):
+            return [item.strip() for item in value.split(",") if item.strip()]
+        if isinstance(value, list):
+            result: list[str] = []
+            for item in value:
+                if isinstance(item, str):
+                    result.extend(
+                        part.strip() for part in item.split(",") if part.strip()
+                    )
+            return result
+        return []
 
     model_config = SettingsConfigDict(
         env_file=".env",

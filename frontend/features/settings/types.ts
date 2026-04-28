@@ -1,6 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 
-export type SettingsTabId = "account" | "usage" | "shortcuts";
+export type SettingsTabId = "account" | "usage" | "shortcuts" | "admin";
 
 export type SettingsTabRequest = {
   tab: SettingsTabId;
@@ -49,4 +49,33 @@ export interface UsageAnalyticsResponse {
   summary: UsageAnalyticsSummary;
   month_view: UsageAnalyticsMonthView;
   day_view: UsageAnalyticsDayView;
+}
+
+export interface ModelDefinitionResponse {
+  model_id: string;
+  display_name: string;
+  provider_id: string;
+  requires_credentials: boolean;
+  supports_custom_base_url: boolean;
+}
+
+export interface ModelProviderResponse {
+  provider_id: string;
+  display_name: string;
+  api_key_env_key: string;
+  base_url_env_key: string;
+  credential_state: "none" | "system" | "user";
+  default_base_url: string;
+  effective_base_url: string;
+  base_url_source: "default" | "system" | "user";
+  known_models: [string, string][];
+  models: ModelDefinitionResponse[];
+}
+
+export interface ModelConfigResponse {
+  default_model: string;
+  model_list: string[];
+  mem0_enabled: boolean;
+  models: ModelDefinitionResponse[];
+  providers: ModelProviderResponse[];
 }
