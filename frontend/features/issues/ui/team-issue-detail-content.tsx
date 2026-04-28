@@ -47,6 +47,12 @@ import type { Preset } from "@/features/capabilities/presets/lib/preset-types";
 import { issuesApi } from "@/features/issues/api/issues-api";
 import { getAssignmentExecutionMeta } from "@/features/issues/lib/issue-detail-view";
 import {
+  createIssueDetailFormData,
+  shouldScheduleIssueDetailAutoSave,
+  type IssueDetailFormData,
+  type IssueDetailLoadState,
+} from "@/features/issues/lib/issue-detail-form";
+import {
   formatAssignmentStatus,
   formatIssueStatus,
 } from "@/features/issues/lib/issue-presentation";
@@ -78,18 +84,6 @@ const ACTION_TOAST_KEYS = {
   cancel: "issues.toasts.cancelled",
   release: "issues.toasts.released",
 } as const;
-
-type TriggerMode = "persistent_sandbox" | "scheduled_task";
-
-interface FormData {
-  status: WorkspaceIssue["status"];
-  priority: WorkspaceIssue["priority"];
-  relatedProjectId: string;
-  selectedPresetId: string;
-  triggerMode: TriggerMode;
-  scheduleCron: string;
-  prompt: string;
-}
 
 function AssignmentBadge({
   assignment,
@@ -153,20 +147,6 @@ function FieldSelect({
   );
 }
 
-function initFormData(issue: WorkspaceIssue): FormData {
-  return {
-    status: issue.status,
-    priority: issue.priority === "urgent" ? "high" : issue.priority,
-    relatedProjectId: issue.related_project_id ?? "none",
-    selectedPresetId: issue.assignee_preset_id
-      ? String(issue.assignee_preset_id)
-      : "none",
-    triggerMode: issue.agent_assignment?.trigger_mode ?? "persistent_sandbox",
-    scheduleCron: issue.agent_assignment?.schedule_cron ?? "0 * * * *",
-    prompt: issue.agent_assignment?.prompt ?? issue.description ?? "",
-  };
-}
-
 interface TeamIssueDetailContentProps {
   issueId: string;
   onDeleted: (issueId: string) => void;
@@ -184,7 +164,7 @@ export function TeamIssueDetailContent({
   const [issue, setIssue] = React.useState<WorkspaceIssue | null>(null);
   const [presets, setPresets] = React.useState<Preset[]>([]);
   const [projects, setProjects] = React.useState<ProjectItem[]>([]);
-  const [form, setForm] = React.useState<FormData>({
+  const [form, setForm] = React.useState<IssueDetailFormData>({
     status: "todo",
     priority: "medium",
     relatedProjectId: "none",
@@ -193,9 +173,7 @@ export function TeamIssueDetailContent({
     scheduleCron: "0 * * * *",
     prompt: "",
   });
-  const [loadState, setLoadState] = React.useState<
-    "loading" | "error" | "loaded"
-  >("loading");
+  const [loadState, setLoadState] = React.useState<IssueDetailLoadState>("loading");
   const [isSaving, setIsSaving] = React.useState(false);
   const [isDeleting, setIsDeleting] = React.useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
@@ -207,6 +185,7 @@ export function TeamIssueDetailContent({
   issueRef.current = issue;
   const onUpdatedRef = React.useRef(onUpdated);
   onUpdatedRef.current = onUpdated;
+  const skipNextAutoSaveRef = React.useRef(true);
 
   const updateForm = React.useCallback((patch: Partial<FormData>) => {
     setForm((prev) => ({ ...prev, ...patch }));
@@ -225,7 +204,8 @@ export function TeamIssueDetailContent({
         nextPresets.filter((item) => item.scope !== "personal" || item.user_id),
       );
       setProjects(nextProjects);
-      setForm(initFormData(nextIssue));
+      skipNextAutoSaveRef.current = true;
+      setForm(createIssueDetailFormData(nextIssue));
       setLoadState("loaded");
     } catch (error) {
       console.error("[Issues] load detail failed", error);
@@ -242,16 +222,17 @@ export function TeamIssueDetailContent({
     try {
       const nextIssue = await issuesApi.getIssue(issueId);
       setIssue(nextIssue);
+      skipNextAutoSaveRef.current = true;
       setForm((prev) => ({
         ...prev,
-        ...initFormData(nextIssue),
+        ...createIssueDetailFormData(nextIssue),
       }));
     } catch {
       toast.error(t("issues.toasts.loadFailed"));
     }
   }, [issueId, t]);
 
-  const autoSave = React.useCallback(async (currentForm: FormData) => {
+  const autoSave = React.useCallback(async (currentForm: IssueDetailFormData) => {
     const currentIssue = issueRef.current;
     if (!currentIssue || isSavingRef.current) return;
     isSavingRef.current = true;
@@ -299,7 +280,10 @@ export function TeamIssueDetailContent({
   }, [t]);
 
   React.useEffect(() => {
-    if (loadState !== "loaded") return;
+    if (!shouldScheduleIssueDetailAutoSave(loadState, skipNextAutoSaveRef.current)) {
+      skipNextAutoSaveRef.current = false;
+      return;
+    }
     const timer = setTimeout(() => {
       void autoSave(formRef.current);
     }, 600);
@@ -519,6 +503,9 @@ export function TeamIssueDetailContent({
                           })
                         }
                       >
+                        <SelectItem value="urgent">
+                          {t("issues.priorities.urgent")}
+                        </SelectItem>
                         <SelectItem value="medium">
                           {t("issues.priorities.medium")}
                         </SelectItem>
@@ -577,7 +564,9 @@ export function TeamIssueDetailContent({
                         label={t("issues.fields.triggerMode")}
                         value={form.triggerMode}
                         onValueChange={(v) =>
-                          updateForm({ triggerMode: v as TriggerMode })
+                          updateForm({
+                            triggerMode: v as IssueDetailFormData["triggerMode"],
+                          })
                         }
                       >
                         <SelectItem value="persistent_sandbox">
