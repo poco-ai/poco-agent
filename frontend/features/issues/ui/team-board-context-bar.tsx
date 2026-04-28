@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, Plus, RefreshCw } from "lucide-react";
+import { ChevronDown, MoreHorizontal, Plus, RefreshCw } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -21,6 +21,7 @@ interface TeamBoardContextBarProps {
   isRefreshing: boolean;
   onRefresh: () => void;
   onCreateIssue: (boardId: string) => void;
+  onOpenBoardSettings: (boardId: string) => void;
   onCreateBoard: () => void;
 }
 
@@ -31,6 +32,7 @@ export function TeamBoardContextBar({
   isRefreshing,
   onRefresh,
   onCreateIssue,
+  onOpenBoardSettings,
   onCreateBoard,
 }: TeamBoardContextBarProps) {
   const { t } = useT("translation");
@@ -111,6 +113,17 @@ export function TeamBoardContextBar({
             >
               <Plus className="size-4" />
               {t("issues.actions.createIssue")}
+            </Button>
+          ) : null}
+          {selectedBoard ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              onClick={() => onOpenBoardSettings(selectedBoard.board_id)}
+              aria-label={t("issues.actions.boardSettings")}
+            >
+              <MoreHorizontal className="size-4" />
             </Button>
           ) : null}
           <Button type="button" size="sm" onClick={onCreateBoard}>

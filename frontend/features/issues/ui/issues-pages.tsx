@@ -382,6 +382,7 @@ export function TeamIssuesPageClient() {
             isRefreshing={isRefreshing}
             onRefresh={() => void refresh()}
             onCreateIssue={setIssueBoardId}
+            onOpenBoardSettings={setBoardSettingsId}
             onCreateBoard={() => setBoardDialogOpen(true)}
           />
 
