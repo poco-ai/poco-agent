@@ -14,6 +14,7 @@ import { skillsService } from "@/features/capabilities/skills/api/skills-api";
 import { useT } from "@/lib/i18n/client";
 import { CapabilityContentShell } from "@/features/capabilities/components/capability-content-shell";
 import { HeaderSearchInput } from "@/components/shared/header-search-input";
+import { getEffectiveInstallState } from "@/features/capabilities/lib/install-policy";
 
 const PAGE_SIZE = 10;
 
@@ -67,22 +68,32 @@ export function SkillsPageClient() {
   const handleBatchToggle = useCallback(
     async (enabled: boolean) => {
       try {
-        const targetInstalls = enabled
-          ? installs
-          : installs.filter((install) => {
-              const skill = skills.find((item) => item.id === install.skill_id);
-              return !skill?.force_enabled;
+        const targetInstalls = installs.filter((install) => {
+          const skill = skills.find((item) => item.id === install.skill_id);
+          return enabled || !skill?.force_enabled;
+        });
+        const syntheticDisables = enabled
+          ? []
+          : skills.filter((skill) => {
+              const install = installs.find((item) => item.skill_id === skill.id);
+              const state = getEffectiveInstallState(skill, install);
+              return state.autoEnabled && !skill.force_enabled;
             });
-        if (targetInstalls.length === 0) {
+        if (targetInstalls.length === 0 && syntheticDisables.length === 0) {
           toast.message(
             t("library.skillsManager.toasts.noEligibleBatchToggle"),
           );
           return;
         }
         await Promise.all(
-          targetInstalls.map((install) =>
-            skillsService.updateInstall(install.id, { enabled }),
-          ),
+          [
+            ...targetInstalls.map((install) =>
+              skillsService.updateInstall(install.id, { enabled }),
+            ),
+            ...syntheticDisables.map((skill) =>
+              skillsService.createInstall({ skill_id: skill.id, enabled: false }),
+            ),
+          ],
         );
         refresh();
       } catch (error) {

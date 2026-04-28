@@ -12,6 +12,7 @@ import type {
   Plugin,
   UserPluginInstall,
 } from "@/features/capabilities/plugins/types";
+import { getEffectiveInstallState } from "@/features/capabilities/lib/install-policy";
 import { useT } from "@/lib/i18n/client";
 import { CapabilityCreateCard } from "@/features/capabilities/components/capability-create-card";
 import { CapabilitySourceAvatar } from "@/features/capabilities/components/capability-source-avatar";
@@ -22,7 +23,7 @@ interface PluginsGridProps {
   loadingId?: number | null;
   isLoading?: boolean;
   displayMode?: "personal" | "runtime" | "admin";
-  onInstall?: (pluginId: number) => void;
+  onInstall?: (pluginId: number, enabled?: boolean) => void;
   onDeletePlugin?: (pluginId: number) => void;
   onToggleEnabled?: (installId: number, enabled: boolean) => void;
   onBatchToggle?: (enabled: boolean) => void;
@@ -56,8 +57,6 @@ export function PluginsGrid({
     }
     return map;
   }, [installs]);
-
-  const enabledCount = installs.filter((i) => i.enabled).length;
   const visiblePlugins = React.useMemo(() => {
     if (displayMode === "admin") {
       return plugins.filter((plugin) => plugin.scope === "system");
@@ -67,6 +66,16 @@ export function PluginsGrid({
     }
     return plugins;
   }, [displayMode, plugins]);
+  const enabledCount = React.useMemo(
+    () =>
+      visiblePlugins.reduce((count, plugin) => {
+        const install = installByPluginId.get(plugin.id);
+        return (
+          count + (getEffectiveInstallState(plugin, install).isEnabled ? 1 : 0)
+        );
+      }, 0),
+    [installByPluginId, visiblePlugins],
+  );
 
   return (
     <div className="space-y-6">
@@ -75,7 +84,7 @@ export function PluginsGrid({
           {t("library.pluginsManager.stats.enabled")}: {enabledCount}
         </span>
         <div className="flex flex-1 flex-nowrap items-center justify-end gap-2 overflow-x-auto">
-          {installs.length > 0 && (
+          {enabledCount > 0 && (
             <Button
               variant="ghost"
               size="sm"
@@ -114,13 +123,13 @@ export function PluginsGrid({
             duration={400}
             renderItem={(plugin) => {
               const install = installByPluginId.get(plugin.id);
-              const isInstalled = Boolean(install);
+              const installState = getEffectiveInstallState(plugin, install);
+              const isInstalled = installState.isInstalled;
               const isRowLoading =
                 isLoading ||
                 loadingId === plugin.id ||
                 loadingId === install?.id;
-              const avatarStatus =
-                isInstalled && install?.enabled ? "active" : "inactive";
+              const avatarStatus = installState.isEnabled ? "active" : "inactive";
 
               return (
                 <div
@@ -190,10 +199,12 @@ export function PluginsGrid({
                       )}
                       {displayMode === "admin" ? null : (
                         <Switch
-                          checked={install.enabled}
+                          checked={installState.isEnabled}
                           disabled={isRowLoading || plugin.force_enabled}
                           onCheckedChange={(enabled) =>
-                            onToggleEnabled?.(install.id, enabled)
+                            install
+                              ? onToggleEnabled?.(install.id, enabled)
+                              : onInstall?.(plugin.id, enabled)
                           }
                         />
                       )}

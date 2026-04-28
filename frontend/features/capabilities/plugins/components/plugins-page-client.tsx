@@ -13,6 +13,7 @@ import { pluginsService } from "@/features/capabilities/plugins/api/plugins-api"
 import { useT } from "@/lib/i18n/client";
 import { CapabilityContentShell } from "@/features/capabilities/components/capability-content-shell";
 import { HeaderSearchInput } from "@/components/shared/header-search-input";
+import { getEffectiveInstallState } from "@/features/capabilities/lib/install-policy";
 
 const PAGE_SIZE = 10;
 
@@ -57,24 +58,32 @@ export function PluginsPageClient() {
   const handleBatchToggle = useCallback(
     async (enabled: boolean) => {
       try {
-        const targetInstalls = enabled
-          ? installs
-          : installs.filter((install) => {
-              const plugin = plugins.find(
-                (item) => item.id === install.plugin_id,
-              );
-              return !plugin?.force_enabled;
+        const targetInstalls = installs.filter((install) => {
+          const plugin = plugins.find((item) => item.id === install.plugin_id);
+          return enabled || !plugin?.force_enabled;
+        });
+        const syntheticDisables = enabled
+          ? []
+          : plugins.filter((plugin) => {
+              const install = installs.find((item) => item.plugin_id === plugin.id);
+              const state = getEffectiveInstallState(plugin, install);
+              return state.autoEnabled && !plugin.force_enabled;
             });
-        if (targetInstalls.length === 0) {
+        if (targetInstalls.length === 0 && syntheticDisables.length === 0) {
           toast.message(
             t("library.pluginsManager.toasts.noEligibleBatchToggle"),
           );
           return;
         }
         await Promise.all(
-          targetInstalls.map((install) =>
-            pluginsService.updateInstall(install.id, { enabled }),
-          ),
+          [
+            ...targetInstalls.map((install) =>
+              pluginsService.updateInstall(install.id, { enabled }),
+            ),
+            ...syntheticDisables.map((plugin) =>
+              pluginsService.createInstall({ plugin_id: plugin.id, enabled: false }),
+            ),
+          ],
         );
         refresh();
       } catch (error) {

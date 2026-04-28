@@ -18,6 +18,7 @@ from app.repositories.user_skill_install_repository import UserSkillInstallRepos
 from app.schemas.input_file import InputFile
 from app.schemas.session import TaskConfig
 from app.schemas.task import TaskEnqueueRequest, TaskEnqueueResponse
+from app.services.env_var_service import EnvVarService
 from app.services.model_config_service import (
     PROVIDER_SPEC_MAP,
     get_allowed_model_ids,
@@ -25,17 +26,24 @@ from app.services.model_config_service import (
 )
 from app.services.session_queue_service import SessionQueueService
 
+env_var_service = EnvVarService()
+
 
 class TaskService:
     """Service layer for task enqueue operations."""
 
     @staticmethod
-    def _validate_and_normalize_model(config: dict) -> None:
+    def _validate_and_normalize_model(
+        config: dict,
+        *,
+        default_model: str,
+        allowed_model_ids: list[str],
+    ) -> None:
         """Validate `model` override and normalize config in-place.
 
         Rules:
         - `model` unset/empty -> removed and clear `model_provider_id`
-        - `model` equals settings.default_model -> removed and clear `model_provider_id`
+        - `model` equals effective default_model -> removed and clear `model_provider_id`
         - explicit `model_provider_id` must be a known provider and match the inferred provider when available
         - otherwise `model` must be in the backend model catalog or belong to a known provider
         """
@@ -64,8 +72,6 @@ class TaskService:
             config.pop("model_provider_id", None)
             return
 
-        settings = get_settings()
-        default_model = (settings.default_model or "").strip()
         if value == default_model:
             config.pop("model", None)
             config.pop("model_provider_id", None)
@@ -89,7 +95,7 @@ class TaskService:
                 message=f"Invalid model provider: {provider_id}",
             )
 
-        allowed = set(get_allowed_model_ids(settings))
+        allowed = set(allowed_model_ids)
         if value not in allowed:
             raise AppException(
                 error_code=ErrorCode.BAD_REQUEST,
@@ -229,6 +235,32 @@ class TaskService:
             self._project_file_to_input_file(project_file)
             for project_file in ProjectFileRepository.list_by_project(db, project.id)
         ]
+
+    @staticmethod
+    def _parse_model_list(raw_value: str | None, *, fallback: list[str]) -> list[str]:
+        if raw_value is None or not raw_value.strip():
+            return fallback
+        return [
+            item.strip()
+            for item in raw_value.replace("\n", ",").split(",")
+            if item.strip()
+        ]
+
+    def _resolve_effective_model_policy(self, db: Session) -> tuple[str, list[str]]:
+        settings = get_settings()
+        system_env_map = env_var_service.get_system_env_map(db)
+        effective_default_model = (
+            system_env_map.get("DEFAULT_MODEL") or settings.default_model or ""
+        ).strip()
+        effective_model_list = self._parse_model_list(
+            system_env_map.get("MODEL_LIST"),
+            fallback=settings.model_list,
+        )
+        return effective_default_model, get_allowed_model_ids(
+            settings,
+            default_model=effective_default_model,
+            model_list=effective_model_list,
+        )
 
     def _normalize_scheduled_at(
         self, scheduled_at: datetime, timezone_name: str | None
@@ -505,7 +537,14 @@ class TaskService:
             merged_base = self._merge_config_map(merged_base, request_config)
 
         # Validate and normalize `model` after merging base + overrides.
-        self._validate_and_normalize_model(merged_base)
+        effective_default_model, allowed_model_ids = self._resolve_effective_model_policy(
+            db
+        )
+        self._validate_and_normalize_model(
+            merged_base,
+            default_model=effective_default_model,
+            allowed_model_ids=allowed_model_ids,
+        )
         self._normalize_memory_enabled(merged_base)
 
         if mcp_toggles is not None:

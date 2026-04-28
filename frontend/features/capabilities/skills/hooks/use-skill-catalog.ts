@@ -113,16 +113,22 @@ export function useSkillCatalog() {
   }, [refresh]);
 
   const installSkill = useCallback(
-    async (skillId: number) => {
+    async (skillId: number, enabled = true) => {
       setLoadingId(skillId);
       try {
         const created = await skillsService.createInstall({
           skill_id: skillId,
-          enabled: true,
+          enabled,
         });
         setInstalls((prev) => [created, ...prev]);
-        toast.success(t("library.skillsManager.toasts.installed"));
-        playInstallSound();
+        toast.success(
+          enabled
+            ? t("library.skillsManager.toasts.installed")
+            : t("library.skillsManager.toasts.disabled"),
+        );
+        if (enabled) {
+          playInstallSound();
+        }
         invalidateStartupPreloadValues(["skillInstalls"]);
       } catch (error) {
         console.error("[Skills] install failed:", error);

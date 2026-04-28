@@ -13,6 +13,7 @@ import { mcpService } from "@/features/capabilities/mcp/api/mcp-api";
 import { useT } from "@/lib/i18n/client";
 import { CapabilityContentShell } from "@/features/capabilities/components/capability-content-shell";
 import { HeaderSearchInput } from "@/components/shared/header-search-input";
+import { getEffectiveInstallState } from "@/features/capabilities/lib/install-policy";
 
 const PAGE_SIZE = 10;
 
@@ -55,22 +56,30 @@ export function McpPageClient() {
   const handleBatchToggle = useCallback(
     async (enabled: boolean) => {
       try {
-        const targetInstalls = enabled
-          ? installs
-          : installs.filter((install) => {
-              const server = servers.find(
-                (item) => item.id === install.server_id,
-              );
-              return !server?.force_enabled;
+        const targetInstalls = installs.filter((install) => {
+          const server = servers.find((item) => item.id === install.server_id);
+          return enabled || !server?.force_enabled;
+        });
+        const syntheticDisables = enabled
+          ? []
+          : servers.filter((server) => {
+              const install = installs.find((item) => item.server_id === server.id);
+              const state = getEffectiveInstallState(server, install);
+              return state.autoEnabled && !server.force_enabled;
             });
-        if (targetInstalls.length === 0) {
+        if (targetInstalls.length === 0 && syntheticDisables.length === 0) {
           toast.message(t("library.mcpLibrary.toasts.noEligibleBatchToggle"));
           return;
         }
         await Promise.all(
-          targetInstalls.map((install) =>
-            mcpService.updateInstall(install.id, { enabled }),
-          ),
+          [
+            ...targetInstalls.map((install) =>
+              mcpService.updateInstall(install.id, { enabled }),
+            ),
+            ...syntheticDisables.map((server) =>
+              mcpService.createInstall({ server_id: server.id, enabled: false }),
+            ),
+          ],
         );
         refresh();
       } catch (error) {

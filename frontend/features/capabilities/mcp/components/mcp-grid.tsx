@@ -13,6 +13,7 @@ import type {
   McpServer,
   UserMcpInstall,
 } from "@/features/capabilities/mcp/types";
+import { getEffectiveInstallState } from "@/features/capabilities/lib/install-policy";
 import { useT } from "@/lib/i18n/client";
 import { CapabilityCreateCard } from "@/features/capabilities/components/capability-create-card";
 import { CapabilitySourceAvatar } from "@/features/capabilities/components/capability-source-avatar";
@@ -58,8 +59,6 @@ export function McpGrid({
     }
     return map;
   }, [installs]);
-
-  const enabledCount = installs.filter((c) => c.enabled).length;
   const visibleServers = React.useMemo(() => {
     if (displayMode === "admin") {
       return servers.filter((server) => server.scope === "system");
@@ -69,6 +68,16 @@ export function McpGrid({
     }
     return servers;
   }, [displayMode, servers]);
+  const enabledCount = React.useMemo(
+    () =>
+      visibleServers.reduce((count, server) => {
+        const install = installByServerId.get(server.id);
+        return (
+          count + (getEffectiveInstallState(server, install).isEnabled ? 1 : 0)
+        );
+      }, 0),
+    [installByServerId, visibleServers],
+  );
 
   return (
     <div className="space-y-6">
@@ -88,7 +97,7 @@ export function McpGrid({
           {t("mcpGrid.enabledServers", { count: enabledCount })}
         </span>
         <div className="flex flex-1 flex-nowrap items-center justify-end gap-2 overflow-x-auto">
-          {installs.length > 0 && (
+          {enabledCount > 0 && (
             <Button
               variant="ghost"
               size="sm"
@@ -126,7 +135,8 @@ export function McpGrid({
             duration={400}
             renderItem={(server) => {
               const install = installByServerId.get(server.id);
-              const isEnabled = install?.enabled ?? false;
+              const installState = getEffectiveInstallState(server, install);
+              const isEnabled = installState.isEnabled;
               const isRowLoading = loadingId === server.id;
               const avatarStatus =
                 enabledCount > MCP_LIMIT && isEnabled
@@ -138,7 +148,7 @@ export function McpGrid({
               return (
                 <div
                   className={`group flex items-center gap-4 rounded-xl border px-4 py-3 min-h-[64px] ${
-                    install
+                    installState.isInstalled
                       ? "border-border/70 bg-card"
                       : "border-border/40 bg-muted/20"
                   }`}
