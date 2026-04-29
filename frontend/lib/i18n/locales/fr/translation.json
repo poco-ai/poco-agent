@@ -154,8 +154,11 @@
     "detailPlaceholder": "La vue détaillée sera étendue avec les métadonnées du tableau et l’historique d’audit.",
     "sections": {
       "overview": "Vue d’ensemble",
+      "collaboration": "Affectation et collaboration",
       "assignment": "Paramètres d’affectation",
       "assignmentDescription": "Configurez l’agent, le mode de déclenchement et la planification avant d’exécuter l’issue.",
+      "triggerSetup": "Configuration du déclenchement",
+      "triggerSetupDescription": "Conservez le contexte du board tout en ajustant la planification et les consignes d’exécution.",
       "prompt": "Prompt d’exécution",
       "promptDescription": "Gardez le prompt modifiable sans le mélanger aux contrôles d’exécution.",
       "executionPreview": "Aperçu de l’exécution",
@@ -166,6 +169,7 @@
     "fields": {
       "boardName": "Nom du tableau",
       "boardDescription": "Description du tableau",
+      "createdAt": "Créé le",
       "status": "Statut",
       "priority": "Priorité",
       "project": "Related project",
@@ -181,6 +185,7 @@
       "lastCompletedAt": "Dernière exécution terminée"
     },
     "context": {
+      "boardPill": "Tableau {{name}}",
       "eyebrow": "Board workspace",
       "noBoardTitle": "Pick a board to start scanning work",
       "noBoardDescription": "Switch between named boards here, then review workflow columns in the canvas below.",
@@ -247,6 +252,9 @@
       "createBoard": "Nouveau tableau",
       "boardSettings": "Paramètres du tableau",
       "createIssue": "Nouvelle issue",
+      "copyIssueId": "Copier l’ID de l’issue",
+      "viewRelatedProject": "Voir le projet lié",
+      "copyShareLink": "Copier le lien de partage",
       "saveOverview": "Enregistrer l’issue",
       "markDone": "Marquer comme terminée",
       "reopen": "Rouvrir",

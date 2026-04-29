@@ -2,7 +2,24 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { RefreshCw, Ticket, Trash2 } from "lucide-react";
+import {
+  CheckCheck,
+  ChevronDown,
+  Copy,
+  CircleDashed,
+  ExternalLink,
+  Flag,
+  FolderOpen,
+  LoaderCircle,
+  MoreHorizontal,
+  RefreshCw,
+  Slash,
+  Sparkles,
+  Ticket,
+  TimerReset,
+  Trash2,
+} from "lucide-react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import {
@@ -15,15 +32,21 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Empty,
   EmptyContent,
@@ -34,27 +57,21 @@ import {
 } from "@/components/ui/empty";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { presetsService } from "@/features/capabilities/presets/api/presets-api";
+import { PresetGlyph } from "@/features/capabilities/presets/components/preset-glyph";
 import type { Preset } from "@/features/capabilities/presets/lib/preset-types";
 import { issuesApi } from "@/features/issues/api/issues-api";
 import { getAssignmentExecutionMeta } from "@/features/issues/lib/issue-detail-view";
 import {
   createIssueDetailFormData,
+  getIssueDetailPrioritySelectValue,
   shouldScheduleIssueDetailAutoSave,
   type IssueDetailFormData,
   type IssueDetailLoadState,
 } from "@/features/issues/lib/issue-detail-form";
 import {
   formatAssignmentStatus,
-  formatIssueStatus,
 } from "@/features/issues/lib/issue-presentation";
 import type {
   AgentAssignment,
@@ -101,50 +118,102 @@ function AssignmentBadge({
   );
 }
 
-function InfoRow({
+function DetailFieldHeader({
+  icon,
   label,
-  value,
-  mono,
 }: {
+  icon: React.ReactNode;
   label: string;
-  value: string;
-  mono?: boolean;
 }) {
-  const { t } = useT("translation");
+  return (
+    <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+      {icon}
+      <span>{label}</span>
+    </div>
+  );
+}
+
+function renderStatusOption(
+  t: ReturnType<typeof useT>["t"],
+  status: WorkspaceIssue["status"],
+) {
+  const iconClassName = "size-3.5";
+
+  if (status === "in_progress") {
+    return (
+      <>
+        <LoaderCircle className={`${iconClassName} text-primary`} />
+        <span>{t("issues.statuses.in_progress")}</span>
+      </>
+    );
+  }
+  if (status === "done") {
+    return (
+      <>
+        <CheckCheck className={`${iconClassName} text-primary`} />
+        <span>{t("issues.statuses.done")}</span>
+      </>
+    );
+  }
+  if (status === "canceled") {
+    return (
+      <>
+        <Slash className={`${iconClassName} text-muted-foreground`} />
+        <span>{t("issues.statuses.canceled")}</span>
+      </>
+    );
+  }
   return (
     <>
-      <p className="text-sm font-medium">{label}</p>
-      <p className={`mt-1 text-sm text-muted-foreground ${mono ? "break-all" : ""}`}>
-        {value || t("issues.none")}
-      </p>
+      <CircleDashed className={`${iconClassName} text-muted-foreground`} />
+      <span>{t("issues.statuses.todo")}</span>
     </>
   );
 }
 
-function FieldSelect({
-  label,
-  value,
-  onValueChange,
-  placeholder,
-  children,
-}: {
-  label: string;
-  value: string;
-  onValueChange: (value: string) => void;
-  placeholder?: string;
-  children: React.ReactNode;
-}) {
+function renderPriorityOption(
+  t: ReturnType<typeof useT>["t"],
+  priority: "high" | "medium" | "low",
+) {
+  const toneClassName =
+    priority === "high"
+      ? "text-red-500"
+      : priority === "low"
+        ? "text-muted-foreground"
+        : "text-amber-500";
+
   return (
-    <div className="space-y-2">
-      <p className="text-xs font-medium text-muted-foreground">{label}</p>
-      <Select value={value} onValueChange={onValueChange}>
-        <SelectTrigger>
-          <SelectValue placeholder={placeholder} />
-        </SelectTrigger>
-        <SelectContent>{children}</SelectContent>
-      </Select>
-    </div>
+    <>
+      <Flag className={`size-3.5 ${toneClassName}`} />
+      <span>{t(`issues.priorities.${priority}`)}</span>
+    </>
   );
+}
+
+function renderStatusIcon(status: WorkspaceIssue["status"]) {
+  const iconClassName = "size-3.5";
+
+  if (status === "in_progress") {
+    return <LoaderCircle className={`${iconClassName} text-primary`} />;
+  }
+  if (status === "done") {
+    return <CheckCheck className={`${iconClassName} text-primary`} />;
+  }
+  if (status === "canceled") {
+    return <Slash className={`${iconClassName} text-muted-foreground`} />;
+  }
+  return <CircleDashed className={`${iconClassName} text-muted-foreground`} />;
+}
+
+function renderPriorityIcon(priority: "high" | "medium" | "low") {
+  const toneClassName =
+    priority === "high"
+      ? "text-red-500"
+      : priority === "low"
+        ? "text-muted-foreground"
+        : "text-amber-500";
+
+  return <Flag className={`size-3.5 ${toneClassName}`} />;
 }
 
 interface TeamIssueDetailContentProps {
@@ -160,8 +229,10 @@ export function TeamIssueDetailContent({
 }: TeamIssueDetailContentProps) {
   const { t } = useT("translation");
   const lng = useLanguage() || "en";
+  const router = useRouter();
 
   const [issue, setIssue] = React.useState<WorkspaceIssue | null>(null);
+  const [boardName, setBoardName] = React.useState<string | null>(null);
   const [presets, setPresets] = React.useState<Preset[]>([]);
   const [projects, setProjects] = React.useState<ProjectItem[]>([]);
   const [form, setForm] = React.useState<IssueDetailFormData>({
@@ -187,19 +258,23 @@ export function TeamIssueDetailContent({
   onUpdatedRef.current = onUpdated;
   const skipNextAutoSaveRef = React.useRef(true);
 
-  const updateForm = React.useCallback((patch: Partial<FormData>) => {
+  const updateForm = React.useCallback((patch: Partial<IssueDetailFormData>) => {
     setForm((prev) => ({ ...prev, ...patch }));
   }, []);
 
   const loadIssue = React.useCallback(async () => {
     setLoadState("loading");
     try {
-      const [nextIssue, nextPresets, nextProjects] = await Promise.all([
-        issuesApi.getIssue(issueId),
+      const nextIssue = await issuesApi.getIssue(issueId);
+      const [nextPresets, nextProjects, nextBoards] = await Promise.all([
         presetsService.listPresets(),
         projectsService.listProjects(),
+        issuesApi.listBoards(nextIssue.workspace_id),
       ]);
       setIssue(nextIssue);
+      setBoardName(
+        nextBoards.find((board) => board.board_id === nextIssue.board_id)?.name ?? null,
+      );
       setPresets(
         nextPresets.filter((item) => item.scope !== "personal" || item.user_id),
       );
@@ -221,7 +296,11 @@ export function TeamIssueDetailContent({
   const refreshIssue = React.useCallback(async () => {
     try {
       const nextIssue = await issuesApi.getIssue(issueId);
+      const nextBoards = await issuesApi.listBoards(nextIssue.workspace_id);
       setIssue(nextIssue);
+      setBoardName(
+        nextBoards.find((board) => board.board_id === nextIssue.board_id)?.name ?? null,
+      );
       skipNextAutoSaveRef.current = true;
       setForm((prev) => ({
         ...prev,
@@ -329,43 +408,103 @@ export function TeamIssueDetailContent({
 
   const assignment = issue?.agent_assignment;
   const executionMeta = getAssignmentExecutionMeta(assignment);
+  const selectedPreset =
+    form.selectedPresetId !== "none"
+      ? presets.find((preset) => String(preset.preset_id) === form.selectedPresetId) ?? null
+      : null;
+  const relatedProject =
+    form.relatedProjectId !== "none"
+      ? projects.find((project) => project.id === form.relatedProjectId) ?? null
+      : null;
+  const collaboratorLabel =
+    selectedPreset?.name ??
+    issue?.assignee_user_id ??
+    t("issues.unassigned");
+  const collaboratorFallback = collaboratorLabel.charAt(0).toUpperCase() || "?";
+
+  const copyText = React.useCallback(
+    async (value: string) => {
+      try {
+        await navigator.clipboard.writeText(value);
+        toast.success(t("common.copy"));
+      } catch {
+        toast.error(t("issues.toasts.actionFailed"));
+      }
+    },
+    [t],
+  );
 
   return (
     <>
       <div className="flex h-full flex-col overflow-hidden">
-        <div className="border-b border-border/70 px-5 py-4 sm:px-6">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <h2 className="text-xl font-semibold text-foreground">
-                  {issue?.title ?? t("issues.detailTitle")}
-                </h2>
-                {isSaving ? (
-                  <span className="relative flex size-2">
-                    <span className="absolute inline-flex size-full animate-ping rounded-full bg-primary/60" />
-                    <span className="relative inline-flex size-2 rounded-full bg-primary" />
-                  </span>
-                ) : null}
-              </div>
-              <p className="text-sm text-muted-foreground">
-                {t("issues.detailSubtitle", { issueId })}
-              </p>
+        <div className="border-b border-border/60 px-7 py-6">
+          <div className="flex items-start justify-between gap-4 pr-14">
+            <div className="flex items-center gap-2">
+              <h2 className="text-2xl font-semibold tracking-tight text-foreground">
+                {issue?.title ?? t("issues.detailTitle")}
+              </h2>
+              {isSaving ? (
+                <span className="relative flex size-2">
+                  <span className="absolute inline-flex size-full animate-ping rounded-full bg-primary/60" />
+                  <span className="relative inline-flex size-2 rounded-full bg-primary" />
+                </span>
+              ) : null}
             </div>
-            {issue ? (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setDeleteDialogOpen(true)}
-              >
-                <Trash2 className="size-4" />
-                {t("issues.actions.deleteIssue")}
-              </Button>
-            ) : null}
+            <div className="flex items-center gap-3">
+              <div className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/80 px-3 py-1.5 text-sm text-muted-foreground">
+                <span className="size-2 rounded-full bg-primary/70" />
+                <span>
+                  {t("issues.context.boardPill", {
+                    name: boardName ?? t("issues.boardsTitle"),
+                  })}
+                </span>
+              </div>
+              {issue ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="size-10 rounded-xl"
+                      aria-label={t("header.more")}
+                    >
+                      <MoreHorizontal className="size-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48 rounded-xl p-2">
+                    <DropdownMenuItem onSelect={() => void copyText(issue.issue_id)}>
+                      <Copy className="size-4" />
+                      {t("issues.actions.copyIssueId")}
+                    </DropdownMenuItem>
+                    {relatedProject ? (
+                      <DropdownMenuItem
+                        onSelect={() => router.push(`/${lng}/projects/${relatedProject.id}`)}
+                      >
+                        <FolderOpen className="size-4" />
+                        {t("issues.actions.viewRelatedProject")}
+                      </DropdownMenuItem>
+                    ) : null}
+                    <DropdownMenuItem onSelect={() => void copyText(window.location.href)}>
+                      <ExternalLink className="size-4" />
+                      {t("issues.actions.copyShareLink")}
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      variant="destructive"
+                      onSelect={() => setDeleteDialogOpen(true)}
+                    >
+                      <Trash2 className="size-4" />
+                      {t("issues.actions.deleteIssue")}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : null}
+            </div>
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-5 py-5 sm:px-6">
+        <div className="flex-1 overflow-y-auto px-7 py-6">
           {loadState === "loading" ? (
             <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
               <div className="space-y-6">
@@ -452,250 +591,375 @@ export function TeamIssueDetailContent({
               </CardContent>
             </Card>
           ) : issue ? (
-            <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
-              <div className="space-y-6">
-                <Card className="border-border/60">
-                  <CardHeader>
-                    <CardTitle>{t("issues.sections.overview")}</CardTitle>
-                    <CardDescription>
-                      {t("issues.sections.dialogOverviewDescription")}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4 pb-6">
-                    <div className="flex flex-wrap gap-2">
-                      <Badge variant="outline">
-                        {formatIssueStatus(t, issue.status)}
-                      </Badge>
-                      {assignment ? (
-                        <AssignmentBadge assignment={assignment} />
-                      ) : null}
+            <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_320px]">
+              <div className="space-y-8">
+                <section className="space-y-6 border-b border-border/60 pb-7">
+                  <div className="space-y-4">
+                    <h3 className="text-xl font-semibold tracking-tight text-foreground">
+                      {t("issues.sections.collaboration")}
+                    </h3>
+                    <div className="grid gap-5 md:grid-cols-[minmax(0,1.25fr)_minmax(0,0.75fr)_minmax(0,0.75fr)]">
+                      <div className="flex items-center gap-4">
+                        {selectedPreset ? (
+                          <div className="flex size-14 items-center justify-center rounded-2xl bg-muted/20">
+                            <PresetGlyph preset={selectedPreset} variant="picker" />
+                          </div>
+                        ) : (
+                          <Avatar className="size-14 border border-border/60 bg-muted/50">
+                            <AvatarFallback className="bg-muted text-base font-semibold text-foreground">
+                              {collaboratorFallback}
+                            </AvatarFallback>
+                          </Avatar>
+                        )}
+                        <div className="space-y-1.5">
+                          <p className="text-lg font-medium text-foreground">
+                            {collaboratorLabel}
+                          </p>
+                          <div className="flex flex-wrap items-center gap-2">
+                            {selectedPreset ? (
+                              <Badge variant="secondary">
+                                {t("issues.fields.agentPreset")}
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline">{t("issues.unassigned")}</Badge>
+                            )}
+                            {assignment ? <AssignmentBadge assignment={assignment} /> : null}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="space-y-1.5">
+                        <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                          {t("issues.fields.createdAt")}
+                        </p>
+                        <p className="text-sm font-medium text-foreground">
+                          {formatDateTime(issue.created_at)}
+                        </p>
+                      </div>
+                      <div className="space-y-1.5">
+                        <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                          {t("issues.fields.updatedAt")}
+                        </p>
+                        <p className="text-sm font-medium text-foreground">
+                          {formatDateTime(issue.updated_at)}
+                        </p>
+                      </div>
                     </div>
-                    <p className="text-sm text-muted-foreground">
-                      {issue.description || t("issues.emptyDescription")}
-                    </p>
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <FieldSelect
-                        label={t("issues.fields.status")}
-                        value={form.status}
-                        onValueChange={(v) =>
-                          updateForm({ status: v as WorkspaceIssue["status"] })
-                        }
-                      >
-                        <SelectItem value="todo">
-                          {t("issues.statuses.todo")}
-                        </SelectItem>
-                        <SelectItem value="in_progress">
-                          {t("issues.statuses.in_progress")}
-                        </SelectItem>
-                        <SelectItem value="done">
-                          {t("issues.statuses.done")}
-                        </SelectItem>
-                        <SelectItem value="canceled">
-                          {t("issues.statuses.canceled")}
-                        </SelectItem>
-                      </FieldSelect>
-                      <FieldSelect
-                        label={t("issues.fields.priority")}
-                        value={form.priority}
-                        onValueChange={(v) =>
-                          updateForm({
-                            priority: v as WorkspaceIssue["priority"],
-                          })
-                        }
-                      >
-                        <SelectItem value="urgent">
-                          {t("issues.priorities.urgent")}
-                        </SelectItem>
-                        <SelectItem value="medium">
-                          {t("issues.priorities.medium")}
-                        </SelectItem>
-                        <SelectItem value="high">
-                          {t("issues.priorities.high")}
-                        </SelectItem>
-                        <SelectItem value="low">
-                          {t("issues.priorities.low")}
-                        </SelectItem>
-                      </FieldSelect>
-                    </div>
-                    <FieldSelect
-                      label={t("issues.fields.project")}
-                      value={form.relatedProjectId}
-                      onValueChange={(v) => updateForm({ relatedProjectId: v })}
-                      placeholder={t("issues.placeholders.project")}
-                    >
-                      <SelectItem value="none">{t("issues.none")}</SelectItem>
-                      {projects.map((project) => (
-                        <SelectItem key={project.id} value={project.id}>
-                          {project.name}
-                        </SelectItem>
-                      ))}
-                    </FieldSelect>
-                  </CardContent>
-                </Card>
+                  </div>
 
-                <Card className="border-border/60">
-                  <CardHeader>
-                    <CardTitle>{t("issues.sections.assignment")}</CardTitle>
-                    <CardDescription>
-                      {t("issues.sections.assignmentDescription")}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4 pb-6">
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <FieldSelect
-                        label={t("issues.fields.agentPreset")}
-                        value={form.selectedPresetId}
-                        onValueChange={(v) =>
-                          updateForm({ selectedPresetId: v })
-                        }
-                        placeholder={t("issues.placeholders.preset")}
-                      >
-                        <SelectItem value="none">{t("issues.none")}</SelectItem>
+                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          className="h-auto rounded-2xl border border-border/50 bg-background/80 px-4 py-3 hover:bg-accent/20"
+                        >
+                          <div className="flex w-full flex-col gap-4 text-left">
+                            <DetailFieldHeader
+                              icon={renderStatusIcon(form.status)}
+                              label={t("issues.fields.status")}
+                            />
+                            <div className="flex w-full items-center justify-end gap-2 text-sm font-medium text-foreground">
+                              <span>{t(`issues.statuses.${form.status}`)}</span>
+                              <ChevronDown className="size-4 text-muted-foreground" />
+                            </div>
+                          </div>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="z-[80] min-w-40">
+                        <DropdownMenuItem
+                          onSelect={() => updateForm({ status: "todo" })}
+                        >
+                          {renderStatusOption(t, "todo")}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onSelect={() => updateForm({ status: "in_progress" })}
+                        >
+                          {renderStatusOption(t, "in_progress")}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onSelect={() => updateForm({ status: "done" })}
+                        >
+                          {renderStatusOption(t, "done")}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onSelect={() => updateForm({ status: "canceled" })}
+                        >
+                          {renderStatusOption(t, "canceled")}
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          className="h-auto rounded-2xl border border-border/50 bg-background/80 px-4 py-3 hover:bg-accent/20"
+                        >
+                          <div className="flex w-full flex-col gap-4 text-left">
+                            <DetailFieldHeader
+                              icon={renderPriorityIcon(
+                                getIssueDetailPrioritySelectValue(form.priority),
+                              )}
+                              label={t("issues.fields.priority")}
+                            />
+                            <div className="flex w-full items-center justify-end gap-2 text-sm font-medium text-foreground">
+                              <span>
+                                {t(
+                                  `issues.priorities.${getIssueDetailPrioritySelectValue(
+                                    form.priority,
+                                  )}`,
+                                )}
+                              </span>
+                              <ChevronDown className="size-4 text-muted-foreground" />
+                            </div>
+                          </div>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="z-[80] min-w-40">
+                        <DropdownMenuItem
+                          onSelect={() => updateForm({ priority: "high" })}
+                        >
+                          {renderPriorityOption(t, "high")}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onSelect={() => updateForm({ priority: "medium" })}
+                        >
+                          {renderPriorityOption(t, "medium")}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onSelect={() => updateForm({ priority: "low" })}
+                        >
+                          {renderPriorityOption(t, "low")}
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          className="h-auto rounded-2xl border border-border/50 bg-background/80 px-4 py-3 hover:bg-accent/20"
+                        >
+                          <div className="flex w-full flex-col gap-4 text-left">
+                            <DetailFieldHeader
+                              icon={<FolderOpen className="size-3.5" />}
+                              label={t("issues.fields.project")}
+                            />
+                            <div className="flex w-full items-center justify-end gap-2 text-sm font-medium text-foreground">
+                              <span>{relatedProject?.name ?? t("issues.none")}</span>
+                              <ChevronDown className="size-4 text-muted-foreground" />
+                            </div>
+                          </div>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="z-[80] min-w-40">
+                        <DropdownMenuItem onSelect={() => updateForm({ relatedProjectId: "none" })}>
+                          {t("issues.none")}
+                        </DropdownMenuItem>
+                        {projects.map((project) => (
+                          <DropdownMenuItem
+                            key={project.id}
+                            onSelect={() => updateForm({ relatedProjectId: project.id })}
+                          >
+                            {project.name}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          className="h-auto rounded-2xl border border-border/50 bg-background/80 px-4 py-3 hover:bg-accent/20"
+                        >
+                          <div className="flex w-full flex-col gap-4 text-left">
+                            <DetailFieldHeader
+                              icon={<Sparkles className="size-3.5" />}
+                              label={t("issues.fields.agentPreset")}
+                            />
+                            <div className="flex w-full items-center justify-end gap-2 text-sm font-medium text-foreground">
+                              <span>{selectedPreset?.name ?? t("issues.none")}</span>
+                              <ChevronDown className="size-4 text-muted-foreground" />
+                            </div>
+                          </div>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="z-[80] min-w-40">
+                        <DropdownMenuItem onSelect={() => updateForm({ selectedPresetId: "none" })}>
+                          {t("issues.none")}
+                        </DropdownMenuItem>
                         {presets.map((preset) => (
-                          <SelectItem
+                          <DropdownMenuItem
                             key={preset.preset_id}
-                            value={String(preset.preset_id)}
+                            onSelect={() => updateForm({ selectedPresetId: String(preset.preset_id) })}
                           >
                             {preset.name}
-                          </SelectItem>
+                          </DropdownMenuItem>
                         ))}
-                      </FieldSelect>
-                      <FieldSelect
-                        label={t("issues.fields.triggerMode")}
-                        value={form.triggerMode}
-                        onValueChange={(v) =>
-                          updateForm({
-                            triggerMode: v as IssueDetailFormData["triggerMode"],
-                          })
-                        }
-                      >
-                        <SelectItem value="persistent_sandbox">
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          className="h-auto rounded-2xl border border-border/50 bg-background/80 px-4 py-3 hover:bg-accent/20"
+                        >
+                          <div className="flex w-full flex-col gap-4 text-left">
+                            <DetailFieldHeader
+                              icon={<TimerReset className="size-3.5" />}
+                              label={t("issues.fields.triggerMode")}
+                            />
+                            <div className="flex w-full items-center justify-end gap-2 text-sm font-medium text-foreground">
+                              <span>{t(`issues.triggerModes.${form.triggerMode}`)}</span>
+                              <ChevronDown className="size-4 text-muted-foreground" />
+                            </div>
+                          </div>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="z-[80] min-w-40">
+                        <DropdownMenuItem
+                          onSelect={() => updateForm({ triggerMode: "persistent_sandbox" })}
+                        >
                           {t("issues.triggerModes.persistent_sandbox")}
-                        </SelectItem>
-                        <SelectItem value="scheduled_task">
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onSelect={() => updateForm({ triggerMode: "scheduled_task" })}
+                        >
                           {t("issues.triggerModes.scheduled_task")}
-                        </SelectItem>
-                      </FieldSelect>
-                    </div>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </section>
 
-                    <div className="space-y-2">
-                      <p className="text-xs font-medium text-muted-foreground">
-                        {t("issues.fields.schedule")}
-                      </p>
-                      <Input
-                        value={form.scheduleCron}
-                        onChange={(e) =>
-                          updateForm({ scheduleCron: e.target.value })
-                        }
-                        disabled={form.triggerMode !== "scheduled_task"}
-                        placeholder="0 * * * *"
-                      />
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-border/60">
-                  <CardHeader>
-                    <CardTitle>{t("issues.sections.prompt")}</CardTitle>
-                    <CardDescription>
-                      {t("issues.sections.promptDescription")}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-2 pb-6">
+                <section className="space-y-4 border-b border-border/60 pb-7">
+                  <div className="space-y-1">
+                    <h3 className="text-xl font-semibold tracking-tight text-foreground">
+                      {t("issues.sections.triggerSetup")}
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      {t("issues.sections.triggerSetupDescription")}
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                      {t("issues.fields.schedule")}
+                    </p>
+                    <Input
+                      value={form.scheduleCron}
+                      onChange={(e) => updateForm({ scheduleCron: e.target.value })}
+                      disabled={form.triggerMode !== "scheduled_task"}
+                      placeholder="0 * * * *"
+                      className="h-11 rounded-2xl border-border/50 bg-background/80 shadow-none"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                      {t("issues.fields.prompt")}
+                    </p>
                     <Textarea
                       value={form.prompt}
                       onChange={(e) => updateForm({ prompt: e.target.value })}
-                      rows={10}
+                      rows={6}
                       placeholder={t("issues.placeholders.prompt")}
+                      className="min-h-36 rounded-2xl border-border/50 bg-background/80 shadow-none"
                     />
-                  </CardContent>
-                </Card>
+                  </div>
+                </section>
               </div>
 
-              <div className="space-y-6">
-                <Card className="border-border/60">
-                  <CardHeader>
-                    <CardTitle>{t("issues.executionTitle")}</CardTitle>
-                    <CardDescription>
-                      {t("issues.sections.executionDescription")}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4 pb-6">
-                    <div className="space-y-3 rounded-2xl border border-border/60 p-4">
-                      <InfoRow
-                        label={t("issues.fields.assignmentStatus")}
-                        value={
-                          assignment
-                            ? formatAssignmentStatus(t, assignment.status)
-                            : t("issues.unassigned")
-                        }
-                      />
-                      <InfoRow
-                        label={t("issues.fields.session")}
-                        value={assignment?.session_id ?? ""}
-                        mono
-                      />
-                      <InfoRow
-                        label={t("issues.fields.container")}
-                        value={assignment?.container_id ?? ""}
-                        mono
-                      />
-                      <InfoRow
-                        label={t("issues.fields.lastTriggeredAt")}
-                        value={
-                          executionMeta.lastTriggeredAt
-                            ? formatDateTime(executionMeta.lastTriggeredAt)
-                            : ""
-                        }
-                      />
-                      <InfoRow
-                        label={t("issues.fields.lastCompletedAt")}
-                        value={
-                          executionMeta.lastCompletedAt
-                            ? formatDateTime(executionMeta.lastCompletedAt)
-                            : ""
-                        }
-                      />
-                    </div>
-                    <div className="grid gap-2">
-                      <Button
-                        type="button"
-                        onClick={() => void runAction("trigger")}
-                      >
-                        {t("issues.actions.trigger")}
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => void runAction("retry")}
-                      >
-                        {t("issues.actions.retry")}
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => void runAction("cancel")}
-                      >
-                        {t("issues.actions.cancel")}
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => void runAction("release")}
-                      >
-                        {t("issues.actions.release")}
-                      </Button>
-                      {assignment?.session_id ? (
-                        <Button type="button" variant="secondary" asChild>
-                          <Link href={`/${lng}/chat/${assignment.session_id}`}>
-                            {t("issues.actions.openSession")}
-                          </Link>
-                        </Button>
-                      ) : null}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
+              <aside className="space-y-6 border-t border-border/60 pt-6 lg:border-t-0 lg:border-l lg:pl-6 lg:pt-0">
+                <div className="space-y-2">
+                  <h3 className="text-xl font-semibold tracking-tight text-foreground">
+                    执行状态
+                  </h3>
+                  <p className="max-w-xs text-sm leading-7 text-muted-foreground">
+                    不离开当前 board，就地执行 assignment 相关动作。
+                  </p>
+                </div>
+                <div className="space-y-3 text-sm">
+                  <div className="flex items-start justify-between gap-4">
+                    <span className="text-muted-foreground">{t("issues.fields.assignmentStatus")}</span>
+                    <span className="text-right font-medium text-foreground">
+                      {assignment
+                        ? formatAssignmentStatus(t, assignment.status)
+                        : t("issues.unassigned")}
+                    </span>
+                  </div>
+                  <div className="flex items-start justify-between gap-4">
+                    <span className="text-muted-foreground">{t("issues.fields.session")}</span>
+                    <span className="max-w-[12rem] break-all text-right font-medium text-foreground">
+                      {assignment?.session_id ?? t("issues.none")}
+                    </span>
+                  </div>
+                  <div className="flex items-start justify-between gap-4">
+                    <span className="text-muted-foreground">{t("issues.fields.container")}</span>
+                    <span className="max-w-[12rem] break-all text-right font-medium text-foreground">
+                      {assignment?.container_id ?? t("issues.none")}
+                    </span>
+                  </div>
+                  <div className="flex items-start justify-between gap-4">
+                    <span className="text-muted-foreground">{t("issues.fields.lastTriggeredAt")}</span>
+                    <span className="text-right font-medium text-foreground">
+                      {executionMeta.lastTriggeredAt
+                        ? formatDateTime(executionMeta.lastTriggeredAt)
+                        : t("issues.none")}
+                    </span>
+                  </div>
+                  <div className="flex items-start justify-between gap-4">
+                    <span className="text-muted-foreground">{t("issues.fields.lastCompletedAt")}</span>
+                    <span className="text-right font-medium text-foreground">
+                      {executionMeta.lastCompletedAt
+                        ? formatDateTime(executionMeta.lastCompletedAt)
+                        : t("issues.none")}
+                    </span>
+                  </div>
+                </div>
+                <div className="grid gap-3">
+                  <Button type="button" className="h-11 rounded-xl" onClick={() => void runAction("trigger")}>
+                    {t("issues.actions.trigger")}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-11 rounded-xl"
+                    onClick={() => void runAction("retry")}
+                  >
+                    {t("issues.actions.retry")}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-11 rounded-xl"
+                    onClick={() => void runAction("cancel")}
+                  >
+                    {t("issues.actions.cancel")}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-11 rounded-xl"
+                    onClick={() => void runAction("release")}
+                  >
+                    {t("issues.actions.release")}
+                  </Button>
+                  {assignment?.session_id ? (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="h-11 rounded-xl"
+                      asChild
+                    >
+                      <Link href={`/${lng}/chat/${assignment.session_id}`}>
+                        {t("issues.actions.openSession")}
+                      </Link>
+                    </Button>
+                  ) : null}
+                </div>
+              </aside>
             </div>
           ) : null}
         </div>

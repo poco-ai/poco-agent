@@ -3,18 +3,19 @@
 import * as React from "react";
 import {
   Activity,
-  Building2,
   Copy,
   MailPlus,
   RefreshCw,
   Shield,
   Ticket,
+  User,
   Users,
 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Card,
   CardContent,
@@ -77,50 +78,58 @@ function formatDateTime(value: string): string {
   }).format(date);
 }
 
-function WorkspaceSummaryCards({
+function WorkspaceMembersPreview({
   members,
-  invites,
 }: {
   members: WorkspaceMember[];
-  invites: WorkspaceInvite[];
 }) {
   const { t } = useT("translation");
-  const { currentWorkspace } = useWorkspaceContext();
 
-  const cards = [
-    {
-      icon: Building2,
-      label: t("workspaces.summary.kind"),
-      value: currentWorkspace
-        ? formatWorkspaceKind(t, currentWorkspace.kind)
-        : t("workspaces.emptyValue"),
-    },
-    {
-      icon: Users,
-      label: t("workspaces.summary.members"),
-      value: String(members.length),
-    },
-    {
-      icon: Ticket,
-      label: t("workspaces.summary.invites"),
-      value: String(countActiveInvites(invites)),
-    },
-  ];
+  if (members.length === 0) {
+    return (
+      <Empty className="min-h-48 rounded-2xl border border-dashed border-border/70 bg-muted/10">
+        <EmptyContent>
+          <EmptyMedia variant="icon">
+            <Users className="size-5" />
+          </EmptyMedia>
+          <EmptyHeader>
+            <EmptyTitle>{t("workspaces.members.title")}</EmptyTitle>
+            <EmptyDescription>{t("workspaces.members.empty")}</EmptyDescription>
+          </EmptyHeader>
+        </EmptyContent>
+      </Empty>
+    );
+  }
 
   return (
-    <div className="grid gap-3 md:grid-cols-3">
-      {cards.map(({ icon: Icon, label, value }) => (
-        <Card key={label} className="overflow-hidden border-border/60">
-          <CardContent className="flex items-center gap-4 p-5">
-            <div className="rounded-xl bg-primary/10 p-3 text-primary">
-              <Icon className="size-5" />
+    <div className="max-h-[22rem] space-y-3 overflow-y-auto pr-1">
+      {members.map((member) => (
+        <div
+          key={member.id}
+          className="flex items-center justify-between gap-3 rounded-2xl border border-border/60 bg-card px-4 py-3"
+        >
+          <div className="flex min-w-0 items-center gap-3">
+            <Avatar className="size-10 border border-border/60 bg-muted/30">
+              <AvatarFallback className="bg-muted/40 text-muted-foreground">
+                <User className="size-4" />
+              </AvatarFallback>
+            </Avatar>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium text-foreground">
+                {member.userId}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {t("workspaces.members.joinedAt", {
+                  date: formatDateTime(member.joinedAt),
+                })}
+              </p>
             </div>
-            <div>
-              <p className="text-sm text-muted-foreground">{label}</p>
-              <p className="text-2xl font-semibold">{value}</p>
-            </div>
-          </CardContent>
-        </Card>
+          </div>
+          <Badge variant={member.role === "owner" ? "default" : "outline"}>
+            <Shield className="size-3" />
+            {formatWorkspaceRole(t, member.role)}
+          </Badge>
+        </div>
       ))}
     </div>
   );
@@ -138,7 +147,7 @@ function WorkspaceOverviewHero({
   const { t } = useT("translation");
 
   return (
-    <Card className="overflow-hidden border-border/60 bg-card">
+    <Card className="overflow-hidden border-border/60 bg-card shadow-none">
       <CardContent className="flex flex-col gap-4 p-6 lg:flex-row lg:items-end lg:justify-between">
         <div className="space-y-3">
           <Badge variant="secondary">
@@ -332,6 +341,8 @@ export function TeamPageClient() {
   const [invites, setInvites] = React.useState<WorkspaceInvite[]>([]);
   const [activity, setActivity] = React.useState<ActivityLog[]>([]);
   const [isRefreshing, setIsRefreshing] = React.useState(false);
+  const [activityPage, setActivityPage] = React.useState(1);
+  const activityPageSize = 6;
 
   const refresh = React.useCallback(async () => {
     if (!currentWorkspace) return;
@@ -357,6 +368,19 @@ export function TeamPageClient() {
     void refresh();
   }, [refresh]);
 
+  React.useEffect(() => {
+    setActivityPage(1);
+  }, [activity]);
+
+  const activityTotalPages = Math.max(
+    1,
+    Math.ceil(activity.length / activityPageSize),
+  );
+  const pagedActivity = React.useMemo(() => {
+    const start = (activityPage - 1) * activityPageSize;
+    return activity.slice(start, start + activityPageSize);
+  }, [activity, activityPage]);
+
   return (
     <TeamContentShell>
       {isLoading ? (
@@ -368,14 +392,24 @@ export function TeamPageClient() {
             members={members}
             invites={invites}
           />
-          <WorkspaceSummaryCards members={members} invites={invites} />
-          <Card className="border-border/60">
-            <CardHeader className="flex flex-wrap items-center justify-between gap-3">
+          <Card className="border-border/60 shadow-none">
+            <CardHeader>
+              <CardTitle>{t("workspaces.members.title")}</CardTitle>
+              <CardDescription>{t("workspaces.members.description")}</CardDescription>
+            </CardHeader>
+            <CardContent className="pb-6">
+              <WorkspaceMembersPreview members={members} />
+            </CardContent>
+          </Card>
+          <section className="space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="space-y-1">
-                <CardTitle>{t("workspaces.activity.title")}</CardTitle>
-                <CardDescription>
+                <h3 className="text-xl font-semibold tracking-tight text-foreground">
+                  {t("workspaces.activity.title")}
+                </h3>
+                <p className="text-sm text-muted-foreground">
                   {t("workspaces.activity.description")}
-                </CardDescription>
+                </p>
               </div>
               <Button
                 variant="outline"
@@ -388,43 +422,74 @@ export function TeamPageClient() {
                 />
                 {t("workspaces.refresh")}
               </Button>
-            </CardHeader>
-            <CardContent className="space-y-3 pb-6">
-              {activity.length === 0 ? (
-                <Empty className="min-h-56 rounded-2xl border border-dashed border-border/70 bg-muted/10">
-                  <EmptyContent>
-                    <EmptyMedia variant="icon">
-                      <Activity className="size-5" />
-                    </EmptyMedia>
-                    <EmptyHeader>
-                      <EmptyTitle>{t("workspaces.activity.title")}</EmptyTitle>
-                      <EmptyDescription>
-                        {t("workspaces.activity.empty")}
-                      </EmptyDescription>
-                    </EmptyHeader>
-                  </EmptyContent>
-                </Empty>
-              ) : (
-                activity.map((item) => (
+            </div>
+            {activity.length === 0 ? (
+              <Empty className="min-h-56 rounded-2xl border border-dashed border-border/70 bg-muted/10">
+                <EmptyContent>
+                  <EmptyMedia variant="icon">
+                    <Activity className="size-5" />
+                  </EmptyMedia>
+                  <EmptyHeader>
+                    <EmptyTitle>{t("workspaces.activity.title")}</EmptyTitle>
+                    <EmptyDescription>
+                      {t("workspaces.activity.empty")}
+                    </EmptyDescription>
+                  </EmptyHeader>
+                </EmptyContent>
+              </Empty>
+            ) : (
+              <div className="overflow-hidden rounded-xl border border-border/50 bg-background/40">
+                {pagedActivity.map((item) => (
                   <div
                     key={item.id}
-                    className="flex items-start gap-3 rounded-2xl border border-border/60 bg-muted/15 p-4"
+                    className="flex items-center gap-3 border-b border-border/50 px-4 py-3 last:border-b-0"
                   >
-                    <Activity className="mt-0.5 size-4 text-muted-foreground" />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium">
-                        {formatActivityAction(t, item.action)}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatDateTime(item.createdAt)}
-                      </p>
-                    </div>
-                    <Badge variant="outline">{item.targetType}</Badge>
+                    <Activity className="size-4 shrink-0 text-muted-foreground" />
+                    <p className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
+                      {formatActivityAction(t, item.action)}
+                    </p>
+                    <span className="shrink-0 text-xs text-muted-foreground">
+                      {formatDateTime(item.createdAt)}
+                    </span>
+                    <Badge variant="outline" className="shrink-0">
+                      {item.targetType}
+                    </Badge>
                   </div>
-                ))
-              )}
-            </CardContent>
-          </Card>
+                ))}
+                {activityTotalPages > 1 ? (
+                  <div className="flex items-center justify-center gap-3 border-t border-border/50 px-4 py-3">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() =>
+                        setActivityPage((page) => Math.max(1, page - 1))
+                      }
+                      disabled={activityPage === 1}
+                    >
+                      {t("pagination.previous")}
+                    </Button>
+                    <span className="text-xs text-muted-foreground">
+                      {activityPage}/{activityTotalPages} 页
+                    </span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() =>
+                        setActivityPage((page) =>
+                          Math.min(activityTotalPages, page + 1),
+                        )
+                      }
+                      disabled={activityPage === activityTotalPages}
+                    >
+                      {t("pagination.next")}
+                    </Button>
+                  </div>
+                ) : null}
+              </div>
+            )}
+          </section>
         </div>
       )}
     </TeamContentShell>
@@ -505,7 +570,7 @@ export function TeamMembersPageClient() {
 
   return (
     <TeamContentShell>
-      <Card className="border-border/60">
+      <Card className="border-border/60 shadow-none">
         <CardHeader className="flex flex-wrap items-center justify-between gap-3">
           <div className="space-y-1">
             <CardTitle>{t("workspaces.members.title")}</CardTitle>

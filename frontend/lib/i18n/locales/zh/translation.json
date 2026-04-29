@@ -154,8 +154,11 @@
     "detailPlaceholder": "事项详情页后续会补充看板元数据和审计历史。",
     "sections": {
       "overview": "概览",
+      "collaboration": "分配与协作",
       "assignment": "分配设置",
       "assignmentDescription": "在执行事项前，先明确 preset、触发方式和调度配置。",
+      "triggerSetup": "触发设置",
+      "triggerSetupDescription": "保持 board 上下文不变，并在需要时补充调度与执行提示。",
       "prompt": "执行提示词",
       "promptDescription": "把提示词编辑和执行控制拆开，避免继续堆成一个长表单。",
       "executionPreview": "执行预览",
@@ -166,6 +169,7 @@
     "fields": {
       "boardName": "看板名称",
       "boardDescription": "看板描述",
+      "createdAt": "创建时间",
       "status": "状态",
       "priority": "优先级",
       "project": "关联项目",
@@ -181,6 +185,7 @@
       "lastCompletedAt": "最近完成时间"
     },
     "context": {
+      "boardPill": "{{name}} 看板",
       "eyebrow": "看板工作区",
       "noBoardTitle": "先选择一个看板，再开始查看工作流",
       "noBoardDescription": "在这里切换命名 board，然后在下方画布中直接浏览各状态列。",
@@ -247,6 +252,9 @@
       "createBoard": "新建看板",
       "boardSettings": "看板设置",
       "createIssue": "新建事项",
+      "copyIssueId": "复制事项 ID",
+      "viewRelatedProject": "查看关联项目",
+      "copyShareLink": "复制分享链接",
       "saveOverview": "保存事项",
       "markDone": "标记完成",
       "reopen": "重新打开",

@@ -265,7 +265,7 @@ export function TeamIssuesPageClient() {
                   isActive
                     ? "bg-muted text-foreground"
                     : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
-                }`}
+                } group/board-item`}
               >
                 <div className="flex items-start gap-2">
                   <button
@@ -283,30 +283,28 @@ export function TeamIssuesPageClient() {
                       {pendingCount} pending · {totalCount} total
                     </p>
                   </button>
-                  {isActive ? (
-                    <div className="flex items-center gap-0.5">
-                      <Button
-                        type="button"
-                        size="icon"
-                        variant="ghost"
-                        className="size-7"
-                        onClick={() => setIssueBoardId(board.board_id)}
-                        aria-label={t("issues.actions.createIssue")}
-                      >
-                        <Plus className="size-3.5" />
-                      </Button>
-                      <Button
-                        type="button"
-                        size="icon"
-                        variant="ghost"
-                        className="size-7"
-                        onClick={() => setBoardSettingsId(board.board_id)}
-                        aria-label={t("issues.actions.boardSettings")}
-                      >
-                        <MoreHorizontal className="size-3.5" />
-                      </Button>
-                    </div>
-                  ) : null}
+                  <div className="flex items-center gap-0.5 opacity-100 transition-opacity md:opacity-0 md:group-hover/board-item:opacity-100 md:group-focus-within/board-item:opacity-100">
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      className="size-7"
+                      onClick={() => setIssueBoardId(board.board_id)}
+                      aria-label={t("issues.actions.createIssue")}
+                    >
+                      <Plus className="size-3.5" />
+                    </Button>
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      className="size-7"
+                      onClick={() => setBoardSettingsId(board.board_id)}
+                      aria-label={t("issues.actions.boardSettings")}
+                    >
+                      <MoreHorizontal className="size-3.5" />
+                    </Button>
+                  </div>
                 </div>
               </div>
             );
@@ -395,10 +393,14 @@ export function TeamIssuesPageClient() {
     selectBoard,
   ]);
 
-  React.useEffect(() => {
+  React.useLayoutEffect(() => {
+    if (boards.length === 0) {
+      return;
+    }
+
     setRailContent(boardRailContent);
     return () => setRailContent(null);
-  }, [boardRailContent, setRailContent]);
+  }, [boardRailContent, boards.length, setRailContent]);
 
   const createBoard = async (name: string) => {
     if (!currentWorkspace || !name.trim()) {

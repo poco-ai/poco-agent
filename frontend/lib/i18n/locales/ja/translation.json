@@ -154,8 +154,11 @@
     "detailPlaceholder": "詳細ビューには今後ボード情報と監査履歴が追加されます。",
     "sections": {
       "overview": "概要",
+      "collaboration": "割り当てとコラボレーション",
       "assignment": "割り当て設定",
       "assignmentDescription": "Issue を実行する前に、担当 preset、トリガーモード、スケジュールを整理します。",
+      "triggerSetup": "トリガー設定",
+      "triggerSetupDescription": "board の文脈を保ったまま、必要に応じてスケジュールや実行ガイダンスを調整します。",
       "prompt": "実行プロンプト",
       "promptDescription": "実行コントロールに混ぜずに、プロンプトだけを編集できるようにします。",
       "executionPreview": "実行プレビュー",
@@ -166,6 +169,7 @@
     "fields": {
       "boardName": "ボード名",
       "boardDescription": "ボードの説明",
+      "createdAt": "作成日時",
       "status": "状態",
       "priority": "優先度",
       "project": "Related project",
@@ -181,6 +185,7 @@
       "lastCompletedAt": "最終完了"
     },
     "context": {
+      "boardPill": "{{name}} ボード",
       "eyebrow": "Board workspace",
       "noBoardTitle": "Pick a board to start scanning work",
       "noBoardDescription": "Switch between named boards here, then review workflow columns in the canvas below.",
@@ -247,6 +252,9 @@
       "createBoard": "新しいボード",
       "boardSettings": "ボード設定",
       "createIssue": "新しい Issue",
+      "copyIssueId": "Issue ID をコピー",
+      "viewRelatedProject": "関連プロジェクトを表示",
+      "copyShareLink": "共有リンクをコピー",
       "saveOverview": "Issue を保存",
       "markDone": "完了にする",
       "reopen": "再オープン",

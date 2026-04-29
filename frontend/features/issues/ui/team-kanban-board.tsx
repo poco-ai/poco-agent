@@ -69,7 +69,7 @@ export function TeamKanbanBoard({
   return (
     <div className="space-y-4">
       {lane.pendingSections.length === 0 && lane.completedIssues.length === 0 ? (
-        <div className="flex min-h-48 items-center justify-center rounded-[28px] border border-dashed border-border/70 bg-card px-6 py-12 text-center shadow-sm">
+        <div className="flex min-h-48 items-center justify-center rounded-[28px] border border-dashed border-border/70 bg-card px-6 py-12 text-center">
           <div className="space-y-1.5">
             <p className="text-sm font-medium text-foreground">
               {t("issues.lane.emptyTitle")}
@@ -100,7 +100,7 @@ export function TeamKanbanBoard({
                   {section.issues.length}
                 </span>
               </div>
-              <div className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
+              <div className="overflow-hidden rounded-xl border border-border/70 bg-card">
                 {section.issues.map((issue) => (
                   <div
                     key={issue.issue_id}
@@ -180,7 +180,7 @@ function CollapsibleCompletedSection({
             {t("issues.lane.emptyCompleted")}
           </p>
         ) : (
-          <div className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
+          <div className="overflow-hidden rounded-xl border border-border/70 bg-card">
             {issues.map((issue) => (
               <div
                 key={issue.issue_id}

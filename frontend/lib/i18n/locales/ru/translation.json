@@ -154,8 +154,11 @@
     "detailPlaceholder": "Экран деталей позже будет дополнен метаданными доски и историей аудита.",
     "sections": {
       "overview": "Обзор",
+      "collaboration": "Назначение и совместная работа",
       "assignment": "Параметры назначения",
       "assignmentDescription": "Настройте пресет, режим запуска и расписание до запуска issue.",
+      "triggerSetup": "Параметры запуска",
+      "triggerSetupDescription": "Сохраняйте контекст board, при необходимости дополняя расписание и инструкции для выполнения.",
       "prompt": "Промпт выполнения",
       "promptDescription": "Промпт редактируется отдельно и не смешивается с управляющими действиями.",
       "executionPreview": "Предпросмотр выполнения",
@@ -166,6 +169,7 @@
     "fields": {
       "boardName": "Название доски",
       "boardDescription": "Описание доски",
+      "createdAt": "Создано",
       "status": "Статус",
       "priority": "Приоритет",
       "project": "Related project",
@@ -181,6 +185,7 @@
       "lastCompletedAt": "Последнее завершение"
     },
     "context": {
+      "boardPill": "Доска {{name}}",
       "eyebrow": "Board workspace",
       "noBoardTitle": "Pick a board to start scanning work",
       "noBoardDescription": "Switch between named boards here, then review workflow columns in the canvas below.",
@@ -247,6 +252,9 @@
       "createBoard": "Новая доска",
       "boardSettings": "Настройки доски",
       "createIssue": "Новая issue",
+      "copyIssueId": "Скопировать ID issue",
+      "viewRelatedProject": "Открыть связанный проект",
+      "copyShareLink": "Скопировать ссылку",
       "saveOverview": "Сохранить issue",
       "markDone": "Отметить выполненной",
       "reopen": "Переоткрыть",

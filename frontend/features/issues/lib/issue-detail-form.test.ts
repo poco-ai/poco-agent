@@ -4,6 +4,7 @@ import test from "node:test";
 import type { WorkspaceIssue } from "../model/types.ts";
 import {
   createIssueDetailFormData,
+  getIssueDetailPrioritySelectValue,
   shouldScheduleIssueDetailAutoSave,
 } from "./issue-detail-form.ts";
 
@@ -59,6 +60,13 @@ test("createIssueDetailFormData preserves urgent priority from the backend", () 
   assert.equal(form.priority, "urgent");
   assert.equal(form.triggerMode, "scheduled_task");
   assert.equal(form.scheduleCron, "0 * * * *");
+});
+
+test("getIssueDetailPrioritySelectValue collapses urgent into the high option", () => {
+  assert.equal(getIssueDetailPrioritySelectValue("urgent"), "high");
+  assert.equal(getIssueDetailPrioritySelectValue("high"), "high");
+  assert.equal(getIssueDetailPrioritySelectValue("medium"), "medium");
+  assert.equal(getIssueDetailPrioritySelectValue("low"), "low");
 });
 
 test("shouldScheduleIssueDetailAutoSave skips the first server-driven form sync", () => {

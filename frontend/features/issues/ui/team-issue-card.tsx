@@ -47,7 +47,7 @@ export function TeamIssueCard({
       className={cn(
         "group flex items-center gap-3 transition hover:bg-muted/20",
         surface === "card" &&
-          "rounded-xl border border-border/70 bg-card px-5 py-3 shadow-sm hover:border-border",
+          "rounded-xl border border-border/70 bg-card px-5 py-3 hover:border-border",
         surface === "plain" && "bg-transparent px-5 py-3",
         isCompleted && "opacity-60",
       )}

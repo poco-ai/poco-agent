@@ -28,6 +28,18 @@ export function createIssueDetailFormData(
   };
 }
 
+export function getIssueDetailPrioritySelectValue(
+  priority: WorkspaceIssue["priority"],
+): "high" | "medium" | "low" {
+  if (priority === "urgent" || priority === "high") {
+    return "high";
+  }
+  if (priority === "low") {
+    return "low";
+  }
+  return "medium";
+}
+
 export function shouldScheduleIssueDetailAutoSave(
   loadState: IssueDetailLoadState,
   shouldSkipNextProgrammaticSync: boolean,

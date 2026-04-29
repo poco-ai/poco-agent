@@ -154,8 +154,11 @@
     "detailPlaceholder": "Issue detail view will expand with board metadata and audit history.",
     "sections": {
       "overview": "Overview",
+      "collaboration": "Assignment & collaboration",
       "assignment": "Assignment settings",
       "assignmentDescription": "Configure the assignee, trigger mode, and schedule before you run the issue.",
+      "triggerSetup": "Trigger setup",
+      "triggerSetupDescription": "Keep board context intact while adjusting schedule and execution guidance.",
       "prompt": "Execution prompt",
       "promptDescription": "Keep the prompt editable without mixing it into the execution controls.",
       "executionPreview": "Execution preview",
@@ -166,6 +169,7 @@
     "fields": {
       "boardName": "Board name",
       "boardDescription": "Board description",
+      "createdAt": "Created",
       "status": "Status",
       "priority": "Priority",
       "project": "Related project",
@@ -181,6 +185,7 @@
       "lastCompletedAt": "Last completed"
     },
     "context": {
+      "boardPill": "{{name}} board",
       "eyebrow": "Board workspace",
       "noBoardTitle": "Pick a board to start scanning work",
       "noBoardDescription": "Switch between named boards here, then review workflow columns in the canvas below.",
@@ -247,6 +252,9 @@
       "createBoard": "New board",
       "boardSettings": "Board settings",
       "createIssue": "New issue",
+      "copyIssueId": "Copy issue ID",
+      "viewRelatedProject": "View related project",
+      "copyShareLink": "Copy share link",
       "saveOverview": "Save issue",
       "markDone": "Mark done",
       "reopen": "Reopen",

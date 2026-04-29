@@ -154,8 +154,11 @@
     "detailPlaceholder": "Die Detailansicht wird später um Board-Metadaten und Audit-Verlauf erweitert.",
     "sections": {
       "overview": "Überblick",
+      "collaboration": "Zuweisung & Zusammenarbeit",
       "assignment": "Zuweisungseinstellungen",
       "assignmentDescription": "Konfigurieren Sie Assignee, Auslösemodus und Zeitplan, bevor Sie das Issue starten.",
+      "triggerSetup": "Trigger-Setup",
+      "triggerSetupDescription": "Behalten Sie den Board-Kontext bei und ergänzen Sie bei Bedarf Zeitplan und Ausführungshinweise.",
       "prompt": "Ausführungsprompt",
       "promptDescription": "Der Prompt bleibt bearbeitbar, ohne mit den Ausführungssteuerungen vermischt zu werden.",
       "executionPreview": "Ausführungsvorschau",
@@ -166,6 +169,7 @@
     "fields": {
       "boardName": "Board-Name",
       "boardDescription": "Board-Beschreibung",
+      "createdAt": "Erstellt",
       "status": "Status",
       "priority": "Priorität",
       "project": "Related project",
@@ -181,6 +185,7 @@
       "lastCompletedAt": "Zuletzt abgeschlossen"
     },
     "context": {
+      "boardPill": "{{name}}-Board",
       "eyebrow": "Board workspace",
       "noBoardTitle": "Pick a board to start scanning work",
       "noBoardDescription": "Switch between named boards here, then review workflow columns in the canvas below.",
@@ -247,6 +252,9 @@
       "createBoard": "Neues Board",
       "boardSettings": "Board-Einstellungen",
       "createIssue": "Neue Issue",
+      "copyIssueId": "Issue-ID kopieren",
+      "viewRelatedProject": "Zugehöriges Projekt öffnen",
+      "copyShareLink": "Freigabelink kopieren",
       "saveOverview": "Issue speichern",
       "markDone": "Als erledigt markieren",
       "reopen": "Wieder öffnen",
