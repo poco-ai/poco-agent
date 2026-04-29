@@ -233,7 +233,8 @@
     "placeholders": {
       "project": "选择项目",
       "preset": "选择 preset",
-      "prompt": "查看或编辑系统生成的执行提示词"
+      "prompt": "查看或编辑系统生成的执行提示词",
+      "description": "添加描述..."
     },
     "preview": {
       "executionMode": "执行模式",

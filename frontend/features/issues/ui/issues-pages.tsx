@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { KanbanSquare, MoreHorizontal, Plus, RefreshCw, Ticket } from "lucide-react";
+import { KanbanSquare, MoreHorizontal, Plus, RefreshCw, Ticket, ChevronDown, Flag } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 
@@ -24,6 +24,13 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { issuesApi } from "@/features/issues/api/issues-api";
 import { summarizeBoardIssues } from "@/features/issues/lib/issues-index-view";
@@ -99,12 +106,24 @@ function CreateBoardDialog({
   );
 }
 
+interface CreateIssueInput {
+  title: string;
+  description: string;
+  priority: string;
+}
+
 interface CreateIssueDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   boardName: string | null;
-  onCreate: (title: string) => Promise<void>;
+  onCreate: (input: CreateIssueInput) => Promise<void>;
 }
+
+const PRIORITY_OPTIONS = [
+  { value: "high", iconClass: "text-red-500" },
+  { value: "medium", iconClass: "text-amber-500" },
+  { value: "low", iconClass: "text-muted-foreground" },
+] as const;
 
 function CreateIssueDialog({
   open,
@@ -114,20 +133,26 @@ function CreateIssueDialog({
 }: CreateIssueDialogProps) {
   const { t } = useT("translation");
   const [title, setTitle] = React.useState("");
+  const [description, setDescription] = React.useState("");
+  const [priority, setPriority] = React.useState("low");
   const [isSaving, setIsSaving] = React.useState(false);
 
   React.useEffect(() => {
     if (!open) {
       setTitle("");
+      setDescription("");
+      setPriority("low");
       setIsSaving(false);
     }
   }, [open]);
 
   const handleCreate = async () => {
     setIsSaving(true);
-    await onCreate(title);
+    await onCreate({ title, description, priority });
     setIsSaving(false);
   };
+
+  const selectedPriority = PRIORITY_OPTIONS.find((o) => o.value === priority) ?? PRIORITY_OPTIONS[1];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -138,12 +163,51 @@ function CreateIssueDialog({
             {boardName ?? t("issues.emptyBoards")}
           </DialogDescription>
         </DialogHeader>
-        <Input
-          value={title}
-          onChange={(event) => setTitle(event.target.value)}
-          placeholder={t("issues.issueTitlePlaceholder")}
-          autoFocus
-        />
+        <div className="space-y-4">
+          <Input
+            value={title}
+            onChange={(event) => setTitle(event.target.value)}
+            placeholder={t("issues.issueTitlePlaceholder")}
+            autoFocus
+          />
+          <Textarea
+            value={description}
+            onChange={(event) => setDescription(event.target.value)}
+            placeholder={t("issues.placeholders.description")}
+            rows={3}
+            className="rounded-xl border-border/50 bg-background/80 shadow-none"
+          />
+          <div className="flex items-center gap-3">
+            <p className="text-xs font-medium text-muted-foreground">
+              {t("issues.fields.priority")}
+            </p>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 rounded-xl"
+                >
+                  <Flag className={`size-3.5 ${selectedPriority.iconClass}`} />
+                  <span>{t(`issues.priorities.${priority}`)}</span>
+                  <ChevronDown className="size-3.5 text-muted-foreground" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="z-[80] min-w-36">
+                {PRIORITY_OPTIONS.map((option) => (
+                  <DropdownMenuItem
+                    key={option.value}
+                    onSelect={() => setPriority(option.value)}
+                  >
+                    <Flag className={`size-3.5 ${option.iconClass}`} />
+                    {t(`issues.priorities.${option.value}`)}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
         <DialogFooter>
           <Button
             type="button"
@@ -420,17 +484,23 @@ export function TeamIssuesPageClient() {
     }
   };
 
-  const createIssue = async (title: string) => {
-    if (!issueBoardId || !title.trim()) {
+  const createIssue = async (input: CreateIssueInput) => {
+    if (!issueBoardId || !input.title.trim()) {
       return;
     }
     try {
-      const created = await issuesApi.createIssue(issueBoardId, {
-        title: title.trim(),
+      await issuesApi.createIssue(issueBoardId, {
+        title: input.title.trim(),
+        description: input.description.trim() || null,
+        priority: input.priority,
       });
-      setIssues((previousIssues) => [created, ...previousIssues]);
       setIssueBoardId(null);
       toast.success(t("issues.toasts.issueCreated"));
+      const refetched = await issuesApi.listIssues(issueBoardId);
+      setIssues((prev) => [
+        ...refetched,
+        ...prev.filter((i) => i.board_id !== issueBoardId),
+      ]);
     } catch (error) {
       console.error("[Issues] create issue failed", error);
       toast.error(t("issues.toasts.issueCreateFailed"));

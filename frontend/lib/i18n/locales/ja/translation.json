@@ -233,7 +233,8 @@
     "placeholders": {
       "project": "Select a project",
       "preset": "Select a preset",
-      "prompt": "Review or edit the generated agent prompt"
+      "prompt": "Review or edit the generated agent prompt",
+      "description": "Add a description..."
     },
     "preview": {
       "executionMode": "実行モード",

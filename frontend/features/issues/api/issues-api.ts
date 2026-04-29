@@ -52,6 +52,7 @@ export const issuesApi = {
     input: {
       title: string;
       description?: string | null;
+      priority?: string;
       assignee_preset_id?: number | null;
       assignee_user_id?: string | null;
       trigger_mode?: "persistent_sandbox" | "scheduled_task";
