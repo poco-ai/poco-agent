@@ -29,7 +29,7 @@ export function TeamIssueDetailDialog({
   return (
     <Dialog open={Boolean(issueId)} onOpenChange={(open) => !open && onClose()}>
       <DialogContent
-        className="h-[calc(100vh-1rem)] max-w-[calc(100vw-1rem)] gap-0 overflow-hidden rounded-[28px] p-0 sm:h-[calc(100vh-4rem)] sm:max-w-6xl"
+        className="h-[calc(100vh-1rem)] max-w-[calc(100vw-1rem)] gap-0 overflow-hidden rounded-[28px] p-0 sm:h-[calc(100vh-4rem)] sm:max-w-4xl"
         ariaTitle={t("issues.detailTitle")}
       >
         <DialogHeader className="sr-only">

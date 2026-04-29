@@ -5,7 +5,9 @@ import Link from "next/link";
 import {
   CheckCheck,
   ChevronDown,
+  ChevronRight,
   Copy,
+  Hash,
   CircleDashed,
   ExternalLink,
   Flag,
@@ -257,6 +259,18 @@ export function TeamIssueDetailContent({
   const onUpdatedRef = React.useRef(onUpdated);
   onUpdatedRef.current = onUpdated;
   const skipNextAutoSaveRef = React.useRef(true);
+
+  const [expandedSections, setExpandedSections] = React.useState(
+    () => new Set(["collaboration"]),
+  );
+  const toggleSection = React.useCallback((key: string) => {
+    setExpandedSections((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }, []);
 
   const updateForm = React.useCallback((patch: Partial<IssueDetailFormData>) => {
     setForm((prev) => ({ ...prev, ...patch }));
@@ -591,13 +605,24 @@ export function TeamIssueDetailContent({
               </CardContent>
             </Card>
           ) : issue ? (
-            <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_320px]">
-              <div className="space-y-8">
-                <section className="space-y-6 border-b border-border/60 pb-7">
-                  <div className="space-y-4">
-                    <h3 className="text-xl font-semibold tracking-tight text-foreground">
+            <div className="space-y-1">
+                <section className="border-b border-border/60">
+                  <button
+                    type="button"
+                    onClick={() => toggleSection("collaboration")}
+                    className="flex w-full items-center gap-2 py-4 text-left"
+                  >
+                    <ChevronRight
+                      className={`size-4 shrink-0 text-muted-foreground transition-transform duration-200 ${
+                        expandedSections.has("collaboration") ? "rotate-90" : ""
+                      }`}
+                    />
+                    <h3 className="text-lg font-semibold tracking-tight text-foreground">
                       {t("issues.sections.collaboration")}
                     </h3>
+                  </button>
+                  {expandedSections.has("collaboration") && (
+                  <div className="space-y-6 pb-7">
                     <div className="grid gap-5 md:grid-cols-[minmax(0,1.25fr)_minmax(0,0.75fr)_minmax(0,0.75fr)]">
                       <div className="flex items-center gap-4">
                         {selectedPreset ? (
@@ -644,7 +669,6 @@ export function TeamIssueDetailContent({
                         </p>
                       </div>
                     </div>
-                  </div>
 
                   <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                     <DropdownMenu>
@@ -833,133 +857,184 @@ export function TeamIssueDetailContent({
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
+                  </div>
+                  )}
                 </section>
 
-                <section className="space-y-4 border-b border-border/60 pb-7">
-                  <div className="space-y-1">
-                    <h3 className="text-xl font-semibold tracking-tight text-foreground">
-                      {t("issues.sections.triggerSetup")}
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                      {t("issues.sections.triggerSetupDescription")}
-                    </p>
-                  </div>
-                  <div className="space-y-2">
-                    <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                      {t("issues.fields.schedule")}
-                    </p>
-                    <Input
-                      value={form.scheduleCron}
-                      onChange={(e) => updateForm({ scheduleCron: e.target.value })}
-                      disabled={form.triggerMode !== "scheduled_task"}
-                      placeholder="0 * * * *"
-                      className="h-11 rounded-2xl border-border/50 bg-background/80 shadow-none"
+                <section className="border-b border-border/60">
+                  <button
+                    type="button"
+                    onClick={() => toggleSection("triggerSetup")}
+                    className="flex w-full items-center gap-2 py-4 text-left"
+                  >
+                    <ChevronRight
+                      className={`size-4 shrink-0 text-muted-foreground transition-transform duration-200 ${
+                        expandedSections.has("triggerSetup") ? "rotate-90" : ""
+                      }`}
                     />
+                    <div className="space-y-1">
+                      <h3 className="text-lg font-semibold tracking-tight text-foreground">
+                        {t("issues.sections.triggerSetup")}
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        {t("issues.sections.triggerSetupDescription")}
+                      </p>
+                    </div>
+                  </button>
+                  {expandedSections.has("triggerSetup") && (
+                  <div className="space-y-4 pb-7">
+                    <div className="space-y-2">
+                      <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                        {t("issues.fields.schedule")}
+                      </p>
+                      <Input
+                        value={form.scheduleCron}
+                        onChange={(e) => updateForm({ scheduleCron: e.target.value })}
+                        disabled={form.triggerMode !== "scheduled_task"}
+                        placeholder="0 * * * *"
+                        className="h-11 rounded-2xl border-border/50 bg-background/80 shadow-none"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                        {t("issues.fields.prompt")}
+                      </p>
+                      <Textarea
+                        value={form.prompt}
+                        onChange={(e) => updateForm({ prompt: e.target.value })}
+                        rows={6}
+                        placeholder={t("issues.placeholders.prompt")}
+                        className="min-h-36 rounded-2xl border-border/50 bg-background/80 shadow-none"
+                      />
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                      {t("issues.fields.prompt")}
-                    </p>
-                    <Textarea
-                      value={form.prompt}
-                      onChange={(e) => updateForm({ prompt: e.target.value })}
-                      rows={6}
-                      placeholder={t("issues.placeholders.prompt")}
-                      className="min-h-36 rounded-2xl border-border/50 bg-background/80 shadow-none"
-                    />
-                  </div>
+                  )}
                 </section>
-              </div>
 
-              <aside className="space-y-6 border-t border-border/60 pt-6 lg:border-t-0 lg:border-l lg:pl-6 lg:pt-0">
-                <div className="space-y-2">
-                  <h3 className="text-xl font-semibold tracking-tight text-foreground">
-                    执行状态
-                  </h3>
-                  <p className="max-w-xs text-sm leading-7 text-muted-foreground">
-                    不离开当前 board，就地执行 assignment 相关动作。
-                  </p>
-                </div>
-                <div className="space-y-3 text-sm">
-                  <div className="flex items-start justify-between gap-4">
-                    <span className="text-muted-foreground">{t("issues.fields.assignmentStatus")}</span>
-                    <span className="text-right font-medium text-foreground">
-                      {assignment
-                        ? formatAssignmentStatus(t, assignment.status)
-                        : t("issues.unassigned")}
-                    </span>
-                  </div>
-                  <div className="flex items-start justify-between gap-4">
-                    <span className="text-muted-foreground">{t("issues.fields.session")}</span>
-                    <span className="max-w-[12rem] break-all text-right font-medium text-foreground">
-                      {assignment?.session_id ?? t("issues.none")}
-                    </span>
-                  </div>
-                  <div className="flex items-start justify-between gap-4">
-                    <span className="text-muted-foreground">{t("issues.fields.container")}</span>
-                    <span className="max-w-[12rem] break-all text-right font-medium text-foreground">
-                      {assignment?.container_id ?? t("issues.none")}
-                    </span>
-                  </div>
-                  <div className="flex items-start justify-between gap-4">
-                    <span className="text-muted-foreground">{t("issues.fields.lastTriggeredAt")}</span>
-                    <span className="text-right font-medium text-foreground">
-                      {executionMeta.lastTriggeredAt
-                        ? formatDateTime(executionMeta.lastTriggeredAt)
-                        : t("issues.none")}
-                    </span>
-                  </div>
-                  <div className="flex items-start justify-between gap-4">
-                    <span className="text-muted-foreground">{t("issues.fields.lastCompletedAt")}</span>
-                    <span className="text-right font-medium text-foreground">
-                      {executionMeta.lastCompletedAt
-                        ? formatDateTime(executionMeta.lastCompletedAt)
-                        : t("issues.none")}
-                    </span>
-                  </div>
-                </div>
-                <div className="grid gap-3">
-                  <Button type="button" className="h-11 rounded-xl" onClick={() => void runAction("trigger")}>
-                    {t("issues.actions.trigger")}
-                  </Button>
-                  <Button
+                <section>
+                  <button
                     type="button"
-                    variant="outline"
-                    className="h-11 rounded-xl"
-                    onClick={() => void runAction("retry")}
+                    onClick={() => toggleSection("executionStatus")}
+                    className="flex w-full items-center gap-2 py-4 text-left"
                   >
-                    {t("issues.actions.retry")}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="h-11 rounded-xl"
-                    onClick={() => void runAction("cancel")}
-                  >
-                    {t("issues.actions.cancel")}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="h-11 rounded-xl"
-                    onClick={() => void runAction("release")}
-                  >
-                    {t("issues.actions.release")}
-                  </Button>
-                  {assignment?.session_id ? (
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      className="h-11 rounded-xl"
-                      asChild
-                    >
-                      <Link href={`/${lng}/chat/${assignment.session_id}`}>
-                        {t("issues.actions.openSession")}
-                      </Link>
-                    </Button>
-                  ) : null}
-                </div>
-              </aside>
+                    <ChevronRight
+                      className={`size-4 shrink-0 text-muted-foreground transition-transform duration-200 ${
+                        expandedSections.has("executionStatus") ? "rotate-90" : ""
+                      }`}
+                    />
+                    <div className="space-y-1">
+                      <h3 className="text-lg font-semibold tracking-tight text-foreground">
+                        执行状态
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        不离开当前 board，就地执行 assignment 相关动作。
+                      </p>
+                    </div>
+                  </button>
+                  {expandedSections.has("executionStatus") && (
+                  <div className="space-y-6 pb-7">
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="rounded-2xl border border-border/50 bg-background/80 px-4 py-3">
+                        <div className="flex w-full flex-col gap-4">
+                          <DetailFieldHeader
+                            icon={<CircleDashed className="size-3.5" />}
+                            label={t("issues.fields.assignmentStatus")}
+                          />
+                          <div className="flex w-full items-center justify-end text-sm font-medium text-foreground">
+                            <span>
+                              {assignment
+                                ? formatAssignmentStatus(t, assignment.status)
+                                : t("issues.unassigned")}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="rounded-2xl border border-border/50 bg-background/80 px-4 py-3">
+                        <div className="flex w-full flex-col gap-4">
+                          <DetailFieldHeader
+                            icon={<Hash className="size-3.5" />}
+                            label={t("issues.fields.session")}
+                          />
+                          <div className="flex w-full items-center justify-end text-sm font-medium text-foreground">
+                            <span className="max-w-[12rem] truncate">
+                              {assignment?.session_id ?? t("issues.none")}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="rounded-2xl border border-border/50 bg-background/80 px-4 py-3">
+                        <div className="flex w-full flex-col gap-4">
+                          <DetailFieldHeader
+                            icon={<FolderOpen className="size-3.5" />}
+                            label={t("issues.fields.container")}
+                          />
+                          <div className="flex w-full items-center justify-end text-sm font-medium text-foreground">
+                            <span className="max-w-[12rem] truncate">
+                              {assignment?.container_id ?? t("issues.none")}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="rounded-2xl border border-border/50 bg-background/80 px-4 py-3">
+                        <div className="flex w-full flex-col gap-4">
+                          <DetailFieldHeader
+                            icon={<TimerReset className="size-3.5" />}
+                            label={t("issues.fields.lastTriggeredAt")}
+                          />
+                          <div className="flex w-full items-center justify-end text-sm font-medium text-foreground">
+                            <span>
+                              {executionMeta.lastTriggeredAt
+                                ? formatDateTime(executionMeta.lastTriggeredAt)
+                                : t("issues.none")}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="grid gap-3">
+                      <Button type="button" className="h-11 rounded-xl" onClick={() => void runAction("trigger")}>
+                        {t("issues.actions.trigger")}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="h-11 rounded-xl"
+                        onClick={() => void runAction("retry")}
+                      >
+                        {t("issues.actions.retry")}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="h-11 rounded-xl"
+                        onClick={() => void runAction("cancel")}
+                      >
+                        {t("issues.actions.cancel")}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="h-11 rounded-xl"
+                        onClick={() => void runAction("release")}
+                      >
+                        {t("issues.actions.release")}
+                      </Button>
+                      {assignment?.session_id ? (
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          className="h-11 rounded-xl"
+                          asChild
+                        >
+                          <Link href={`/${lng}/chat/${assignment.session_id}`}>
+                            {t("issues.actions.openSession")}
+                          </Link>
+                        </Button>
+                      ) : null}
+                    </div>
+                  </div>
+                  )}
+                </section>
             </div>
           ) : null}
         </div>
