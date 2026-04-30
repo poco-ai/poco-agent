@@ -249,19 +249,21 @@ export function useAdminConsole() {
         return next;
       });
       try {
-        await action();
-      } catch (error) {
-        console.error("[useAdminConsole] Action failed", error);
-        toast.error(toErrorMessage(error, t("settings.admin.actionFailed")));
-        throw error;
-      }
+        try {
+          await action();
+        } catch (error) {
+          console.error("[useAdminConsole] Action failed", error);
+          toast.error(toErrorMessage(error, t("settings.admin.actionFailed")));
+          throw error;
+        }
 
-      try {
-        await loadScopes(reloadScopes);
-        toast.success(successMessage);
-      } catch (error) {
-        console.error("[useAdminConsole] Reload after action failed", error);
-        toast.warning(t("settings.admin.reloadFailed"));
+        try {
+          await loadScopes(reloadScopes);
+          toast.success(successMessage);
+        } catch (error) {
+          console.error("[useAdminConsole] Reload after action failed", error);
+          toast.warning(t("settings.admin.reloadFailed"));
+        }
       } finally {
         setSavingScopes((current) => {
           const next = new Set(current);

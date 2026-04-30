@@ -245,7 +245,6 @@ export function EnvVarsGrid({
 
                         <div className="flex items-center gap-2 flex-shrink-0">
                           <div className="flex items-center gap-2 rounded-lg border border-amber-500/20 bg-amber-500/5 px-2 py-1">
-                            <AlertTriangle className="size-3.5 text-amber-600 dark:text-amber-300" />
                             <span className="text-xs text-muted-foreground">
                               {t("library.envVars.runtimeAccessShort")}
                             </span>
