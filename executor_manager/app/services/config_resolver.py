@@ -150,6 +150,18 @@ class ConfigResolver:
         )
 
         step_started = time.perf_counter()
+        runtime_env_map = await self._get_runtime_env_map(user_id)
+        logger.info(
+            "timing",
+            extra={
+                "step": "config_resolve_runtime_env_map",
+                "duration_ms": int((time.perf_counter() - step_started) * 1000),
+                "runtime_env_keys": len(runtime_env_map),
+                **ctx,
+            },
+        )
+
+        step_started = time.perf_counter()
         mcp_config = await self._resolve_effective_mcp_config(user_id, effective_config)
         logger.info(
             "timing",
@@ -261,6 +273,11 @@ class ConfigResolver:
         resolved_git = self._resolve_git_token(resolved, env_map)
         if resolved_git:
             resolved.update(resolved_git)
+        runtime_env_overrides = {
+            key: value
+            for key, value in (runtime_env_map or {}).items()
+            if isinstance(key, str) and key.strip() and isinstance(value, str)
+        }
         env_overrides = self._resolve_model_env_overrides(
             resolved,
             env_map,
@@ -268,8 +285,12 @@ class ConfigResolver:
             session_id=session_id,
             run_id=run_id,
         )
-        if env_overrides:
-            resolved["env_overrides"] = env_overrides
+        merged_env_overrides = {
+            **runtime_env_overrides,
+            **env_overrides,
+        }
+        if merged_env_overrides:
+            resolved["env_overrides"] = merged_env_overrides
 
         logger.info(
             "timing",
@@ -402,6 +423,9 @@ class ConfigResolver:
 
     async def _get_env_map(self, user_id: str) -> dict[str, str]:
         return await self.backend_client.get_env_map(user_id=user_id)
+
+    async def _get_runtime_env_map(self, user_id: str) -> dict[str, str]:
+        return await self.backend_client.get_runtime_env_map(user_id=user_id)
 
     async def _resolve_effective_mcp_config(
         self, user_id: str, config_snapshot: dict

@@ -759,7 +759,8 @@
         "set": "Set",
         "unset": "Unset",
         "overridden": "Overridden by user",
-        "overridesSystem": "Overrides system"
+        "overridesSystem": "Overrides system",
+        "runtimeEnabled": "Runtime enabled"
       },
       "actions": {
         "override": "Override",
@@ -782,7 +783,13 @@
         "user": "User",
         "global": "Global",
         "mcp": "MCP"
-      }
+      },
+      "runtimeAccessLabel": "Allow in task runtime",
+      "runtimeAccessHint": "Injected values can be read by scripts, commands, plugins, and may leak through output, logs, files, or network requests.",
+      "runtimeAccessScopeHint": "This switch only controls automatic injection of this saved variable. It does not remove executor-provided base environment variables or required runtime credentials.",
+      "runtimeRiskTitle": "Runtime injection may leak this secret",
+      "runtimeRiskDescription": "After enabling this option, the variable will be available inside the task runtime environment. Bash, Python, Skills, or plugins may read and export it. Enable this only when you trust the task and the capabilities it uses.",
+      "runtimeRiskConfirm": "Enable anyway"
     },
     "personalization": {
       "card": {
@@ -1990,7 +1997,27 @@
       "skillsMpHelp": "After saving, it is used as the system-level SKILLSMP_API_KEY and overrides the deployment fallback.",
       "pageSubtitle": "Manage global default capabilities and system configuration with a workflow aligned to personal Capabilities.",
       "systemScopeBadge": "System Scope",
-      "adminOnlyBadge": "Admin Only"
+      "adminOnlyBadge": "Admin Only",
+      "navRuntimeEnvPolicy": "Runtime env policy",
+      "runtimeEnvPolicyTitle": "Runtime environment policy",
+      "runtimeEnvPolicyDescription": "Control which environment variables may be injected into task runtime environments.",
+      "runtimeEnvPolicySaved": "Runtime environment policy updated",
+      "runtimeEnvPolicyRiskTitle": "Runtime injection increases secret exposure risk",
+      "runtimeEnvPolicyRiskDescription": "Any value injected into the task runtime may be printed, logged, written to files, or sent over the network by the task itself.",
+      "runtimeEnvPolicyScopeHint": "This policy only controls automatic injection of saved user/system env vars. It does not change executor base environment variables or runtime credentials required by the platform.",
+      "runtimeEnvPolicyMode": "Policy mode",
+      "runtimeEnvPolicyModeOptIn": "Opt-in runtime injection",
+      "runtimeEnvPolicyModeDisabled": "Disable runtime injection",
+      "runtimeEnvAllowlist": "Allowlist patterns",
+      "runtimeEnvDenylist": "Denylist patterns",
+      "runtimeEnvProtectedPrefixes": "Protected prefixes",
+      "runtimeEnvProtectedKeys": "Protected keys",
+      "runtimeEnvProtectedHint": "Protected runtime variables are always blocked from automatic injection.",
+      "runtimeVisibilityLabel": "Runtime visibility",
+      "runtimeVisibilityNone": "Do not inject",
+      "runtimeVisibilityAdminsOnly": "Admins only",
+      "runtimeVisibilityAllUsers": "All users",
+      "runtimeVisibilityProtectedWarning": "This key matches a protected runtime key/prefix. The visibility setting can be saved, but automatic runtime injection will still be blocked."
     }
   },
   "validation": {

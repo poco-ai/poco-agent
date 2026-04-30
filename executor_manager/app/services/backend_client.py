@@ -220,6 +220,19 @@ class BackendClient:
         data = response.json()
         return data.get("data", {}) or {}
 
+    async def get_runtime_env_map(self, user_id: str) -> dict[str, str]:
+        response = await self._request(
+            "GET",
+            "/api/v1/internal/env-vars/runtime-map",
+            headers={
+                "X-Internal-Token": self.settings.internal_api_token,
+                "X-User-Id": user_id,
+                **self._trace_headers(),
+            },
+        )
+        data = response.json()
+        return data.get("data", {}) or {}
+
     async def resolve_mcp_config(self, user_id: str, server_ids: list[int]) -> dict:
         """Resolve effective MCP config for execution based on selected server ids."""
         response = await self._request(

@@ -3,6 +3,9 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from app.core.deps import get_current_user_id, get_db, require_internal_token
+from app.core.errors.error_codes import ErrorCode
+from app.core.errors.exceptions import AppException
+from app.repositories.user_repository import UserRepository
 from app.schemas.env_var import (
     SystemEnvVarCreateRequest,
     SystemEnvVarResponse,
@@ -24,6 +27,26 @@ async def get_env_map(
 ) -> JSONResponse:
     env_map = env_var_service.get_env_map(db, user_id=user_id)
     return Response.success(data=env_map, message="Env map retrieved")
+
+
+@router.get("/env-vars/runtime-map", response_model=ResponseSchema[dict[str, str]])
+async def get_runtime_env_map(
+    _: None = Depends(require_internal_token),
+    user_id: str = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+) -> JSONResponse:
+    user = UserRepository.get_by_id(db, user_id)
+    if user is None:
+        raise AppException(
+            error_code=ErrorCode.USER_NOT_FOUND,
+            message=f"User not found: {user_id}",
+        )
+    env_map = env_var_service.get_runtime_env_map(
+        db,
+        user_id=user_id,
+        requester_is_admin=user.system_role == "admin",
+    )
+    return Response.success(data=env_map, message="Runtime env map retrieved")
 
 
 @router.get(

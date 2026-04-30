@@ -1,8 +1,5 @@
 import { apiClient, API_ENDPOINTS } from "@/services/api-client";
-import type {
-  EnvVarCreateInput,
-  EnvVarUpdateInput,
-} from "@/features/capabilities/env-vars/types";
+import type { EnvVarScope } from "@/features/capabilities/env-vars/types";
 import type {
   Skill,
   SkillCreateInput,
@@ -73,11 +70,36 @@ export interface AdminEnvVar {
   user_id: string;
   key: string;
   description: string | null;
-  scope: "system" | "user";
+  scope: EnvVarScope;
   is_set: boolean;
   masked_value: string;
+  runtime_visibility: "none" | "admins_only" | "all_users";
   created_at: string;
   updated_at: string;
+}
+
+export type RuntimeVisibility = "none" | "admins_only" | "all_users";
+
+export interface AdminSystemEnvVarCreateInput {
+  key: string;
+  value: string;
+  description?: string | null;
+  runtime_visibility?: RuntimeVisibility;
+}
+
+export interface AdminSystemEnvVarUpdateInput {
+  value?: string | null;
+  description?: string | null;
+  runtime_visibility?: RuntimeVisibility | null;
+}
+
+export interface RuntimeEnvPolicy {
+  mode: "disabled" | "opt_in";
+  allowlist_patterns: string[];
+  denylist_patterns: string[];
+  protected_keys: string[];
+  protected_prefixes: string[];
+  updated_at: string | null;
 }
 
 export interface AdminMcpServer {
@@ -127,14 +149,36 @@ export const adminApi = {
       cache: "no-store",
     });
   },
-  createSystemEnvVar: async (input: EnvVarCreateInput) => {
+  createSystemEnvVar: async (input: AdminSystemEnvVarCreateInput) => {
     return apiClient.post(API_ENDPOINTS.adminSystemEnvVars, input);
   },
-  updateSystemEnvVar: async (envVarId: number, input: EnvVarUpdateInput) => {
+  updateSystemEnvVar: async (
+    envVarId: number,
+    input: AdminSystemEnvVarUpdateInput,
+  ) => {
     return apiClient.patch(API_ENDPOINTS.adminSystemEnvVar(envVarId), input);
   },
   deleteSystemEnvVar: async (envVarId: number) => {
     return apiClient.delete(API_ENDPOINTS.adminSystemEnvVar(envVarId));
+  },
+  getRuntimeEnvPolicy: async (): Promise<RuntimeEnvPolicy> => {
+    return apiClient.get<RuntimeEnvPolicy>(
+      API_ENDPOINTS.adminRuntimeEnvPolicy,
+      {
+        cache: "no-store",
+      },
+    );
+  },
+  updateRuntimeEnvPolicy: async (
+    input: Pick<
+      RuntimeEnvPolicy,
+      "mode" | "allowlist_patterns" | "denylist_patterns"
+    >,
+  ): Promise<RuntimeEnvPolicy> => {
+    return apiClient.patch<RuntimeEnvPolicy>(
+      API_ENDPOINTS.adminRuntimeEnvPolicy,
+      input,
+    );
   },
   getModelConfig: async (): Promise<ModelConfigResponse> => {
     return apiClient.get<ModelConfigResponse>(API_ENDPOINTS.adminModelConfig, {

@@ -2,12 +2,23 @@
 
 import * as React from "react";
 import { Loader2, Plus, Save } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 import { useT } from "@/lib/i18n/client";
 import { Dialog, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import type { EnvVarUpsertInput } from "@/features/capabilities/env-vars/hooks/use-env-vars-store";
 import { CapabilityDialogContent } from "@/features/capabilities/components/capability-dialog-content";
 
@@ -21,6 +32,7 @@ interface EnvVarUpsertDialogProps {
   mode?: EnvVarDialogMode;
   initialKey?: string;
   initialDescription?: string | null;
+  initialExposeToRuntime?: boolean;
   keyReadOnly?: boolean;
 }
 
@@ -32,6 +44,7 @@ export function AddEnvVarDialog({
   mode = "create",
   initialKey,
   initialDescription,
+  initialExposeToRuntime,
   keyReadOnly,
 }: EnvVarUpsertDialogProps) {
   const { t } = useT("translation");
@@ -40,6 +53,11 @@ export function AddEnvVarDialog({
   const [description, setDescription] = React.useState(
     initialDescription || "",
   );
+  const [exposeToRuntime, setExposeToRuntime] = React.useState(
+    Boolean(initialExposeToRuntime),
+  );
+  const [pendingSubmit, setPendingSubmit] =
+    React.useState<EnvVarUpsertInput | null>(null);
 
   const isKeyReadOnly = Boolean(keyReadOnly ?? mode !== "create");
   const requiresValue = mode !== "edit";
@@ -50,7 +68,9 @@ export function AddEnvVarDialog({
     setKey(initialKey || "");
     setValue("");
     setDescription(initialDescription || "");
-  }, [open, initialDescription, initialKey]);
+    setExposeToRuntime(Boolean(initialExposeToRuntime));
+    setPendingSubmit(null);
+  }, [open, initialDescription, initialExposeToRuntime, initialKey]);
 
   const title =
     mode === "create"
@@ -64,22 +84,35 @@ export function AddEnvVarDialog({
       ? t("library.envVars.valueUpdateHint")
       : t("library.envVars.valueCreateHint");
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
+  const buildPayload = (): EnvVarUpsertInput | null => {
     const trimmedKey = key.trim();
     const trimmedValue = value.trim();
 
-    if (!trimmedKey) return;
-    if (requiresValue && !trimmedValue) return;
+    if (!trimmedKey) return null;
+    if (requiresValue && !trimmedValue) return null;
 
-    await onSave({
+    return {
       key: trimmedKey,
       value: trimmedValue ? trimmedValue : undefined,
       description: description.trim() || undefined,
-    });
+      expose_to_runtime: exposeToRuntime,
+    };
+  };
 
+  const submitPayload = async (payload: EnvVarUpsertInput) => {
+    await onSave(payload);
     onOpenChange(false);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const payload = buildPayload();
+    if (!payload) return;
+    if (payload.expose_to_runtime && !initialExposeToRuntime) {
+      setPendingSubmit(payload);
+      return;
+    }
+    await submitPayload(payload);
   };
 
   const isValid =
@@ -176,12 +209,69 @@ export function AddEnvVarDialog({
               />
             </div>
 
+            <div className="space-y-2 rounded-xl border border-amber-500/30 bg-amber-500/5 p-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="space-y-1">
+                  <Label>{t("library.envVars.runtimeAccessLabel")}</Label>
+                  <p className="text-xs text-muted-foreground">
+                    {t("library.envVars.runtimeAccessHint")}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {t("library.envVars.runtimeAccessScopeHint")}
+                  </p>
+                </div>
+                <Switch
+                  checked={exposeToRuntime}
+                  onCheckedChange={setExposeToRuntime}
+                  disabled={isSaving}
+                />
+              </div>
+            </div>
+
             <p className="text-xs text-muted-foreground">
               {t("library.envVars.secretHelp")}
             </p>
           </div>
         </form>
       </CapabilityDialogContent>
+      <AlertDialog
+        open={pendingSubmit !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingSubmit(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {t("library.envVars.runtimeRiskTitle")}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("library.envVars.runtimeRiskDescription")}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isSaving}>
+              {t("common.cancel")}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(event) => {
+                if (!pendingSubmit) return;
+                event.preventDefault();
+                void submitPayload(pendingSubmit)
+                  .then(() => {
+                    setPendingSubmit(null);
+                  })
+                  .catch(() => {
+                    // Keep the dialog open so the user can retry after the toast.
+                  });
+              }}
+              disabled={isSaving}
+            >
+              {t("library.envVars.runtimeRiskConfirm")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }

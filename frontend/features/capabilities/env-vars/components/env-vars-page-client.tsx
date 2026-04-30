@@ -22,12 +22,15 @@ export function EnvVarsPageClient() {
   const [dialogInitialDesc, setDialogInitialDesc] = useState<
     string | null | undefined
   >(undefined);
+  const [dialogInitialExposeToRuntime, setDialogInitialExposeToRuntime] =
+    useState<boolean | undefined>(undefined);
   const envVarStore = useEnvVarsStore();
 
   const openCreateDialog = () => {
     setDialogMode("create");
     setDialogInitialKey(undefined);
     setDialogInitialDesc(undefined);
+    setDialogInitialExposeToRuntime(false);
     setIsAddDialogOpen(true);
   };
 
@@ -51,6 +54,7 @@ export function EnvVarsPageClient() {
                 setDialogMode("edit");
                 setDialogInitialKey(envVar.key);
                 setDialogInitialDesc(envVar.description);
+                setDialogInitialExposeToRuntime(envVar.expose_to_runtime);
                 setIsAddDialogOpen(true);
               }}
               onOverrideSystem={(key: string) => {
@@ -61,12 +65,16 @@ export function EnvVarsPageClient() {
                   setDialogMode("edit");
                   setDialogInitialKey(existingUser.key);
                   setDialogInitialDesc(existingUser.description);
+                  setDialogInitialExposeToRuntime(
+                    existingUser.expose_to_runtime,
+                  );
                   setIsAddDialogOpen(true);
                   return;
                 }
                 setDialogMode("override");
                 setDialogInitialKey(key);
                 setDialogInitialDesc(undefined);
+                setDialogInitialExposeToRuntime(false);
                 setIsAddDialogOpen(true);
               }}
             />
@@ -80,6 +88,7 @@ export function EnvVarsPageClient() {
         mode={dialogMode}
         initialKey={dialogInitialKey}
         initialDescription={dialogInitialDesc}
+        initialExposeToRuntime={dialogInitialExposeToRuntime}
         onSave={async (payload) => {
           await envVarStore.upsertEnvVar(payload);
         }}

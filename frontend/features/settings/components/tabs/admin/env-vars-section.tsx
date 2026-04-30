@@ -5,11 +5,20 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import type {
-  EnvVarCreateInput,
-  EnvVarUpdateInput,
-} from "@/features/capabilities/env-vars/types";
-import type { AdminEnvVar } from "@/features/settings/api/admin-api";
+  AdminEnvVar,
+  AdminSystemEnvVarCreateInput,
+  AdminSystemEnvVarUpdateInput,
+  RuntimeEnvPolicy,
+  RuntimeVisibility,
+} from "@/features/settings/api/admin-api";
 import { useT } from "@/lib/i18n/client";
 
 import {
@@ -24,22 +33,28 @@ const SKILLSMP_API_KEY = "SKILLSMP_API_KEY";
 interface EnvVarEditState {
   value: string;
   description: string;
+  runtimeVisibility: RuntimeVisibility;
 }
 
 interface AdminEnvVarsSectionProps {
   envVars: AdminEnvVar[];
+  runtimeEnvPolicy: RuntimeEnvPolicy | null;
   isLoading: boolean;
   hasError: boolean;
   isSaving: boolean;
   onRefresh: () => void;
   onRetry: () => void;
-  onCreate: (input: EnvVarCreateInput) => Promise<void>;
-  onUpdate: (envVarId: number, input: EnvVarUpdateInput) => Promise<void>;
+  onCreate: (input: AdminSystemEnvVarCreateInput) => Promise<void>;
+  onUpdate: (
+    envVarId: number,
+    input: AdminSystemEnvVarUpdateInput,
+  ) => Promise<void>;
   onDelete: (envVarId: number) => Promise<void>;
 }
 
 export function AdminEnvVarsSection({
   envVars,
+  runtimeEnvPolicy,
   isLoading,
   hasError,
   isSaving,
@@ -53,6 +68,8 @@ export function AdminEnvVarsSection({
   const [newEnvKey, setNewEnvKey] = React.useState("");
   const [newEnvValue, setNewEnvValue] = React.useState("");
   const [newEnvDescription, setNewEnvDescription] = React.useState("");
+  const [newRuntimeVisibility, setNewRuntimeVisibility] =
+    React.useState<RuntimeVisibility>("none");
   const [editingEnvVarId, setEditingEnvVarId] = React.useState<number | null>(
     null,
   );
@@ -63,6 +80,73 @@ export function AdminEnvVarsSection({
     setEditingEnvVarId(null);
     setEnvEditState(null);
   }, []);
+
+  const isProtectedRuntimeKey = React.useCallback(
+    (key: string) => {
+      const normalizedKey = key.trim();
+      if (!normalizedKey || !runtimeEnvPolicy) {
+        return false;
+      }
+      if ((runtimeEnvPolicy.protected_keys ?? []).includes(normalizedKey)) {
+        return true;
+      }
+      return (runtimeEnvPolicy.protected_prefixes ?? []).some((prefix) =>
+        normalizedKey.startsWith(prefix),
+      );
+    },
+    [runtimeEnvPolicy],
+  );
+
+  const newKeyIsProtected = isProtectedRuntimeKey(newEnvKey);
+
+  const handleCreate = React.useCallback(async () => {
+    if (!newEnvKey.trim()) {
+      throw new Error(t("settings.admin.envKeyRequired"));
+    }
+    await onCreate({
+      key: newEnvKey.trim(),
+      value: newEnvValue,
+      description: newEnvDescription || undefined,
+      runtime_visibility: newRuntimeVisibility,
+    });
+    setNewEnvKey("");
+    setNewEnvValue("");
+    setNewEnvDescription("");
+    setNewRuntimeVisibility("none");
+  }, [
+    newEnvDescription,
+    newEnvKey,
+    newEnvValue,
+    newRuntimeVisibility,
+    onCreate,
+    t,
+  ]);
+
+  const handleDelete = React.useCallback(
+    async (envVarId: number) => {
+      try {
+        await onDelete(envVarId);
+      } catch {
+        // Error toast is handled upstream.
+      }
+    },
+    [onDelete],
+  );
+
+  const handleUpdate = React.useCallback(
+    async (envVarId: number) => {
+      if (!envEditState) {
+        return;
+      }
+      await onUpdate(envVarId, {
+        value: envEditState.value || undefined,
+        description: envEditState.description || undefined,
+        runtime_visibility: envEditState.runtimeVisibility,
+      });
+      resetEditingState();
+    },
+    [envEditState, onUpdate, resetEditingState],
+  );
 
   return (
     <SectionCard
@@ -112,23 +196,44 @@ export function AdminEnvVarsSection({
             placeholder={t("settings.admin.envDescriptionPlaceholder")}
           />
         </div>
+        <div className="max-w-sm">
+          <Label className="mb-2 block">
+            {t("settings.admin.runtimeVisibilityLabel")}
+          </Label>
+          <Select
+            value={newRuntimeVisibility}
+            onValueChange={(value) =>
+              setNewRuntimeVisibility(value as RuntimeVisibility)
+            }
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">
+                {t("settings.admin.runtimeVisibilityNone")}
+              </SelectItem>
+              <SelectItem value="admins_only">
+                {t("settings.admin.runtimeVisibilityAdminsOnly")}
+              </SelectItem>
+              <SelectItem value="all_users">
+                {t("settings.admin.runtimeVisibilityAllUsers")}
+              </SelectItem>
+            </SelectContent>
+          </Select>
+          {newKeyIsProtected ? (
+            <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">
+              {t("settings.admin.runtimeVisibilityProtectedWarning")}
+            </p>
+          ) : null}
+        </div>
         <div className="flex justify-end">
           <Button
-            onClick={() =>
-              void (async () => {
-                if (!newEnvKey.trim()) {
-                  throw new Error(t("settings.admin.envKeyRequired"));
-                }
-                await onCreate({
-                  key: newEnvKey.trim(),
-                  value: newEnvValue,
-                  description: newEnvDescription || undefined,
-                });
-                setNewEnvKey("");
-                setNewEnvValue("");
-                setNewEnvDescription("");
-              })()
-            }
+            onClick={() => {
+              void handleCreate().catch(() => {
+                // Error toast is handled upstream.
+              });
+            }}
             disabled={isSaving}
           >
             {t("settings.admin.create")}
@@ -141,11 +246,20 @@ export function AdminEnvVarsSection({
               title={item.key}
               description={item.description || item.masked_value || "-"}
               badge={
-                <Badge variant={item.is_set ? "secondary" : "outline"}>
-                  {item.is_set
-                    ? t("settings.admin.valueConfigured")
-                    : t("settings.admin.valueEmpty")}
-                </Badge>
+                <div className="flex gap-2">
+                  <Badge variant={item.is_set ? "secondary" : "outline"}>
+                    {item.is_set
+                      ? t("settings.admin.valueConfigured")
+                      : t("settings.admin.valueEmpty")}
+                  </Badge>
+                  <Badge variant="outline">
+                    {item.runtime_visibility === "none"
+                      ? t("settings.admin.runtimeVisibilityNone")
+                      : item.runtime_visibility === "admins_only"
+                        ? t("settings.admin.runtimeVisibilityAdminsOnly")
+                        : t("settings.admin.runtimeVisibilityAllUsers")}
+                  </Badge>
+                </div>
               }
               danger={
                 <>
@@ -157,6 +271,7 @@ export function AdminEnvVarsSection({
                       setEnvEditState({
                         value: "",
                         description: item.description ?? "",
+                        runtimeVisibility: item.runtime_visibility,
                       });
                     }}
                     disabled={isSaving}
@@ -166,7 +281,9 @@ export function AdminEnvVarsSection({
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => void onDelete(item.id)}
+                    onClick={() => {
+                      void handleDelete(item.id);
+                    }}
                     disabled={isSaving}
                   >
                     <Trash2 className="size-4" />
@@ -207,6 +324,42 @@ export function AdminEnvVarsSection({
                       />
                     </div>
                   </div>
+                  <div className="space-y-2">
+                    <Label>{t("settings.admin.runtimeVisibilityLabel")}</Label>
+                    <Select
+                      value={envEditState.runtimeVisibility}
+                      onValueChange={(value) =>
+                        setEnvEditState((current) =>
+                          current
+                            ? {
+                                ...current,
+                                runtimeVisibility: value as RuntimeVisibility,
+                              }
+                            : current,
+                        )
+                      }
+                    >
+                      <SelectTrigger className="max-w-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">
+                          {t("settings.admin.runtimeVisibilityNone")}
+                        </SelectItem>
+                        <SelectItem value="admins_only">
+                          {t("settings.admin.runtimeVisibilityAdminsOnly")}
+                        </SelectItem>
+                        <SelectItem value="all_users">
+                          {t("settings.admin.runtimeVisibilityAllUsers")}
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {isProtectedRuntimeKey(item.key) ? (
+                      <p className="text-xs text-amber-700 dark:text-amber-300">
+                        {t("settings.admin.runtimeVisibilityProtectedWarning")}
+                      </p>
+                    ) : null}
+                  </div>
                   <div className="text-xs text-muted-foreground">
                     {t("settings.admin.maskedUpdateHint")}
                   </div>
@@ -219,15 +372,11 @@ export function AdminEnvVarsSection({
                       {t("settings.admin.cancel")}
                     </Button>
                     <Button
-                      onClick={() =>
-                        void (async () => {
-                          await onUpdate(item.id, {
-                            value: envEditState.value || undefined,
-                            description: envEditState.description || undefined,
-                          });
-                          resetEditingState();
-                        })()
-                      }
+                      onClick={() => {
+                        void handleUpdate(item.id).catch(() => {
+                          // Error toast is handled upstream.
+                        });
+                      }}
                       disabled={isSaving}
                     >
                       {t("settings.admin.update")}

@@ -15,7 +15,7 @@ def _status_code_for_app_exception(exc: AppException) -> int:
         return 401
     if exc.error_code == ErrorCode.FORBIDDEN:
         return 403
-    if exc.error_code == ErrorCode.NOT_FOUND:
+    if exc.error_code in {ErrorCode.NOT_FOUND, ErrorCode.USER_NOT_FOUND}:
         return 404
     if exc.error_code in {
         ErrorCode.INTERNAL_ERROR,

@@ -10,6 +10,7 @@ export interface EnvVar {
   description: string | null;
   scope: EnvVarScope;
   is_set: boolean;
+  expose_to_runtime: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -18,9 +19,11 @@ export interface EnvVarCreateInput {
   key: string;
   value: string;
   description?: string | null;
+  expose_to_runtime?: boolean;
 }
 
 export interface EnvVarUpdateInput {
   value?: string | null;
   description?: string | null;
+  expose_to_runtime?: boolean | null;
 }

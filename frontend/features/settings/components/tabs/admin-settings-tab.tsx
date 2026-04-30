@@ -20,6 +20,7 @@ import { CapabilitiesSidebar } from "@/features/capabilities/components/capabili
 import { CapabilitiesLibraryHeader } from "@/features/capabilities/components/capabilities-library-header";
 import type { CapabilityView } from "@/features/capabilities/hooks/use-capability-views";
 import { AdminEnvVarsSection } from "@/features/settings/components/tabs/admin/env-vars-section";
+import { RuntimeEnvPolicySection } from "@/features/settings/components/tabs/admin/runtime-env-policy-section";
 import { AdminMcpSection } from "@/features/settings/components/tabs/admin/mcp-section";
 import { AdminModelConfigSection } from "@/features/settings/components/tabs/admin/model-config-section";
 import { AdminPluginsSection } from "@/features/settings/components/tabs/admin/plugins-section";
@@ -50,11 +51,13 @@ export function AdminSettingsTab() {
     presetVisuals,
     systemClaudeMd,
     modelConfig,
+    runtimeEnvPolicy,
     isLoadingScope,
     hasErrorScope,
     isSavingScope,
     refreshScope,
     saveModelConfig,
+    saveRuntimeEnvPolicy,
     createEnvVar,
     updateEnvVar,
     deleteEnvVar,
@@ -83,6 +86,7 @@ export function AdminSettingsTab() {
   const sectionSaving = {
     modelConfig: isSavingScope("modelConfig"),
     envVars: isSavingScope("envVars"),
+    runtimeEnvPolicy: isSavingScope("runtimeEnvPolicy"),
     skills: isSavingScope("skills"),
     mcp: isSavingScope("mcp"),
     plugins: isSavingScope("plugins"),
@@ -96,6 +100,7 @@ export function AdminSettingsTab() {
   const sectionLoading = {
     modelConfig: isLoadingScope("modelConfig"),
     envVars: isLoadingScope("envVars"),
+    runtimeEnvPolicy: isLoadingScope("runtimeEnvPolicy"),
     skills: isLoadingScope("skills"),
     mcp: isLoadingScope("mcp"),
     plugins: isLoadingScope("plugins"),
@@ -109,6 +114,7 @@ export function AdminSettingsTab() {
   const sectionError = {
     modelConfig: hasErrorScope("modelConfig"),
     envVars: hasErrorScope("envVars"),
+    runtimeEnvPolicy: hasErrorScope("runtimeEnvPolicy"),
     skills: hasErrorScope("skills"),
     mcp: hasErrorScope("mcp"),
     plugins: hasErrorScope("plugins"),
@@ -142,6 +148,14 @@ export function AdminSettingsTab() {
         label: t("settings.admin.navEnvVars"),
         description: t("settings.admin.envDescription"),
         icon: KeySquare,
+        group: "secondary",
+        component: EMPTY_COMPONENT,
+      },
+      {
+        id: "runtimeEnvPolicy",
+        label: t("settings.admin.navRuntimeEnvPolicy"),
+        description: t("settings.admin.runtimeEnvPolicyDescription"),
+        icon: Shield,
         group: "secondary",
         component: EMPTY_COMPONENT,
       },
@@ -266,6 +280,7 @@ export function AdminSettingsTab() {
         return (
           <AdminEnvVarsSection
             envVars={envVars}
+            runtimeEnvPolicy={runtimeEnvPolicy}
             isLoading={sectionLoading.envVars}
             hasError={sectionError.envVars}
             isSaving={sectionSaving.envVars}
@@ -274,6 +289,18 @@ export function AdminSettingsTab() {
             onCreate={createEnvVar}
             onUpdate={updateEnvVar}
             onDelete={deleteEnvVar}
+          />
+        );
+      case "runtimeEnvPolicy":
+        return (
+          <RuntimeEnvPolicySection
+            policy={runtimeEnvPolicy}
+            isLoading={sectionLoading.runtimeEnvPolicy}
+            hasError={sectionError.runtimeEnvPolicy}
+            isSaving={sectionSaving.runtimeEnvPolicy}
+            onRefresh={() => refreshScope("runtimeEnvPolicy")}
+            onRetry={() => refreshScope("runtimeEnvPolicy")}
+            onSave={saveRuntimeEnvPolicy}
           />
         );
       case "skills":

@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import {
+  AlertTriangle,
   CheckCircle2,
   CircleOff,
   Loader2,
@@ -224,6 +225,15 @@ export function EnvVarsGrid({
                             {overridesSystem && (
                               <Badge variant="secondary" className="text-xs">
                                 {t("library.envVars.status.overridesSystem")}
+                              </Badge>
+                            )}
+                            {envVar.expose_to_runtime && (
+                              <Badge
+                                variant="outline"
+                                className="text-xs border-amber-500/40 text-amber-700 dark:text-amber-300"
+                              >
+                                <AlertTriangle className="mr-1 size-3" />
+                                {t("library.envVars.status.runtimeEnabled")}
                               </Badge>
                             )}
                           </div>

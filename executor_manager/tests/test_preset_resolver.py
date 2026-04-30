@@ -135,6 +135,32 @@ class ConfigResolverTests(unittest.TestCase):
             "https://minimax.example.com/anthropic",
         )
 
+    def test_runtime_env_map_merges_under_model_env_overrides(self) -> None:
+        resolver = ConfigResolver(backend_client=MagicMock())
+
+        runtime_env = {
+            "OPENAI_COMPATIBLE_API_KEY": "runtime-key",
+            "DEFAULT_MODEL": "runtime-default",
+        }
+        model_overrides = resolver._resolve_model_env_overrides(
+            {},
+            {
+                "DEFAULT_MODEL": "minimax-default",
+                "MINIMAX_API_KEY": "minimax-key",
+                "MINIMAX_BASE_URL": "https://minimax.example.com/anthropic",
+            },
+            user_id="user-1",
+        )
+
+        merged = {
+            **runtime_env,
+            **model_overrides,
+        }
+
+        self.assertEqual(merged["OPENAI_COMPATIBLE_API_KEY"], "runtime-key")
+        self.assertEqual(merged["DEFAULT_MODEL"], "minimax-default")
+        self.assertEqual(merged["ANTHROPIC_API_KEY"], "minimax-key")
+
 
 if __name__ == "__main__":
     unittest.main()

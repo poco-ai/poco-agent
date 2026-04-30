@@ -14,12 +14,18 @@ from app.schemas.env_var import (
     EnvVarCreateRequest,
     EnvVarPublicResponse,
     EnvVarUpdateRequest,
+    RuntimeVisibility,
     SystemEnvVarAdminResponse,
     SystemEnvVarCreateRequest,
     SystemEnvVarResponse,
     SystemEnvVarUpdateRequest,
 )
 from app.services.constants import SYSTEM_USER_ID
+from app.services.runtime_env_policy_service import (
+    PROTECTED_RUNTIME_ENV_KEYS,
+    PROTECTED_RUNTIME_ENV_PREFIXES,
+    RuntimeEnvPolicyService,
+)
 from app.utils.crypto import decrypt_value, encrypt_value
 
 logger = logging.getLogger(__name__)
@@ -58,6 +64,15 @@ def _require_scope(value: str) -> EnvVarScope:
         raise AppException(
             error_code=ErrorCode.BAD_REQUEST,
             message=f"Invalid env var scope: {value}",
+        )
+    return value
+
+
+def _require_runtime_visibility(value: str) -> RuntimeVisibility:
+    if value not in ("none", "admins_only", "all_users"):
+        raise AppException(
+            error_code=ErrorCode.BAD_REQUEST,
+            message=f"Invalid runtime visibility: {value}",
         )
     return value
 
@@ -101,16 +116,13 @@ def _require_regular_user_id(user_id: str) -> None:
 class EnvVarService:
     def __init__(self) -> None:
         self.settings = get_settings()
+        self.runtime_env_policy_service = RuntimeEnvPolicyService()
 
     def _encrypt(self, value: str) -> str:
         return encrypt_value(value, self.settings.secret_key)
 
     def _decrypt(self, token: str) -> str:
         return decrypt_value(token, self.settings.secret_key)
-
-    # ----------------------------
-    # Public (UI) APIs: no secrets
-    # ----------------------------
 
     def list_public_env_vars(
         self, db: Session, user_id: str
@@ -131,7 +143,6 @@ class EnvVarService:
         for ev in user_vars:
             if ev.key in RESERVED_USER_ENV_VAR_KEYS:
                 continue
-            # User vars always have a non-empty value (enforced by create/update rules).
             items.append(self._to_public_response(ev, is_set=True))
         return items
 
@@ -156,6 +167,8 @@ class EnvVarService:
             value_ciphertext=self._encrypt(value),
             description=request.description,
             scope=_require_scope("user"),
+            expose_to_runtime=bool(request.expose_to_runtime),
+            runtime_visibility="none",
         )
 
         try:
@@ -188,6 +201,8 @@ class EnvVarService:
             env_var.value_ciphertext = self._encrypt(value)
         if request.description is not None:
             env_var.description = request.description
+        if request.expose_to_runtime is not None:
+            env_var.expose_to_runtime = bool(request.expose_to_runtime)
 
         db.commit()
         db.refresh(env_var)
@@ -214,12 +229,12 @@ class EnvVarService:
             description=env_var.description,
             scope=_require_scope(env_var.scope),
             is_set=bool(is_set),
+            expose_to_runtime=bool(env_var.expose_to_runtime),
             created_at=env_var.created_at,
             updated_at=env_var.updated_at,
         )
 
     def _is_set(self, env_var: UserEnvVar) -> bool:
-        """System env vars can be "declared but unset" by storing an empty value."""
         try:
             value = self._decrypt(env_var.value_ciphertext)
         except Exception:
@@ -227,14 +242,8 @@ class EnvVarService:
             return False
         return bool(value.strip())
 
-    # ---------------------------------
-    # Internal APIs: secrets + env_map
-    # ---------------------------------
-
     def get_system_env_map(self, db: Session) -> dict[str, str]:
-        """Return env_map containing process env plus system-managed values only."""
         env_map = self._load_process_env_map()
-
         system_vars = EnvVarRepository.list_by_user_and_scope(
             db, user_id=SYSTEM_USER_ID, scope="system"
         )
@@ -246,17 +255,10 @@ class EnvVarService:
                 continue
             if value.strip():
                 env_map[item.key] = value
-
         return env_map
 
     def get_env_map(self, db: Session, user_id: str) -> dict[str, str]:
-        """Return env_map for config resolution: system + user (user overrides system).
-
-        Empty values are treated as "unset" and excluded from the map so that
-        `${env:KEY}` fails loudly when not configured.
-        """
         env_map = self.get_system_env_map(db)
-
         user_vars = EnvVarRepository.list_by_user_and_scope(
             db, user_id=user_id, scope="user"
         )
@@ -271,6 +273,57 @@ class EnvVarService:
             if value.strip():
                 env_map[item.key] = value
         return env_map
+
+    def get_runtime_env_map(
+        self,
+        db: Session,
+        user_id: str,
+        *,
+        requester_is_admin: bool = False,
+    ) -> dict[str, str]:
+        policy = self.runtime_env_policy_service.get_policy(db)
+        if policy.mode == "disabled":
+            return {}
+
+        system_vars = {
+            item.key: item
+            for item in EnvVarRepository.list_by_user_and_scope(
+                db, user_id=SYSTEM_USER_ID, scope="system"
+            )
+        }
+        user_vars = {
+            item.key: item
+            for item in EnvVarRepository.list_by_user_and_scope(
+                db, user_id=user_id, scope="user"
+            )
+        }
+
+        merged_keys = list(system_vars.keys())
+        for key in user_vars:
+            if key not in system_vars:
+                merged_keys.append(key)
+
+        result: dict[str, str] = {}
+        for key in merged_keys:
+            env_var = user_vars.get(key) or system_vars.get(key)
+            if env_var is None:
+                continue
+            if not self._is_runtime_eligible(
+                env_var,
+                requester_is_admin=requester_is_admin,
+                allowlist_patterns=policy.allowlist_patterns,
+                denylist_patterns=policy.denylist_patterns,
+            ):
+                continue
+            try:
+                value = self._decrypt(env_var.value_ciphertext)
+            except Exception:
+                logger.exception("Failed to decrypt runtime env var: %s", env_var.key)
+                continue
+            normalized = value.strip()
+            if normalized:
+                result[env_var.key] = normalized
+        return result
 
     def _load_process_env_map(self) -> dict[str, str]:
         env_map: dict[str, str] = {}
@@ -302,6 +355,9 @@ class EnvVarService:
                     value=value,
                     description=ev.description,
                     scope=_require_scope(ev.scope),
+                    runtime_visibility=_require_runtime_visibility(
+                        ev.runtime_visibility
+                    ),
                     created_at=ev.created_at,
                     updated_at=ev.updated_at,
                 )
@@ -312,7 +368,6 @@ class EnvVarService:
         self, db: Session, request: SystemEnvVarCreateRequest
     ) -> SystemEnvVarResponse:
         key = _normalize_key(request.key)
-        # System vars can be empty to represent "declared but unset".
         value = (request.value or "").strip()
 
         existing = EnvVarRepository.get_by_user_and_key(db, SYSTEM_USER_ID, key)
@@ -328,6 +383,8 @@ class EnvVarService:
             value_ciphertext=self._encrypt(value),
             description=request.description,
             scope=_require_scope("system"),
+            expose_to_runtime=False,
+            runtime_visibility=_require_runtime_visibility(request.runtime_visibility),
         )
 
         try:
@@ -348,6 +405,7 @@ class EnvVarService:
             value=value,
             description=env_var.description,
             scope=_require_scope(env_var.scope),
+            runtime_visibility=_require_runtime_visibility(env_var.runtime_visibility),
             created_at=env_var.created_at,
             updated_at=env_var.updated_at,
         )
@@ -370,7 +428,6 @@ class EnvVarService:
             value = (request.value or "").strip()
             env_var.value_ciphertext = self._encrypt(value)
         else:
-            # Use existing (decrypted) value for response
             try:
                 value = self._decrypt(env_var.value_ciphertext)
             except Exception:
@@ -379,6 +436,10 @@ class EnvVarService:
 
         if request.description is not None:
             env_var.description = request.description
+        if request.runtime_visibility is not None:
+            env_var.runtime_visibility = _require_runtime_visibility(
+                request.runtime_visibility
+            )
 
         db.commit()
         db.refresh(env_var)
@@ -389,6 +450,7 @@ class EnvVarService:
             value=value,
             description=env_var.description,
             scope=_require_scope(env_var.scope),
+            runtime_visibility=_require_runtime_visibility(env_var.runtime_visibility),
             created_at=env_var.created_at,
             updated_at=env_var.updated_at,
         )
@@ -437,8 +499,56 @@ class EnvVarService:
                     scope=_require_scope(ev.scope),
                     is_set=bool(value.strip()),
                     masked_value=self._mask_secret_value(value),
+                    runtime_visibility=_require_runtime_visibility(
+                        ev.runtime_visibility
+                    ),
                     created_at=ev.created_at,
                     updated_at=ev.updated_at,
                 )
             )
         return result
+
+    @staticmethod
+    def _matches_pattern(key: str, patterns: list[str]) -> bool:
+        for pattern in patterns:
+            normalized = str(pattern or "").strip()
+            if not normalized:
+                continue
+            if normalized.endswith("*"):
+                prefix = normalized[:-1]
+                if not prefix or key.startswith(prefix):
+                    return True
+                continue
+            if key == normalized:
+                return True
+        return False
+
+    def _is_runtime_eligible(
+        self,
+        env_var: UserEnvVar,
+        *,
+        requester_is_admin: bool,
+        allowlist_patterns: list[str],
+        denylist_patterns: list[str],
+    ) -> bool:
+        key = env_var.key
+        if key in RESERVED_USER_ENV_VAR_KEYS:
+            return False
+        if key in PROTECTED_RUNTIME_ENV_KEYS:
+            return False
+        if any(key.startswith(prefix) for prefix in PROTECTED_RUNTIME_ENV_PREFIXES):
+            return False
+        if self._matches_pattern(key, denylist_patterns):
+            return False
+        if allowlist_patterns and not self._matches_pattern(key, allowlist_patterns):
+            return False
+
+        if env_var.scope == "user":
+            return bool(env_var.expose_to_runtime)
+
+        visibility = _require_runtime_visibility(env_var.runtime_visibility)
+        if visibility == "none":
+            return False
+        if visibility == "admins_only":
+            return requester_is_admin
+        return True

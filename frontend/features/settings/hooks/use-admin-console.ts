@@ -4,10 +4,6 @@ import * as React from "react";
 import { toast } from "sonner";
 
 import type {
-  EnvVarCreateInput,
-  EnvVarUpdateInput,
-} from "@/features/capabilities/env-vars/types";
-import type {
   McpServerCreateInput,
   McpServerUpdateInput,
 } from "@/features/capabilities/mcp/types";
@@ -41,6 +37,9 @@ import {
   type AdminEnvVar,
   type AdminMcpServer,
   type AdminPlugin,
+  type AdminSystemEnvVarCreateInput,
+  type AdminSystemEnvVarUpdateInput,
+  type RuntimeEnvPolicy,
 } from "@/features/settings/api/admin-api";
 import type { ModelConfigResponse } from "@/features/settings/types";
 import type { UserProfile } from "@/features/user/types";
@@ -62,7 +61,8 @@ type AdminDataScope =
   | "slashCommands"
   | "subAgents"
   | "presets"
-  | "claudeMd";
+  | "claudeMd"
+  | "runtimeEnvPolicy";
 
 function toErrorMessage(error: unknown, fallback: string): string {
   if (error instanceof Error && error.message) {
@@ -90,6 +90,8 @@ export function useAdminConsole() {
   >([]);
   const [systemClaudeMd, setSystemClaudeMd] =
     React.useState<CustomInstructionsSettings | null>(null);
+  const [runtimeEnvPolicy, setRuntimeEnvPolicy] =
+    React.useState<RuntimeEnvPolicy | null>(null);
   const [modelConfig, setModelConfig] =
     React.useState<ModelConfigResponse | null>(null);
   const [loadingScopes, setLoadingScopes] = React.useState<Set<AdminDataScope>>(
@@ -143,6 +145,9 @@ export function useAdminConsole() {
       },
       claudeMd: async () => {
         setSystemClaudeMd(await adminApi.getSystemClaudeMd());
+      },
+      runtimeEnvPolicy: async () => {
+        setRuntimeEnvPolicy(await adminApi.getRuntimeEnvPolicy());
       },
     }),
     [],
@@ -219,6 +224,7 @@ export function useAdminConsole() {
         "subAgents",
         "presets",
         "claudeMd",
+        "runtimeEnvPolicy",
       ]);
     } catch (error) {
       console.error("[useAdminConsole] Failed to load data", error);
@@ -314,7 +320,7 @@ export function useAdminConsole() {
   );
 
   const createEnvVar = React.useCallback(
-    async (input: EnvVarCreateInput) => {
+    async (input: AdminSystemEnvVarCreateInput) => {
       await runAction(
         async () => {
           await adminApi.createSystemEnvVar(input);
@@ -328,7 +334,7 @@ export function useAdminConsole() {
   );
 
   const updateEnvVar = React.useCallback(
-    async (envVarId: number, input: EnvVarUpdateInput) => {
+    async (envVarId: number, input: AdminSystemEnvVarUpdateInput) => {
       await runAction(
         async () => {
           await adminApi.updateSystemEnvVar(envVarId, input);
@@ -350,6 +356,26 @@ export function useAdminConsole() {
         t("settings.admin.envDeleted"),
         "envVars",
         ["envVars"],
+      );
+    },
+    [runAction, t],
+  );
+
+  const saveRuntimeEnvPolicy = React.useCallback(
+    async (
+      input: Pick<
+        RuntimeEnvPolicy,
+        "mode" | "allowlist_patterns" | "denylist_patterns"
+      >,
+    ) => {
+      await runAction(
+        async () => {
+          const result = await adminApi.updateRuntimeEnvPolicy(input);
+          setRuntimeEnvPolicy(result);
+        },
+        t("settings.admin.runtimeEnvPolicySaved"),
+        "runtimeEnvPolicy",
+        ["runtimeEnvPolicy"],
       );
     },
     [runAction, t],
@@ -661,6 +687,7 @@ export function useAdminConsole() {
     presets,
     presetVisuals,
     systemClaudeMd,
+    runtimeEnvPolicy,
     modelConfig,
     isLoadingScope,
     hasErrorScope,
@@ -671,6 +698,7 @@ export function useAdminConsole() {
     createEnvVar,
     updateEnvVar,
     deleteEnvVar,
+    saveRuntimeEnvPolicy,
     createSkill,
     updateSkill,
     deleteSkill,
