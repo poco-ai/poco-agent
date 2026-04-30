@@ -1,17 +1,10 @@
 import * as React from "react";
-import { KeySquare, RefreshCw, Trash2 } from "lucide-react";
+import { Ban, KeySquare, RefreshCw, Shield, Trash2, Users } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import type {
   AdminEnvVar,
   AdminSystemEnvVarCreateInput,
@@ -50,6 +43,90 @@ interface AdminEnvVarsSectionProps {
     input: AdminSystemEnvVarUpdateInput,
   ) => Promise<void>;
   onDelete: (envVarId: number) => Promise<void>;
+}
+
+function RuntimeVisibilitySelector({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: RuntimeVisibility;
+  onChange: (value: RuntimeVisibility) => void;
+  disabled?: boolean;
+}) {
+  const { t } = useT("translation");
+  const options: Array<{
+    value: RuntimeVisibility;
+    icon: typeof Ban;
+    label: string;
+    hint: string;
+  }> = [
+    {
+      value: "none",
+      icon: Ban,
+      label: t("settings.admin.runtimeVisibilityNone"),
+      hint: t("settings.admin.runtimeVisibilityNoneHint"),
+    },
+    {
+      value: "admins_only",
+      icon: Shield,
+      label: t("settings.admin.runtimeVisibilityAdminsOnly"),
+      hint: t("settings.admin.runtimeVisibilityAdminsOnlyHint"),
+    },
+    {
+      value: "all_users",
+      icon: Users,
+      label: t("settings.admin.runtimeVisibilityAllUsers"),
+      hint: t("settings.admin.runtimeVisibilityAllUsersHint"),
+    },
+  ];
+
+  return (
+    <div className="grid gap-2 md:grid-cols-3">
+      {options.map((option) => {
+        const Icon = option.icon;
+        const selected = value === option.value;
+        return (
+          <button
+            key={option.value}
+            type="button"
+            onClick={() => onChange(option.value)}
+            disabled={disabled}
+            aria-pressed={selected}
+            className={[
+              "rounded-xl border p-3 text-left transition-colors",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+              "disabled:cursor-not-allowed disabled:opacity-60",
+              selected
+                ? "border-primary bg-primary/5 shadow-sm"
+                : "border-border bg-muted/20 hover:bg-muted/40",
+            ].join(" ")}
+          >
+            <div className="flex items-start gap-3">
+              <div
+                className={[
+                  "mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg border",
+                  selected
+                    ? "border-primary/30 bg-primary/10 text-primary"
+                    : "border-border bg-background text-muted-foreground",
+                ].join(" ")}
+              >
+                <Icon className="size-4" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-sm font-medium text-foreground">
+                  {option.label}
+                </div>
+                <div className="mt-1 text-xs leading-5 text-muted-foreground">
+                  {option.hint}
+                </div>
+              </div>
+            </div>
+          </button>
+        );
+      })}
+    </div>
+  );
 }
 
 export function AdminEnvVarsSection({
@@ -196,35 +273,24 @@ export function AdminEnvVarsSection({
             placeholder={t("settings.admin.envDescriptionPlaceholder")}
           />
         </div>
-        <div className="max-w-sm">
-          <Label className="mb-2 block">
-            {t("settings.admin.runtimeVisibilityLabel")}
-          </Label>
-          <Select
-            value={newRuntimeVisibility}
-            onValueChange={(value) =>
-              setNewRuntimeVisibility(value as RuntimeVisibility)
-            }
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">
-                {t("settings.admin.runtimeVisibilityNone")}
-              </SelectItem>
-              <SelectItem value="admins_only">
-                {t("settings.admin.runtimeVisibilityAdminsOnly")}
-              </SelectItem>
-              <SelectItem value="all_users">
-                {t("settings.admin.runtimeVisibilityAllUsers")}
-              </SelectItem>
-            </SelectContent>
-          </Select>
-          {newKeyIsProtected ? (
-            <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">
-              {t("settings.admin.runtimeVisibilityProtectedWarning")}
+        <div className="space-y-3 rounded-xl border border-border bg-muted/10 p-4">
+          <div className="space-y-1">
+            <Label className="block">
+              {t("settings.admin.runtimeVisibilityLabel")}
+            </Label>
+            <p className="text-xs text-muted-foreground">
+              {t("settings.admin.runtimeVisibilityDescription")}
             </p>
+          </div>
+          <RuntimeVisibilitySelector
+            value={newRuntimeVisibility}
+            onChange={setNewRuntimeVisibility}
+            disabled={isSaving}
+          />
+          {newKeyIsProtected ? (
+            <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
+              {t("settings.admin.runtimeVisibilityProtectedWarning")}
+            </div>
           ) : null}
         </div>
         <div className="flex justify-end">
@@ -252,7 +318,16 @@ export function AdminEnvVarsSection({
                       ? t("settings.admin.valueConfigured")
                       : t("settings.admin.valueEmpty")}
                   </Badge>
-                  <Badge variant="outline">
+                  <Badge
+                    variant="outline"
+                    className={
+                      item.runtime_visibility === "all_users"
+                        ? "border-primary/30 bg-primary/5 text-primary"
+                        : item.runtime_visibility === "admins_only"
+                          ? "border-amber-500/30 bg-amber-500/5 text-amber-700 dark:text-amber-300"
+                          : "text-muted-foreground"
+                    }
+                  >
                     {item.runtime_visibility === "none"
                       ? t("settings.admin.runtimeVisibilityNone")
                       : item.runtime_visibility === "admins_only"
@@ -292,7 +367,7 @@ export function AdminEnvVarsSection({
               }
             >
               {editingEnvVarId === item.id && envEditState ? (
-                <div className="space-y-3">
+                <div className="space-y-4 rounded-xl border border-border/70 bg-muted/10 p-4">
                   <div className="grid gap-3 md:grid-cols-2">
                     <div className="space-y-2">
                       <Label>{t("settings.admin.envValuePlaceholder")}</Label>
@@ -324,40 +399,33 @@ export function AdminEnvVarsSection({
                       />
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label>{t("settings.admin.runtimeVisibilityLabel")}</Label>
-                    <Select
+                  <div className="space-y-3">
+                    <div className="space-y-1">
+                      <Label>
+                        {t("settings.admin.runtimeVisibilityLabel")}
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        {t("settings.admin.runtimeVisibilityDescription")}
+                      </p>
+                    </div>
+                    <RuntimeVisibilitySelector
                       value={envEditState.runtimeVisibility}
-                      onValueChange={(value) =>
+                      onChange={(value) =>
                         setEnvEditState((current) =>
                           current
                             ? {
                                 ...current,
-                                runtimeVisibility: value as RuntimeVisibility,
+                                runtimeVisibility: value,
                               }
                             : current,
                         )
                       }
-                    >
-                      <SelectTrigger className="max-w-sm">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">
-                          {t("settings.admin.runtimeVisibilityNone")}
-                        </SelectItem>
-                        <SelectItem value="admins_only">
-                          {t("settings.admin.runtimeVisibilityAdminsOnly")}
-                        </SelectItem>
-                        <SelectItem value="all_users">
-                          {t("settings.admin.runtimeVisibilityAllUsers")}
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
+                      disabled={isSaving}
+                    />
                     {isProtectedRuntimeKey(item.key) ? (
-                      <p className="text-xs text-amber-700 dark:text-amber-300">
+                      <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
                         {t("settings.admin.runtimeVisibilityProtectedWarning")}
-                      </p>
+                      </div>
                     ) : null}
                   </div>
                   <div className="text-xs text-muted-foreground">

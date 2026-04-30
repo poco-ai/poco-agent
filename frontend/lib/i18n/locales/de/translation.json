@@ -798,7 +798,9 @@
         "mcp": "MCP"
       },
       "runtimeAccessLabel": "Allow in task runtime",
+      "runtimeAccessShort": "Runtime",
       "runtimeAccessHint": "Injected values can be read by scripts, commands, plugins, and may leak through output, logs, files, or network requests.",
+      "runtimePromptOnceHint": "The warning dialog is only shown the first time you enable runtime access in this browser.",
       "runtimeAccessScopeHint": "This switch only controls automatic injection of this saved variable. It does not remove executor-provided base environment variables or required runtime credentials.",
       "runtimeRiskTitle": "Runtime injection may leak this secret",
       "runtimeRiskDescription": "After enabling this option, the variable will be available inside the task runtime environment. Bash, Python, Skills, or plugins may read and export it. Enable this only when you trust the task and the capabilities it uses.",

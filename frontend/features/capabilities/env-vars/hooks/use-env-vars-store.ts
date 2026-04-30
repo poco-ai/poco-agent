@@ -115,6 +115,32 @@ export function useEnvVarsStore() {
     [t],
   );
 
+  const setRuntimeExposure = useCallback(
+    async (envVar: EnvVar, exposeToRuntime: boolean): Promise<void> => {
+      if (envVar.scope !== "user") {
+        return;
+      }
+
+      setSavingEnvKey(envVar.key);
+      try {
+        const updated = await envVarsService.update(envVar.id, {
+          expose_to_runtime: exposeToRuntime,
+        });
+        setEnvVars((prev) =>
+          prev.map((item) => (item.id === envVar.id ? updated : item)),
+        );
+        toast.success(t("library.envVars.toasts.updated"));
+      } catch (error) {
+        console.error("[EnvVars] runtime exposure update failed", error);
+        toast.error(getErrorMessage(error, t("library.envVars.toasts.error")));
+        throw error;
+      } finally {
+        setSavingEnvKey(null);
+      }
+    },
+    [t],
+  );
+
   const refreshEnvVars = useCallback(async () => {
     try {
       const latest = await envVarsService.list();
@@ -130,6 +156,7 @@ export function useEnvVarsStore() {
     envVars,
     isLoading,
     upsertEnvVar,
+    setRuntimeExposure,
     removeEnvVar,
     savingEnvKey,
     refreshEnvVars,
