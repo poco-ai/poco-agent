@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Ban, KeySquare, RefreshCw, Shield, Trash2, Users } from "lucide-react";
+import { Ban, RefreshCw, Shield, Trash2, Users } from "lucide-react";
 
 import {
   AlertDialog,
@@ -27,8 +27,8 @@ import { useT } from "@/lib/i18n/client";
 import { AdminCatalogShell } from "./admin-catalog-shell";
 import { AdminSectionError, AdminSectionLoading, ListItem } from "./shared";
 
-const SKILLSMP_API_KEY = "SKILLSMP_API_KEY";
 const CREATE_KEY_INPUT_ID = "admin-env-create-key";
+const SKILLSMP_API_KEY = "SKILLSMP_API_KEY";
 
 interface EnvVarEditState {
   value: string;
@@ -233,6 +233,7 @@ export function AdminEnvVarsSection({
   );
 
   const newKeyIsProtected = isProtectedRuntimeKey(newEnvKey);
+  const newKeyIsSkillsMp = newEnvKey.trim() === SKILLSMP_API_KEY;
 
   const handleCreate = React.useCallback(async () => {
     if (!newEnvKey.trim()) {
@@ -310,28 +311,10 @@ export function AdminEnvVarsSection({
               : "space-y-4"
           }
         >
-          <div className="rounded-xl border border-dashed border-border bg-background/60 px-4 py-4">
-            <div className="flex items-start gap-3">
-              <div className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-border/50 bg-muted/20 text-muted-foreground">
-                <KeySquare className="size-4" />
-              </div>
-              <div className="min-w-0 space-y-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <div className="font-medium text-foreground">
-                    {SKILLSMP_API_KEY}
-                  </div>
-                  <Badge
-                    variant="outline"
-                    className="text-[11px] text-muted-foreground"
-                  >
-                    {t("settings.admin.infoBadge", "Info")}
-                  </Badge>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  {t("settings.admin.skillsMpHelp")}
-                </p>
-              </div>
-            </div>
+          <div className="rounded-xl border border-dashed border-border bg-background/60 px-4 py-3">
+            <p className="text-sm text-muted-foreground">
+              {t("settings.admin.skillsMpHelp")}
+            </p>
           </div>
 
           {createOpen ? (
@@ -410,6 +393,11 @@ export function AdminEnvVarsSection({
                     {t("settings.admin.runtimeVisibilityProtectedWarning")}
                   </div>
                 ) : null}
+                {newKeyIsSkillsMp ? (
+                  <div className="rounded-lg border border-sky-500/30 bg-sky-500/5 px-3 py-2 text-xs text-sky-700 dark:text-sky-300">
+                    {t("settings.admin.skillsMpInternalHint")}
+                  </div>
+                ) : null}
               </div>
 
               <div className="flex justify-end">
@@ -448,7 +436,11 @@ export function AdminEnvVarsSection({
                   <ListItem
                     key={item.id}
                     title={item.key}
-                    description={item.description || item.masked_value || "-"}
+                    description={
+                      item.key === SKILLSMP_API_KEY
+                        ? t("settings.admin.skillsMpRowDescription")
+                        : item.description || item.masked_value || "-"
+                    }
                     badge={
                       <div className="flex flex-wrap gap-2">
                         <Badge variant={item.is_set ? "secondary" : "outline"}>
@@ -472,6 +464,14 @@ export function AdminEnvVarsSection({
                               ? t("settings.admin.runtimeVisibilityAdminsOnly")
                               : t("settings.admin.runtimeVisibilityAllUsers")}
                         </Badge>
+                        {item.key === SKILLSMP_API_KEY ? (
+                          <Badge
+                            variant="outline"
+                            className="border-sky-500/30 bg-sky-500/5 text-sky-700 dark:text-sky-300"
+                          >
+                            {t("settings.admin.internalOnlyBadge")}
+                          </Badge>
+                        ) : null}
                       </div>
                     }
                     danger={
@@ -571,6 +571,11 @@ export function AdminEnvVarsSection({
                               {t(
                                 "settings.admin.runtimeVisibilityProtectedWarning",
                               )}
+                            </div>
+                          ) : null}
+                          {item.key === SKILLSMP_API_KEY ? (
+                            <div className="rounded-lg border border-sky-500/30 bg-sky-500/5 px-3 py-2 text-xs text-sky-700 dark:text-sky-300">
+                              {t("settings.admin.skillsMpInternalHint")}
                             </div>
                           ) : null}
                         </div>
