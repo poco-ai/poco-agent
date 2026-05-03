@@ -64,22 +64,30 @@ export function AddEnvVarDialog({
       ? t("library.envVars.valueUpdateHint")
       : t("library.envVars.valueCreateHint");
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
+  const buildPayload = (): EnvVarUpsertInput | null => {
     const trimmedKey = key.trim();
     const trimmedValue = value.trim();
 
-    if (!trimmedKey) return;
-    if (requiresValue && !trimmedValue) return;
+    if (!trimmedKey) return null;
+    if (requiresValue && !trimmedValue) return null;
 
-    await onSave({
+    return {
       key: trimmedKey,
       value: trimmedValue ? trimmedValue : undefined,
       description: description.trim() || undefined,
-    });
+    };
+  };
 
+  const submitPayload = async (payload: EnvVarUpsertInput) => {
+    await onSave(payload);
     onOpenChange(false);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const payload = buildPayload();
+    if (!payload) return;
+    await submitPayload(payload);
   };
 
   const isValid =

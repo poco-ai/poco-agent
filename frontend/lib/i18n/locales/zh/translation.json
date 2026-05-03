@@ -759,7 +759,8 @@
         "set": "已设置",
         "unset": "未设置",
         "overridden": "已被个人覆盖",
-        "overridesSystem": "覆盖系统"
+        "overridesSystem": "覆盖系统",
+        "runtimeEnabled": "已注入运行环境"
       },
       "actions": {
         "override": "覆盖",
@@ -782,7 +783,15 @@
         "user": "个人",
         "global": "全局变量",
         "mcp": "MCP 变量"
-      }
+      },
+      "runtimeAccessLabel": "允许传入任务运行环境",
+      "runtimeAccessShort": "运行时",
+      "runtimeAccessHint": "注入后，脚本、命令、插件都可能读取该值，并通过输出、日志、文件或网络请求泄露。",
+      "runtimePromptOnceHint": "在当前浏览器中，只有第一次开启运行时访问时才会弹出警告确认。",
+      "runtimeAccessScopeHint": "这个开关只控制当前已保存变量的自动注入，不会移除执行器基础环境变量，也不会移除平台运行所需的凭证。",
+      "runtimeRiskTitle": "注入运行环境存在泄露风险",
+      "runtimeRiskDescription": "启用后，该变量会进入任务运行环境。Bash、Python、Skills 或插件都可能读取并导出它。仅在你信任当前任务及其使用能力时启用。",
+      "runtimeRiskConfirm": "仍然启用"
     },
     "personalization": {
       "card": {
@@ -1902,6 +1911,16 @@
       "modelConfigSaved": "模型配置已更新",
       "envTitle": "系统环境变量",
       "envDescription": "仅展示脱敏后的值，适合作为系统默认配置。",
+      "envCreateTitle": "创建系统环境变量",
+      "envCreateDescription": "添加共享默认变量，并控制它们是否可被注入到运行时容器。",
+      "envListTitle": "已配置变量",
+      "envListDescription": "可编辑脱敏值、调整运行时可见范围，或删除不再需要的变量。",
+      "envEmpty": "当前还没有系统环境变量。",
+      "envSearchPlaceholder": "搜索环境变量",
+      "envDeleteTitle": "确认删除系统环境变量？",
+      "envDeleteDescription": "删除后，{{key}} 将从系统级环境变量列表中永久移除。",
+      "envDeleteConfirm": "删除变量",
+      "delete": "删除",
       "envKeyPlaceholder": "KEY",
       "envValuePlaceholder": "值",
       "envDescriptionPlaceholder": "描述",
@@ -1987,10 +2006,37 @@
       "summaryResources": "系统资源",
       "summaryUsers": "用户",
       "summaryEnvVars": "环境变量",
-      "skillsMpHelp": "保存后会作为系统级环境变量 SKILLSMP_API_KEY 使用，并覆盖部署环境中的兜底值。",
+      "skillsMpHelp": "除非管理员显式将 SKILLSMP_API_KEY 保存为系统环境变量，否则 SkillsMP 不会显示在这里。",
+      "skillsMpInternalHint": "这个 key 由平台内部用于 SkillsMP，不会注入到任务运行容器中。",
+      "skillsMpRowDescription": "平台内部使用的 SkillsMP 凭证。",
+      "internalOnlyBadge": "仅内部使用",
       "pageSubtitle": "使用与个人 Capabilities 一致的方式管理全局默认能力与系统配置。",
       "systemScopeBadge": "System Scope",
-      "adminOnlyBadge": "Admin Only"
+      "adminOnlyBadge": "Admin Only",
+      "navRuntimeEnvPolicy": "运行时环境策略",
+      "runtimeEnvPolicyTitle": "运行时环境策略",
+      "runtimeEnvPolicyDescription": "控制哪些环境变量允许自动注入任务运行环境。",
+      "runtimeEnvPolicySaved": "运行时环境策略已更新",
+      "runtimeEnvPolicyRiskTitle": "运行时注入会提升敏感信息暴露风险",
+      "runtimeEnvPolicyRiskDescription": "任何注入到任务运行环境的值，都可能被任务主动打印、记录日志、写入文件或发送到外部网络。",
+      "runtimeEnvPolicyScopeHint": "该策略只控制已保存的用户/系统环境变量的自动注入，不会改变执行器基础环境变量，也不会移除平台运行所需的凭证。",
+      "runtimeEnvPolicyMode": "策略模式",
+      "runtimeEnvPolicyModeOptIn": "按变量显式开启注入",
+      "runtimeEnvPolicyModeDisabled": "禁用运行时注入",
+      "runtimeEnvAllowlist": "允许列表模式",
+      "runtimeEnvDenylist": "禁止列表模式",
+      "runtimeEnvProtectedPrefixes": "受保护前缀",
+      "runtimeEnvProtectedKeys": "受保护键",
+      "runtimeEnvProtectedHint": "受保护的运行时变量始终禁止自动注入。",
+      "runtimeVisibilityLabel": "运行时可见范围",
+      "runtimeVisibilityDescription": "选择哪些任务可以通过自动运行时注入拿到这个系统变量。",
+      "runtimeVisibilityNone": "不注入",
+      "runtimeVisibilityNoneHint": "仅保存在管理员设置中，不自动注入任务。",
+      "runtimeVisibilityAdminsOnly": "仅管理员任务",
+      "runtimeVisibilityAdminsOnlyHint": "只有系统管理员发起的任务可以读取它。",
+      "runtimeVisibilityAllUsers": "所有用户任务",
+      "runtimeVisibilityAllUsersHint": "自动注入到所有用户的任务运行环境中。",
+      "runtimeVisibilityProtectedWarning": "该 key 命中了受保护的运行时 key/前缀。可见范围设置可以保存，但自动运行时注入仍会被阻止。"
     }
   },
   "validation": {

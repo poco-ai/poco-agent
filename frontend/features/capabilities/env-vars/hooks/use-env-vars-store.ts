@@ -11,6 +11,7 @@ export interface EnvVarUpsertInput {
   key: string;
   value?: string;
   description?: string | null;
+  expose_to_runtime?: boolean;
 }
 
 function getErrorMessage(error: unknown, fallback: string): string {
@@ -46,11 +47,16 @@ export function useEnvVarsStore() {
   }, []);
 
   const upsertEnvVar = useCallback(
-    async ({ key, value, description }: EnvVarUpsertInput) => {
+    async ({
+      key,
+      value,
+      description,
+      expose_to_runtime,
+    }: EnvVarUpsertInput): Promise<void> => {
       const normalizedKey = key.trim();
       if (!normalizedKey) {
         toast.error(t("library.envVars.toasts.keyRequired"));
-        return;
+        throw new Error(t("library.envVars.toasts.keyRequired"));
       }
 
       setSavingEnvKey(normalizedKey);
@@ -63,6 +69,7 @@ export function useEnvVarsStore() {
           const updated = await envVarsService.update(existing.id, {
             value: value?.trim() ? value.trim() : undefined,
             description: description ?? existing.description,
+            expose_to_runtime,
           });
           setEnvVars((prev) =>
             prev.map((item) => (item.id === existing.id ? updated : item)),
@@ -72,12 +79,13 @@ export function useEnvVarsStore() {
           const trimmedValue = (value ?? "").trim();
           if (!trimmedValue) {
             toast.error(t("library.envVars.toasts.error"));
-            return;
+            throw new Error(t("library.envVars.toasts.error"));
           }
           const created = await envVarsService.create({
             key: normalizedKey,
             value: trimmedValue,
             description: description ?? undefined,
+            expose_to_runtime: Boolean(expose_to_runtime),
           });
           setEnvVars((prev) => [...prev, created]);
           toast.success(t("library.envVars.toasts.created"));
@@ -85,6 +93,7 @@ export function useEnvVarsStore() {
       } catch (error) {
         console.error("[EnvVars] upsert failed", error);
         toast.error(getErrorMessage(error, t("library.envVars.toasts.error")));
+        throw error;
       } finally {
         setSavingEnvKey(null);
       }
@@ -106,6 +115,32 @@ export function useEnvVarsStore() {
     [t],
   );
 
+  const setRuntimeExposure = useCallback(
+    async (envVar: EnvVar, exposeToRuntime: boolean): Promise<void> => {
+      if (envVar.scope !== "user") {
+        return;
+      }
+
+      setSavingEnvKey(envVar.key);
+      try {
+        const updated = await envVarsService.update(envVar.id, {
+          expose_to_runtime: exposeToRuntime,
+        });
+        setEnvVars((prev) =>
+          prev.map((item) => (item.id === envVar.id ? updated : item)),
+        );
+        toast.success(t("library.envVars.toasts.updated"));
+      } catch (error) {
+        console.error("[EnvVars] runtime exposure update failed", error);
+        toast.error(getErrorMessage(error, t("library.envVars.toasts.error")));
+        throw error;
+      } finally {
+        setSavingEnvKey(null);
+      }
+    },
+    [t],
+  );
+
   const refreshEnvVars = useCallback(async () => {
     try {
       const latest = await envVarsService.list();
@@ -121,6 +156,7 @@ export function useEnvVarsStore() {
     envVars,
     isLoading,
     upsertEnvVar,
+    setRuntimeExposure,
     removeEnvVar,
     savingEnvKey,
     refreshEnvVars,

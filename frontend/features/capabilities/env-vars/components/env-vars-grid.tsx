@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import {
+  AlertTriangle,
   CheckCircle2,
   CircleOff,
   Loader2,
@@ -13,6 +14,12 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { SkeletonShimmer } from "@/components/ui/skeleton-shimmer";
 import { StaggeredList } from "@/components/ui/staggered-entrance";
 import { useT } from "@/lib/i18n/client";
@@ -27,6 +34,7 @@ interface EnvVarsGridProps {
   isLoading?: boolean;
   onDelete?: (id: number) => void;
   onEdit?: (envVar: EnvVar) => void;
+  onToggleRuntime?: (envVar: EnvVar, checked: boolean) => void;
   onOverrideSystem?: (key: string) => void;
   onAddClick?: () => void;
 }
@@ -62,6 +70,7 @@ export function EnvVarsGrid({
   isLoading = false,
   onDelete,
   onEdit,
+  onToggleRuntime,
   onOverrideSystem,
   onAddClick,
 }: EnvVarsGridProps) {
@@ -235,6 +244,46 @@ export function EnvVarsGrid({
                         </div>
 
                         <div className="flex items-center gap-2 flex-shrink-0">
+                          <div className="flex items-center gap-2 rounded-lg border border-amber-500/20 bg-amber-500/5 px-2 py-1">
+                            <span className="text-xs text-muted-foreground">
+                              {t("library.envVars.runtimeAccessShort")}
+                            </span>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <button
+                                  type="button"
+                                  className="flex size-5 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-foreground"
+                                  aria-label={t(
+                                    "library.envVars.runtimeAccessLabel",
+                                  )}
+                                >
+                                  <AlertTriangle className="size-3" />
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent
+                                side="top"
+                                sideOffset={8}
+                                className="max-w-72 space-y-1"
+                              >
+                                <div>
+                                  {t("library.envVars.runtimeAccessHint")}
+                                </div>
+                                <div className="text-background/80">
+                                  {t("library.envVars.runtimePromptOnceHint")}
+                                </div>
+                              </TooltipContent>
+                            </Tooltip>
+                            <Switch
+                              checked={envVar.expose_to_runtime}
+                              onCheckedChange={(checked) =>
+                                onToggleRuntime?.(envVar, checked)
+                              }
+                              disabled={isBusy}
+                              aria-label={t(
+                                "library.envVars.runtimeAccessLabel",
+                              )}
+                            />
+                          </div>
                           <div className={hoverActionsClass}>
                             <Button
                               variant="ghost"

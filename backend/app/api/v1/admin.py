@@ -9,6 +9,7 @@ from app.models.user import User
 from app.schemas.admin import (
     ClaudeMdAdminUpsertRequest,
     ModelConfigAdminUpdateRequest,
+    RuntimeEnvPolicyAdminUpdateRequest,
     SystemRoleUpdateRequest,
 )
 from app.schemas.auth import CurrentUserResponse
@@ -43,6 +44,10 @@ from app.schemas.preset import (
     PresetVisualSummary,
 )
 from app.schemas.response import Response, ResponseSchema
+from app.schemas.runtime_env_policy import (
+    RuntimeEnvPolicyResponse,
+    RuntimeEnvPolicyUpdateRequest,
+)
 from app.schemas.skill_import import (
     SkillImportCommitEnqueueResponse,
     SkillImportCommitRequest,
@@ -75,6 +80,7 @@ from app.services.skill_import_job_service import SkillImportJobService
 from app.services.skill_import_service import SkillImportService
 from app.services.slash_command_service import SlashCommandService
 from app.services.constants import SYSTEM_USER_ID
+from app.services.runtime_env_policy_service import RuntimeEnvPolicyService
 from app.services.sub_agent_service import SubAgentService
 from app.services.user_admin_service import UserAdminService
 
@@ -94,6 +100,7 @@ slash_command_service = SlashCommandService()
 claude_md_service = ClaudeMdService()
 preset_service = PresetService()
 sub_agent_service = SubAgentService()
+runtime_env_policy_service = RuntimeEnvPolicyService()
 
 
 @router.get(
@@ -149,6 +156,38 @@ async def delete_system_env_var(
 ) -> JSONResponse:
     env_var_service.delete_system_env_var(db, env_var_id)
     return Response.success(data={"id": env_var_id}, message="System env var deleted")
+
+
+@router.get(
+    "/runtime-env-policy",
+    response_model=ResponseSchema[RuntimeEnvPolicyResponse],
+)
+async def get_runtime_env_policy(
+    _: User = Depends(require_system_admin),
+    db: Session = Depends(get_db),
+) -> JSONResponse:
+    result = runtime_env_policy_service.get_policy(db)
+    return Response.success(data=result, message="Runtime env policy retrieved")
+
+
+@router.patch(
+    "/runtime-env-policy",
+    response_model=ResponseSchema[RuntimeEnvPolicyResponse],
+)
+async def update_runtime_env_policy(
+    request: RuntimeEnvPolicyAdminUpdateRequest,
+    _: User = Depends(require_system_admin),
+    db: Session = Depends(get_db),
+) -> JSONResponse:
+    result = runtime_env_policy_service.update_policy(
+        db,
+        RuntimeEnvPolicyUpdateRequest(
+            mode=request.mode,
+            allowlist_patterns=request.allowlist_patterns,
+            denylist_patterns=request.denylist_patterns,
+        ),
+    )
+    return Response.success(data=result, message="Runtime env policy updated")
 
 
 @router.get("/model-config", response_model=ResponseSchema[ModelConfigResponse])

@@ -203,6 +203,7 @@ export const API_ENDPOINTS = {
   // Admin
   adminSystemEnvVars: "/admin/system-env-vars",
   adminSystemEnvVar: (envVarId: number) => `/admin/system-env-vars/${envVarId}`,
+  adminRuntimeEnvPolicy: "/admin/runtime-env-policy",
   adminModelConfig: "/admin/model-config",
   adminSkills: "/admin/skills",
   adminSkill: (skillId: number) => `/admin/skills/${skillId}`,

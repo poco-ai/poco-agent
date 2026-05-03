@@ -16,6 +16,7 @@ interface AdminCatalogShellProps {
   searchPlaceholder: string;
   createLabel?: string;
   onCreate?: () => void;
+  actions?: React.ReactNode;
   children: React.ReactNode;
 }
 
@@ -28,10 +29,11 @@ export function AdminCatalogShell({
   searchPlaceholder,
   createLabel,
   onCreate,
+  actions,
   children,
 }: AdminCatalogShellProps) {
   return (
-    <SectionCard title={title} description={description}>
+    <SectionCard title={title} description={description} actions={actions}>
       <div className="space-y-6">
         <div className="rounded-xl bg-muted/50 px-5 py-3">
           <div className="flex flex-wrap items-center gap-3 md:justify-between">

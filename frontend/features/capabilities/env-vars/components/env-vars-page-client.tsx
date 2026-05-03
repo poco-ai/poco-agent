@@ -1,6 +1,16 @@
 "use client";
 
 import { useState } from "react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 import { EnvVarsGrid } from "@/features/capabilities/env-vars/components/env-vars-grid";
 import {
@@ -12,8 +22,12 @@ import { useEnvVarsStore } from "@/features/capabilities/env-vars/hooks/use-env-
 import type { EnvVar } from "@/features/capabilities/env-vars/types";
 import { PullToRefresh } from "@/components/ui/pull-to-refresh";
 import { CapabilityContentShell } from "@/features/capabilities/components/capability-content-shell";
+import { useT } from "@/lib/i18n/client";
+
+const RUNTIME_RISK_ACK_STORAGE_KEY = "runtime_env_risk_ack_v1";
 
 export function EnvVarsPageClient() {
+  const { t } = useT("translation");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [dialogMode, setDialogMode] = useState<EnvVarDialogMode>("create");
   const [dialogInitialKey, setDialogInitialKey] = useState<string | undefined>(
@@ -22,6 +36,14 @@ export function EnvVarsPageClient() {
   const [dialogInitialDesc, setDialogInitialDesc] = useState<
     string | null | undefined
   >(undefined);
+  const [pendingRuntimeEnableEnvVar, setPendingRuntimeEnableEnvVar] =
+    useState<EnvVar | null>(null);
+  const [hasRuntimeRiskAck, setHasRuntimeRiskAck] = useState(() => {
+    if (typeof window === "undefined") {
+      return false;
+    }
+    return window.localStorage.getItem(RUNTIME_RISK_ACK_STORAGE_KEY) === "true";
+  });
   const envVarStore = useEnvVarsStore();
 
   const openCreateDialog = () => {
@@ -46,6 +68,21 @@ export function EnvVarsPageClient() {
               onAddClick={openCreateDialog}
               onDelete={(id) => {
                 envVarStore.removeEnvVar(id);
+              }}
+              onToggleRuntime={(envVar, checked) => {
+                if (
+                  checked &&
+                  !envVar.expose_to_runtime &&
+                  !hasRuntimeRiskAck
+                ) {
+                  setPendingRuntimeEnableEnvVar(envVar);
+                  return;
+                }
+                void envVarStore
+                  .setRuntimeExposure(envVar, checked)
+                  .catch(() => {
+                    // Error toast is handled upstream.
+                  });
               }}
               onEdit={(envVar: EnvVar) => {
                 setDialogMode("edit");
@@ -85,6 +122,55 @@ export function EnvVarsPageClient() {
         }}
         isSaving={envVarStore.savingEnvKey !== null}
       />
+
+      <AlertDialog
+        open={pendingRuntimeEnableEnvVar !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPendingRuntimeEnableEnvVar(null);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {t("library.envVars.runtimeRiskTitle")}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("library.envVars.runtimeRiskDescription")}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={envVarStore.savingEnvKey !== null}>
+              {t("common.cancel")}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(event) => {
+                if (!pendingRuntimeEnableEnvVar) return;
+                event.preventDefault();
+                void envVarStore
+                  .setRuntimeExposure(pendingRuntimeEnableEnvVar, true)
+                  .then(() => {
+                    if (typeof window !== "undefined") {
+                      window.localStorage.setItem(
+                        RUNTIME_RISK_ACK_STORAGE_KEY,
+                        "true",
+                      );
+                    }
+                    setHasRuntimeRiskAck(true);
+                    setPendingRuntimeEnableEnvVar(null);
+                  })
+                  .catch(() => {
+                    // Keep the dialog open so the user can retry after the toast.
+                  });
+              }}
+              disabled={envVarStore.savingEnvKey !== null}
+            >
+              {t("library.envVars.runtimeRiskConfirm")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

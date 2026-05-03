@@ -25,6 +25,7 @@ from app.models.preset_visual import PresetVisual
 from app.models.project import Project
 from app.models.project_file import ProjectFile
 from app.models.project_local_mount import ProjectLocalMount
+from app.models.runtime_env_policy import RuntimeEnvPolicy
 from app.models.session_queue_item import AgentSessionQueueItem
 from app.models.skill import Skill
 from app.models.skill_import_job import SkillImportJob
@@ -65,6 +66,7 @@ __all__ = [
     "Project",
     "ProjectFile",
     "ProjectLocalMount",
+    "RuntimeEnvPolicy",
     "Skill",
     "SkillImportJob",
     "SlashCommand",
