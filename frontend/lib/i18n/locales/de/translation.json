@@ -1731,7 +1731,8 @@
     "saving": "Speichern...",
     "confirm": "Bestätigen",
     "enabled": "Aktiviert",
-    "disabled": "Deaktiviert"
+    "disabled": "Deaktiviert",
+    "deleting": "Wird gelöscht..."
   },
   "pagination": {
     "previous": "Zurück",

@@ -20,6 +20,11 @@ import {
   getStartupPreloadValue,
   hasStartupPreloadValue,
 } from "@/lib/startup-preload";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { useCapabilityToggle } from "@/features/connectors";
 import {
@@ -421,6 +426,18 @@ export function CardNav({
       previewItems.length,
     0,
   );
+  const allEnabledPreviewNames = useMemo(
+    () => [
+      ...installedMcps.filter((item) => item.enabled).map((item) => item.name),
+      ...installedSkills
+        .filter((item) => item.enabled)
+        .map((item) => item.name),
+      ...installedPlugins
+        .filter((item) => item.enabled)
+        .map((item) => item.name),
+    ],
+    [installedMcps, installedPlugins, installedSkills],
+  );
 
   const handleDismiss = useCallback(() => {
     onDismiss?.();
@@ -512,7 +529,7 @@ export function CardNav({
             </span>
           </div>
 
-          <div className="flex items-center gap-1.5">
+          <div className="flex min-w-0 flex-1 items-center justify-end gap-1.5">
             {previewItems.map((item) => {
               const Icon =
                 item.type === "mcp"
@@ -522,20 +539,31 @@ export function CardNav({
                     : Plug;
 
               return (
-                <span
-                  key={item.id}
-                  title={item.name}
-                  className="inline-flex size-7 items-center justify-center rounded-full border border-border/60 bg-muted/40 text-muted-foreground"
-                >
-                  <Icon className="size-3.5" />
-                </span>
+                <Tooltip key={item.id}>
+                  <TooltipTrigger asChild>
+                    <span className="inline-flex max-w-[140px] items-center gap-1 rounded-full border border-border/60 bg-muted/40 px-2 py-1 text-xs text-muted-foreground">
+                      <Icon className="size-3.5 shrink-0" />
+                      <span className="truncate">{item.name}</span>
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" sideOffset={8}>
+                    {item.name}
+                  </TooltipContent>
+                </Tooltip>
               );
             })}
 
             {hiddenPreviewCount > 0 ? (
-              <span className="inline-flex h-7 min-w-7 items-center justify-center rounded-full border border-border/60 bg-muted/40 px-2 text-xs text-muted-foreground">
-                +{hiddenPreviewCount}
-              </span>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="inline-flex h-7 min-w-7 items-center justify-center rounded-full border border-border/60 bg-muted/40 px-2 text-xs text-muted-foreground">
+                    +{hiddenPreviewCount}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent side="top" sideOffset={8}>
+                  {allEnabledPreviewNames.join(" · ")}
+                </TooltipContent>
+              </Tooltip>
             ) : null}
 
             {canDismiss ? (

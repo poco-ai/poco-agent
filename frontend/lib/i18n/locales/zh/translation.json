@@ -1708,7 +1708,8 @@
     "edit": "编辑",
     "saving": "保存中...",
     "default": "默认",
-    "forced": "强制"
+    "forced": "强制",
+    "deleting": "删除中..."
   },
   "pagination": {
     "previous": "上一页",

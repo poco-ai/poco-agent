@@ -244,7 +244,7 @@ export function SkillsGrid({
     const isInstalled = installState.isInstalled;
     const isRowLoading =
       isLoading || loadingId === skill.id || loadingId === install?.id;
-    const showDeleteAction = isHovered;
+    const showDeleteAction = isHovered || displayMode === "admin";
 
     return (
       <div className="min-h-[64px]">

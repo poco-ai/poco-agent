@@ -1731,7 +1731,8 @@
     "saving": "保存中...",
     "confirm": "確認",
     "enabled": "有効",
-    "disabled": "無効"
+    "disabled": "無効",
+    "deleting": "削除中..."
   },
   "pagination": {
     "previous": "前へ",

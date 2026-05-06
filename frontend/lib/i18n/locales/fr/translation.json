@@ -1731,7 +1731,8 @@
     "saving": "Enregistrement...",
     "confirm": "Confirmer",
     "enabled": "Activé",
-    "disabled": "Désactivé"
+    "disabled": "Désactivé",
+    "deleting": "Suppression..."
   },
   "pagination": {
     "previous": "Précédent",

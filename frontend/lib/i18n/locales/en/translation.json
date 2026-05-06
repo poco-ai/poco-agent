@@ -1708,7 +1708,8 @@
     "enabled": "Enabled",
     "disabled": "Disabled",
     "default": "Default",
-    "forced": "Forced"
+    "forced": "Forced",
+    "deleting": "Deleting..."
   },
   "pagination": {
     "previous": "Previous",

@@ -1731,7 +1731,8 @@
     "saving": "Сохранение...",
     "confirm": "Подтвердить",
     "enabled": "Включено",
-    "disabled": "Отключено"
+    "disabled": "Отключено",
+    "deleting": "Удаление..."
   },
   "pagination": {
     "previous": "Предыдущая",
