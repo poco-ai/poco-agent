@@ -52,12 +52,6 @@ interface InstalledItem {
   toggleId: number;
 }
 
-interface PreviewItem {
-  id: string;
-  name: string;
-  type: "mcp" | "skill" | "plugin";
-}
-
 /**
  * CardNav Component
  *
@@ -391,53 +385,33 @@ export function CardNav({
   const skillEnabledCount = countEnabled(installedSkills);
   const pluginEnabledCount = countEnabled(installedPlugins);
 
-  const previewItems = useMemo<PreviewItem[]>(() => {
-    const enabledItems: PreviewItem[] = [
-      ...installedMcps
-        .filter((item) => item.enabled)
-        .map((item) => ({
-          id: `mcp-${item.id}`,
-          name: item.name,
-          type: "mcp" as const,
-        })),
-      ...installedSkills
-        .filter((item) => item.enabled)
-        .map((item) => ({
-          id: `skill-${item.id}`,
-          name: item.name,
-          type: "skill" as const,
-        })),
-      ...installedPlugins
-        .filter((item) => item.enabled)
-        .map((item) => ({
-          id: `plugin-${item.id}`,
-          name: item.name,
-          type: "plugin" as const,
-        })),
-    ];
+  const enabledCapabilityCount =
+    mcpEnabledCount + skillEnabledCount + pluginEnabledCount;
 
-    return enabledItems.slice(0, 6);
-  }, [installedMcps, installedPlugins, installedSkills]);
+  const enabledSummary = useMemo(() => {
+    if (enabledCapabilityCount === 0) {
+      return "";
+    }
 
-  const hiddenPreviewCount = Math.max(
-    mcpEnabledCount +
-      skillEnabledCount +
-      pluginEnabledCount -
-      previewItems.length,
-    0,
-  );
-  const allEnabledPreviewNames = useMemo(
-    () => [
-      ...installedMcps.filter((item) => item.enabled).map((item) => item.name),
-      ...installedSkills
-        .filter((item) => item.enabled)
-        .map((item) => item.name),
-      ...installedPlugins
-        .filter((item) => item.enabled)
-        .map((item) => item.name),
-    ],
-    [installedMcps, installedPlugins, installedSkills],
-  );
+    const segments = [
+      `${t("connectors.enabled")} ${enabledCapabilityCount}`,
+      mcpEnabledCount > 0 ? `${t("cardNav.mcp")} ${mcpEnabledCount}` : null,
+      skillEnabledCount > 0
+        ? `${t("cardNav.skills")} ${skillEnabledCount}`
+        : null,
+      pluginEnabledCount > 0
+        ? `${t("cardNav.plugins")} ${pluginEnabledCount}`
+        : null,
+    ].filter(Boolean);
+
+    return segments.join(" · ");
+  }, [
+    enabledCapabilityCount,
+    mcpEnabledCount,
+    pluginEnabledCount,
+    skillEnabledCount,
+    t,
+  ]);
 
   const handleDismiss = useCallback(() => {
     onDismiss?.();
@@ -530,38 +504,20 @@ export function CardNav({
           </div>
 
           <div className="flex min-w-0 flex-1 items-center justify-end gap-1.5">
-            {previewItems.map((item) => {
-              const Icon =
-                item.type === "mcp"
-                  ? Server
-                  : item.type === "skill"
-                    ? Sparkles
-                    : Plug;
-
-              return (
-                <Tooltip key={item.id}>
-                  <TooltipTrigger asChild>
-                    <span className="inline-flex max-w-[140px] items-center gap-1 rounded-full border border-border/60 bg-muted/40 px-2 py-1 text-xs text-muted-foreground">
-                      <Icon className="size-3.5 shrink-0" />
-                      <span className="truncate">{item.name}</span>
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipContent side="top" sideOffset={8}>
-                    {item.name}
-                  </TooltipContent>
-                </Tooltip>
-              );
-            })}
-
-            {hiddenPreviewCount > 0 ? (
+            {enabledSummary ? (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <span className="inline-flex h-7 min-w-7 items-center justify-center rounded-full border border-border/60 bg-muted/40 px-2 text-xs text-muted-foreground">
-                    +{hiddenPreviewCount}
+                  <span className="max-w-[280px] truncate text-xs text-muted-foreground transition-colors duration-300 group-hover:text-foreground/80 sm:max-w-[360px]">
+                    {enabledSummary}
                   </span>
                 </TooltipTrigger>
                 <TooltipContent side="top" sideOffset={8}>
-                  {allEnabledPreviewNames.join(" · ")}
+                  <div className="space-y-1">
+                    <p>{enabledSummary}</p>
+                    <p className="text-muted-foreground">
+                      {t("cardNav.clickForDetails")}
+                    </p>
+                  </div>
                 </TooltipContent>
               </Tooltip>
             ) : null}
