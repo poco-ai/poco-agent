@@ -209,9 +209,9 @@
     },
     "warnings": {
       "tooManyMcps": "启用的 MCP 服务器过多（{{count}} 个），可能会导致系统加载变慢、性能下降。",
-      "tooManySkills": "启用的技能过多（{{count}} 个），可能会导致系统加载变慢、性能下降。",
+      "tooManySkills": "用户主动启用的技能过多（{{count}} 个，建议不超过 {{limit}} 个），可能会导致系统加载变慢、性能下降。系统内置技能不计入该推荐额度。",
       "mcpLimitReached": "启用此 MCP 将超过推荐数量（3 个）。过多的 MCP 可能会导致系统加载变慢。",
-      "skillLimitReached": "启用此技能将超过推荐数量（5 个）。过多的技能可能会导致系统加载变慢。"
+      "skillLimitReached": "启用此技能后，用户主动启用的技能将达到 {{count}} 个，超过建议数量（{{limit}} 个）。系统内置技能不计入该推荐额度。"
     }
   },
   "prompts": {
@@ -1119,7 +1119,8 @@
       "stats": {
         "available": "可用技能",
         "installed": "已安装",
-        "enabled": "已启用"
+        "enabled": "已启用",
+        "recommendedEnabled": "用户启用 {{count}} / 建议 {{limit}}"
       },
       "section": {
         "title": "Skills"

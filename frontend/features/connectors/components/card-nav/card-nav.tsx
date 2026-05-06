@@ -5,6 +5,10 @@ import { useRouter } from "next/navigation";
 import { Plug, Server, Sparkles, X } from "lucide-react";
 import { mcpService } from "@/features/capabilities/mcp/api/mcp-api";
 import { skillsService } from "@/features/capabilities/skills/api/skills-api";
+import {
+  countsTowardRecommendedSkillLimit,
+  RECOMMENDED_USER_SKILL_LIMIT,
+} from "@/features/capabilities/skills/lib/runtime-policy";
 import { pluginsService } from "@/features/capabilities/plugins/api/plugins-api";
 import type { McpServer } from "@/features/capabilities/mcp/types";
 import type { Skill } from "@/features/capabilities/skills/types";
@@ -33,7 +37,7 @@ import {
 } from "./connect-tools-dialog";
 
 const MCP_LIMIT = 3;
-const SKILL_LIMIT = 5;
+const SKILL_LIMIT = RECOMMENDED_USER_SKILL_LIMIT;
 
 type CapabilityViewId = "mcp" | "skills" | "plugins";
 
@@ -214,6 +218,18 @@ export function CardNav({
     return items;
   }, [capabilityToggle?.skillEnabledMap, skills, t]);
 
+  const enabledUserSkillCount = useMemo(() => {
+    const effectiveSkillEnabledMap = capabilityToggle?.skillEnabledMap ?? {};
+
+    return skills.reduce((count, skill) => {
+      if (!countsTowardRecommendedSkillLimit(skill)) {
+        return count;
+      }
+
+      return count + (effectiveSkillEnabledMap[skill.id] ? 1 : 0);
+    }, 0);
+  }, [capabilityToggle?.skillEnabledMap, skills]);
+
   // Get all installed Plugins
   const installedPlugins: InstalledItem[] = pluginInstalls.map((install) => {
     const plugin = plugins.find((p) => p.id === install.plugin_id);
@@ -263,14 +279,25 @@ export function CardNav({
     (skillId: number, currentEnabled: boolean) => {
       if (!capabilityToggle) return;
       const newEnabled = !currentEnabled;
+      const targetSkill = skills.find((item) => item.id === skillId);
+      const countsTowardLimit = countsTowardRecommendedSkillLimit(targetSkill);
+      const nextEnabledUserSkillCount =
+        newEnabled && countsTowardLimit
+          ? enabledUserSkillCount + 1
+          : enabledUserSkillCount;
 
-      // Check if enabling would exceed the limit
-      const currentEnabledCount = installedSkills.filter(
-        (i) => i.enabled,
-      ).length;
-      if (newEnabled && currentEnabledCount >= SKILL_LIMIT) {
-        toast.warning(t("hero.warnings.skillLimitReached"));
-        return;
+      // Warn when enabling would exceed the recommended user-skill limit.
+      if (
+        newEnabled &&
+        countsTowardLimit &&
+        nextEnabledUserSkillCount > SKILL_LIMIT
+      ) {
+        toast.warning(
+          t("hero.warnings.skillLimitReached", {
+            count: nextEnabledUserSkillCount,
+            limit: SKILL_LIMIT,
+          }),
+        );
       }
 
       capabilityToggle.toggleSkill(skillId, newEnabled);
@@ -278,18 +305,8 @@ export function CardNav({
       if (newEnabled) {
         playInstallSound();
       }
-
-      // Check if we've exceeded the limit after enabling
-      const newEnabledCount = newEnabled
-        ? currentEnabledCount + 1
-        : currentEnabledCount;
-      if (newEnabledCount > SKILL_LIMIT) {
-        toast.warning(
-          t("hero.warnings.tooManySkills", { count: newEnabledCount }),
-        );
-      }
     },
-    [capabilityToggle, installedSkills, t],
+    [capabilityToggle, enabledUserSkillCount, skills, t],
   );
 
   // Toggle Plugin enabled state (local only, no API call)
@@ -343,9 +360,12 @@ export function CardNav({
   const handleWarningClick = useCallback(
     (type: "mcp" | "skill", count: number) => {
       toast.warning(
-        t(`hero.warnings.tooMany${type === "mcp" ? "Mcps" : "Skills"}`, {
-          count,
-        }),
+        type === "mcp"
+          ? t("hero.warnings.tooManyMcps", { count })
+          : t("hero.warnings.tooManySkills", {
+              count,
+              limit: SKILL_LIMIT,
+            }),
       );
     },
     [t],
@@ -471,8 +491,9 @@ export function CardNav({
         emptyText: t("cardNav.noSkillsInstalled"),
         onToggle: toggleSkillEnabled,
         onNavigate: () => handleCardClick("skills"),
-        showWarning: skillEnabledCount > SKILL_LIMIT,
-        onWarningClick: () => handleWarningClick("skill", skillEnabledCount),
+        showWarning: enabledUserSkillCount > SKILL_LIMIT,
+        onWarningClick: () =>
+          handleWarningClick("skill", enabledUserSkillCount),
       },
       {
         icon: Plug,
@@ -493,8 +514,8 @@ export function CardNav({
       togglePluginEnabled,
       handleCardClick,
       handleWarningClick,
+      enabledUserSkillCount,
       mcpEnabledCount,
-      skillEnabledCount,
     ],
   );
 
