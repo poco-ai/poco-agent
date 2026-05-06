@@ -52,6 +52,13 @@ interface InstalledItem {
   toggleId: number;
 }
 
+interface EnabledCapabilitySection {
+  key: CapabilityViewId;
+  label: string;
+  count: number;
+  items: string[];
+}
+
 /**
  * CardNav Component
  *
@@ -388,6 +395,45 @@ export function CardNav({
   const enabledCapabilityCount =
     mcpEnabledCount + skillEnabledCount + pluginEnabledCount;
 
+  const enabledSections = useMemo<EnabledCapabilitySection[]>(() => {
+    const sections: EnabledCapabilitySection[] = [
+      {
+        key: "mcp",
+        label: t("cardNav.mcp"),
+        count: mcpEnabledCount,
+        items: installedMcps
+          .filter((item) => item.enabled)
+          .map((item) => item.name),
+      },
+      {
+        key: "skills",
+        label: t("cardNav.skills"),
+        count: skillEnabledCount,
+        items: installedSkills
+          .filter((item) => item.enabled)
+          .map((item) => item.name),
+      },
+      {
+        key: "plugins",
+        label: t("cardNav.plugins"),
+        count: pluginEnabledCount,
+        items: installedPlugins
+          .filter((item) => item.enabled)
+          .map((item) => item.name),
+      },
+    ];
+
+    return sections.filter((section) => section.count > 0);
+  }, [
+    installedMcps,
+    installedPlugins,
+    installedSkills,
+    mcpEnabledCount,
+    pluginEnabledCount,
+    skillEnabledCount,
+    t,
+  ]);
+
   const enabledSummary = useMemo(() => {
     if (enabledCapabilityCount === 0) {
       return "";
@@ -395,23 +441,11 @@ export function CardNav({
 
     const segments = [
       `${t("connectors.enabled")} ${enabledCapabilityCount}`,
-      mcpEnabledCount > 0 ? `${t("cardNav.mcp")} ${mcpEnabledCount}` : null,
-      skillEnabledCount > 0
-        ? `${t("cardNav.skills")} ${skillEnabledCount}`
-        : null,
-      pluginEnabledCount > 0
-        ? `${t("cardNav.plugins")} ${pluginEnabledCount}`
-        : null,
-    ].filter(Boolean);
+      ...enabledSections.map((section) => `${section.label} ${section.count}`),
+    ];
 
     return segments.join(" · ");
-  }, [
-    enabledCapabilityCount,
-    mcpEnabledCount,
-    pluginEnabledCount,
-    skillEnabledCount,
-    t,
-  ]);
+  }, [enabledCapabilityCount, enabledSections, t]);
 
   const handleDismiss = useCallback(() => {
     onDismiss?.();
@@ -511,12 +545,38 @@ export function CardNav({
                     {enabledSummary}
                   </span>
                 </TooltipTrigger>
-                <TooltipContent side="top" sideOffset={8}>
-                  <div className="space-y-1">
-                    <p>{enabledSummary}</p>
-                    <p className="text-muted-foreground">
-                      {t("cardNav.clickForDetails")}
-                    </p>
+                <TooltipContent
+                  side="top"
+                  sideOffset={10}
+                  className="w-[min(26rem,calc(100vw-2rem))] rounded-xl border border-border/80 bg-popover/98 p-0 text-popover-foreground shadow-xl shadow-black/10 backdrop-blur-sm dark:shadow-black/40"
+                >
+                  <div className="border-b border-border/70 px-4 py-3">
+                    <p className="text-sm font-medium">{enabledSummary}</p>
+                  </div>
+                  <div className="max-h-72 space-y-3 overflow-y-auto px-4 py-3">
+                    {enabledSections.map((section) => (
+                      <div key={section.key} className="space-y-1.5">
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                            {section.label}
+                          </p>
+                          <span className="text-xs text-muted-foreground">
+                            {section.count}
+                          </span>
+                        </div>
+                        <ul className="space-y-1">
+                          {section.items.map((name) => (
+                            <li
+                              key={`${section.key}-${name}`}
+                              className="truncate text-sm leading-5 text-popover-foreground/90"
+                              title={name}
+                            >
+                              {name}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
                   </div>
                 </TooltipContent>
               </Tooltip>
