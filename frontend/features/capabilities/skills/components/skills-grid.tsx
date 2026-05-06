@@ -214,6 +214,9 @@ export function SkillsGrid({
   const enabledCount = React.useMemo(
     () =>
       skills.reduce((count, skill) => {
+        if (skill.admin_disabled) {
+          return count;
+        }
         const install = installBySkillId.get(skill.id);
         return (
           count + (getEffectiveInstallState(skill, install).isEnabled ? 1 : 0)
@@ -225,7 +228,8 @@ export function SkillsGrid({
   function SkillRow({ skill }: { skill: Skill }) {
     const [isHovered, setIsHovered] = React.useState(false);
     const install = installBySkillId.get(skill.id);
-    const isBuiltin = skill.scope === "system";
+    const isBuiltin = skill.is_builtin;
+    const isSystemSkill = skill.scope === "system";
     const isAgentCreated =
       skill.scope === "user" && skill.source?.kind === "skill-creator";
     const isMarketplace = skill.source?.kind === "marketplace";
@@ -233,7 +237,9 @@ export function SkillsGrid({
       ? t("library.skillsManager.sections.system")
       : isMarketplace
         ? t("library.sources.marketplace")
-        : t("library.skillsManager.sections.custom");
+        : isSystemSkill
+          ? t("library.skillsManager.sections.system")
+          : t("library.skillsManager.sections.custom");
     const installState = getEffectiveInstallState(skill, install);
     const isInstalled = installState.isInstalled;
     const isRowLoading =
@@ -282,6 +288,11 @@ export function SkillsGrid({
                   {t("common.forced")}
                 </Badge>
               ) : null}
+              {skill.admin_disabled ? (
+                <Badge variant="outline" className="text-xs">
+                  {t("common.disabled")}
+                </Badge>
+              ) : null}
               {isAgentCreated && (
                 <Badge variant="secondary" className="text-xs">
                   {t("library.skillsManager.source.skillCreator")}
@@ -295,7 +306,10 @@ export function SkillsGrid({
             ) : null}
           </div>
 
-          {displayMode === "admin" && isBuiltin && onDeleteSkill ? (
+          {displayMode === "admin" &&
+          isSystemSkill &&
+          onDeleteSkill &&
+          !isBuiltin ? (
             <div className="flex items-center gap-2">
               <Button
                 variant="ghost"

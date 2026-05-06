@@ -2036,7 +2036,8 @@
       "runtimeVisibilityAdminsOnlyHint": "只有系统管理员发起的任务可以读取它。",
       "runtimeVisibilityAllUsers": "所有用户任务",
       "runtimeVisibilityAllUsersHint": "自动注入到所有用户的任务运行环境中。",
-      "runtimeVisibilityProtectedWarning": "该 key 命中了受保护的运行时 key/前缀。可见范围设置可以保存，但自动运行时注入仍会被阻止。"
+      "runtimeVisibilityProtectedWarning": "该 key 命中了受保护的运行时 key/前缀。可见范围设置可以保存，但自动运行时注入仍会被阻止。",
+      "policyDisabledForUsers": "对用户禁用"
     }
   },
   "validation": {

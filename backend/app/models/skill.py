@@ -28,6 +28,12 @@ class Skill(Base, TimestampMixin):
         default=False,
         server_default=text("false"),
     )
+    admin_disabled: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default=text("false"),
+    )
 
     __table_args__ = (
         UniqueConstraint("name", "owner_user_id", name="uq_skill_name_owner"),

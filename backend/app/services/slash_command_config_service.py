@@ -155,11 +155,16 @@ class SlashCommandConfigService:
         skill_names: list[str] | None = None,
     ) -> list[tuple[str, str | None]]:
         if skill_names is not None:
+            visible_skill_names = {
+                name
+                for skill in SkillRepository.list_visible(db, user_id=user_id)
+                if (name := self._normalize_command_name(skill.name)) is not None
+            }
             provided: list[tuple[str, str | None]] = []
             seen: set[str] = set()
             for raw in skill_names:
                 name = self._normalize_command_name(raw)
-                if name is None or name in seen:
+                if name is None or name in seen or name not in visible_skill_names:
                     continue
                 seen.add(name)
                 provided.append((name, None))
@@ -183,6 +188,8 @@ class SlashCommandConfigService:
         for skill_id in ordered_enabled_ids:
             skill = skill_by_id.get(skill_id)
             if skill is None:
+                continue
+            if skill.scope == "system" and skill.admin_disabled:
                 continue
             if skill.scope != "system" and skill.owner_user_id != user_id:
                 continue

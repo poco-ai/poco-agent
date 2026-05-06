@@ -18,6 +18,8 @@ class CapabilityRecommendationItem(BaseModel):
     description: str | None = None
     score: float
     default_enabled: bool
+    effective_enabled: bool
+    force_enabled: bool
 
 
 class CapabilityRecommendationResponse(BaseModel):

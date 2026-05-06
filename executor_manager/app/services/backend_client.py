@@ -233,12 +233,20 @@ class BackendClient:
         data = response.json()
         return data.get("data", {}) or {}
 
-    async def resolve_mcp_config(self, user_id: str, server_ids: list[int]) -> dict:
+    async def resolve_mcp_config(
+        self,
+        user_id: str,
+        server_ids: list[int],
+        server_overrides: dict[str, bool] | None = None,
+    ) -> dict:
         """Resolve effective MCP config for execution based on selected server ids."""
+        payload: dict[str, object] = {"server_ids": server_ids}
+        if server_overrides is not None:
+            payload["server_overrides"] = server_overrides
         response = await self._request(
             "POST",
             "/api/v1/internal/mcp-config/resolve",
-            json={"server_ids": server_ids},
+            json=payload,
             headers={
                 "X-Internal-Token": self.settings.internal_api_token,
                 "X-User-Id": user_id,
@@ -248,12 +256,20 @@ class BackendClient:
         data = response.json()
         return data.get("data", {}) or {}
 
-    async def resolve_skill_config(self, user_id: str, skill_ids: list[int]) -> dict:
+    async def resolve_skill_config(
+        self,
+        user_id: str,
+        skill_ids: list[int],
+        skill_overrides: dict[str, bool] | None = None,
+    ) -> dict:
         """Resolve effective skill config for execution based on selected skill ids."""
+        payload: dict[str, object] = {"skill_ids": skill_ids}
+        if skill_overrides is not None:
+            payload["skill_overrides"] = skill_overrides
         response = await self._request(
             "POST",
             "/api/v1/internal/skill-config/resolve",
-            json={"skill_ids": skill_ids},
+            json=payload,
             headers={
                 "X-Internal-Token": self.settings.internal_api_token,
                 "X-User-Id": user_id,
@@ -263,12 +279,20 @@ class BackendClient:
         data = response.json()
         return data.get("data", {}) or {}
 
-    async def resolve_plugin_config(self, user_id: str, plugin_ids: list[int]) -> dict:
+    async def resolve_plugin_config(
+        self,
+        user_id: str,
+        plugin_ids: list[int],
+        plugin_overrides: dict[str, bool] | None = None,
+    ) -> dict:
         """Resolve effective plugin config for execution based on selected plugin ids."""
+        payload: dict[str, object] = {"plugin_ids": plugin_ids}
+        if plugin_overrides is not None:
+            payload["plugin_overrides"] = plugin_overrides
         response = await self._request(
             "POST",
             "/api/v1/internal/plugin-config/resolve",
-            json={"plugin_ids": plugin_ids},
+            json=payload,
             headers={
                 "X-Internal-Token": self.settings.internal_api_token,
                 "X-User-Id": user_id,

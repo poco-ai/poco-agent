@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.core.errors.error_codes import ErrorCode
 from app.core.errors.exceptions import AppException
+from app.lifecycle.builtin_skills import SYSTEM_SKILL_OWNER_USER_ID
 from app.models.skill import Skill
 from app.repositories.skill_repository import SkillRepository
 from app.schemas.source import SourceInfo
@@ -48,6 +49,14 @@ class SkillService:
         skills = SkillRepository.list_visible(db, user_id=user_id)
         return [self._to_response(s) for s in skills]
 
+    def list_skills_for_admin(self, db: Session) -> list[SkillResponse]:
+        skills = SkillRepository.list_by_scope_and_owner(
+            db,
+            scope="system",
+            owner_user_id=SYSTEM_SKILL_OWNER_USER_ID,
+        )
+        return [self._to_response(skill) for skill in skills]
+
     def get_skill(self, db: Session, user_id: str, skill_id: int) -> SkillResponse:
         skill = self._get_visible_skill(db, user_id, skill_id)
         return self._to_response(skill)
@@ -59,6 +68,13 @@ class SkillService:
         skill_id: int,
     ) -> list[FileNode]:
         skill = self._get_visible_skill(db, user_id, skill_id)
+        return self._list_skill_files_for_skill(skill)
+
+    def list_skill_files_for_admin(self, db: Session, skill_id: int) -> list[FileNode]:
+        skill = self._get_admin_skill(db, skill_id)
+        return self._list_skill_files_for_skill(skill)
+
+    def _list_skill_files_for_skill(self, skill: Skill) -> list[FileNode]:
         entry = skill.entry if isinstance(skill.entry, dict) else {}
         raw_key = entry.get("s3_key")
         if not isinstance(raw_key, str) or not raw_key.strip():
@@ -74,6 +90,16 @@ class SkillService:
     ) -> SkillResponse:
         name = _validate_skill_name(request.name)
         scope = (request.scope or "user").strip() or "user"
+        if scope == "system" and user_id != SYSTEM_SKILL_OWNER_USER_ID:
+            raise AppException(
+                error_code=ErrorCode.SKILL_MODIFY_FORBIDDEN,
+                message="Cannot create system skills",
+            )
+        if request.admin_disabled is not None and scope != "system":
+            raise AppException(
+                error_code=ErrorCode.BAD_REQUEST,
+                message="admin_disabled is only supported for system skills",
+            )
 
         if SkillRepository.get_by_name(db, name, user_id):
             raise AppException(
@@ -92,6 +118,7 @@ class SkillService:
             source={"kind": "manual"},
             default_enabled=bool(request.default_enabled),
             force_enabled=bool(request.force_enabled),
+            admin_disabled=bool(request.admin_disabled),
         )
 
         SkillRepository.create(db, skill)
@@ -121,6 +148,14 @@ class SkillService:
             raise AppException(
                 error_code=ErrorCode.FORBIDDEN,
                 message="Skill does not belong to the user",
+            )
+        if self._is_builtin_skill(skill) and self._has_builtin_immutable_updates(
+            skill,
+            request,
+        ):
+            raise AppException(
+                error_code=ErrorCode.SKILL_MODIFY_FORBIDDEN,
+                message="Built-in system skills are read-only",
             )
 
         target_name = skill.name
@@ -163,6 +198,13 @@ class SkillService:
             skill.default_enabled = bool(request.default_enabled)
         if request.force_enabled is not None:
             skill.force_enabled = bool(request.force_enabled)
+        if request.admin_disabled is not None:
+            if skill.scope != "system":
+                raise AppException(
+                    error_code=ErrorCode.BAD_REQUEST,
+                    message="admin_disabled is only supported for system skills",
+                )
+            skill.admin_disabled = bool(request.admin_disabled)
 
         db.commit()
         db.refresh(skill)
@@ -185,14 +227,49 @@ class SkillService:
                 error_code=ErrorCode.FORBIDDEN,
                 message="Skill does not belong to the user",
             )
+        if self._is_builtin_skill(skill):
+            raise AppException(
+                error_code=ErrorCode.SKILL_MODIFY_FORBIDDEN,
+                message="Built-in system skills cannot be deleted",
+            )
 
+        self._delete_skill_assets(skill)
         SkillRepository.delete(db, skill)
         db.commit()
 
     @staticmethod
     def _get_visible_skill(db: Session, user_id: str, skill_id: int) -> Skill:
         skill = SkillRepository.get_by_id(db, skill_id)
-        if not skill or (skill.scope != "system" and skill.owner_user_id != user_id):
+        if not skill:
+            raise AppException(
+                error_code=ErrorCode.SKILL_NOT_FOUND,
+                message=f"Skill not found: {skill_id}",
+            )
+        if skill.scope == "system":
+            if (
+                skill.owner_user_id != SYSTEM_SKILL_OWNER_USER_ID
+                or skill.admin_disabled
+            ):
+                raise AppException(
+                    error_code=ErrorCode.SKILL_NOT_FOUND,
+                    message=f"Skill not found: {skill_id}",
+                )
+            return skill
+        if skill.owner_user_id != user_id:
+            raise AppException(
+                error_code=ErrorCode.SKILL_NOT_FOUND,
+                message=f"Skill not found: {skill_id}",
+            )
+        return skill
+
+    @staticmethod
+    def _get_admin_skill(db: Session, skill_id: int) -> Skill:
+        skill = SkillRepository.get_by_id(db, skill_id)
+        if (
+            not skill
+            or skill.scope != "system"
+            or skill.owner_user_id != SYSTEM_SKILL_OWNER_USER_ID
+        ):
             raise AppException(
                 error_code=ErrorCode.SKILL_NOT_FOUND,
                 message=f"Skill not found: {skill_id}",
@@ -290,6 +367,19 @@ class SkillService:
             self.storage_service = S3StorageService()
         return self.storage_service
 
+    def _delete_skill_assets(self, skill: Skill) -> None:
+        entry = skill.entry if isinstance(skill.entry, dict) else {}
+        raw_key = entry.get("s3_key") or entry.get("key")
+        if not isinstance(raw_key, str) or not raw_key.strip():
+            return
+
+        key = raw_key.strip()
+        storage_service = self._storage_service()
+        if self._is_prefix_entry(entry, key):
+            storage_service.delete_prefix(prefix=key.rstrip("/"))
+            return
+        storage_service.delete_object(key=key)
+
     def _version_skill_assets(
         self,
         *,
@@ -379,6 +469,40 @@ class SkillService:
             owner_user_id=skill.owner_user_id,
             default_enabled=bool(skill.default_enabled),
             force_enabled=bool(skill.force_enabled),
+            admin_disabled=bool(skill.admin_disabled),
+            is_builtin=SkillService._is_builtin_skill(skill),
             created_at=skill.created_at,
             updated_at=skill.updated_at,
         )
+
+    @staticmethod
+    def _is_builtin_skill(skill: Skill) -> bool:
+        if skill.scope != "system" or skill.owner_user_id != SYSTEM_SKILL_OWNER_USER_ID:
+            return False
+        if not isinstance(skill.source, dict):
+            return False
+        if skill.source.get("managed_by") == "lifecycle":
+            return True
+        return (
+            skill.source.get("kind") == "system"
+            and isinstance(skill.source.get("asset_dir"), str)
+            and skill.source["asset_dir"].startswith("skills/")
+        )
+
+    @classmethod
+    def _has_builtin_immutable_updates(
+        cls,
+        skill: Skill,
+        request: SkillUpdateRequest,
+    ) -> bool:
+        if not cls._is_builtin_skill(skill):
+            return False
+        if request.entry is not None:
+            return True
+        if request.scope is not None and request.scope.strip() != skill.scope:
+            return True
+        if request.name is not None and request.name.strip() != skill.name:
+            return True
+        if request.description is not None:
+            return (request.description.strip() or None) != skill.description
+        return False

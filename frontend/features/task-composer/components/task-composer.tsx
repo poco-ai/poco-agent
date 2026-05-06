@@ -211,6 +211,16 @@ export function TaskComposer({
     [capabilityToggle],
   );
 
+  const sessionMcpOverrides = React.useMemo(
+    () => toCapabilityToggleConfig(capabilityToggle?.mcpOverrideMap),
+    [capabilityToggle],
+  );
+
+  const sessionSkillOverrides = React.useMemo(
+    () => toCapabilityToggleConfig(capabilityToggle?.skillOverrideMap),
+    [capabilityToggle],
+  );
+
   React.useEffect(() => {
     let active = true;
 
@@ -417,10 +427,12 @@ export function TaskComposer({
       browser_enabled: browserEnabled,
       memory_enabled: memoryFeatureEnabled ? memoryEnabled : false,
       mcp_config:
-        Object.keys(effectiveMcpConfig).length > 0 ? effectiveMcpConfig : null,
+        Object.keys(sessionMcpOverrides).length > 0
+          ? sessionMcpOverrides
+          : null,
       skill_config:
-        Object.keys(effectiveSkillConfig).length > 0
-          ? effectiveSkillConfig
+        Object.keys(sessionSkillOverrides).length > 0
+          ? sessionSkillOverrides
           : null,
       filesystem_mode: localFilesystemDraft.filesystem_mode,
       local_mounts: localFilesystemDraft.local_mounts,
@@ -454,8 +466,6 @@ export function TaskComposer({
   }, [
     allowProjectize,
     browserEnabled,
-    effectiveMcpConfig,
-    effectiveSkillConfig,
     canSubmit,
     gitBranch,
     gitTokenEnvKey,
@@ -478,6 +488,8 @@ export function TaskComposer({
     scheduledName,
     scheduledReuseSession,
     scheduledTimezone,
+    sessionMcpOverrides,
+    sessionSkillOverrides,
     upload,
     value,
     voiceInput.isBusy,
@@ -490,13 +502,16 @@ export function TaskComposer({
         item.type === "mcp"
           ? effectiveMcpConfig[key]
           : effectiveSkillConfig[key];
-      return typeof override === "boolean" ? override : item.default_enabled;
+      return typeof override === "boolean" ? override : item.effective_enabled;
     },
     [effectiveMcpConfig, effectiveSkillConfig],
   );
 
   const handleToggleCapability = React.useCallback(
     (item: CapabilityRecommendation, enabled: boolean) => {
+      if (item.force_enabled && !enabled) {
+        return;
+      }
       const key = String(item.id);
       const currentEnabled =
         item.type === "mcp"
@@ -505,7 +520,7 @@ export function TaskComposer({
       const restoreEnabled =
         typeof currentEnabled === "boolean"
           ? currentEnabled
-          : item.default_enabled;
+          : item.effective_enabled;
 
       if (item.type === "mcp") {
         capabilityToggle?.toggleMcp(item.id, enabled);

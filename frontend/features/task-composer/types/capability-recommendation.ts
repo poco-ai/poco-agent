@@ -7,6 +7,8 @@ export interface CapabilityRecommendation {
   description: string | null;
   score: number;
   default_enabled: boolean;
+  effective_enabled: boolean;
+  force_enabled: boolean;
 }
 
 export interface CapabilityRecommendationsResponse {

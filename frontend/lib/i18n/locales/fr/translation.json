@@ -1967,7 +1967,8 @@
       "runtimeVisibilityDescription": "Contrôle si cette variable peut être injectée automatiquement dans les conteneurs d’exécution des tâches.",
       "runtimeVisibilityNoneHint": "Ne jamais injecter automatiquement dans les conteneurs de tâche.",
       "runtimeVisibilityAdminsOnlyHint": "Injecter uniquement dans les environnements d’exécution lancés par des administrateurs.",
-      "runtimeVisibilityAllUsersHint": "Peut être injectée dans les environnements d’exécution de tous les utilisateurs si la politique globale l’autorise."
+      "runtimeVisibilityAllUsersHint": "Peut être injectée dans les environnements d’exécution de tous les utilisateurs si la politique globale l’autorise.",
+      "policyDisabledForUsers": "Désactivé pour les utilisateurs"
     }
   },
   "validation": {

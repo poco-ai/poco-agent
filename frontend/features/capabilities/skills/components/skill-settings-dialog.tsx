@@ -7,6 +7,7 @@ import {
   Loader2,
   PencilLine,
   Sparkles,
+  Trash2,
   TriangleAlert,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -41,8 +42,10 @@ interface SkillSettingsDialogProps {
     skillId: number,
     input: SkillUpdateInput,
   ) => Promise<Skill | void>;
+  onDeleteSkill?: (skillId: number) => Promise<void> | void;
   allowSystemEdit?: boolean;
   showPolicyControls?: boolean;
+  loadSkillFiles?: (skillId: number) => Promise<FileNode[]>;
 }
 
 function flattenFiles(nodes: FileNode[]): FileNode[] {
@@ -123,8 +126,10 @@ export function SkillSettingsDialog({
   onClose,
   onSaved,
   onSaveSkill,
+  onDeleteSkill,
   allowSystemEdit = false,
   showPolicyControls = false,
+  loadSkillFiles,
 }: SkillSettingsDialogProps) {
   const { t } = useT("translation");
   const [name, setName] = React.useState("");
@@ -134,11 +139,23 @@ export function SkillSettingsDialog({
   const [isLoadingFiles, setIsLoadingFiles] = React.useState(false);
   const [isPreviewVisible, setIsPreviewVisible] = React.useState(false);
   const [isSaving, setIsSaving] = React.useState(false);
+  const [isDeleting, setIsDeleting] = React.useState(false);
   const [saveError, setSaveError] = React.useState<string | null>(null);
   const [defaultEnabled, setDefaultEnabled] = React.useState(false);
   const [forceEnabled, setForceEnabled] = React.useState(false);
+  const [adminDisabled, setAdminDisabled] = React.useState(false);
+  const loadSkillFilesApi = React.useCallback(
+    (skillId: number) =>
+      loadSkillFiles
+        ? loadSkillFiles(skillId)
+        : skillsService.listSkillFiles(skillId),
+    [loadSkillFiles],
+  );
 
-  const isSystemSkill = skill?.scope === "system" && !allowSystemEdit;
+  const isSystemSkill = skill?.scope === "system";
+  const isSystemReadonly = Boolean(isSystemSkill && !allowSystemEdit);
+  const isBuiltinSkill = Boolean(skill?.is_builtin);
+  const isMetadataReadonly = isSystemReadonly || isBuiltinSkill;
   const trimmedName = name.trim();
   const trimmedDescription = description.trim();
   const storagePath = getEntryS3Key(skill);
@@ -165,9 +182,11 @@ export function SkillSettingsDialog({
       trimmedDescription !== (skill.description ?? "") ||
       (showPolicyControls &&
         (defaultEnabled !== skill.default_enabled ||
-          forceEnabled !== skill.force_enabled))
+          forceEnabled !== skill.force_enabled ||
+          adminDisabled !== skill.admin_disabled))
     );
   }, [
+    adminDisabled,
     defaultEnabled,
     forceEnabled,
     showPolicyControls,
@@ -184,14 +203,12 @@ export function SkillSettingsDialog({
         return [];
       }
 
-      const nextFiles = await skillsService.listSkillFiles(skill.id, {
-        revalidate: 0,
-      });
+      const nextFiles = await loadSkillFilesApi(skill.id);
       setFiles(nextFiles);
       setSelectedFile(findPreferredFile(nextFiles, preferredPath));
       return nextFiles;
     },
-    [skill],
+    [loadSkillFilesApi, skill],
   );
 
   React.useEffect(() => {
@@ -206,6 +223,7 @@ export function SkillSettingsDialog({
     setDescription(skill.description ?? "");
     setDefaultEnabled(skill.default_enabled);
     setForceEnabled(skill.force_enabled);
+    setAdminDisabled(skill.admin_disabled);
     setSaveError(null);
     setIsSaving(false);
     setIsPreviewVisible(false);
@@ -224,9 +242,7 @@ export function SkillSettingsDialog({
     const loadFiles = async () => {
       try {
         setIsLoadingFiles(true);
-        const nextFiles = await skillsService.listSkillFiles(skill.id, {
-          revalidate: 0,
-        });
+        const nextFiles = await loadSkillFilesApi(skill.id);
         if (cancelled) {
           return;
         }
@@ -253,7 +269,7 @@ export function SkillSettingsDialog({
     return () => {
       cancelled = true;
     };
-  }, [open, skill]);
+  }, [loadSkillFilesApi, open, skill]);
 
   React.useEffect(() => {
     if (!isPreviewVisible) {
@@ -273,7 +289,7 @@ export function SkillSettingsDialog({
   const handleSave = async () => {
     if (
       !skill ||
-      isSystemSkill ||
+      isSystemReadonly ||
       !trimmedName ||
       nameConflict ||
       !hasChanges
@@ -286,19 +302,27 @@ export function SkillSettingsDialog({
     try {
       const saveSkill = onSaveSkill ?? skillsService.updateSkill;
       const updated = await saveSkill(skill.id, {
-        name: trimmedName,
-        description: trimmedDescription || null,
+        name: isMetadataReadonly ? skill.name : trimmedName,
+        description: isMetadataReadonly
+          ? skill.description
+          : trimmedDescription || null,
         default_enabled: showPolicyControls ? defaultEnabled : undefined,
         force_enabled: showPolicyControls ? forceEnabled : undefined,
+        admin_disabled: showPolicyControls ? adminDisabled : undefined,
       });
       const nextSkill = updated ?? {
         ...skill,
-        name: trimmedName,
-        description: trimmedDescription || null,
+        name: isMetadataReadonly ? skill.name : trimmedName,
+        description: isMetadataReadonly
+          ? skill.description
+          : trimmedDescription || null,
         default_enabled: showPolicyControls
           ? defaultEnabled
           : skill.default_enabled,
         force_enabled: showPolicyControls ? forceEnabled : skill.force_enabled,
+        admin_disabled: showPolicyControls
+          ? adminDisabled
+          : skill.admin_disabled,
       };
       toast.success(t("library.skillSettings.toasts.saved"));
       await onSaved?.(nextSkill);
@@ -313,6 +337,30 @@ export function SkillSettingsDialog({
       toast.error(message);
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!skill || !onDeleteSkill || isSaving || isDeleting) {
+      return;
+    }
+
+    setSaveError(null);
+    setIsDeleting(true);
+    try {
+      await onDeleteSkill(skill.id);
+      toast.success(t("common.deleted"));
+      onClose();
+    } catch (error) {
+      console.error("[SkillSettingsDialog] Failed to delete skill", error);
+      const message =
+        error instanceof ApiError && error.message.trim()
+          ? error.message
+          : t("library.skillSettings.toasts.saveFailed");
+      setSaveError(message);
+      toast.error(message);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -369,6 +417,11 @@ export function SkillSettingsDialog({
                   <Badge variant="secondary" className="text-xs">
                     {getSourceLabel(skill, t)}
                   </Badge>
+                  {skill.admin_disabled ? (
+                    <Badge variant="outline" className="text-xs">
+                      {t("common.disabled")}
+                    </Badge>
+                  ) : null}
                 </div>
               </div>
             </div>
@@ -425,7 +478,7 @@ export function SkillSettingsDialog({
                     </Label>
                     <Input
                       value={name}
-                      disabled={isSystemSkill || isSaving}
+                      disabled={isMetadataReadonly || isSaving}
                       onChange={(event) => {
                         setName(event.target.value);
                         if (saveError) {
@@ -443,7 +496,7 @@ export function SkillSettingsDialog({
                     </div>
                     <Textarea
                       value={description}
-                      disabled={isSystemSkill || isSaving}
+                      disabled={isMetadataReadonly || isSaving}
                       onChange={(event) => {
                         setDescription(event.target.value);
                         if (saveError) {
@@ -468,7 +521,7 @@ export function SkillSettingsDialog({
                     </code>
                   </div>
 
-                  {isSystemSkill ? (
+                  {isMetadataReadonly ? (
                     <div className="rounded-md border border-border/60 bg-muted/20 px-3 py-2 text-sm text-muted-foreground">
                       {t("library.skillSettings.readonlyHint")}
                     </div>
@@ -484,7 +537,7 @@ export function SkillSettingsDialog({
                   ) : null}
 
                   {showPolicyControls ? (
-                    <div className="grid gap-3 md:grid-cols-2">
+                    <div className="grid gap-3 md:grid-cols-3">
                       <div className="space-y-2">
                         <Label>
                           {t("settings.admin.policyDefaultEnabled")}
@@ -505,6 +558,17 @@ export function SkillSettingsDialog({
                           />
                         </div>
                       </div>
+                      <div className="space-y-2">
+                        <Label>
+                          {t("settings.admin.policyDisabledForUsers")}
+                        </Label>
+                        <div className="flex items-center gap-3 rounded-md border border-border px-3 py-2">
+                          <Switch
+                            checked={adminDisabled}
+                            onCheckedChange={setAdminDisabled}
+                          />
+                        </div>
+                      </div>
                     </div>
                   ) : null}
 
@@ -519,13 +583,34 @@ export function SkillSettingsDialog({
           </div>
 
           <div className="mt-4 flex items-center justify-end gap-2">
+            {onDeleteSkill && !skill.is_builtin ? (
+              <Button
+                variant="destructive"
+                disabled={isSaving || isDeleting}
+                onClick={handleDelete}
+                className="mr-auto"
+              >
+                {isDeleting ? (
+                  <>
+                    <Loader2 className="mr-2 size-4 animate-spin" />
+                    {t("common.deleting")}
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="mr-2 size-4" />
+                    {t("common.delete")}
+                  </>
+                )}
+              </Button>
+            ) : null}
             <Button variant="outline" disabled={isSaving} onClick={onClose}>
               {t("common.cancel")}
             </Button>
             <Button
               disabled={
                 isSaving ||
-                isSystemSkill ||
+                isDeleting ||
+                isSystemReadonly ||
                 !trimmedName ||
                 nameConflict ||
                 !hasChanges

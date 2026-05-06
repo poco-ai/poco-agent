@@ -165,6 +165,7 @@ class SkillBootstrapService:
                 owner_user_id=SYSTEM_SKILL_OWNER_USER_ID,
                 entry=dict(bundle.entry),
                 source=dict(bundle.source),
+                admin_disabled=False,
             )
             SkillRepository.create(db, skill)
             db.flush()

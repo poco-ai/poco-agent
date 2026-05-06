@@ -2036,7 +2036,8 @@
       "runtimeVisibilityAdminsOnlyHint": "Only tasks launched by system admins can read it.",
       "runtimeVisibilityAllUsers": "All users",
       "runtimeVisibilityAllUsersHint": "Make it available to every user's task runtime.",
-      "runtimeVisibilityProtectedWarning": "This key matches a protected runtime key/prefix. The visibility setting can be saved, but automatic runtime injection will still be blocked."
+      "runtimeVisibilityProtectedWarning": "This key matches a protected runtime key/prefix. The visibility setting can be saved, but automatic runtime injection will still be blocked.",
+      "policyDisabledForUsers": "Disabled for users"
     }
   },
   "validation": {

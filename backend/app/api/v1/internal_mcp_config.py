@@ -24,6 +24,9 @@ async def resolve_mcp_config(
 ) -> JSONResponse:
     """Resolve effective MCP config for execution based on selected server ids."""
     resolved = service.resolve_user_mcp_config(
-        db=db, user_id=user_id, server_ids=request.server_ids
+        db=db,
+        user_id=user_id,
+        server_ids=request.server_ids,
+        server_overrides=request.server_overrides,
     )
     return Response.success(data=resolved, message="MCP config resolved")

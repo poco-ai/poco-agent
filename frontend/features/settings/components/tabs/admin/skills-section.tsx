@@ -118,6 +118,10 @@ export function AdminSkillsSection({
         open={selectedSkill !== null}
         onClose={() => setSelectedSkillId(null)}
         onSaveSkill={onUpdate}
+        loadSkillFiles={adminApi.listSystemSkillFiles}
+        onDeleteSkill={async (skillId) => {
+          await onDelete(skillId);
+        }}
         allowSystemEdit
         showPolicyControls
       />

@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session
 
 from app.repositories.plugin_repository import PluginRepository
 from app.repositories.user_plugin_install_repository import UserPluginInstallRepository
+from app.services.capability_policy import normalize_override_map
 
 
 class PluginConfigService:
@@ -12,12 +13,14 @@ class PluginConfigService:
         db: Session,
         user_id: str,
         plugin_ids: list[int],
+        plugin_overrides: dict[str, bool] | None = None,
     ) -> dict:
         """Resolve plugins for a user given selected plugin ids.
 
         Returns a dict compatible with executor_manager PluginStager:
         {plugin_name: {"enabled": True, "entry": {...}, "manifest": {...}}, ...}
         """
+        normalized_overrides = normalize_override_map(plugin_overrides)
         installs = UserPluginInstallRepository.list_by_user(db, user_id)
         installs_by_plugin_id = {install.plugin_id: install for install in installs}
 
@@ -34,12 +37,13 @@ class PluginConfigService:
             plugin = PluginRepository.get_by_id(db, plugin_id)
             if not plugin or not isinstance(plugin.entry, dict):
                 continue
-            install = installs_by_plugin_id.get(plugin_id)
-            is_enabled = bool(plugin.force_enabled) or bool(
-                install.enabled if install is not None else plugin.default_enabled
-            )
-            if not is_enabled:
-                continue
+            if normalized_overrides is None:
+                install = installs_by_plugin_id.get(plugin_id)
+                is_enabled = bool(plugin.force_enabled) or bool(
+                    install.enabled if install is not None else plugin.default_enabled
+                )
+                if not is_enabled:
+                    continue
 
             existing = selected.get(plugin.name)
             if existing is None:
@@ -62,6 +66,33 @@ class PluginConfigService:
                 )
 
         requested_ids = set(ordered_ids)
+        if normalized_overrides is not None:
+            for plugin in PluginRepository.list_visible(db, user_id=user_id):
+                if plugin.scope != "system" or not isinstance(plugin.entry, dict):
+                    continue
+                if plugin.id in requested_ids or not plugin.force_enabled:
+                    continue
+                selected.setdefault(
+                    plugin.name,
+                    (
+                        plugin.scope,
+                        plugin.entry,
+                        plugin.manifest,
+                        plugin.version,
+                        plugin.description,
+                    ),
+                )
+            return {
+                name: {
+                    "enabled": True,
+                    "entry": entry,
+                    "manifest": manifest,
+                    "version": version,
+                    "description": description,
+                }
+                for name, (_, entry, manifest, version, description) in selected.items()
+            }
+
         for plugin in PluginRepository.list_visible(db, user_id=user_id):
             if plugin.scope != "system" or not isinstance(plugin.entry, dict):
                 continue

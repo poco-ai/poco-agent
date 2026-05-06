@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session
 
 from app.repositories.skill_repository import SkillRepository
 from app.repositories.user_skill_install_repository import UserSkillInstallRepository
+from app.services.capability_policy import normalize_override_map
 
 
 class SkillConfigService:
@@ -12,12 +13,14 @@ class SkillConfigService:
         db: Session,
         user_id: str,
         skill_ids: list[int],
+        skill_overrides: dict[str, bool] | None = None,
     ) -> dict:
         """Resolve skills for a user given selected skill ids.
 
         Returns a dict compatible with executor_manager SkillStager:
         {skill_name: {"enabled": True, "entry": {...}}, ...}
         """
+        normalized_overrides = normalize_override_map(skill_overrides)
         installs = UserSkillInstallRepository.list_by_user(db, user_id)
         installs_by_skill_id = {install.skill_id: install for install in installs}
 
@@ -35,13 +38,8 @@ class SkillConfigService:
             skill = SkillRepository.get_by_id(db, skill_id)
             if not skill or not isinstance(skill.entry, dict):
                 continue
-            install = installs_by_skill_id.get(skill_id)
-            is_enabled = bool(skill.force_enabled) or bool(
-                install.enabled if install is not None else skill.default_enabled
-            )
-            if not is_enabled:
+            if skill.scope == "system" and skill.admin_disabled:
                 continue
-
             # If both user and system skills share the same name, prefer the user one.
             existing = selected.get(skill.name)
             if existing is None:
@@ -50,6 +48,18 @@ class SkillConfigService:
             existing_scope, _ = existing
             if existing_scope != "user" and skill.scope == "user":
                 selected[skill.name] = (skill.scope, skill.entry)
+
+        if normalized_overrides is not None:
+            for skill in SkillRepository.list_visible(db, user_id=user_id):
+                if skill.scope != "system" or not isinstance(skill.entry, dict):
+                    continue
+                if not skill.force_enabled or skill.id in seen:
+                    continue
+                selected.setdefault(skill.name, (skill.scope, skill.entry))
+            return {
+                name: {"enabled": True, "entry": entry}
+                for name, (_, entry) in selected.items()
+            }
 
         for skill in SkillRepository.list_visible(db, user_id=user_id):
             if skill.scope != "system" or not isinstance(skill.entry, dict):

@@ -438,16 +438,23 @@ class ConfigResolver:
         3) legacy config_snapshot.mcp_config already contains full server configs
         """
         server_ids = self._normalize_ids(config_snapshot.get("mcp_server_ids"))
-        if server_ids:
+        server_overrides = self._normalize_bool_map(
+            config_snapshot.get("mcp_overrides")
+        )
+        if "mcp_server_ids" in config_snapshot or server_overrides is not None:
             return await self.backend_client.resolve_mcp_config(
-                user_id=user_id, server_ids=server_ids
+                user_id=user_id,
+                server_ids=server_ids,
+                server_overrides=server_overrides,
             )
 
         mcp_config = config_snapshot.get("mcp_config")
         toggle_ids = self._extract_enabled_ids_from_toggles(mcp_config)
         if toggle_ids is not None:
             return await self.backend_client.resolve_mcp_config(
-                user_id=user_id, server_ids=toggle_ids
+                user_id=user_id,
+                server_ids=toggle_ids,
+                server_overrides=self._normalize_bool_map(mcp_config),
             )
 
         return mcp_config if isinstance(mcp_config, dict) else {}
@@ -463,8 +470,13 @@ class ConfigResolver:
         """
         if "skill_ids" in config_snapshot:
             skill_ids = self._normalize_ids(config_snapshot.get("skill_ids"))
+            skill_overrides = self._normalize_bool_map(
+                config_snapshot.get("skill_overrides")
+            )
             return await self.backend_client.resolve_skill_config(
-                user_id=user_id, skill_ids=skill_ids
+                user_id=user_id,
+                skill_ids=skill_ids,
+                skill_overrides=skill_overrides,
             )
 
         legacy = config_snapshot.get("skill_files")
@@ -480,9 +492,14 @@ class ConfigResolver:
         2) legacy config_snapshot.plugin_files already contains entry configs
         """
         plugin_ids = self._normalize_ids(config_snapshot.get("plugin_ids"))
-        if plugin_ids:
+        plugin_overrides = self._normalize_bool_map(
+            config_snapshot.get("plugin_overrides")
+        )
+        if "plugin_ids" in config_snapshot or plugin_overrides is not None:
             return await self.backend_client.resolve_plugin_config(
-                user_id=user_id, plugin_ids=plugin_ids
+                user_id=user_id,
+                plugin_ids=plugin_ids,
+                plugin_overrides=plugin_overrides,
             )
 
         legacy = config_snapshot.get("plugin_files")
@@ -589,6 +606,21 @@ class ConfigResolver:
             seen.add(sid)
             ids.append(sid)
         return ids
+
+    @staticmethod
+    def _normalize_bool_map(value: Any) -> dict[str, bool] | None:
+        if not isinstance(value, dict):
+            return None
+        normalized: dict[str, bool] = {}
+        for key, enabled in value.items():
+            if not isinstance(enabled, bool):
+                continue
+            if isinstance(key, int):
+                normalized[str(key)] = enabled
+                continue
+            if isinstance(key, str) and key.strip():
+                normalized[key.strip()] = enabled
+        return normalized
 
     @staticmethod
     def _resolve_mcp(mcp_config: dict, env_map: dict[str, str]) -> dict:
