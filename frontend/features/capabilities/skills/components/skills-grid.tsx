@@ -19,6 +19,10 @@ import type {
   UserSkillInstall,
 } from "@/features/capabilities/skills/types";
 import { getEffectiveInstallState } from "@/features/capabilities/lib/install-policy";
+import {
+  countsTowardRecommendedSkillLimit,
+  RECOMMENDED_USER_SKILL_LIMIT,
+} from "@/features/capabilities/skills/lib/runtime-policy";
 import type { SourceInfo } from "@/features/capabilities/types/source";
 import { formatSourceLabel } from "@/features/capabilities/utils/source";
 import { useT } from "@/lib/i18n/client";
@@ -26,7 +30,7 @@ import { cn } from "@/lib/utils";
 import { CapabilityCreateCard } from "@/features/capabilities/components/capability-create-card";
 import { CapabilitySourceAvatar } from "@/features/capabilities/components/capability-source-avatar";
 
-const SKILL_LIMIT = 5;
+const SKILL_LIMIT = RECOMMENDED_USER_SKILL_LIMIT;
 
 interface SkillsGridProps {
   skills: Skill[];
@@ -214,6 +218,22 @@ export function SkillsGrid({
   const enabledCount = React.useMemo(
     () =>
       skills.reduce((count, skill) => {
+        if (skill.admin_disabled) {
+          return count;
+        }
+        const install = installBySkillId.get(skill.id);
+        return (
+          count + (getEffectiveInstallState(skill, install).isEnabled ? 1 : 0)
+        );
+      }, 0),
+    [installBySkillId, skills],
+  );
+  const enabledRecommendedCount = React.useMemo(
+    () =>
+      skills.reduce((count, skill) => {
+        if (!countsTowardRecommendedSkillLimit(skill)) {
+          return count;
+        }
         const install = installBySkillId.get(skill.id);
         return (
           count + (getEffectiveInstallState(skill, install).isEnabled ? 1 : 0)
@@ -225,7 +245,8 @@ export function SkillsGrid({
   function SkillRow({ skill }: { skill: Skill }) {
     const [isHovered, setIsHovered] = React.useState(false);
     const install = installBySkillId.get(skill.id);
-    const isBuiltin = skill.scope === "system";
+    const isBuiltin = skill.is_builtin;
+    const isSystemSkill = skill.scope === "system";
     const isAgentCreated =
       skill.scope === "user" && skill.source?.kind === "skill-creator";
     const isMarketplace = skill.source?.kind === "marketplace";
@@ -233,12 +254,14 @@ export function SkillsGrid({
       ? t("library.skillsManager.sections.system")
       : isMarketplace
         ? t("library.sources.marketplace")
-        : t("library.skillsManager.sections.custom");
+        : isSystemSkill
+          ? t("library.skillsManager.sections.system")
+          : t("library.skillsManager.sections.custom");
     const installState = getEffectiveInstallState(skill, install);
     const isInstalled = installState.isInstalled;
     const isRowLoading =
       isLoading || loadingId === skill.id || loadingId === install?.id;
-    const showDeleteAction = isHovered;
+    const showDeleteAction = isHovered || displayMode === "admin";
 
     return (
       <div className="min-h-[64px]">
@@ -282,6 +305,11 @@ export function SkillsGrid({
                   {t("common.forced")}
                 </Badge>
               ) : null}
+              {skill.admin_disabled ? (
+                <Badge variant="outline" className="text-xs">
+                  {t("common.disabled")}
+                </Badge>
+              ) : null}
               {isAgentCreated && (
                 <Badge variant="secondary" className="text-xs">
                   {t("library.skillsManager.source.skillCreator")}
@@ -295,7 +323,10 @@ export function SkillsGrid({
             ) : null}
           </div>
 
-          {displayMode === "admin" && isBuiltin && onDeleteSkill ? (
+          {displayMode === "admin" &&
+          isSystemSkill &&
+          onDeleteSkill &&
+          !isBuiltin ? (
             <div className="flex items-center gap-2">
               <Button
                 variant="ghost"
@@ -472,11 +503,14 @@ export function SkillsGrid({
   return (
     <div className="space-y-6">
       {/* Warning alert */}
-      {enabledCount > SKILL_LIMIT && (
+      {enabledRecommendedCount > SKILL_LIMIT && (
         <Alert className="border-amber-500/50 bg-amber-500/10 text-amber-600 dark:text-amber-500 [&>svg]:text-amber-600 dark:[&>svg]:text-amber-500 *:data-[slot=alert-description]:text-amber-600/90 dark:*:data-[slot=alert-description]:text-amber-500/90">
           <AlertTriangle className="size-4" />
           <AlertDescription>
-            {t("hero.warnings.tooManySkills", { count: enabledCount })}
+            {t("hero.warnings.tooManySkills", {
+              count: enabledRecommendedCount,
+              limit: SKILL_LIMIT,
+            })}
           </AlertDescription>
         </Alert>
       )}
@@ -485,6 +519,12 @@ export function SkillsGrid({
       <div className="rounded-xl bg-muted/50 px-5 py-3 flex flex-wrap items-center gap-3 md:flex-nowrap md:justify-between">
         <span className="text-sm text-muted-foreground">
           {t("library.skillsManager.stats.enabled")}: {enabledCount}
+          <span className="ml-2 text-xs text-muted-foreground/80">
+            {t("library.skillsManager.stats.recommendedEnabled", {
+              count: enabledRecommendedCount,
+              limit: SKILL_LIMIT,
+            })}
+          </span>
         </span>
         <div className="flex flex-1 flex-nowrap items-center justify-end gap-2 overflow-x-auto">
           {enabledCount > 0 && (

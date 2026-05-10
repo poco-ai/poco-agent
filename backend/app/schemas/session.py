@@ -35,6 +35,9 @@ class TaskConfig(BaseModel):
     mcp_config: dict[str, bool] = Field(default_factory=dict)
     skill_config: dict[str, bool] = Field(default_factory=dict)
     plugin_config: dict[str, bool] = Field(default_factory=dict)
+    mcp_overrides: dict[str, bool] = Field(default_factory=dict)
+    skill_overrides: dict[str, bool] = Field(default_factory=dict)
+    plugin_overrides: dict[str, bool] = Field(default_factory=dict)
     subagent_ids: list[int] = Field(default_factory=list)
     subagent_configs: list[TaskSubAgentConfig] = Field(default_factory=list)
     container_mode: Literal["ephemeral", "persistent"] = "ephemeral"

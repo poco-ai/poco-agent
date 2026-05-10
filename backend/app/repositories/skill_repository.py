@@ -84,6 +84,7 @@ class SkillRepository:
                 ),
                 and_(
                     Skill.scope == "system",
+                    Skill.admin_disabled.is_(False),
                     ~Skill.name.in_(user_skill_names),
                 ),
             )

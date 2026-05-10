@@ -871,9 +871,9 @@
     },
     "warnings": {
       "tooManyMcps": "Too many MCP servers enabled ({{count}}). This may slow down system loading and reduce performance.",
-      "tooManySkills": "Too many skills enabled ({{count}}). This may slow down system loading and reduce performance.",
+      "tooManySkills": "Too many user-enabled skills ({{count}}, recommended no more than {{limit}}). This may slow down system loading and reduce performance. Built-in system skills do not count toward this recommendation.",
       "mcpLimitReached": "Enabling this MCP will exceed the recommended limit (3 servers). Too many MCPs may slow down system loading.",
-      "skillLimitReached": "Enabling this skill will exceed the recommended limit (5 skills). Too many skills may slow down system loading."
+      "skillLimitReached": "Enabling this skill will bring user-enabled skills to {{count}}, above the recommended limit ({{limit}}). Built-in system skills do not count toward this recommendation."
     }
   },
   "prompts": {
@@ -1797,7 +1797,8 @@
       "stats": {
         "available": "Available",
         "installed": "Installed",
-        "enabled": "Enabled"
+        "enabled": "Enabled",
+        "recommendedEnabled": "User-enabled {{count}} / recommended {{limit}}"
       },
       "section": {
         "title": "Skills"
@@ -2386,7 +2387,8 @@
     "enabled": "Enabled",
     "disabled": "Disabled",
     "default": "Default",
-    "forced": "Forced"
+    "forced": "Forced",
+    "deleting": "Deleting..."
   },
   "pagination": {
     "previous": "Previous",
@@ -2715,7 +2717,8 @@
       "runtimeVisibilityAdminsOnlyHint": "Only tasks launched by system admins can read it.",
       "runtimeVisibilityAllUsers": "All users",
       "runtimeVisibilityAllUsersHint": "Make it available to every user's task runtime.",
-      "runtimeVisibilityProtectedWarning": "This key matches a protected runtime key/prefix. The visibility setting can be saved, but automatic runtime injection will still be blocked."
+      "runtimeVisibilityProtectedWarning": "This key matches a protected runtime key/prefix. The visibility setting can be saved, but automatic runtime injection will still be blocked.",
+      "policyDisabledForUsers": "Disabled for users"
     }
   },
   "validation": {

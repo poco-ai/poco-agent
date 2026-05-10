@@ -279,6 +279,7 @@ export const API_ENDPOINTS = {
   adminModelConfig: "/admin/model-config",
   adminSkills: "/admin/skills",
   adminSkill: (skillId: number) => `/admin/skills/${skillId}`,
+  adminSkillFiles: (skillId: number) => `/admin/skills/${skillId}/files`,
   adminSkillImportDiscover: "/admin/skills/import/discover",
   adminSkillImportCommit: "/admin/skills/import/commit",
   adminSkillImportJob: (jobId: string) => `/admin/skills/import/jobs/${jobId}`,

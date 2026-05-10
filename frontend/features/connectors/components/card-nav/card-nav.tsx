@@ -5,6 +5,10 @@ import { useRouter } from "next/navigation";
 import { Plug, Server, Sparkles, X } from "lucide-react";
 import { mcpService } from "@/features/capabilities/mcp/api/mcp-api";
 import { skillsService } from "@/features/capabilities/skills/api/skills-api";
+import {
+  countsTowardRecommendedSkillLimit,
+  RECOMMENDED_USER_SKILL_LIMIT,
+} from "@/features/capabilities/skills/lib/runtime-policy";
 import { pluginsService } from "@/features/capabilities/plugins/api/plugins-api";
 import type { McpServer } from "@/features/capabilities/mcp/types";
 import type { Skill } from "@/features/capabilities/skills/types";
@@ -20,6 +24,11 @@ import {
   getStartupPreloadValue,
   hasStartupPreloadValue,
 } from "@/lib/startup-preload";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { useCapabilityToggle } from "@/features/connectors";
 import {
@@ -28,7 +37,7 @@ import {
 } from "./connect-tools-dialog";
 
 const MCP_LIMIT = 3;
-const SKILL_LIMIT = 5;
+const SKILL_LIMIT = RECOMMENDED_USER_SKILL_LIMIT;
 
 type CapabilityViewId = "mcp" | "skills" | "plugins";
 
@@ -47,10 +56,11 @@ interface InstalledItem {
   toggleId: number;
 }
 
-interface PreviewItem {
-  id: string;
-  name: string;
-  type: "mcp" | "skill" | "plugin";
+interface EnabledCapabilitySection {
+  key: CapabilityViewId;
+  label: string;
+  count: number;
+  items: string[];
 }
 
 /**
@@ -208,6 +218,18 @@ export function CardNav({
     return items;
   }, [capabilityToggle?.skillEnabledMap, skills, t]);
 
+  const enabledUserSkillCount = useMemo(() => {
+    const effectiveSkillEnabledMap = capabilityToggle?.skillEnabledMap ?? {};
+
+    return skills.reduce((count, skill) => {
+      if (!countsTowardRecommendedSkillLimit(skill)) {
+        return count;
+      }
+
+      return count + (effectiveSkillEnabledMap[skill.id] ? 1 : 0);
+    }, 0);
+  }, [capabilityToggle?.skillEnabledMap, skills]);
+
   // Get all installed Plugins
   const installedPlugins: InstalledItem[] = pluginInstalls.map((install) => {
     const plugin = plugins.find((p) => p.id === install.plugin_id);
@@ -257,14 +279,25 @@ export function CardNav({
     (skillId: number, currentEnabled: boolean) => {
       if (!capabilityToggle) return;
       const newEnabled = !currentEnabled;
+      const targetSkill = skills.find((item) => item.id === skillId);
+      const countsTowardLimit = countsTowardRecommendedSkillLimit(targetSkill);
+      const nextEnabledUserSkillCount =
+        newEnabled && countsTowardLimit
+          ? enabledUserSkillCount + 1
+          : enabledUserSkillCount;
 
-      // Check if enabling would exceed the limit
-      const currentEnabledCount = installedSkills.filter(
-        (i) => i.enabled,
-      ).length;
-      if (newEnabled && currentEnabledCount >= SKILL_LIMIT) {
-        toast.warning(t("hero.warnings.skillLimitReached"));
-        return;
+      // Warn when enabling would exceed the recommended user-skill limit.
+      if (
+        newEnabled &&
+        countsTowardLimit &&
+        nextEnabledUserSkillCount > SKILL_LIMIT
+      ) {
+        toast.warning(
+          t("hero.warnings.skillLimitReached", {
+            count: nextEnabledUserSkillCount,
+            limit: SKILL_LIMIT,
+          }),
+        );
       }
 
       capabilityToggle.toggleSkill(skillId, newEnabled);
@@ -272,18 +305,8 @@ export function CardNav({
       if (newEnabled) {
         playInstallSound();
       }
-
-      // Check if we've exceeded the limit after enabling
-      const newEnabledCount = newEnabled
-        ? currentEnabledCount + 1
-        : currentEnabledCount;
-      if (newEnabledCount > SKILL_LIMIT) {
-        toast.warning(
-          t("hero.warnings.tooManySkills", { count: newEnabledCount }),
-        );
-      }
     },
-    [capabilityToggle, installedSkills, t],
+    [capabilityToggle, enabledUserSkillCount, skills, t],
   );
 
   // Toggle Plugin enabled state (local only, no API call)
@@ -337,9 +360,12 @@ export function CardNav({
   const handleWarningClick = useCallback(
     (type: "mcp" | "skill", count: number) => {
       toast.warning(
-        t(`hero.warnings.tooMany${type === "mcp" ? "Mcps" : "Skills"}`, {
-          count,
-        }),
+        type === "mcp"
+          ? t("hero.warnings.tooManyMcps", { count })
+          : t("hero.warnings.tooManySkills", {
+              count,
+              limit: SKILL_LIMIT,
+            }),
       );
     },
     [t],
@@ -386,41 +412,60 @@ export function CardNav({
   const skillEnabledCount = countEnabled(installedSkills);
   const pluginEnabledCount = countEnabled(installedPlugins);
 
-  const previewItems = useMemo<PreviewItem[]>(() => {
-    const enabledItems: PreviewItem[] = [
-      ...installedMcps
-        .filter((item) => item.enabled)
-        .map((item) => ({
-          id: `mcp-${item.id}`,
-          name: item.name,
-          type: "mcp" as const,
-        })),
-      ...installedSkills
-        .filter((item) => item.enabled)
-        .map((item) => ({
-          id: `skill-${item.id}`,
-          name: item.name,
-          type: "skill" as const,
-        })),
-      ...installedPlugins
-        .filter((item) => item.enabled)
-        .map((item) => ({
-          id: `plugin-${item.id}`,
-          name: item.name,
-          type: "plugin" as const,
-        })),
+  const enabledCapabilityCount =
+    mcpEnabledCount + skillEnabledCount + pluginEnabledCount;
+
+  const enabledSections = useMemo<EnabledCapabilitySection[]>(() => {
+    const sections: EnabledCapabilitySection[] = [
+      {
+        key: "mcp",
+        label: t("cardNav.mcp"),
+        count: mcpEnabledCount,
+        items: installedMcps
+          .filter((item) => item.enabled)
+          .map((item) => item.name),
+      },
+      {
+        key: "skills",
+        label: t("cardNav.skills"),
+        count: skillEnabledCount,
+        items: installedSkills
+          .filter((item) => item.enabled)
+          .map((item) => item.name),
+      },
+      {
+        key: "plugins",
+        label: t("cardNav.plugins"),
+        count: pluginEnabledCount,
+        items: installedPlugins
+          .filter((item) => item.enabled)
+          .map((item) => item.name),
+      },
     ];
 
-    return enabledItems.slice(0, 6);
-  }, [installedMcps, installedPlugins, installedSkills]);
+    return sections.filter((section) => section.count > 0);
+  }, [
+    installedMcps,
+    installedPlugins,
+    installedSkills,
+    mcpEnabledCount,
+    pluginEnabledCount,
+    skillEnabledCount,
+    t,
+  ]);
 
-  const hiddenPreviewCount = Math.max(
-    mcpEnabledCount +
-      skillEnabledCount +
-      pluginEnabledCount -
-      previewItems.length,
-    0,
-  );
+  const enabledSummary = useMemo(() => {
+    if (enabledCapabilityCount === 0) {
+      return "";
+    }
+
+    const segments = [
+      `${t("connectors.enabled")} ${enabledCapabilityCount}`,
+      ...enabledSections.map((section) => `${section.label} ${section.count}`),
+    ];
+
+    return segments.join(" · ");
+  }, [enabledCapabilityCount, enabledSections, t]);
 
   const handleDismiss = useCallback(() => {
     onDismiss?.();
@@ -446,8 +491,9 @@ export function CardNav({
         emptyText: t("cardNav.noSkillsInstalled"),
         onToggle: toggleSkillEnabled,
         onNavigate: () => handleCardClick("skills"),
-        showWarning: skillEnabledCount > SKILL_LIMIT,
-        onWarningClick: () => handleWarningClick("skill", skillEnabledCount),
+        showWarning: enabledUserSkillCount > SKILL_LIMIT,
+        onWarningClick: () =>
+          handleWarningClick("skill", enabledUserSkillCount),
       },
       {
         icon: Plug,
@@ -468,8 +514,8 @@ export function CardNav({
       togglePluginEnabled,
       handleCardClick,
       handleWarningClick,
+      enabledUserSkillCount,
       mcpEnabledCount,
-      skillEnabledCount,
     ],
   );
 
@@ -512,30 +558,49 @@ export function CardNav({
             </span>
           </div>
 
-          <div className="flex items-center gap-1.5">
-            {previewItems.map((item) => {
-              const Icon =
-                item.type === "mcp"
-                  ? Server
-                  : item.type === "skill"
-                    ? Sparkles
-                    : Plug;
-
-              return (
-                <span
-                  key={item.id}
-                  title={item.name}
-                  className="inline-flex size-7 items-center justify-center rounded-full border border-border/60 bg-muted/40 text-muted-foreground"
+          <div className="flex min-w-0 flex-1 items-center justify-end gap-1.5">
+            {enabledSummary ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="max-w-[280px] truncate text-xs text-muted-foreground transition-colors duration-300 group-hover:text-foreground/80 sm:max-w-[360px]">
+                    {enabledSummary}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent
+                  side="top"
+                  sideOffset={10}
+                  className="w-[min(26rem,calc(100vw-2rem))] rounded-xl border border-border/80 bg-popover/98 p-0 text-popover-foreground shadow-xl shadow-black/10 backdrop-blur-sm dark:shadow-black/40"
                 >
-                  <Icon className="size-3.5" />
-                </span>
-              );
-            })}
-
-            {hiddenPreviewCount > 0 ? (
-              <span className="inline-flex h-7 min-w-7 items-center justify-center rounded-full border border-border/60 bg-muted/40 px-2 text-xs text-muted-foreground">
-                +{hiddenPreviewCount}
-              </span>
+                  <div className="border-b border-border/70 px-4 py-3">
+                    <p className="text-sm font-medium">{enabledSummary}</p>
+                  </div>
+                  <div className="max-h-72 space-y-3 overflow-y-auto px-4 py-3">
+                    {enabledSections.map((section) => (
+                      <div key={section.key} className="space-y-1.5">
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                            {section.label}
+                          </p>
+                          <span className="text-xs text-muted-foreground">
+                            {section.count}
+                          </span>
+                        </div>
+                        <ul className="space-y-1">
+                          {section.items.map((name) => (
+                            <li
+                              key={`${section.key}-${name}`}
+                              className="truncate text-sm leading-5 text-popover-foreground/90"
+                              title={name}
+                            >
+                              {name}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+                </TooltipContent>
+              </Tooltip>
             ) : null}
 
             {canDismiss ? (

@@ -206,6 +206,10 @@ export interface TaskConfig {
    *  Plugins not in this object use their default enabled state from user installs.
    */
   plugin_config?: Record<string, boolean>;
+  /** Persisted session-level capability overrides used by runtime resolution. */
+  mcp_overrides?: Record<string, boolean>;
+  skill_overrides?: Record<string, boolean>;
+  plugin_overrides?: Record<string, boolean>;
   /** Optional explicit subagent selection (by id). */
   subagent_ids?: number[];
   /** Optional inline subagent definitions merged into runtime agents. */

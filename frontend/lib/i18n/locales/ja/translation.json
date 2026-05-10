@@ -2407,7 +2407,8 @@
     "saving": "保存中...",
     "confirm": "確認",
     "enabled": "有効",
-    "disabled": "無効"
+    "disabled": "無効",
+    "deleting": "削除中..."
   },
   "pagination": {
     "previous": "前へ",
@@ -2644,7 +2645,8 @@
       "runtimeVisibilityDescription": "この変数をタスク実行コンテナへ自動注入できるかを制御します。",
       "runtimeVisibilityNoneHint": "タスクコンテナへ自動注入しません。",
       "runtimeVisibilityAdminsOnlyHint": "管理者が開始した実行環境にのみ注入します。",
-      "runtimeVisibilityAllUsersHint": "グローバルポリシーで許可されている場合、すべてのユーザー実行環境に注入できます。"
+      "runtimeVisibilityAllUsersHint": "グローバルポリシーで許可されている場合、すべてのユーザー実行環境に注入できます。",
+      "policyDisabledForUsers": "ユーザー向けに無効化"
     }
   },
   "validation": {

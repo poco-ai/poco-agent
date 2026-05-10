@@ -871,9 +871,9 @@
     },
     "warnings": {
       "tooManyMcps": "启用的 MCP 服务器过多（{{count}} 个），可能会导致系统加载变慢、性能下降。",
-      "tooManySkills": "启用的技能过多（{{count}} 个），可能会导致系统加载变慢、性能下降。",
+      "tooManySkills": "用户主动启用的技能过多（{{count}} 个，建议不超过 {{limit}} 个），可能会导致系统加载变慢、性能下降。系统内置技能不计入该推荐额度。",
       "mcpLimitReached": "启用此 MCP 将超过推荐数量（3 个）。过多的 MCP 可能会导致系统加载变慢。",
-      "skillLimitReached": "启用此技能将超过推荐数量（5 个）。过多的技能可能会导致系统加载变慢。"
+      "skillLimitReached": "启用此技能后，用户主动启用的技能将达到 {{count}} 个，超过建议数量（{{limit}} 个）。系统内置技能不计入该推荐额度。"
     }
   },
   "prompts": {
@@ -1797,7 +1797,8 @@
       "stats": {
         "available": "可用技能",
         "installed": "已安装",
-        "enabled": "已启用"
+        "enabled": "已启用",
+        "recommendedEnabled": "用户启用 {{count}} / 建议 {{limit}}"
       },
       "section": {
         "title": "Skills"
@@ -2386,7 +2387,8 @@
     "edit": "编辑",
     "saving": "保存中...",
     "default": "默认",
-    "forced": "强制"
+    "forced": "强制",
+    "deleting": "删除中..."
   },
   "pagination": {
     "previous": "上一页",
@@ -2715,7 +2717,8 @@
       "runtimeVisibilityAdminsOnlyHint": "只有系统管理员发起的任务可以读取它。",
       "runtimeVisibilityAllUsers": "所有用户任务",
       "runtimeVisibilityAllUsersHint": "自动注入到所有用户的任务运行环境中。",
-      "runtimeVisibilityProtectedWarning": "该 key 命中了受保护的运行时 key/前缀。可见范围设置可以保存，但自动运行时注入仍会被阻止。"
+      "runtimeVisibilityProtectedWarning": "该 key 命中了受保护的运行时 key/前缀。可见范围设置可以保存，但自动运行时注入仍会被阻止。",
+      "policyDisabledForUsers": "对用户禁用"
     }
   },
   "validation": {

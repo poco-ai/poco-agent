@@ -55,6 +55,7 @@ from app.schemas.skill_import import (
     SkillImportJobResponse,
 )
 from app.schemas.skill import SkillCreateRequest, SkillResponse, SkillUpdateRequest
+from app.schemas.workspace import FileNode
 from app.schemas.slash_command import (
     SlashCommandAdminResponse,
     SlashCommandCreateRequest,
@@ -218,7 +219,7 @@ async def list_system_skills(
     _: User = Depends(require_system_admin),
     db: Session = Depends(get_db),
 ) -> JSONResponse:
-    result = skill_service.list_skills(db, user_id=SYSTEM_USER_ID)
+    result = skill_service.list_skills_for_admin(db)
     return Response.success(data=result, message="System skills retrieved")
 
 
@@ -244,6 +245,16 @@ async def update_system_skill(
         db, user_id=SYSTEM_USER_ID, skill_id=skill_id, request=request
     )
     return Response.success(data=result, message="System skill updated")
+
+
+@router.get("/skills/{skill_id}/files", response_model=ResponseSchema[list[FileNode]])
+async def list_system_skill_files(
+    skill_id: int,
+    _: User = Depends(require_system_admin),
+    db: Session = Depends(get_db),
+) -> JSONResponse:
+    result = skill_service.list_skill_files_for_admin(db, skill_id)
+    return Response.success(data=result, message="System skill files retrieved")
 
 
 @router.delete("/skills/{skill_id}", response_model=ResponseSchema[dict])

@@ -9,6 +9,7 @@ import type {
   SkillImportJobStatusResponse,
   SkillUpdateInput,
 } from "@/features/capabilities/skills/types";
+import type { FileNode } from "@/features/chat";
 import type {
   McpServerCreateInput,
   McpServerUpdateInput,
@@ -206,6 +207,11 @@ export const adminApi = {
     input: SkillUpdateInput,
   ): Promise<Skill> => {
     return apiClient.patch<Skill>(API_ENDPOINTS.adminSkill(skillId), input);
+  },
+  listSystemSkillFiles: async (skillId: number): Promise<FileNode[]> => {
+    return apiClient.get<FileNode[]>(API_ENDPOINTS.adminSkillFiles(skillId), {
+      cache: "no-store",
+    });
   },
   deleteSystemSkill: async (skillId: number) => {
     return apiClient.delete(API_ENDPOINTS.adminSkill(skillId));

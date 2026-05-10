@@ -10,6 +10,8 @@ export interface Skill {
   owner_user_id: string | null;
   default_enabled: boolean;
   force_enabled: boolean;
+  admin_disabled: boolean;
+  is_builtin: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -21,6 +23,7 @@ export interface SkillCreateInput {
   scope?: string | null;
   default_enabled?: boolean | null;
   force_enabled?: boolean | null;
+  admin_disabled?: boolean | null;
 }
 
 export interface SkillUpdateInput {
@@ -30,6 +33,7 @@ export interface SkillUpdateInput {
   scope?: string | null;
   default_enabled?: boolean | null;
   force_enabled?: boolean | null;
+  admin_disabled?: boolean | null;
 }
 
 export interface UserSkillInstall {

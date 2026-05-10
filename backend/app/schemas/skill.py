@@ -12,6 +12,7 @@ class SkillCreateRequest(BaseModel):
     scope: str | None = None
     default_enabled: bool | None = None
     force_enabled: bool | None = None
+    admin_disabled: bool | None = None
 
 
 class SkillUpdateRequest(BaseModel):
@@ -21,6 +22,7 @@ class SkillUpdateRequest(BaseModel):
     scope: str | None = None
     default_enabled: bool | None = None
     force_enabled: bool | None = None
+    admin_disabled: bool | None = None
 
 
 class SkillResponse(BaseModel):
@@ -33,5 +35,7 @@ class SkillResponse(BaseModel):
     owner_user_id: str | None
     default_enabled: bool
     force_enabled: bool
+    admin_disabled: bool
+    is_builtin: bool
     created_at: datetime
     updated_at: datetime

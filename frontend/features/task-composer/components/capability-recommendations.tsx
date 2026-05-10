@@ -38,6 +38,7 @@ function RecommendationCard({
   onToggle,
   t,
 }: RecommendationCardProps) {
+  const isForcedActive = item.force_enabled && enabled;
   const toggleLabel = enabled
     ? t("hero.capabilityRecommendations.remove", { name: item.name })
     : `${t("hero.capabilityRecommendations.useForTask")}: ${item.name}`;
@@ -46,10 +47,17 @@ function RecommendationCard({
     <button
       type="button"
       aria-pressed={enabled}
+      disabled={isForcedActive}
       aria-label={toggleLabel}
-      onClick={() => onToggle(item, !enabled)}
+      onClick={() => {
+        if (isForcedActive) return;
+        onToggle(item, !enabled);
+      }}
       title={toggleLabel}
-      className="group flex min-h-[72px] w-full flex-col justify-center rounded-xl border border-border/40 dark:border-border/80 bg-background/70 px-3 py-3 text-left transition-[border-color,background-color] hover:border-border/70 dark:hover:border-border hover:bg-muted/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+      className={cn(
+        "group flex min-h-[72px] w-full flex-col justify-center rounded-xl border border-border/40 bg-background/70 px-3 py-3 text-left transition-[border-color,background-color] hover:border-border/70 hover:bg-muted/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 dark:border-border/80 dark:hover:border-border",
+        isForcedActive ? "cursor-not-allowed opacity-80" : null,
+      )}
     >
       <div className="flex min-w-0 items-start gap-3">
         <CapabilitySourceAvatar
@@ -75,6 +83,11 @@ function RecommendationCard({
             >
               {getCapabilityTypeLabel(item, t)}
             </Badge>
+            {item.force_enabled ? (
+              <Badge variant="destructive" className="shrink-0 text-xs">
+                {t("common.forced")}
+              </Badge>
+            ) : null}
           </div>
 
           <p className="mt-1 line-clamp-1 text-[11px] text-muted-foreground">

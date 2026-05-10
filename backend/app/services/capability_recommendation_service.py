@@ -15,6 +15,7 @@ from app.schemas.capability_recommendation import (
     CapabilityRecommendationResponse,
     CapabilityRecommendationType,
 )
+from app.services.capability_policy import resolve_effective_enabled
 
 
 @dataclass(slots=True)
@@ -24,6 +25,8 @@ class _CapabilityCandidate:
     name: str
     description: str | None
     default_enabled: bool
+    effective_enabled: bool
+    force_enabled: bool
     document: str
 
 
@@ -101,16 +104,21 @@ class CapabilityRecommendationService:
             for install in UserMcpInstallRepository.list_by_user(db, user_id)
         }
         for server in McpServerRepository.list_visible(db, user_id=user_id):
-            default_enabled = mcp_installs.get(server.id)
-            if default_enabled is None:
-                continue
+            install_enabled = mcp_installs.get(server.id)
+            effective_enabled = resolve_effective_enabled(
+                force_enabled=bool(server.force_enabled),
+                default_enabled=bool(server.default_enabled),
+                install_enabled=install_enabled,
+            )
             candidates.append(
                 _CapabilityCandidate(
                     type="mcp",
                     id=server.id,
                     name=server.name,
                     description=self._clean_text(server.description),
-                    default_enabled=default_enabled,
+                    default_enabled=bool(server.default_enabled),
+                    effective_enabled=effective_enabled,
+                    force_enabled=bool(server.force_enabled),
                     document=self._build_document(
                         capability_type="mcp",
                         name=server.name,
@@ -125,16 +133,21 @@ class CapabilityRecommendationService:
             for install in UserSkillInstallRepository.list_by_user(db, user_id)
         }
         for skill in SkillRepository.list_visible(db, user_id=user_id):
-            default_enabled = skill_installs.get(skill.id)
-            if default_enabled is None:
-                continue
+            install_enabled = skill_installs.get(skill.id)
+            effective_enabled = resolve_effective_enabled(
+                force_enabled=bool(skill.force_enabled),
+                default_enabled=bool(skill.default_enabled),
+                install_enabled=install_enabled,
+            )
             candidates.append(
                 _CapabilityCandidate(
                     type="skill",
                     id=skill.id,
                     name=skill.name,
                     description=self._clean_text(skill.description),
-                    default_enabled=default_enabled,
+                    default_enabled=bool(skill.default_enabled),
+                    effective_enabled=effective_enabled,
+                    force_enabled=bool(skill.force_enabled),
                     document=self._build_document(
                         capability_type="skill",
                         name=skill.name,
@@ -267,6 +280,8 @@ class CapabilityRecommendationService:
                     description=candidate.description,
                     score=score,
                     default_enabled=candidate.default_enabled,
+                    effective_enabled=candidate.effective_enabled,
+                    force_enabled=candidate.force_enabled,
                 )
             )
 
