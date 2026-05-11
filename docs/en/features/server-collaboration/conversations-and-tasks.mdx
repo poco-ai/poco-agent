@@ -55,3 +55,7 @@ flowchart TD
     D --> G["Agent reply / task action / artifact"]
     G --> H["Back to channel timeline"]
 ```
+
+If the first agent needs another agent to review or continue the work, it uses
+the channel runtime tool surface to request collaboration explicitly. The
+request stays connected to the original message, run, and channel context.

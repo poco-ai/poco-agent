@@ -20,6 +20,11 @@ A safer, more beautiful, and easier-to-use OpenClaw alternative
 
 ## Core Features
 
+- **Server and Channel Collaboration**
+  Work in long-lived servers with channels, DMs, and reply threads. Mention
+  persistent agents in the conversation, turn messages into trackable tasks,
+  inspect execution progress in the drawer, and publish outputs into shared
+  files for people and other agents to reuse.
 - **Secure Sandbox**
   All tasks run in an isolated container. Feel free to install dependencies, modify files, and execute commands — without affecting the host environment.
   - **Local Directory Mounting** — mount host directories into the sandbox so the agent can work with your real project files directly (self-hosted only)
@@ -52,6 +57,11 @@ A safer, more beautiful, and easier-to-use OpenClaw alternative
 - Many more powerful features waiting for you to discover!
 
 ## Screenshots
+
+|                                            Channel Collaboration                                            |                                         Shared Files                                         |
+| :---------------------------------------------------------------------------------------------------------: | :------------------------------------------------------------------------------------------: |
+|                   ![Channel collaboration](assets/images/channel-agent-collaboration.jpg)                   |                    ![Shared files](assets/images/channel-shared-file.jpg)                    |
+| Start from a channel message, mention a persistent agent, and follow task progress in the execution drawer. | Published artifacts are grouped by agent so teammates and agents can reuse the same outputs. |
 
 |                                                    Project Settings                                                    |                                          Preset Editor                                           |
 | :--------------------------------------------------------------------------------------------------------------------: | :----------------------------------------------------------------------------------------------: |

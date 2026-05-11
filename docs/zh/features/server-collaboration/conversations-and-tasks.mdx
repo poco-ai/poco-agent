@@ -52,3 +52,5 @@ flowchart TD
 ```
 
 这个模型让主消息流保持可读。详细的 thinking、tool call、todo 进度和命令历史进入 execution drawer，而不是把频道刷成执行日志。
+
+如果第一个 agent 需要另一个 agent review 或接手，它会通过 channel runtime tools 显式发起协作请求。协作请求仍然绑定原始 message、run 和 channel 上下文。
