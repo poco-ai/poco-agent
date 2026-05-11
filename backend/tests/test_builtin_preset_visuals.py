@@ -1,13 +1,47 @@
 from pathlib import Path
+from tempfile import TemporaryDirectory
 import unittest
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
 from app.lifecycle.bootstrap import LifecycleBootstrapService
-from app.lifecycle.builtin_preset_visuals import BuiltinPresetVisualBootstrapService
+from app.lifecycle.builtin_preset_visuals import (
+    BuiltinPresetVisualBootstrapService,
+    _resolve_preset_visual_assets_root,
+)
 
 
 class BuiltinPresetVisualsTests(unittest.TestCase):
+    def test_resolve_assets_root_supports_source_checkout_layout(self) -> None:
+        with TemporaryDirectory() as temp_dir:
+            repo_root = Path(temp_dir)
+            assets_root = repo_root / "assets" / "icons" / "presets"
+            assets_root.mkdir(parents=True)
+            module_file = (
+                repo_root
+                / "backend"
+                / "app"
+                / "lifecycle"
+                / "builtin_preset_visuals.py"
+            )
+
+            self.assertEqual(
+                _resolve_preset_visual_assets_root(module_file),
+                assets_root,
+            )
+
+    def test_resolve_assets_root_supports_container_layout(self) -> None:
+        with TemporaryDirectory() as temp_dir:
+            app_root = Path(temp_dir) / "app"
+            assets_root = app_root / "assets" / "icons" / "presets"
+            assets_root.mkdir(parents=True)
+            module_file = app_root / "app" / "lifecycle" / "builtin_preset_visuals.py"
+
+            self.assertEqual(
+                _resolve_preset_visual_assets_root(module_file),
+                assets_root,
+            )
+
     def test_discover_assets_returns_all_repo_svg_files_with_stable_storage_keys(
         self,
     ) -> None:

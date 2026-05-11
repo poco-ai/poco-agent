@@ -8,8 +8,21 @@ from app.models.preset_visual import PresetVisual
 from app.repositories.preset_visual_repository import PresetVisualRepository
 from app.services.storage_service import S3StorageService
 
-_REPO_ROOT = Path(__file__).resolve().parents[3]
-_PRESET_VISUAL_ASSETS_ROOT = _REPO_ROOT / "assets" / "icons" / "presets"
+def _resolve_preset_visual_assets_root(module_file: Path | None = None) -> Path:
+    current_file = module_file or Path(__file__).resolve()
+    candidates = [
+        # Source checkout layout: <repo>/backend/app/lifecycle/<file>.
+        current_file.parents[3] / "assets" / "icons" / "presets",
+        # Container layout: /app/app/lifecycle/<file> with assets copied to /app/assets.
+        current_file.parents[2] / "assets" / "icons" / "presets",
+    ]
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    return candidates[0]
+
+
+_PRESET_VISUAL_ASSETS_ROOT = _resolve_preset_visual_assets_root()
 _LIFECYCLE_MANAGER = "lifecycle"
 
 

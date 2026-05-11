@@ -24,6 +24,15 @@ function getFallbackLabel(value: string): string {
     .join("");
 }
 
+function getAgentAvatarUrl(agent: ServerAgentItem, preset: Preset | null): string {
+  const presetVisualUrl = preset?.visual_url?.trim();
+  if (presetVisualUrl) {
+    return presetVisualUrl;
+  }
+  const visualKey = agent.visualKey.trim();
+  return visualKey ? `/api/v1/presets/visuals/${visualKey}/content` : "";
+}
+
 export function ServerAgentAvatar({
   agent,
   presets,
@@ -36,7 +45,7 @@ export function ServerAgentAvatar({
   fallbackClassName?: string;
 }) {
   const preset = getAgentPreset(agent, presets);
-  const avatarUrl = preset?.visual_url?.trim() || undefined;
+  const avatarUrl = getAgentAvatarUrl(agent, preset);
   const fallbackLabel = getFallbackLabel(agent.displayName || agent.handle);
 
   return (
