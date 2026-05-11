@@ -22,7 +22,6 @@ from app.schemas.channel_artifact import (
 )
 from app.schemas.workspace import FileNode
 from app.services.server_channel_access import require_channel_member_access
-from app.services.server_member_service import require_server_member
 from app.services.storage_service import S3StorageService
 from app.utils.workspace import build_workspace_file_nodes
 from app.utils.workspace_manifest import (

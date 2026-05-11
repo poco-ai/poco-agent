@@ -17,7 +17,6 @@ from app.repositories.server_channel_message_repository import (
 from app.repositories.server_channel_agent_member_repository import (
     ServerChannelAgentMemberRepository,
 )
-from app.repositories.server_channel_repository import ServerChannelRepository
 from app.repositories.server_member_repository import ServerMemberRepository
 from app.repositories.server_channel_task_repository import (
     ServerChannelTaskRepository,
@@ -33,7 +32,6 @@ from app.schemas.server_channel_task import (
     ServerChannelTaskUpdateRequest,
 )
 from app.services.server_channel_access import require_channel_member_access
-from app.services.server_member_service import require_server_member
 
 
 @dataclass(slots=True)
