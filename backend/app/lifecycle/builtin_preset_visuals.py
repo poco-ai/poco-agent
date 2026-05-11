@@ -8,6 +8,7 @@ from app.models.preset_visual import PresetVisual
 from app.repositories.preset_visual_repository import PresetVisualRepository
 from app.services.storage_service import S3StorageService
 
+
 def _resolve_preset_visual_assets_root(module_file: Path | None = None) -> Path:
     current_file = module_file or Path(__file__).resolve()
     candidates = [

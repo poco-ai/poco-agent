@@ -203,9 +203,7 @@ class ServerExecutionObservabilityTests(unittest.TestCase):
 
         placeholder = create_message.call_args.args[1]
         self.assertEqual(placeholder.content["trigger_message_id"], str(message.id))
-        self.assertEqual(
-            placeholder.content["thread_root_message_id"], str(message.id)
-        )
+        self.assertEqual(placeholder.content["thread_root_message_id"], str(message.id))
         self.assertEqual(placeholder.thread_root_message_id, message.id)
 
     def test_callback_updates_execution_placeholder_summary(self) -> None:

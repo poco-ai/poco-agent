@@ -654,7 +654,9 @@ export function ColleagueDetail({
                 {canEditSelectedMemberRole ? (
                   <Select
                     value={selectedMember.role}
-                    onValueChange={(value) => void handleMemberRoleChange(value)}
+                    onValueChange={(value) =>
+                      void handleMemberRoleChange(value)
+                    }
                     disabled={isUpdatingMemberRole}
                   >
                     <SelectTrigger className="mt-2 w-full border-border bg-card">
@@ -705,7 +707,8 @@ export function ColleagueDetail({
             </div>
             <div className="space-y-3 border-t border-border pt-5">
               <div className="flex flex-wrap gap-2">
-                {canManageServerOperations && selectedMemberChannelMembership ? (
+                {canManageServerOperations &&
+                selectedMemberChannelMembership ? (
                   <Button
                     type="button"
                     variant="outline"
@@ -750,7 +753,9 @@ export function ColleagueDetail({
                   title={
                     canRemoveSelectedMember
                       ? undefined
-                      : t("conversationView.colleagues.ownerOnlyMemberActionHint")
+                      : t(
+                          "conversationView.colleagues.ownerOnlyMemberActionHint",
+                        )
                   }
                   className="text-destructive hover:bg-destructive/10 hover:text-destructive"
                 >
@@ -760,7 +765,9 @@ export function ColleagueDetail({
               </div>
               {isPersonalServer && canShowTransferSelectedMemberOwnership ? (
                 <p className="text-xs text-muted-foreground">
-                  {t("conversationView.colleagues.personalOwnershipTransferHint")}
+                  {t(
+                    "conversationView.colleagues.personalOwnershipTransferHint",
+                  )}
                 </p>
               ) : null}
               {!canManageServerMembers ? (

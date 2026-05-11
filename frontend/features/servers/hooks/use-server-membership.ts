@@ -236,7 +236,10 @@ export function useServerMembership({
         );
         toast.success(t("conversationView.toasts.memberRoleUpdated"));
       } catch (error) {
-        console.error("[ServersWorkspace] update server member role failed", error);
+        console.error(
+          "[ServersWorkspace] update server member role failed",
+          error,
+        );
         toast.error(t("conversationView.toasts.memberRoleUpdateFailed"));
         throw error;
       }
@@ -259,7 +262,10 @@ export function useServerMembership({
         onSwitchServer(server.id);
         toast.success(t("conversationView.toasts.ownershipTransferred"));
       } catch (error) {
-        console.error("[ServersWorkspace] transfer server ownership failed", error);
+        console.error(
+          "[ServersWorkspace] transfer server ownership failed",
+          error,
+        );
         toast.error(t("conversationView.toasts.ownershipTransferFailed"));
         throw error;
       }

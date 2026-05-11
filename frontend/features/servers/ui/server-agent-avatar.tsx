@@ -24,7 +24,10 @@ function getFallbackLabel(value: string): string {
     .join("");
 }
 
-function getAgentAvatarUrl(agent: ServerAgentItem, preset: Preset | null): string {
+function getAgentAvatarUrl(
+  agent: ServerAgentItem,
+  preset: Preset | null,
+): string {
   const presetVisualUrl = preset?.visual_url?.trim();
   if (presetVisualUrl) {
     return presetVisualUrl;

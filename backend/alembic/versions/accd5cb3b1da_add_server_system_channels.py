@@ -5,6 +5,7 @@ Revises: 20260510_merge_heads
 Create Date: 2026-05-11 15:16:42.852210
 
 """
+
 from typing import Sequence, Union
 
 from alembic import op

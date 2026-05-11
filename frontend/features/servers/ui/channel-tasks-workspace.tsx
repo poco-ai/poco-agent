@@ -1,7 +1,12 @@
 "use client";
 
 import * as React from "react";
-import { CornerDownRight, LayoutGrid, LayoutList, UserRound } from "lucide-react";
+import {
+  CornerDownRight,
+  LayoutGrid,
+  LayoutList,
+  UserRound,
+} from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -84,7 +89,9 @@ function ActorAvatar({
   }
   return (
     <Avatar className={cn("size-7 rounded-md border border-border", className)}>
-      {actor?.avatarUrl ? <AvatarImage src={actor.avatarUrl} alt={label} /> : null}
+      {actor?.avatarUrl ? (
+        <AvatarImage src={actor.avatarUrl} alt={label} />
+      ) : null}
       <AvatarFallback className="rounded-md bg-muted text-[0.65rem] font-semibold text-foreground">
         {actor ? getInitials(label) : <UserRound className="size-3.5" />}
       </AvatarFallback>
@@ -260,9 +267,7 @@ function TaskAssignmentControl({
         >
           <DialogHeader>
             <DialogTitle>{t("channelTasks.detail.assignee")}</DialogTitle>
-            <DialogDescription>
-              {task.title}
-            </DialogDescription>
+            <DialogDescription>{task.title}</DialogDescription>
           </DialogHeader>
           <Input
             value={search}

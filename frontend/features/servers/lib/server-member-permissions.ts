@@ -1,8 +1,4 @@
-import type {
-  ServerKind,
-  ServerMemberItem,
-  ServerRole,
-} from "../model/types";
+import type { ServerKind, ServerMemberItem, ServerRole } from "../model/types";
 
 const SERVER_ROLES: readonly ServerRole[] = ["owner", "admin", "member"];
 
@@ -18,7 +14,9 @@ export interface InvitedByDisplay {
   secondary: string | null;
 }
 
-export function isServerRole(value: string | null | undefined): value is ServerRole {
+export function isServerRole(
+  value: string | null | undefined,
+): value is ServerRole {
   return SERVER_ROLES.includes(value as ServerRole);
 }
 
@@ -26,11 +24,15 @@ export function getServerRoleLabelKey(role: string): string {
   return isServerRole(role) ? `conversationView.roles.${role}` : role;
 }
 
-export function canManageServerOperations(role: string | null | undefined): boolean {
+export function canManageServerOperations(
+  role: string | null | undefined,
+): boolean {
   return role === "owner" || role === "admin";
 }
 
-export function canManageServerMembers(role: string | null | undefined): boolean {
+export function canManageServerMembers(
+  role: string | null | undefined,
+): boolean {
   return role === "owner";
 }
 
@@ -41,10 +43,10 @@ export function canEditServerMemberRole({
 }: ServerMemberPermissionInput): boolean {
   return Boolean(
     currentUserId &&
-      currentUserRole === "owner" &&
-      targetMember.status === "active" &&
-      targetMember.role !== "owner" &&
-      targetMember.userId !== currentUserId,
+    currentUserRole === "owner" &&
+    targetMember.status === "active" &&
+    targetMember.role !== "owner" &&
+    targetMember.userId !== currentUserId,
   );
 }
 
@@ -55,15 +57,20 @@ export function canShowTransferServerOwnershipAction({
 }: ServerMemberPermissionInput): boolean {
   return Boolean(
     currentUserId &&
-      currentUserRole === "owner" &&
-      targetMember.status === "active" &&
-      targetMember.role !== "owner" &&
-      targetMember.userId !== currentUserId,
+    currentUserRole === "owner" &&
+    targetMember.status === "active" &&
+    targetMember.role !== "owner" &&
+    targetMember.userId !== currentUserId,
   );
 }
 
-export function canTransferServerOwnership(input: ServerMemberPermissionInput): boolean {
-  return input.serverKind !== "personal" && canShowTransferServerOwnershipAction(input);
+export function canTransferServerOwnership(
+  input: ServerMemberPermissionInput,
+): boolean {
+  return (
+    input.serverKind !== "personal" &&
+    canShowTransferServerOwnershipAction(input)
+  );
 }
 
 export function canRemoveServerMember({
@@ -73,10 +80,10 @@ export function canRemoveServerMember({
 }: ServerMemberPermissionInput): boolean {
   return Boolean(
     currentUserId &&
-      currentUserRole === "owner" &&
-      targetMember.status === "active" &&
-      targetMember.role !== "owner" &&
-      targetMember.userId !== currentUserId,
+    currentUserRole === "owner" &&
+    targetMember.status === "active" &&
+    targetMember.role !== "owner" &&
+    targetMember.userId !== currentUserId,
   );
 }
 

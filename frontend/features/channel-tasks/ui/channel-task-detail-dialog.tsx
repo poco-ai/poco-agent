@@ -596,23 +596,23 @@ export function ChannelTaskDetailDialog({
                   </div>
                 ) : (
                   <div className="mt-4 rounded-2xl border border-dashed border-border/70 bg-muted/10 px-4 py-5">
-                  <p className="text-sm text-foreground">
-                    {t("channelTasks.detail.executionPlaceholder")}
-                  </p>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <Badge variant="secondary">
-                      {t("channelTasks.detail.currentStatus", {
-                        status: t(`channelTasks.statuses.${task.status}`),
-                      })}
-                    </Badge>
-                    <Badge variant="outline">
-                      {task.assigneeUserId ||
-                      task.assigneePresetId ||
-                      task.assigneeAgentIdentityId
-                        ? t("channelTasks.detail.assigneeAttached")
-                        : t("channelTasks.detail.assigneePending")}
-                    </Badge>
-                  </div>
+                    <p className="text-sm text-foreground">
+                      {t("channelTasks.detail.executionPlaceholder")}
+                    </p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <Badge variant="secondary">
+                        {t("channelTasks.detail.currentStatus", {
+                          status: t(`channelTasks.statuses.${task.status}`),
+                        })}
+                      </Badge>
+                      <Badge variant="outline">
+                        {task.assigneeUserId ||
+                        task.assigneePresetId ||
+                        task.assigneeAgentIdentityId
+                          ? t("channelTasks.detail.assigneeAttached")
+                          : t("channelTasks.detail.assigneePending")}
+                      </Badge>
+                    </div>
                   </div>
                 )}
               </div>

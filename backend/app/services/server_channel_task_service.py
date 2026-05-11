@@ -260,7 +260,11 @@ class ServerChannelTaskService:
         agent_identity_id: uuid.UUID,
     ) -> None:
         agent = AgentIdentityRepository.get_by_id(db, agent_identity_id)
-        if agent is None or agent.server_id != server_id or agent.removed_at is not None:
+        if (
+            agent is None
+            or agent.server_id != server_id
+            or agent.removed_at is not None
+        ):
             raise AppException(
                 error_code=ErrorCode.BAD_REQUEST,
                 message="Task assignee agent must belong to this server",

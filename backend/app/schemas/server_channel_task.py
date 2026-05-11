@@ -35,7 +35,10 @@ class ServerChannelTaskCreateRequest(BaseModel):
         )
         if assignee_count > 1:
             raise ValueError("Only one task assignee can be set")
-        if self.assignee_preset_id is not None or self.assignee_agent_identity_id is not None:
+        if (
+            self.assignee_preset_id is not None
+            or self.assignee_agent_identity_id is not None
+        ):
             self.assignee_user_id = None
         return self
 
@@ -65,10 +68,7 @@ class ServerChannelTaskUpdateRequest(BaseModel):
         ]
         if len(provided) > 1:
             raise ValueError("Only one task assignee can be set")
-        if (
-            "assignee_preset_id" in provided
-            or "assignee_agent_identity_id" in provided
-        ):
+        if "assignee_preset_id" in provided or "assignee_agent_identity_id" in provided:
             self.assignee_user_id = None
         return self
 
@@ -95,7 +95,10 @@ class ServerChannelTaskClaimRequest(BaseModel):
         )
         if assignee_count > 1:
             raise ValueError("Only one task assignee can be set")
-        if self.assignee_preset_id is not None or self.assignee_agent_identity_id is not None:
+        if (
+            self.assignee_preset_id is not None
+            or self.assignee_agent_identity_id is not None
+        ):
             self.assignee_user_id = None
         return self
 

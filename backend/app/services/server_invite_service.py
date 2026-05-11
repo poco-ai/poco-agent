@@ -48,7 +48,9 @@ class ServerInviteService:
         return user.display_name or user.primary_email or user.id
 
     @staticmethod
-    def _ensure_public_channel(db: Session, server_id: uuid.UUID, created_by: str) -> ServerChannel:
+    def _ensure_public_channel(
+        db: Session, server_id: uuid.UUID, created_by: str
+    ) -> ServerChannel:
         public_channel = ServerChannelRepository.get_system_channel(
             db,
             server_id,
@@ -59,7 +61,9 @@ class ServerInviteService:
 
         slug = "public"
         suffix = 2
-        while ServerChannelRepository.get_by_server_slug(db, server_id, slug) is not None:
+        while (
+            ServerChannelRepository.get_by_server_slug(db, server_id, slug) is not None
+        ):
             slug = f"public-{suffix}"
             suffix += 1
         channel = ServerChannelRepository.create(

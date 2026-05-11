@@ -304,7 +304,9 @@ class ServerChannelTaskServiceTests(unittest.TestCase):
             )
 
         create_system_message.assert_called_once()
-        self.assertEqual(create_system_message.call_args.kwargs["event"], "task.status_changed")
+        self.assertEqual(
+            create_system_message.call_args.kwargs["event"], "task.status_changed"
+        )
         self.assertEqual(result.status, "in_review")
         self.db.commit.assert_called_once()
 
@@ -383,7 +385,9 @@ class ServerChannelTaskServiceTests(unittest.TestCase):
             )
 
         create_system_message.assert_called_once()
-        self.assertEqual(create_system_message.call_args.kwargs["event"], "task.assigned")
+        self.assertEqual(
+            create_system_message.call_args.kwargs["event"], "task.assigned"
+        )
         self.assertEqual(task.assignee_user_id, "user-1")
         self.assertEqual(result.assignee_user_id, "user-1")
 

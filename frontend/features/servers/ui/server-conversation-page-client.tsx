@@ -1072,27 +1072,27 @@ function ChannelSettingsDialog({
         <DialogFooter className="flex-row items-center justify-between sm:justify-between">
           {!isSystemChannel ? (
             <div className="flex min-w-0 flex-wrap gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={onArchive}
-              disabled={isArchiving || !channel}
-            >
-              <Archive className="size-4" />
-              {t("conversationView.channelSettings.archive")}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={onDelete}
-              disabled={!channel}
-              className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-            >
-              <Trash2 className="size-4" />
-              {t("conversationView.channelSettings.delete")}
-            </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={onArchive}
+                disabled={isArchiving || !channel}
+              >
+                <Archive className="size-4" />
+                {t("conversationView.channelSettings.archive")}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={onDelete}
+                disabled={!channel}
+                className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+              >
+                <Trash2 className="size-4" />
+                {t("conversationView.channelSettings.delete")}
+              </Button>
             </div>
           ) : (
             <div />
@@ -2201,12 +2201,7 @@ export function ServerConversationPageClient({
       cancelled = true;
       window.clearInterval(intervalId);
     };
-  }, [
-    activeChannelId,
-    drawer,
-    mode,
-    selectedServerId,
-  ]);
+  }, [activeChannelId, drawer, mode, selectedServerId]);
 
   const openMode = (nextMode: WorkspaceMode) => {
     setMode(nextMode);
@@ -2318,15 +2313,11 @@ export function ServerConversationPageClient({
         );
         const title =
           content.split("\n")[0]?.trim().slice(0, 80) || content.slice(0, 80);
-        await channelTasksApi.createTask(
-          selectedServerId,
-          activeChannelId,
-          {
-            title,
-            description: content,
-            sourceMessageId: message.id,
-          },
-        );
+        await channelTasksApi.createTask(selectedServerId, activeChannelId, {
+          title,
+          description: content,
+          sourceMessageId: message.id,
+        });
         toast.success(t("conversationView.toasts.taskCreated"));
       } else {
         await serversApi.sendMessage(selectedServerId, activeChannelId, {
@@ -2381,15 +2372,11 @@ export function ServerConversationPageClient({
         const title =
           trimmedDraft.split("\n")[0]?.trim().slice(0, 80) ||
           trimmedDraft.slice(0, 80);
-        await channelTasksApi.createTask(
-          selectedServerId,
-          drawer.channelId,
-          {
-            title,
-            description: trimmedDraft,
-            sourceMessageId: message.id,
-          },
-        );
+        await channelTasksApi.createTask(selectedServerId, drawer.channelId, {
+          title,
+          description: trimmedDraft,
+          sourceMessageId: message.id,
+        });
         setThreadDraft("");
         setThreadAsTask(false);
         setTasks(

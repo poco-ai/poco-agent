@@ -106,8 +106,6 @@ test("only owner can remove non-owner server members", () => {
   );
 });
 
-
-
 test("personal servers show but disable ownership transfer", () => {
   const targetMember = member({ userId: "member-user", role: "member" });
 

@@ -560,7 +560,9 @@ class ServerChannelServiceTests(unittest.TestCase):
             service.join_channel(self.db, self.user, self.server.id, channel.id)
 
         create_event.assert_called_once()
-        self.assertEqual(create_event.call_args.kwargs["content"]["join_reason"], "self_join")
+        self.assertEqual(
+            create_event.call_args.kwargs["content"]["join_reason"], "self_join"
+        )
 
     def test_member_cannot_leave_system_channel(self) -> None:
         service = ServerChannelService()
@@ -831,8 +833,12 @@ class ServerInviteServiceTests(unittest.TestCase):
         create_membership.assert_called_once()
         create_channel_member.assert_called_once()
         create_event.assert_called_once()
-        self.assertEqual(create_event.call_args.kwargs["event_type"], "channel.member_joined")
-        self.assertEqual(create_event.call_args.kwargs["content"]["join_reason"], "server_invite")
+        self.assertEqual(
+            create_event.call_args.kwargs["event_type"], "channel.member_joined"
+        )
+        self.assertEqual(
+            create_event.call_args.kwargs["content"]["join_reason"], "server_invite"
+        )
         self.assertEqual(invite.used_count, 1)
         self.db.commit.assert_called_once()
         self.assertEqual(result.server_id, self.server.id)

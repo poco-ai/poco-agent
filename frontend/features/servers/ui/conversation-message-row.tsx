@@ -672,12 +672,7 @@ function StandardMessageRow({
 
 export function MessageRow(props: MessageRowProps) {
   if (props.message.messageType === "event") {
-    return (
-      <ChannelEventRow
-        message={props.message}
-        compact={props.compact}
-      />
-    );
+    return <ChannelEventRow message={props.message} compact={props.compact} />;
   }
   return <StandardMessageRow {...props} />;
 }

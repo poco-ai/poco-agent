@@ -237,7 +237,9 @@ class AgentIdentityServiceTests(unittest.TestCase):
         require_admin.assert_called_once_with(self.db, self.server.id, self.user.id)
         create_membership.assert_called_once()
         create_event.assert_called_once()
-        self.assertEqual(create_event.call_args.kwargs["event_type"], "channel.agent_joined")
+        self.assertEqual(
+            create_event.call_args.kwargs["event_type"], "channel.agent_joined"
+        )
         self.assertEqual(
             create_event.call_args.kwargs["target"].target_agent_identity_id,
             agent_identity.id,
@@ -268,7 +270,9 @@ class AgentIdentityServiceTests(unittest.TestCase):
                     self.user,
                     self.server.id,
                     self.channel.id,
-                    ChannelAgentMemberCreateRequest(agent_identity_id=agent_identity_id),
+                    ChannelAgentMemberCreateRequest(
+                        agent_identity_id=agent_identity_id
+                    ),
                 )
 
         require_admin.assert_called_once_with(self.db, self.server.id, self.user.id)
