@@ -47,7 +47,6 @@ import {
   getAgentRuntimeDotClassName,
   getAgentRuntimeStatus,
 } from "../lib/agent-runtime-status";
-import { ServerMessageContent } from "./server-message-content";
 import { ServerAgentAvatar } from "./server-agent-avatar";
 
 const overlayDrawerClassName =
@@ -58,6 +57,24 @@ const drawerHeaderClassName =
 
 const drawerHeaderActionsClassName =
   "ml-auto flex min-w-0 max-w-full flex-wrap items-center justify-end gap-2";
+
+function toConversationMessage(
+  message: ChannelTaskActivityMessage,
+): ServerConversationMessage {
+  return {
+    id: message.messageId,
+    channelId: message.channelId,
+    authorUserId: message.authorUserId,
+    messageType: message.messageType,
+    content: message.content,
+    textPreview: message.textPreview,
+    threadRootMessageId: message.threadRootMessageId,
+    replyCount: 0,
+    reactions: [],
+    createdAt: message.createdAt,
+    updatedAt: message.updatedAt,
+  };
+}
 
 export function ThreadDrawer({
   thread,
@@ -593,7 +610,6 @@ export function TaskDrawer({
 }) {
   const { t } = useT("translation");
   const [isSaving, setIsSaving] = React.useState(false);
-
   const updateAssignee = async (value: string) => {
     const [kind, id] = value.split(":", 2);
     setIsSaving(true);
@@ -697,22 +713,24 @@ export function TaskDrawer({
             <p className="text-xs font-medium text-muted-foreground">
               {t("conversationView.taskActivity")}
             </p>
-            <div className="mt-3 space-y-3">
+            <div className="mt-3 overflow-hidden rounded-md border border-border bg-background">
               {activity.length > 0 ? (
                 activity.map((item) => (
                   <div
                     key={item.messageId}
-                    className="rounded-md border border-border px-3 py-3 text-sm text-foreground"
+                    className="border-b border-border last:border-b-0"
                   >
-                    <ServerMessageContent
-                      content={
-                        item.textPreview || t("conversationView.emptyMessage")
-                      }
+                    <MessageRow
+                      message={toConversationMessage(item)}
+                      agents={agents}
+                      onOpenThread={() => undefined}
+                      onToggleSaved={() => undefined}
+                      compact
                     />
                   </div>
                 ))
               ) : (
-                <p className="text-sm text-muted-foreground">
+                <p className="px-3 py-3 text-sm text-muted-foreground">
                   {t("conversationView.noTaskActivity")}
                 </p>
               )}

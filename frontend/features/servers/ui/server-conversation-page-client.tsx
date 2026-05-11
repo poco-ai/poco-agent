@@ -2164,12 +2164,12 @@ export function ServerConversationPageClient({
           ),
         );
       } catch (error) {
-        console.error("[ServersWorkspace] task activity load failed", error);
+        console.error("[ServersWorkspace] task thread load failed", error);
       }
     };
 
     void loadTaskActivity();
-  }, [activeChannelId, selectedServerId, selectedTask?.threadRootMessageId]);
+  }, [activeChannelId, selectedServerId, selectedTask]);
 
   React.useEffect(() => {
     if (!selectedServerId || !activeChannelId) {
@@ -2236,8 +2236,7 @@ export function ServerConversationPageClient({
           setThreadMessages(nextThread as ServerConversationMessage[]);
         }
         if (
-          selectedTask?.threadRootMessageId &&
-          Array.isArray(nextTaskActivity)
+          selectedTask && Array.isArray(nextTaskActivity)
         ) {
           setTaskActivity(nextTaskActivity as ChannelTaskActivityMessage[]);
         }
@@ -2264,7 +2263,7 @@ export function ServerConversationPageClient({
     drawer,
     mode,
     selectedServerId,
-    selectedTask?.threadRootMessageId,
+    selectedTask,
   ]);
 
   const openMode = (nextMode: WorkspaceMode) => {
@@ -2372,6 +2371,7 @@ export function ServerConversationPageClient({
           activeChannelId,
           {
             text: content,
+            asTask: true,
           },
         );
         const title =
@@ -2433,6 +2433,7 @@ export function ServerConversationPageClient({
           {
             text: replyText,
             threadRootMessageId: drawer.rootMessageId,
+            asTask: true,
           },
         );
         const title =
@@ -3278,7 +3279,11 @@ export function ServerConversationPageClient({
                       );
                     }}
                     onRefreshActivity={async () => {
-                      if (!selectedTask.threadRootMessageId || !activeChannelId) {
+                      if (!activeChannelId) {
+                        return;
+                      }
+                      if (!selectedTask.threadRootMessageId) {
+                        setTaskActivity([]);
                         return;
                       }
                       setTaskActivity(

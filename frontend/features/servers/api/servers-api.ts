@@ -553,6 +553,7 @@ export const serversApi = {
     input: {
       text: string;
       threadRootMessageId?: string | null;
+      asTask?: boolean;
     },
   ): Promise<ServerConversationMessage> => {
     const message = await apiClient.post<ServerConversationMessageResponse>(
@@ -563,6 +564,7 @@ export const serversApi = {
         thread_root_message_id: input.threadRootMessageId ?? null,
         content: {
           text: input.text,
+          ...(input.asTask ? { as_task: true } : {}),
         },
       },
     );

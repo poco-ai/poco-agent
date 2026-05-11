@@ -487,6 +487,7 @@ class ServerChannelTaskService:
         task: ServerChannelTask,
         actor_context: TaskActorContext | None = None,
         source_message_id: uuid.UUID | None = None,
+        thread_root_message_id: uuid.UUID | None = None,
     ) -> ServerChannelMessage:
         actor = self._build_actor_context(current_user, actor_context)
         return self._create_message(
@@ -509,6 +510,7 @@ class ServerChannelTaskService:
                     else None,
                 },
             ),
+            thread_root_message_id=thread_root_message_id,
         )
 
     def _create_system_message(
@@ -541,6 +543,38 @@ class ServerChannelTaskService:
             thread_root_message_id=task.thread_root_message_id,
         )
 
+    def _resolve_task_thread_root_message_id(
+        self,
+        db: Session,
+        *,
+        channel_id: uuid.UUID,
+        source_message_id: uuid.UUID | None,
+        source_thread_root_message_id: uuid.UUID | None,
+    ) -> uuid.UUID | None:
+        root_message_id = source_thread_root_message_id
+        if root_message_id is None and source_message_id is not None:
+            source_message = ServerChannelMessageRepository.get_by_id(
+                db,
+                source_message_id,
+            )
+            if source_message is None or source_message.channel_id != channel_id:
+                raise AppException(
+                    error_code=ErrorCode.BAD_REQUEST,
+                    message="Task source message is invalid",
+                )
+            return source_message.thread_root_message_id or source_message.id
+
+        if root_message_id is None:
+            return None
+
+        root_message = ServerChannelMessageRepository.get_by_id(db, root_message_id)
+        if root_message is None or root_message.channel_id != channel_id:
+            raise AppException(
+                error_code=ErrorCode.BAD_REQUEST,
+                message="Task source thread is invalid",
+            )
+        return root_message.thread_root_message_id or root_message.id
+
     def create_task(
         self,
         db: Session,
@@ -560,6 +594,12 @@ class ServerChannelTaskService:
             channel_id=channel.id,
             assignee_user_id=request.assignee_user_id,
             assignee_agent_identity_id=request.assignee_agent_identity_id,
+        )
+        activity_thread_root_message_id = self._resolve_task_thread_root_message_id(
+            db,
+            channel_id=channel.id,
+            source_message_id=request.source_message_id,
+            source_thread_root_message_id=source_thread_root_message_id,
         )
 
         sibling_tasks = ServerChannelTaskRepository.list_by_channel_and_status(
@@ -601,8 +641,9 @@ class ServerChannelTaskService:
             task=task,
             actor_context=actor_context,
             source_message_id=request.source_message_id,
+            thread_root_message_id=activity_thread_root_message_id,
         )
-        task.thread_root_message_id = root_message.id
+        task.thread_root_message_id = activity_thread_root_message_id or root_message.id
 
         db.commit()
         db.refresh(task)

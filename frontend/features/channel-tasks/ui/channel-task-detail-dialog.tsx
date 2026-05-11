@@ -240,17 +240,15 @@ export function ChannelTaskDetailDialog({
       setDescription(nextTask.description ?? "");
       setContext(null);
       setHighlightMessageId(null);
-      if (nextTask.threadRootMessageId) {
-        setActivity(
-          await channelTasksApi.getTaskThread(
-            serverId,
-            channelId,
-            nextTask.threadRootMessageId,
-          ),
-        );
-      } else {
-        setActivity([]);
-      }
+      setActivity(
+        nextTask.threadRootMessageId
+          ? await channelTasksApi.getTaskThread(
+              serverId,
+              channelId,
+              nextTask.threadRootMessageId,
+            )
+          : [],
+      );
     } catch (error) {
       console.error("[ChannelTasks] detail load failed", error);
       toast.error(t("channelTasks.toasts.detailLoadFailed"));

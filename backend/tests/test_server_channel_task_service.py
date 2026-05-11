@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 from unittest.mock import MagicMock, patch
 
 from app.models.server_channel import ServerChannel
+from app.models.server_channel_message import ServerChannelMessage
 from app.models.server_channel_task import ServerChannelTask
 from app.models.user import User
 from app.schemas.server_channel_task import (
@@ -115,7 +116,7 @@ class ServerChannelTaskServiceTests(unittest.TestCase):
         self.assertEqual(kwargs["content"]["event_type"], "task.created")
         self.assertEqual(kwargs["content"]["actor_type"], "user")
 
-    def test_create_task_root_message_records_source_message_without_replying(
+    def test_create_task_root_message_records_source_message(
         self,
     ) -> None:
         service = ServerChannelTaskService()
@@ -151,6 +152,108 @@ class ServerChannelTaskServiceTests(unittest.TestCase):
         self.assertEqual(
             kwargs["content"]["source_message_id"],
             str(source_message_id),
+        )
+
+    def test_create_task_root_message_can_attach_to_existing_thread(self) -> None:
+        service = ServerChannelTaskService()
+        source_message_id = uuid.uuid4()
+        thread_root_message_id = uuid.uuid4()
+        task = ServerChannelTask(
+            id=uuid.uuid4(),
+            server_id=self.server_id,
+            channel_id=self.channel.id,
+            display_number=1,
+            title="Ship board view",
+            description=None,
+            status="todo",
+            position=0,
+            priority="medium",
+            creator_user_id="user-1",
+            updated_by="user-1",
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
+        )
+
+        with patch.object(service, "_create_message") as create_message:
+            service._create_task_root_message(
+                self.db,
+                current_user=self.user,
+                task=task,
+                source_message_id=source_message_id,
+                thread_root_message_id=thread_root_message_id,
+            )
+
+        create_message.assert_called_once()
+        kwargs = create_message.call_args.kwargs
+        self.assertEqual(kwargs["message_type"], "event")
+        self.assertEqual(kwargs["thread_root_message_id"], thread_root_message_id)
+        self.assertEqual(
+            kwargs["content"]["source_message_id"],
+            str(source_message_id),
+        )
+
+    def test_create_task_uses_source_message_thread_as_task_thread(self) -> None:
+        service = ServerChannelTaskService()
+        source_message_id = uuid.uuid4()
+        thread_root_message_id = uuid.uuid4()
+        source_message = ServerChannelMessage(
+            id=source_message_id,
+            channel_id=self.channel.id,
+            author_user_id="user-1",
+            message_type="user",
+            content={"text": "Please track this"},
+            text_preview="Please track this",
+            thread_root_message_id=thread_root_message_id,
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
+        )
+
+        with (
+            patch.object(service, "_require_channel_access", return_value=self.channel),
+            patch(
+                "app.services.server_channel_task_service.ServerChannelMessageRepository.get_by_id",
+                return_value=source_message,
+            ),
+            patch(
+                "app.services.server_channel_task_service.ServerChannelTaskRepository.list_by_channel_and_status",
+                return_value=[],
+            ),
+            patch(
+                "app.services.server_channel_task_service.ServerChannelTaskRepository.create"
+            ) as create_task,
+            patch(
+                "app.services.server_channel_task_service.ServerChannelTaskRepository.get_max_display_number",
+                return_value=None,
+            ),
+            patch.object(service, "_create_task_root_message") as create_root_message,
+        ):
+            now = datetime.now(UTC)
+
+            def build_task(_db, task):
+                task.id = uuid.uuid4()
+                task.created_at = now
+                task.updated_at = now
+                return task
+
+            create_task.side_effect = build_task
+            create_root_message.return_value = MagicMock(id=uuid.uuid4())
+
+            service.create_task(
+                self.db,
+                self.user,
+                self.server_id,
+                self.channel.id,
+                ServerChannelTaskCreateRequest(
+                    title="Track thread",
+                    source_message_id=source_message_id,
+                ),
+            )
+
+        created_task = create_task.call_args.args[1]
+        self.assertEqual(created_task.thread_root_message_id, thread_root_message_id)
+        self.assertEqual(
+            create_root_message.call_args.kwargs["thread_root_message_id"],
+            thread_root_message_id,
         )
 
     def test_update_task_status_emits_event_message_for_status_change(self) -> None:
@@ -267,6 +370,7 @@ class ServerChannelTaskServiceTests(unittest.TestCase):
                 "_require_task_access",
                 return_value=(self.channel, task),
             ),
+            patch.object(service, "_validate_task_assignee"),
             patch.object(service, "_create_system_message") as create_system_message,
         ):
             result = service.claim_task(
