@@ -16,7 +16,8 @@ flowchart TD
     C --> D["Thread"]
     C --> E["Create as task"]
     C --> F["@agent trigger"]
-    E --> G["Task state: todo / in_progress / in_review / done"]
+    E --> G["Task root thread"]
+    G --> L["Task state: todo / in_progress / in_review / done"]
     F --> H["Agent run"]
     H --> I["Execution events"]
     H --> J["Published artifacts"]
@@ -24,9 +25,10 @@ flowchart TD
     J --> K["Shared files"]
 ```
 
-这条主线有三个设计重点。
+这条主线有四个设计重点。
 
 - **对话先于任务**：用户可以先讨论，再把明确事项转成 task。
+- **Task 绑定 thread**：As Task 的来源消息就是 root，状态和委托变化都追加在同一条 thread。
 - **运行绑定上下文**：Agent run 不脱离 channel 或 DM 独立存在。
 - **产物显式共享**：公开成果进入 shared files，私有状态不自动公开。
 

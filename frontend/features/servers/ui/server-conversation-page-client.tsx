@@ -1682,7 +1682,10 @@ export function ServerConversationPageClient({
   const selectedServer =
     servers.find((server) => server.id === selectedServerId) ?? null;
   const selectedChannel =
-    channels.find((channel) => channel.id === activeChannelId) ?? null;
+    channels.find(
+      (channel) =>
+        channel.id === activeChannelId && channel.serverId === selectedServerId,
+    ) ?? null;
   const topLevelChannels = sortChannelsForSidebar(
     channels.filter((channel) => channel.conversationType === "channel"),
   );
@@ -1945,6 +1948,8 @@ export function ServerConversationPageClient({
   }, [channelId, routeModeParam]);
 
   React.useEffect(() => {
+    let cancelled = false;
+
     const loadServerContext = async () => {
       if (!selectedServerId) {
         setChannels([]);
@@ -1964,10 +1969,20 @@ export function ServerConversationPageClient({
         setChannelAgentsByChannelId(cachedContext.channelAgentsByChannelId);
         setIsLoading(false);
       } else {
+        setChannels([]);
+        setMessagesByChannel({});
+        setChannelAgentsByChannelId({});
+        setTasks([]);
+        setChannelAgents([]);
+        setChannelMembers([]);
+        setChannelArtifacts([]);
         setIsLoading(true);
       }
       try {
         const nextChannels = await serversApi.listChannels(selectedServerId);
+        if (cancelled) {
+          return;
+        }
         setChannels(nextChannels);
 
         const previews = await Promise.all(
@@ -1989,6 +2004,9 @@ export function ServerConversationPageClient({
             return [channel.id, agents] as const;
           }),
         );
+        if (cancelled) {
+          return;
+        }
         const nextChannelAgentsByChannelId =
           Object.fromEntries(channelAgentEntries);
         setChannelAgentsByChannelId(nextChannelAgentsByChannelId);
@@ -2001,16 +2019,21 @@ export function ServerConversationPageClient({
         console.error("[ServersWorkspace] load failed", error);
         toast.error(t("conversationView.toasts.loadFailed"));
       } finally {
-        setIsLoading(false);
+        if (!cancelled) {
+          setIsLoading(false);
+        }
       }
     };
 
     void loadServerContext();
+    return () => {
+      cancelled = true;
+    };
   }, [selectedServerId, t]);
 
   React.useEffect(() => {
     const loadActiveChannelContext = async () => {
-      if (!selectedServerId || !activeChannelId) {
+      if (!selectedServerId || !activeChannelId || !selectedChannel) {
         setTasks([]);
         setChannelAgents([]);
         setChannelMembers([]);
@@ -2034,7 +2057,13 @@ export function ServerConversationPageClient({
     };
 
     void loadActiveChannelContext();
-  }, [activeChannelId, channelAgentsByChannelId, selectedServerId, t]);
+  }, [
+    activeChannelId,
+    channelAgentsByChannelId,
+    selectedChannel,
+    selectedServerId,
+    t,
+  ]);
 
   React.useEffect(() => {
     if (!selectedServerId || channels.length === 0) {
@@ -2098,6 +2127,33 @@ export function ServerConversationPageClient({
   }, [channelId, isDesktop, lng, router, selectedServerId]);
 
   React.useEffect(() => {
+    if (!selectedServerId || !activeChannelId || channels.length === 0) {
+      return;
+    }
+    const hasLoadedSelectedServerChannels = channels.every(
+      (channel) => channel.serverId === selectedServerId,
+    );
+    if (!hasLoadedSelectedServerChannels) {
+      return;
+    }
+    if (
+      channels.some(
+        (channel) =>
+          channel.id === activeChannelId &&
+          channel.serverId === selectedServerId,
+      )
+    ) {
+      return;
+    }
+    saveLastSelection({
+      mode: "search",
+      serverId: selectedServerId,
+      channelId: null,
+    });
+    router.replace(`/${lng}/servers?mode=search&server=${selectedServerId}`);
+  }, [activeChannelId, channels, lng, router, selectedServerId]);
+
+  React.useEffect(() => {
     const loadThread = async () => {
       if (drawer.type !== "thread" || !selectedServerId) {
         setThreadMessages([]);
@@ -2135,7 +2191,7 @@ export function ServerConversationPageClient({
   }, [drawer, markMessagesRead, threadMessages]);
 
   React.useEffect(() => {
-    if (!selectedServerId || !activeChannelId) {
+    if (!selectedServerId || !activeChannelId || !selectedChannel) {
       return;
     }
 
@@ -2201,7 +2257,7 @@ export function ServerConversationPageClient({
       cancelled = true;
       window.clearInterval(intervalId);
     };
-  }, [activeChannelId, drawer, mode, selectedServerId]);
+  }, [activeChannelId, drawer, mode, selectedChannel, selectedServerId]);
 
   const openMode = (nextMode: WorkspaceMode) => {
     setMode(nextMode);
