@@ -2,6 +2,7 @@ import type {
   ServerAgentItem,
   ServerChannelMemberItem,
   ServerConversationMessage,
+  ServerMemberItem,
   ServerUserPublicProfile,
 } from "@/features/servers/model/types";
 
@@ -109,6 +110,21 @@ export function buildHumanMentionCandidates(
       handle: member.userId,
       kind: "human",
     }));
+}
+
+export function getAvailableChannelHumanMembers(
+  serverMembers: ServerMemberItem[],
+  channelMembers: ServerChannelMemberItem[],
+): ServerMemberItem[] {
+  const activeChannelUserIds = new Set(
+    channelMembers
+      .filter((member) => member.status === "active")
+      .map((member) => member.userId),
+  );
+  return serverMembers.filter(
+    (member) =>
+      member.status === "active" && !activeChannelUserIds.has(member.userId),
+  );
 }
 
 export function messageMentionsUser(

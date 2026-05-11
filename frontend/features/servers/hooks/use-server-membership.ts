@@ -7,6 +7,7 @@ import { presetsService } from "@/features/capabilities/presets/api/presets-api"
 import type { Preset } from "@/features/capabilities/presets/lib/preset-types";
 import { useAdaptivePolling } from "@/features/chat/hooks/use-adaptive-polling";
 import { serversApi } from "@/features/servers";
+import { loadServerMembershipData } from "@/features/servers/lib/server-membership";
 import type {
   ServerAgentItem,
   ServerInviteItem,
@@ -49,14 +50,10 @@ export function useServerMembership({
   const [isAgentCreating, setIsAgentCreating] = React.useState(false);
 
   const refreshMembership = React.useCallback(async (serverId: string) => {
-    const [nextAgents, nextMembers, nextInvites] = await Promise.all([
-      serversApi.listAgents(serverId),
-      serversApi.listMembers(serverId),
-      serversApi.listInvites(serverId),
-    ]);
-    setServerAgents(nextAgents);
-    setServerMembers(nextMembers);
-    setServerInvites(nextInvites);
+    const next = await loadServerMembershipData(serverId, serversApi);
+    setServerAgents(next.agents);
+    setServerMembers(next.members);
+    setServerInvites(next.invites);
   }, []);
 
   React.useEffect(() => {

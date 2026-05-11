@@ -64,6 +64,7 @@ import { useServerMembership } from "@/features/servers/hooks/use-server-members
 import {
   buildAgentMentionCandidate,
   buildHumanMentionCandidates,
+  getAvailableChannelHumanMembers,
   getMentionInsertText,
   getMentionSearchText,
   getUserDisplayName,
@@ -1047,12 +1048,13 @@ function ChannelMembersDialog({
   channel,
   agents,
   availableAgents,
+  availableHumans,
   humans,
   canManageMembers,
   onOpenChange,
   onOpenDm,
   onAddAgents,
-  onAddMember,
+  onAddMembers,
   onRemoveAgent,
   onRemoveMember,
 }: {
@@ -1060,29 +1062,36 @@ function ChannelMembersDialog({
   channel: ServerChannelItem | null;
   agents: ServerAgentItem[];
   availableAgents: ServerAgentItem[];
+  availableHumans: ServerMemberItem[];
   humans: ServerChannelMemberItem[];
   canManageMembers: boolean;
   onOpenChange: (open: boolean) => void;
   onOpenDm: (agentId: string) => void;
   onAddAgents: (agentIds: string[]) => Promise<void>;
-  onAddMember: (userId: string) => void;
+  onAddMembers: (userIds: string[]) => Promise<void>;
   onRemoveAgent: (agentId: string) => void;
   onRemoveMember: (membershipId: number) => void;
 }) {
   const { t } = useT("translation");
-  const [memberUserId, setMemberUserId] = React.useState("");
   const [agentSearch, setAgentSearch] = React.useState("");
+  const [humanSearch, setHumanSearch] = React.useState("");
   const [selectedAgentIds, setSelectedAgentIds] = React.useState<Set<string>>(
     () => new Set(),
   );
+  const [selectedHumanIds, setSelectedHumanIds] = React.useState<Set<string>>(
+    () => new Set(),
+  );
   const [isAddingAgents, setIsAddingAgents] = React.useState(false);
+  const [isAddingHumans, setIsAddingHumans] = React.useState(false);
 
   React.useEffect(() => {
     if (!open) {
-      setMemberUserId("");
       setAgentSearch("");
+      setHumanSearch("");
       setSelectedAgentIds(new Set());
+      setSelectedHumanIds(new Set());
       setIsAddingAgents(false);
+      setIsAddingHumans(false);
     }
   }, [open]);
 
@@ -1098,6 +1107,18 @@ function ChannelMembersDialog({
     });
   }, [agentSearch, availableAgents]);
 
+  const visibleAvailableHumans = React.useMemo(() => {
+    const keyword = humanSearch.trim().toLowerCase();
+    return availableHumans.filter((member) => {
+      if (!keyword) {
+        return true;
+      }
+      return `${getUserDisplayName(member.user, member.userId)} ${member.userId}`
+        .toLowerCase()
+        .includes(keyword);
+    });
+  }, [availableHumans, humanSearch]);
+
   const toggleAgentSelection = (agentId: string) => {
     setSelectedAgentIds((current) => {
       const next = new Set(current);
@@ -1105,6 +1126,18 @@ function ChannelMembersDialog({
         next.delete(agentId);
       } else {
         next.add(agentId);
+      }
+      return next;
+    });
+  };
+
+  const toggleHumanSelection = (userId: string) => {
+    setSelectedHumanIds((current) => {
+      const next = new Set(current);
+      if (next.has(userId)) {
+        next.delete(userId);
+      } else {
+        next.add(userId);
       }
       return next;
     });
@@ -1121,6 +1154,20 @@ function ChannelMembersDialog({
       setAgentSearch("");
     } finally {
       setIsAddingAgents(false);
+    }
+  };
+
+  const handleAddHumans = async () => {
+    if (selectedHumanIds.size === 0) {
+      return;
+    }
+    setIsAddingHumans(true);
+    try {
+      await onAddMembers(Array.from(selectedHumanIds));
+      setSelectedHumanIds(new Set());
+      setHumanSearch("");
+    } finally {
+      setIsAddingHumans(false);
     }
   };
 
@@ -1302,26 +1349,72 @@ function ChannelMembersDialog({
                 </div>
               )}
             </div>
+            <div className="space-y-3 rounded-md border border-border bg-card px-3 py-3">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm font-semibold text-foreground">
+                  {t("conversationView.members.inviteHumans")}
+                </p>
+                <span className="text-xs text-muted-foreground">
+                  {visibleAvailableHumans.length}
+                </span>
+              </div>
+              <Input
+                value={humanSearch}
+                onChange={(event) => setHumanSearch(event.target.value)}
+                placeholder={t(
+                  "conversationView.members.humanSearchPlaceholder",
+                )}
+              />
+              <div className="max-h-56 overflow-y-auto space-y-1">
+                {visibleAvailableHumans.length > 0 ? (
+                  visibleAvailableHumans.map((human) => {
+                    const selected = selectedHumanIds.has(human.userId);
+                    return (
+                      <button
+                        key={human.userId}
+                        type="button"
+                        onClick={() => toggleHumanSelection(human.userId)}
+                        className={cn(
+                          "flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm transition-colors",
+                          selected
+                            ? "bg-primary/15 text-foreground"
+                            : "hover:bg-muted/30",
+                        )}
+                      >
+                        <span className="flex size-7 shrink-0 items-center justify-center rounded-md border border-border bg-muted">
+                          <UserRound className="size-4" />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm font-medium text-foreground">
+                            {getUserDisplayName(human.user, human.userId)}
+                          </span>
+                          <span className="block truncate text-xs text-muted-foreground">
+                            {human.userId}
+                          </span>
+                        </span>
+                        {selected ? (
+                          <Check className="size-4 text-primary" />
+                        ) : null}
+                      </button>
+                    );
+                  })
+                ) : (
+                  <div className="rounded-md border border-dashed border-border px-3 py-6 text-center text-sm text-muted-foreground">
+                    {t("conversationView.members.noAvailableHumans")}
+                  </div>
+                )}
+              </div>
+              <Button
+                type="button"
+                onClick={() => void handleAddHumans()}
+                disabled={selectedHumanIds.size === 0 || isAddingHumans}
+              >
+                <Plus className="size-4" />
+                {t("conversationView.members.addSelectedHumans")}
+              </Button>
+            </div>
           </section>
         </div>
-        <DialogFooter>
-          <div className="flex w-full flex-col gap-2 sm:flex-row">
-            <Input
-              value={memberUserId}
-              onChange={(event) => setMemberUserId(event.target.value)}
-              placeholder={t("conversationView.members.addMemberPlaceholder")}
-            />
-            <Button
-              type="button"
-              className="w-full sm:w-auto"
-              onClick={() => onAddMember(memberUserId)}
-              disabled={!memberUserId.trim()}
-            >
-              <Plus className="size-4" />
-              {t("conversationView.members.addMember")}
-            </Button>
-          </div>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
@@ -1540,6 +1633,10 @@ export function ServerConversationPageClient({
     const existingIds = new Set(channelAgents.map((agent) => agent.id));
     return serverAgents.filter((agent) => !existingIds.has(agent.id));
   }, [channelAgents, serverAgents]);
+  const availableChannelHumans = React.useMemo(
+    () => getAvailableChannelHumanMembers(serverMembers, channelMembers),
+    [channelMembers, serverMembers],
+  );
   const isChannelOwner = Boolean(
     selectedChannel &&
     profile?.id &&
@@ -2498,21 +2595,25 @@ export function ServerConversationPageClient({
     }
   };
 
-  const handleAddChannelMember = async (userId: string) => {
-    if (!selectedServerId || !activeChannelId) {
+  const handleAddChannelMembers = async (userIds: string[]) => {
+    const nextUserIds = userIds.map((userId) => userId.trim()).filter(Boolean);
+    if (!selectedServerId || !activeChannelId || nextUserIds.length === 0) {
       return;
     }
     try {
-      const member = await serversApi.addChannelMember(
-        selectedServerId,
-        activeChannelId,
-        {
-          userId: userId.trim(),
-        },
+      const members = await Promise.all(
+        nextUserIds.map((userId) =>
+          serversApi.addChannelMember(selectedServerId, activeChannelId, {
+            userId,
+          }),
+        ),
       );
       setChannelMembers((current) => {
-        const withoutExisting = current.filter((item) => item.id !== member.id);
-        return [...withoutExisting, member];
+        const nextById = new Map(current.map((item) => [item.id, item]));
+        for (const member of members) {
+          nextById.set(member.id, member);
+        }
+        return Array.from(nextById.values());
       });
       toast.success(t("conversationView.toasts.memberAdded"));
     } catch (error) {
@@ -3121,6 +3222,7 @@ export function ServerConversationPageClient({
         channel={selectedChannel}
         agents={channelAgents}
         availableAgents={availableChannelAgents}
+        availableHumans={availableChannelHumans}
         humans={channelMembers}
         canManageMembers={canManageServer}
         onOpenChange={setMembersOpen}
@@ -3129,7 +3231,7 @@ export function ServerConversationPageClient({
           void handleOpenDm(agentId);
         }}
         onAddAgents={(agentIds) => handleAddChannelAgents(agentIds)}
-        onAddMember={(userId) => void handleAddChannelMember(userId)}
+        onAddMembers={(userIds) => handleAddChannelMembers(userIds)}
         onRemoveAgent={(agentId) => void handleRemoveChannelAgent(agentId)}
         onRemoveMember={(membershipId) =>
           void handleRemoveChannelMember(membershipId)
