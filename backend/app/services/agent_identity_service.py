@@ -37,6 +37,11 @@ from app.services.server_member_service import (
     require_server_member,
     require_server_owner,
 )
+from app.services.server_channel_event_service import (
+    ChannelEventActor,
+    ChannelEventTarget,
+    create_channel_event_message,
+)
 from app.services.session_service import SessionService
 
 
@@ -53,6 +58,10 @@ class AgentIdentityService:
         membership: ServerChannelAgentMember,
     ) -> ChannelAgentMemberResponse:
         return ChannelAgentMemberResponse.model_validate(membership)
+
+    @staticmethod
+    def _user_label(user: User) -> str:
+        return user.display_name or user.primary_email or user.id
 
     @staticmethod
     def _build_state_paths(agent_identity_id: uuid.UUID) -> dict[str, str]:
@@ -288,9 +297,31 @@ class AgentIdentityService:
             agent_identity.id,
         )
         if existing is not None:
+            should_emit_joined_event = existing.status != "active"
             if existing.status != "active":
                 existing.status = "active"
                 existing.role = request.role
+                db.flush()
+                if should_emit_joined_event:
+                    create_channel_event_message(
+                        db,
+                        channel_id=channel.id,
+                        event_type="channel.agent_joined",
+                        actor=ChannelEventActor(
+                            actor_type="user",
+                            actor_user_id=current_user.id,
+                            actor_label=self._user_label(current_user),
+                        ),
+                        target=ChannelEventTarget(
+                            target_agent_identity_id=agent_identity.id,
+                            target_agent_handle=agent_identity.handle,
+                            target_label=agent_identity.display_name,
+                        ),
+                        content={"membership_id": existing.id},
+                        text_preview=(
+                            f"{agent_identity.display_name} joined {channel.name}"
+                        ),
+                    )
                 db.commit()
                 db.refresh(existing)
             return self._to_channel_member_response(existing)
@@ -303,6 +334,24 @@ class AgentIdentityService:
                 role=request.role,
                 status="active",
             ),
+        )
+        db.flush()
+        create_channel_event_message(
+            db,
+            channel_id=channel.id,
+            event_type="channel.agent_joined",
+            actor=ChannelEventActor(
+                actor_type="user",
+                actor_user_id=current_user.id,
+                actor_label=self._user_label(current_user),
+            ),
+            target=ChannelEventTarget(
+                target_agent_identity_id=agent_identity.id,
+                target_agent_handle=agent_identity.handle,
+                target_label=agent_identity.display_name,
+            ),
+            content={"membership_id": membership.id},
+            text_preview=f"{agent_identity.display_name} joined {channel.name}",
         )
         db.commit()
         db.refresh(membership)

@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, ForeignKey, String, Text, UniqueConstraint, text
+from sqlalchemy import DateTime, ForeignKey, Index, String, Text, UniqueConstraint, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models import Base, TimestampMixin
@@ -19,6 +19,13 @@ class ServerChannel(Base, TimestampMixin):
             "server_id",
             "slug",
             name="uq_server_channels_server_id_slug",
+        ),
+        Index(
+            "uq_server_channels_server_system_channel_type",
+            "server_id",
+            "system_channel_type",
+            unique=True,
+            postgresql_where=text("system_channel_type IS NOT NULL"),
         ),
     )
 
@@ -42,6 +49,11 @@ class ServerChannel(Base, TimestampMixin):
         index=True,
     )
     visibility: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    system_channel_type: Mapped[str | None] = mapped_column(
+        String(50),
+        nullable=True,
+        index=True,
+    )
     direct_user_id: Mapped[str | None] = mapped_column(
         String(255),
         ForeignKey("users.id", ondelete="SET NULL"),

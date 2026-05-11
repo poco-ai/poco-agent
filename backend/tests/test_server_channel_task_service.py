@@ -79,7 +79,38 @@ class ServerChannelTaskServiceTests(unittest.TestCase):
         self.assertEqual(result.channel_id, self.channel.id)
         self.db.commit.assert_called_once()
 
-    def test_update_task_status_emits_system_message_for_status_change(self) -> None:
+    def test_create_task_root_message_is_event_without_author(self) -> None:
+        service = ServerChannelTaskService()
+        task = ServerChannelTask(
+            id=uuid.uuid4(),
+            server_id=self.server_id,
+            channel_id=self.channel.id,
+            title="Ship board view",
+            description=None,
+            status="todo",
+            position=0,
+            priority="medium",
+            creator_user_id="user-1",
+            updated_by="user-1",
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
+        )
+
+        with patch.object(service, "_create_message") as create_message:
+            service._create_task_root_message(
+                self.db,
+                current_user=self.user,
+                task=task,
+            )
+
+        create_message.assert_called_once()
+        kwargs = create_message.call_args.kwargs
+        self.assertIsNone(kwargs["author_user_id"])
+        self.assertEqual(kwargs["message_type"], "event")
+        self.assertEqual(kwargs["content"]["event_type"], "task.created")
+        self.assertEqual(kwargs["content"]["actor_type"], "user")
+
+    def test_update_task_status_emits_event_message_for_status_change(self) -> None:
         service = ServerChannelTaskService()
         task = ServerChannelTask(
             id=uuid.uuid4(),
@@ -126,8 +157,45 @@ class ServerChannelTaskServiceTests(unittest.TestCase):
             )
 
         create_system_message.assert_called_once()
+        self.assertEqual(create_system_message.call_args.kwargs["event"], "task.status_changed")
         self.assertEqual(result.status, "in_review")
         self.db.commit.assert_called_once()
+
+    def test_task_status_system_message_helper_creates_event_reply(self) -> None:
+        service = ServerChannelTaskService()
+        root_id = uuid.uuid4()
+        task = ServerChannelTask(
+            id=uuid.uuid4(),
+            server_id=self.server_id,
+            channel_id=self.channel.id,
+            title="Ship board view",
+            description=None,
+            status="in_review",
+            position=0,
+            priority="medium",
+            creator_user_id="user-1",
+            updated_by="user-1",
+            thread_root_message_id=root_id,
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
+        )
+
+        with patch.object(service, "_create_message") as create_message:
+            service._create_system_message(
+                self.db,
+                current_user=self.user,
+                task=task,
+                event="task.status_changed",
+                text_preview="Alice moved task to in review",
+                extra_content={"from_status": "todo", "to_status": "in_review"},
+            )
+
+        create_message.assert_called_once()
+        kwargs = create_message.call_args.kwargs
+        self.assertIsNone(kwargs["author_user_id"])
+        self.assertEqual(kwargs["message_type"], "event")
+        self.assertEqual(kwargs["thread_root_message_id"], root_id)
+        self.assertEqual(kwargs["content"]["event_type"], "task.status_changed")
 
     def test_claim_task_defaults_to_current_user(self) -> None:
         service = ServerChannelTaskService()
@@ -165,6 +233,7 @@ class ServerChannelTaskServiceTests(unittest.TestCase):
             )
 
         create_system_message.assert_called_once()
+        self.assertEqual(create_system_message.call_args.kwargs["event"], "task.claimed")
         self.assertEqual(task.assignee_user_id, "user-1")
         self.assertEqual(result.assignee_user_id, "user-1")
 

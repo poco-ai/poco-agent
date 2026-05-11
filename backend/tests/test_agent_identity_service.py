@@ -211,6 +211,9 @@ class AgentIdentityServiceTests(unittest.TestCase):
             patch(
                 "app.services.agent_identity_service.ServerChannelAgentMemberRepository.create"
             ) as create_membership,
+            patch(
+                "app.services.agent_identity_service.create_channel_event_message"
+            ) as create_event,
         ):
             now = datetime.now(UTC)
 
@@ -233,6 +236,12 @@ class AgentIdentityServiceTests(unittest.TestCase):
 
         require_admin.assert_called_once_with(self.db, self.server.id, self.user.id)
         create_membership.assert_called_once()
+        create_event.assert_called_once()
+        self.assertEqual(create_event.call_args.kwargs["event_type"], "channel.agent_joined")
+        self.assertEqual(
+            create_event.call_args.kwargs["target"].target_agent_identity_id,
+            agent_identity.id,
+        )
         self.assertEqual(result.channel_id, self.channel.id)
         self.assertEqual(result.agent_identity_id, agent_identity.id)
         self.db.commit.assert_called_once()

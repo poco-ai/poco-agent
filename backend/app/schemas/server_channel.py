@@ -8,6 +8,7 @@ from app.schemas.user_profile import UserPublicProfileResponse
 
 ServerChannelVisibility = Literal["public", "private"]
 ServerConversationType = Literal["channel", "direct_message"]
+ServerSystemChannelType = Literal["personal", "public"]
 
 
 class ServerChannelCreateRequest(BaseModel):
@@ -41,6 +42,8 @@ class ServerChannelResponse(BaseModel):
     description: str | None = None
     conversation_type: ServerConversationType
     visibility: ServerChannelVisibility
+    system_channel_type: ServerSystemChannelType | None = None
+    is_system_channel: bool = False
     direct_user_id: str | None = None
     direct_agent_identity_id: UUID | None = None
     created_by: str | None

@@ -212,10 +212,11 @@ class ServerChannelTaskService:
         return self._create_message(
             db,
             channel_id=task.channel_id,
-            author_user_id=current_user.id,
-            message_type="task",
+            author_user_id=None,
+            message_type="event",
             text_preview=f"Task created: {task.title}",
             content={
+                "event_type": "task.created",
                 "event": "task.created",
                 "task_id": str(task.id),
                 "title": task.title,
@@ -256,6 +257,7 @@ class ServerChannelTaskService:
         actor = self._build_actor_context(current_user, actor_context)
 
         content: dict[str, object] = {
+            "event_type": event,
             "event": event,
             "task_id": str(task.id),
             "title": task.title,
@@ -278,7 +280,7 @@ class ServerChannelTaskService:
             db,
             channel_id=task.channel_id,
             author_user_id=None,
-            message_type="system",
+            message_type="event",
             text_preview=text_preview,
             content=content,
             thread_root_message_id=task.thread_root_message_id,

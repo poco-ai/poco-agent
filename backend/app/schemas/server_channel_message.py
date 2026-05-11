@@ -10,7 +10,7 @@ from app.schemas.server_channel_message_reaction import (
 from app.schemas.agent_identity import AgentIdentityResponse
 from app.schemas.user_profile import UserPublicProfileResponse
 
-ServerChannelMessageType = Literal["user", "system", "task"]
+ServerChannelMessageType = Literal["user", "system", "task", "event"]
 
 
 class ServerChannelMessageCreateRequest(BaseModel):
