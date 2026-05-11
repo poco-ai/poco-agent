@@ -18,6 +18,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 
 import { PageHeaderShell } from "@/components/shared/page-header-shell";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -47,6 +48,7 @@ import {
   resolveChannelTaskView,
 } from "@/features/channel-tasks/lib/channel-task-board";
 import type {
+  ChannelTaskActorSummary,
   ChannelTask,
   ChannelTaskCreateInput,
   ChannelTaskStatus,
@@ -91,6 +93,39 @@ function StatusIcon({ status }: { status: ChannelTaskStatus }) {
     return <CheckCheck className="size-3.5 text-primary" />;
   }
   return <CircleDashed className="size-3.5 text-muted-foreground" />;
+}
+
+function getActorInitials(actor: ChannelTaskActorSummary | null | undefined) {
+  const label = actor?.label?.trim() || "?";
+  return label
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join("");
+}
+
+function TaskActorPill({
+  label,
+  actor,
+  fallback,
+}: {
+  label: string;
+  actor: ChannelTaskActorSummary | null | undefined;
+  fallback: string;
+}) {
+  return (
+    <span className="inline-flex min-w-0 items-center gap-1.5 rounded-md border border-border/60 bg-background/70 px-2 py-1">
+      <Avatar className="size-4">
+        <AvatarImage src={actor?.avatarUrl ?? undefined} alt="" />
+        <AvatarFallback className="text-[10px]">
+          {getActorInitials(actor)}
+        </AvatarFallback>
+      </Avatar>
+      <span className="min-w-0 truncate">
+        {label}: {actor?.label?.trim() || fallback}
+      </span>
+    </span>
+  );
 }
 
 function CreateTaskDialog({
@@ -201,6 +236,9 @@ function TaskCard({
           <div className="min-w-0 space-y-1.5">
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <StatusIcon status={task.status} />
+              <span className="font-medium text-foreground">
+                #{task.displayNumber}
+              </span>
               <span>{t(`channelTasks.statuses.${task.status}`)}</span>
             </div>
             <h3 className="line-clamp-2 text-sm font-semibold text-foreground">
@@ -218,6 +256,16 @@ function TaskCard({
           </p>
         ) : null}
         <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+          <TaskActorPill
+            label={t("channelTasks.detail.creator")}
+            actor={task.creator}
+            fallback={t("channelTasks.detail.unknownActor")}
+          />
+          <TaskActorPill
+            label={t("channelTasks.detail.assignee")}
+            actor={task.assignee}
+            fallback={t("channelTasks.detail.unassigned")}
+          />
           <Badge variant="secondary">{t("channelTasks.threadReady")}</Badge>
           <span>
             {t("channelTasks.updatedAt", {

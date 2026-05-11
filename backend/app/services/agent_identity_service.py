@@ -32,10 +32,16 @@ from app.schemas.agent_identity import (
     ChannelAgentMemberResponse,
 )
 from app.services.agent_state_bootstrap_service import ensure_agent_state_bootstrap
+from app.services.server_channel_access import require_channel_member_access
 from app.services.server_member_service import (
     require_server_admin,
     require_server_member,
     require_server_owner,
+)
+from app.services.server_channel_event_service import (
+    ChannelEventActor,
+    ChannelEventTarget,
+    create_channel_event_message,
 )
 from app.services.session_service import SessionService
 
@@ -53,6 +59,10 @@ class AgentIdentityService:
         membership: ServerChannelAgentMember,
     ) -> ChannelAgentMemberResponse:
         return ChannelAgentMemberResponse.model_validate(membership)
+
+    @staticmethod
+    def _user_label(user: User) -> str:
+        return user.display_name or user.primary_email or user.id
 
     @staticmethod
     def _build_state_paths(agent_identity_id: uuid.UUID) -> dict[str, str]:
@@ -138,6 +148,23 @@ class AgentIdentityService:
             )
 
         preset = self._resolve_preset_for_user(db, current_user.id, request.preset_id)
+        display_name = request.display_name.strip()
+        if not display_name:
+            raise AppException(
+                error_code=ErrorCode.BAD_REQUEST,
+                message="Agent display name must not be empty",
+            )
+        existing_display_name = AgentIdentityRepository.get_by_server_and_display_name(
+            db,
+            server.id,
+            display_name,
+            include_removed=False,
+        )
+        if existing_display_name is not None:
+            raise AppException(
+                error_code=ErrorCode.BAD_REQUEST,
+                message=f"Agent display name already exists: {display_name}",
+            )
         handle_seed = request.handle or request.display_name
         handle = self._unique_handle(db, server.id, handle_seed)
         visual_key = (request.visual_key or "").strip() or preset.visual_key
@@ -147,7 +174,7 @@ class AgentIdentityService:
                 server_id=server.id,
                 preset_id=preset.id,
                 handle=handle,
-                display_name=request.display_name.strip(),
+                display_name=display_name,
                 description=(request.description or "").strip() or None,
                 visual_key=visual_key,
                 visibility=request.visibility.strip() or "server",
@@ -214,13 +241,12 @@ class AgentIdentityService:
         server_id: uuid.UUID,
         channel_id: uuid.UUID,
     ) -> list[AgentIdentityResponse]:
-        require_server_member(db, server_id, current_user.id)
-        channel = ServerChannelRepository.get_by_id(db, channel_id)
-        if channel is None or channel.server_id != server_id:
-            raise AppException(
-                error_code=ErrorCode.NOT_FOUND,
-                message=f"Channel not found: {channel_id}",
-            )
+        channel = require_channel_member_access(
+            db,
+            server_id=server_id,
+            channel_id=channel_id,
+            user_id=current_user.id,
+        )
 
         memberships = ServerChannelAgentMemberRepository.list_by_channel(db, channel.id)
         agent_responses: list[AgentIdentityResponse] = []
@@ -245,7 +271,7 @@ class AgentIdentityService:
         channel_id: uuid.UUID,
         request: ChannelAgentMemberCreateRequest,
     ) -> ChannelAgentMemberResponse:
-        require_server_member(db, server_id, current_user.id)
+        require_server_admin(db, server_id, current_user.id)
         channel = ServerChannelRepository.get_by_id(db, channel_id)
         if channel is None or channel.server_id != server_id:
             raise AppException(
@@ -271,9 +297,31 @@ class AgentIdentityService:
             agent_identity.id,
         )
         if existing is not None:
+            should_emit_joined_event = existing.status != "active"
             if existing.status != "active":
                 existing.status = "active"
                 existing.role = request.role
+                db.flush()
+                if should_emit_joined_event:
+                    create_channel_event_message(
+                        db,
+                        channel_id=channel.id,
+                        event_type="channel.agent_joined",
+                        actor=ChannelEventActor(
+                            actor_type="user",
+                            actor_user_id=current_user.id,
+                            actor_label=self._user_label(current_user),
+                        ),
+                        target=ChannelEventTarget(
+                            target_agent_identity_id=agent_identity.id,
+                            target_agent_handle=agent_identity.handle,
+                            target_label=agent_identity.display_name,
+                        ),
+                        content={"membership_id": existing.id},
+                        text_preview=(
+                            f"{agent_identity.display_name} joined {channel.name}"
+                        ),
+                    )
                 db.commit()
                 db.refresh(existing)
             return self._to_channel_member_response(existing)
@@ -286,6 +334,24 @@ class AgentIdentityService:
                 role=request.role,
                 status="active",
             ),
+        )
+        db.flush()
+        create_channel_event_message(
+            db,
+            channel_id=channel.id,
+            event_type="channel.agent_joined",
+            actor=ChannelEventActor(
+                actor_type="user",
+                actor_user_id=current_user.id,
+                actor_label=self._user_label(current_user),
+            ),
+            target=ChannelEventTarget(
+                target_agent_identity_id=agent_identity.id,
+                target_agent_handle=agent_identity.handle,
+                target_label=agent_identity.display_name,
+            ),
+            content={"membership_id": membership.id},
+            text_preview=f"{agent_identity.display_name} joined {channel.name}",
         )
         db.commit()
         db.refresh(membership)

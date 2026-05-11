@@ -471,7 +471,7 @@ const TextDocumentViewer = ({
                 className="mt-4"
                 onClick={() => {
                   if (ensureFreshFile) {
-                    void ensureFreshFile(file);
+                    void ensureFreshFile(file).finally(refetch);
                     return;
                   }
                   refetch();
@@ -638,7 +638,7 @@ const MarkdownDocumentViewer = ({
                 className="mt-4"
                 onClick={() => {
                   if (ensureFreshFile) {
-                    void ensureFreshFile(file);
+                    void ensureFreshFile(file).finally(refetch);
                     return;
                   }
                   refetch();
@@ -857,7 +857,7 @@ const ExcalidrawDocumentViewer = ({
                 className="mt-4"
                 onClick={() => {
                   if (ensureFreshFile) {
-                    void ensureFreshFile(file);
+                    void ensureFreshFile(file).finally(refetch);
                     return;
                   }
                   refetch();
@@ -1001,7 +1001,7 @@ const DrawioDocumentViewer = ({
                 className="mt-4"
                 onClick={() => {
                   if (ensureFreshFile) {
-                    void ensureFreshFile(file);
+                    void ensureFreshFile(file).finally(refetch);
                     return;
                   }
                   refetch();

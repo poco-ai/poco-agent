@@ -33,6 +33,16 @@ class ServerAgentTriggerService:
             shared_context_service or ChannelSharedContextService()
         )
 
+    def _effective_thread_root_message_id(self, message) -> uuid.UUID | None:
+        thread_root_message_id = getattr(message, "thread_root_message_id", None)
+        if thread_root_message_id is not None:
+            return thread_root_message_id
+
+        content = getattr(message, "content", None)
+        if isinstance(content, dict) and content.get("as_task") is True:
+            return getattr(message, "id", None)
+        return None
+
     def _create_execution_placeholder(
         self,
         db: Session,
@@ -49,7 +59,7 @@ class ServerAgentTriggerService:
             execution_status = "queued"
 
         trigger_message_id = getattr(message, "id", None)
-        thread_root_message_id = getattr(message, "thread_root_message_id", None)
+        thread_root_message_id = self._effective_thread_root_message_id(message)
         logical_thread_root_message_id = thread_root_message_id or getattr(
             message, "id", None
         )
@@ -163,11 +173,8 @@ class ServerAgentTriggerService:
                 or agent.removed_at is not None
             ):
                 continue
-            mention_keys = {
-                agent.handle.strip().lower(),
-                agent.display_name.strip().lower(),
-            }
-            if handles.intersection(mention_keys):
+            agent_handle = agent.handle.strip().lower()
+            if agent_handle in handles:
                 matched.append(agent)
         return matched
 
@@ -192,8 +199,8 @@ class ServerAgentTriggerService:
             and channel.direct_agent_identity_id
             else "channel_mention"
         )
-        thread_root_message_id = getattr(
-            message, "thread_root_message_id", None
+        thread_root_message_id = self._effective_thread_root_message_id(
+            message
         ) or getattr(
             message,
             "id",

@@ -1,6 +1,7 @@
 import uuid
 
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 
 from app.models.server_channel_task import ServerChannelTask
 
@@ -35,6 +36,17 @@ class ServerChannelTaskRepository:
                 ServerChannelTask.id.desc(),
             )
             .all()
+        )
+
+    @staticmethod
+    def get_max_display_number(
+        session_db: Session,
+        channel_id: uuid.UUID,
+    ) -> int | None:
+        return (
+            session_db.query(func.max(ServerChannelTask.display_number))
+            .filter(ServerChannelTask.channel_id == channel_id)
+            .scalar()
         )
 
     @staticmethod

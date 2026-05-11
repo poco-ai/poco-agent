@@ -28,6 +28,8 @@ export function ColleaguesPanel({
   members,
   selection,
   activeChannelIdByAgentId = {},
+  canCreateAgent,
+  canInviteMembers,
   onSelect,
   onOpenActiveChannel,
   onAddAgent,
@@ -38,6 +40,8 @@ export function ColleaguesPanel({
   members: ServerMemberItem[];
   selection: ColleagueSelection | null;
   activeChannelIdByAgentId?: Record<string, string>;
+  canCreateAgent: boolean;
+  canInviteMembers: boolean;
   onSelect: (selection: ColleagueSelection) => void;
   onOpenActiveChannel?: (channelId: string) => void;
   onAddAgent: () => void;
@@ -57,12 +61,23 @@ export function ColleaguesPanel({
               variant="outline"
               size="icon"
               onClick={onAddAgent}
+              disabled={!canCreateAgent}
               aria-label={t("conversationView.agentPreset.title")}
+              title={
+                canCreateAgent
+                  ? undefined
+                  : t("conversationView.colleagues.createAgentPermissionHint")
+              }
               className="size-8"
             >
               <Plus className="size-4" />
             </Button>
           </div>
+          {!canCreateAgent ? (
+            <p className="px-1 text-xs text-muted-foreground">
+              {t("conversationView.colleagues.createAgentPermissionHint")}
+            </p>
+          ) : null}
           <div className="space-y-2">
             {agents.length > 0 ? (
               agents.map((agent) => (
@@ -153,12 +168,23 @@ export function ColleaguesPanel({
               variant="outline"
               size="icon"
               onClick={onInviteMember}
+              disabled={!canInviteMembers}
               aria-label={t("conversationView.serverAccess.invitesTitle")}
+              title={
+                canInviteMembers
+                  ? undefined
+                  : t("conversationView.colleagues.invitePermissionHint")
+              }
               className="size-8"
             >
               <Plus className="size-4" />
             </Button>
           </div>
+          {!canInviteMembers ? (
+            <p className="px-1 text-xs text-muted-foreground">
+              {t("conversationView.colleagues.invitePermissionHint")}
+            </p>
+          ) : null}
           <div className="space-y-2">
             {members.length > 0 ? (
               members.map((member) => (

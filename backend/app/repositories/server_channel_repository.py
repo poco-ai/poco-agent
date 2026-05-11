@@ -1,5 +1,6 @@
 import uuid
 
+from sqlalchemy import case
 from sqlalchemy.orm import Session
 
 from app.models.server_channel import ServerChannel
@@ -49,22 +50,55 @@ class ServerChannelRepository:
     ) -> list[ServerChannel]:
         return (
             session_db.query(ServerChannel)
-            .outerjoin(
+            .join(
                 ServerChannelMember,
-                ServerChannelMember.channel_id == ServerChannel.id,
+                (ServerChannelMember.channel_id == ServerChannel.id)
+                & (ServerChannelMember.user_id == user_id)
+                & (ServerChannelMember.status == "active"),
             )
             .filter(
                 ServerChannel.server_id == server_id,
                 ServerChannel.archived_at.is_(None),
-                (
-                    (ServerChannel.visibility == "public")
-                    | (
-                        (ServerChannelMember.user_id == user_id)
-                        & (ServerChannelMember.status == "active")
-                    )
-                ),
             )
             .order_by(ServerChannel.created_at.asc(), ServerChannel.name.asc())
+            .all()
+        )
+
+    @staticmethod
+    def get_system_channel(
+        session_db: Session,
+        server_id: uuid.UUID,
+        system_channel_type: str,
+    ) -> ServerChannel | None:
+        return (
+            session_db.query(ServerChannel)
+            .filter(
+                ServerChannel.server_id == server_id,
+                ServerChannel.system_channel_type == system_channel_type,
+                ServerChannel.archived_at.is_(None),
+            )
+            .first()
+        )
+
+    @staticmethod
+    def list_default_public_candidates(
+        session_db: Session,
+        server_id: uuid.UUID,
+    ) -> list[ServerChannel]:
+        slug_priority = case(
+            (ServerChannel.slug == "public", 0),
+            (ServerChannel.slug == "general", 1),
+            else_=2,
+        )
+        return (
+            session_db.query(ServerChannel)
+            .filter(
+                ServerChannel.server_id == server_id,
+                ServerChannel.conversation_type == "channel",
+                ServerChannel.visibility == "public",
+                ServerChannel.archived_at.is_(None),
+            )
+            .order_by(slug_priority.asc(), ServerChannel.created_at.asc())
             .all()
         )
 

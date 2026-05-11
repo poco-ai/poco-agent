@@ -23,6 +23,7 @@ import type {
   ChannelTask,
   ChannelTaskActivityMessage,
 } from "@/features/channel-tasks/model/types";
+import { channelTasksApi } from "@/features/channel-tasks/api/channel-tasks-api";
 import { TaskHistoryProvider } from "@/features/projects/contexts/task-history-context";
 import type {
   ServerAgentItem,
@@ -46,7 +47,6 @@ import {
   getAgentRuntimeDotClassName,
   getAgentRuntimeStatus,
 } from "../lib/agent-runtime-status";
-import { ServerMessageContent } from "./server-message-content";
 import { ServerAgentAvatar } from "./server-agent-avatar";
 
 const overlayDrawerClassName =
@@ -57,6 +57,24 @@ const drawerHeaderClassName =
 
 const drawerHeaderActionsClassName =
   "ml-auto flex min-w-0 max-w-full flex-wrap items-center justify-end gap-2";
+
+function toConversationMessage(
+  message: ChannelTaskActivityMessage,
+): ServerConversationMessage {
+  return {
+    id: message.messageId,
+    channelId: message.channelId,
+    authorUserId: message.authorUserId,
+    messageType: message.messageType,
+    content: message.content,
+    textPreview: message.textPreview,
+    threadRootMessageId: message.threadRootMessageId,
+    replyCount: 0,
+    reactions: [],
+    createdAt: message.createdAt,
+    updatedAt: message.updatedAt,
+  };
+}
 
 export function ThreadDrawer({
   thread,
@@ -179,12 +197,13 @@ export function ThreadDrawer({
         </Button>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto">
-        {thread.map((message) => (
+        {thread.map((message, index) => (
           <MessageRow
             key={message.id}
             message={message}
             agents={agents}
             presets={presets}
+            defaultExpanded={index === thread.length - 1}
             onOpenThread={() => undefined}
             onOpenExecution={onOpenExecution}
             onToggleSaved={() => undefined}
@@ -570,15 +589,55 @@ export function ExecutionDrawer({
 }
 
 export function TaskDrawer({
+  serverId,
+  channelId,
   task,
   activity,
+  members,
+  agents,
+  onTaskUpdated,
+  onRefreshActivity,
   onClose,
 }: {
+  serverId: string;
+  channelId: string;
   task: ChannelTask;
   activity: ChannelTaskActivityMessage[];
+  members: ServerChannelMemberItem[];
+  agents: ServerAgentItem[];
+  onTaskUpdated: (task: ChannelTask) => void;
+  onRefreshActivity: () => Promise<void>;
   onClose: () => void;
 }) {
   const { t } = useT("translation");
+  const [isSaving, setIsSaving] = React.useState(false);
+  const updateAssignee = async (value: string) => {
+    const [kind, id] = value.split(":", 2);
+    setIsSaving(true);
+    try {
+      const nextTask = await channelTasksApi.updateTask(
+        serverId,
+        channelId,
+        task.taskId,
+        {
+          title: task.title,
+          description: task.description,
+          assigneeUserId: kind === "user" ? id : null,
+          assigneeAgentIdentityId: kind === "agent" ? id : null,
+          assigneePresetId: null,
+        },
+      );
+      onTaskUpdated(nextTask);
+      await onRefreshActivity();
+      toast.success(t("channelTasks.toasts.assigneeUpdated"));
+    } catch (error) {
+      console.error("[TaskDrawer] assignee update failed", error);
+      toast.error(t("channelTasks.toasts.assigneeFailed"));
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
     <aside className={overlayDrawerClassName}>
       <div className={drawerHeaderClassName}>
@@ -605,30 +664,74 @@ export function TaskDrawer({
             <p className="text-xs font-medium text-muted-foreground">
               {t("conversationView.taskDetail")}
             </p>
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+              <Badge variant="secondary">#{task.displayNumber}</Badge>
+              <Badge variant="outline">
+                {t("channelTasks.detail.creator")}:{" "}
+                {task.creator?.label || task.creatorUserId}
+              </Badge>
+              <Badge variant="outline">
+                {t("channelTasks.detail.assignee")}:{" "}
+                {task.assignee?.label || t("channelTasks.detail.unassigned")}
+              </Badge>
+            </div>
             <p className="mt-2 text-sm leading-7 text-foreground">
               {task.description || t("servers.agents.emptyDescription")}
             </p>
+            <label className="mt-4 block space-y-1.5">
+              <span className="text-xs font-medium text-muted-foreground">
+                {t("channelTasks.detail.assignee")}
+              </span>
+              <select
+                value={
+                  task.assigneeAgentIdentityId
+                    ? `agent:${task.assigneeAgentIdentityId}`
+                    : task.assigneeUserId
+                      ? `user:${task.assigneeUserId}`
+                      : "none:"
+                }
+                disabled={isSaving}
+                onChange={(event) => void updateAssignee(event.target.value)}
+                className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm text-foreground shadow-none"
+              >
+                <option value="none:">
+                  {t("channelTasks.detail.unassigned")}
+                </option>
+                {members.map((member) => (
+                  <option key={member.id} value={`user:${member.userId}`}>
+                    {member.user?.displayName || member.userId}
+                  </option>
+                ))}
+                {agents.map((agent) => (
+                  <option key={agent.id} value={`agent:${agent.id}`}>
+                    @{agent.handle} / {agent.displayName}
+                  </option>
+                ))}
+              </select>
+            </label>
           </div>
           <div className="rounded-md border border-border px-4 py-4">
             <p className="text-xs font-medium text-muted-foreground">
               {t("conversationView.taskActivity")}
             </p>
-            <div className="mt-3 space-y-3">
+            <div className="mt-3 overflow-hidden rounded-md border border-border bg-background">
               {activity.length > 0 ? (
                 activity.map((item) => (
                   <div
                     key={item.messageId}
-                    className="rounded-md border border-border px-3 py-3 text-sm text-foreground"
+                    className="border-b border-border last:border-b-0"
                   >
-                    <ServerMessageContent
-                      content={
-                        item.textPreview || t("conversationView.emptyMessage")
-                      }
+                    <MessageRow
+                      message={toConversationMessage(item)}
+                      agents={agents}
+                      onOpenThread={() => undefined}
+                      onToggleSaved={() => undefined}
+                      compact
                     />
                   </div>
                 ))
               ) : (
-                <p className="text-sm text-muted-foreground">
+                <p className="px-3 py-3 text-sm text-muted-foreground">
                   {t("conversationView.noTaskActivity")}
                 </p>
               )}

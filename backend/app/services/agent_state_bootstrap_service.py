@@ -1,4 +1,5 @@
 import json
+import os
 from pathlib import Path
 
 from app.models.agent_identity import AgentIdentity
@@ -6,6 +7,13 @@ from app.models.agent_persistent_state import AgentPersistentState
 
 DEFAULT_AGENT_STATE_BASE_DIR = Path(__file__).resolve().parents[3] / "tmp_workspace"
 BOOTSTRAP_SCHEMA_VERSION = 1
+
+
+def resolve_agent_state_base_dir() -> Path:
+    configured_root = os.getenv("WORKSPACE_ROOT")
+    if configured_root:
+        return Path(configured_root)
+    return DEFAULT_AGENT_STATE_BASE_DIR
 
 
 def _write_if_missing_or_empty(path: Path, content: str) -> None:
@@ -74,8 +82,9 @@ def ensure_agent_state_bootstrap(
     *,
     agent_identity: AgentIdentity,
     persistent_state: AgentPersistentState,
-    base_dir: Path = DEFAULT_AGENT_STATE_BASE_DIR,
+    base_dir: Path | None = None,
 ) -> Path:
+    base_dir = base_dir or resolve_agent_state_base_dir()
     root = base_dir / persistent_state.state_root_path
     notes_dir = root / "notes"
     state_dir = root / "state"

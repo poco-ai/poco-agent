@@ -63,6 +63,7 @@ class ServerService:
         name: str,
         slug: str,
         visibility: str,
+        system_channel_type: str,
     ) -> ServerChannel:
         channel = ServerChannelRepository.create(
             db,
@@ -72,6 +73,7 @@ class ServerService:
                 slug=slug,
                 conversation_type="channel",
                 visibility=visibility,
+                system_channel_type=system_channel_type,
                 created_by=current_user.id,
             ),
         )
@@ -117,6 +119,7 @@ class ServerService:
             name="Personal",
             slug="personal",
             visibility="private",
+            system_channel_type="personal",
         )
         db.commit()
         db.refresh(server)
@@ -164,9 +167,10 @@ class ServerService:
             db,
             server=server,
             current_user=current_user,
-            name="general",
-            slug="general",
+            name="Public",
+            slug="public",
             visibility="public",
+            system_channel_type="public",
         )
         db.commit()
         db.refresh(server)

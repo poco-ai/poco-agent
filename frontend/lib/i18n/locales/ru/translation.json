@@ -157,7 +157,13 @@
       "executionPlaceholder": "Execution summary and runtime state will attach here once the channel task flow connects to the agent runtime.",
       "currentStatus": "Current status: {{status}}",
       "assigneeAttached": "Assignee attached",
-      "assigneePending": "Assignee pending"
+      "assigneePending": "Assignee pending",
+      "creator": "Creator",
+      "assignee": "Assignee",
+      "unassigned": "Unassigned",
+      "unknownActor": "Unknown",
+      "context": "Channel context",
+      "contextDescription": "Review the channel messages around the selected activity."
     },
     "toasts": {
       "loadFailed": "Failed to load channel tasks",
@@ -171,7 +177,10 @@
       "unclaimed": "Task unclaimed",
       "claimFailed": "Failed to update task claim",
       "statusUpdated": "Task status updated",
-      "statusFailed": "Failed to update task status"
+      "statusFailed": "Failed to update task status",
+      "assigneeUpdated": "Assignee updated",
+      "assigneeFailed": "Failed to update assignee",
+      "contextFailed": "Failed to load channel context"
     }
   },
   "conversationView": {
@@ -238,6 +247,21 @@
     "emptyTaskListTitle": "Задач пока нет",
     "emptyTaskListDescription": "Задачи канала появятся здесь, когда сообщения будут преобразованы в работу.",
     "leave": "Покинуть",
+    "events": {
+      "actor": "Кто-то",
+      "task": "Задача без названия",
+      "channelMemberJoined": "{{target}} присоединился",
+      "channelAgentJoined": "{{target}} присоединился",
+      "taskCreated": "{{actor}} создал задачу: {{task}}",
+      "taskCreatedAssigned": "{{actor}} создал задачу {{task}} и назначил ее на {{assignee}}",
+      "taskStatusChanged": "{{actor}} переместил задачу из {{fromStatus}} в {{toStatus}}",
+      "taskAssigned": "{{actor}} назначил задачу {{task}} на {{toAssignee}}",
+      "taskReassigned": "{{actor}} переназначил задачу {{task}} на {{toAssignee}}",
+      "taskUnassigned": "{{actor}} снял назначение с задачи {{task}}",
+      "taskUpdated": "{{actor}} обновил задачу {{task}}",
+      "taskCommented": "{{actor}} прокомментировал задачу {{task}}: {{comment}}",
+      "unknown": "{{actor}} обновил канал"
+    },
     "mentionCandidates": "Упомянуть",
     "mentionKinds": {
       "agent": "Агент",
@@ -276,9 +300,14 @@
       "title": "Участники",
       "description": "Люди и агенты в #{{channel}}.",
       "inviteAgents": "Пригласить агентов",
+      "inviteHumans": "Пригласить участников",
       "agentSearchPlaceholder": "Поиск агентов по имени",
+      "humanSearchPlaceholder": "Поиск участников по имени",
       "noAvailableAgents": "Нет доступных агентов для добавления.",
+      "noAvailableHumans": "Нет доступных участников для добавления.",
       "addSelectedAgents": "Добавить выбранных агентов",
+      "addSelectedHumans": "Добавить выбранных участников",
+      "manageAgentsPermissionHint": "Добавлять агентов в каналы могут только администраторы сервера и owner.",
       "agents": "Агенты",
       "humans": "Люди",
       "noAgents": "В этом канале нет агентов.",
@@ -305,7 +334,8 @@
       "generateInvite": "Создать приглашение",
       "inviteMeta": "Истекает {{expiresAt}}",
       "copyInvite": "Копировать",
-      "noInvites": "Активных приглашений пока нет."
+      "noInvites": "Активных приглашений пока нет.",
+      "invitePermissionHint": "Only server admins and owners can manage invite keys."
     },
     "agentPreset": {
       "title": "Добавить агента",
@@ -313,6 +343,7 @@
       "preset": "Пресет",
       "selectPreset": "Выберите пресет",
       "displayName": "Отображаемое имя",
+      "displayNameConflict": "Агент с таким отображаемым именем уже существует.",
       "handle": "Идентификатор",
       "agentDescription": "Описание",
       "create": "Создать агента"
@@ -324,6 +355,10 @@
       "humans": "Люди",
       "noAgents": "Серверных агентов пока нет.",
       "noHumans": "Людей-участников пока нет.",
+      "createAgentPermissionHint": "Создавать агентов могут только администраторы сервера и owner.",
+      "invitePermissionHint": "Only server admins and owners can invite members.",
+      "rolePermissionHint": "Only the server owner can change member roles.",
+      "ownerOnlyMemberActionHint": "Only the server owner can manage server members.",
       "description": "Описание",
       "lifecycle": "Жизненный цикл",
       "created": "Создан",
@@ -349,6 +384,9 @@
       },
       "emptyValue": "Недоступно",
       "emptySelection": "Выберите коллегу, чтобы посмотреть детали.",
+      "transferOwnership": "Transfer ownership",
+      "transferOwnershipTitle": "Transfer server ownership?",
+      "transferOwnershipDescription": "This will make {{member}} the server owner. Your role will become Admin.",
       "removeMember": "Удалить участника",
       "startAgent": "Запустить",
       "restartAgent": "Перезапустить",
@@ -364,7 +402,8 @@
       "stopAgentDescription": "Текущая работа этого агента будет отброшена, и он не будет принимать новые задачи канала, пока его снова не запустят. Задачи в очереди сохранятся.",
       "removeAgentTitle": "Удалить {{name}} с этого сервера?",
       "removeAgentDescription": "Агент будет удален из {{channels}} и других каналов, а еще не начатые задачи будут отменены. История сообщений, реакции и результаты работы сохранятся.",
-      "removeAgentDescriptionUnknown": "Агент будет удален из каналов этого сервера, а еще не начатые задачи будут отменены. История сообщений, реакции и результаты работы сохранятся."
+      "removeAgentDescriptionUnknown": "Агент будет удален из каналов этого сервера, а еще не начатые задачи будут отменены. История сообщений, реакции и результаты работы сохранятся.",
+      "personalOwnershipTransferHint": "Personal servers do not support ownership transfer."
     },
     "threadMentionHint": "Ответы в этой ветке будут направлены",
     "execution": {
@@ -390,6 +429,7 @@
       "taskCreated": "Задача создана из сообщения",
       "channelCreated": "Канал создан",
       "channelCreateFailed": "Не удалось создать канал",
+      "systemChannelNameReserved": "Public и Personal — зарезервированные названия каналов",
       "channelUpdated": "Канал обновлён",
       "channelUpdateFailed": "Не удалось обновить канал",
       "channelArchived": "Канал архивирован",
@@ -416,6 +456,10 @@
       "agentUpdated": "Агент обновлен",
       "agentUpdateFailed": "Не удалось обновить агента",
       "agentStarted": "Агент запущен",
+      "memberRoleUpdated": "Member role updated",
+      "memberRoleUpdateFailed": "Failed to update member role",
+      "ownershipTransferred": "Server ownership transferred",
+      "ownershipTransferFailed": "Failed to transfer ownership",
       "memberRemoved": "Участник удалён",
       "memberRemoveFailed": "Не удалось удалить участника",
       "agentRestarted": "Агент перезапущен",
@@ -435,6 +479,11 @@
       "pickerLabel": "Выбрать реакцию",
       "addEmoji": "Отреагировать {{emoji}}",
       "removeEmoji": "Удалить реакцию {{emoji}}"
+    },
+    "roles": {
+      "owner": "Owner",
+      "admin": "Admin",
+      "member": "Member"
     }
   },
   "workspaces": {

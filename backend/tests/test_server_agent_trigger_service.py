@@ -52,10 +52,11 @@ class ServerAgentTriggerServiceTests(unittest.TestCase):
             handle="api-specialist",
             display_name="API Specialist",
             lifecycle_state="active",
+            removed_at=None,
             created_by="owner-user",
             persistent_state=SimpleNamespace(active_session_id=None),
         )
-        membership = SimpleNamespace(agent_identity_id=self.agent_id)
+        membership = SimpleNamespace(agent_identity_id=self.agent_id, status="active")
         self.context_service.extract_trigger_body.return_value = (
             "Please review @api-specialist"
         )
@@ -113,6 +114,56 @@ class ServerAgentTriggerServiceTests(unittest.TestCase):
             request.config.trigger_context.handoff.dedupe_key,
             f"channel-trigger:{message.id}:{self.agent_id}",
         )
+
+    def test_channel_mention_ignores_display_name_match(self) -> None:
+        message = SimpleNamespace(
+            id=uuid.uuid4(),
+            channel_id=self.channel_id,
+            author_user_id="user-1",
+            text_preview="Please review @Reviewer",
+            content={"text": "Please review @Reviewer"},
+            thread_root_message_id=None,
+        )
+        channel = SimpleNamespace(
+            id=self.channel_id,
+            server_id=self.server_id,
+            conversation_type="channel",
+            direct_agent_identity_id=None,
+            name="backend",
+        )
+        agent = SimpleNamespace(
+            id=self.agent_id,
+            server_id=self.server_id,
+            preset_id=8,
+            handle="api-specialist",
+            display_name="Reviewer",
+            lifecycle_state="active",
+            removed_at=None,
+            created_by="owner-user",
+            persistent_state=SimpleNamespace(active_session_id=None),
+        )
+        membership = SimpleNamespace(agent_identity_id=self.agent_id, status="active")
+
+        with (
+            patch(
+                "app.services.server_agent_trigger_service.ServerChannelAgentMemberRepository.list_by_channel",
+                return_value=[membership],
+            ),
+            patch(
+                "app.services.server_agent_trigger_service.AgentIdentityRepository.get_by_id",
+                return_value=agent,
+            ),
+        ):
+            results = self.service.trigger_for_channel_message(
+                self.db,
+                current_user=self.current_user,
+                server_id=self.server_id,
+                channel=channel,
+                message=message,
+            )
+
+        self.assertEqual(results, [])
+        self.task_service.enqueue_task.assert_not_called()
 
     def test_agent_dm_message_triggers_direct_agent_without_mention(self) -> None:
         message = SimpleNamespace(

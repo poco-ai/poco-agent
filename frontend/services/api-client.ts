@@ -228,6 +228,12 @@ export const API_ENDPOINTS = {
     threadRootMessageId: string,
   ) =>
     `/servers/${serverId}/channels/${channelId}/threads/${threadRootMessageId}`,
+  serverChannelMessageContext: (
+    serverId: string,
+    channelId: string,
+    messageId: string,
+  ) =>
+    `/servers/${serverId}/channels/${channelId}/messages/${messageId}/context`,
 
   // Workspaces
   workspaces: "/workspaces",

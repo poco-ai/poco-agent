@@ -21,7 +21,7 @@ from app.schemas.channel_artifact import (
     AgentChannelArtifactSearchResponse,
 )
 from app.schemas.workspace import FileNode
-from app.services.server_member_service import require_server_member
+from app.services.server_channel_access import require_channel_member_access
 from app.services.storage_service import S3StorageService
 from app.utils.workspace import build_workspace_file_nodes
 from app.utils.workspace_manifest import (
@@ -375,7 +375,12 @@ class ChannelArtifactService:
         server_id: uuid.UUID,
         channel_id: uuid.UUID,
     ) -> list[FileNode]:
-        require_server_member(db, server_id, current_user.id)
+        require_channel_member_access(
+            db,
+            server_id=server_id,
+            channel_id=channel_id,
+            user_id=current_user.id,
+        )
         artifacts = ChannelArtifactRepository.list_by_channel(
             db,
             channel_id=channel_id,

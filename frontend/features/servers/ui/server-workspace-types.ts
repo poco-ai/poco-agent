@@ -17,7 +17,6 @@ export type ConversationTab = "chat";
 export type DrawerState =
   | { type: "none" }
   | { type: "thread"; channelId: string; rootMessageId: string }
-  | { type: "task"; taskId: string }
   | { type: "artifacts" }
   | { type: "execution"; sessionId: string }
   | { type: "agent"; agentId?: string | null }

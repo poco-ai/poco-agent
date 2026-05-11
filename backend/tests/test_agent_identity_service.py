@@ -3,6 +3,8 @@ import uuid
 from datetime import UTC, datetime
 from unittest.mock import MagicMock, patch
 
+from app.core.errors.error_codes import ErrorCode
+from app.core.errors.exceptions import AppException
 from app.models.agent_identity import AgentIdentity
 from app.models.agent_persistent_state import AgentPersistentState
 from app.models.server import Server
@@ -69,6 +71,10 @@ class AgentIdentityServiceTests(unittest.TestCase):
                 return_value=None,
             ),
             patch(
+                "app.services.agent_identity_service.AgentIdentityRepository.get_by_server_and_display_name",
+                return_value=None,
+            ),
+            patch(
                 "app.services.agent_identity_service.AgentIdentityRepository.create"
             ) as create_agent,
             patch(
@@ -112,6 +118,61 @@ class AgentIdentityServiceTests(unittest.TestCase):
         self.assertEqual(result.display_name, "Backend Specialist")
         self.db.commit.assert_called_once()
 
+    def test_create_agent_rejects_duplicate_display_name(self) -> None:
+        service = AgentIdentityService()
+        preset = MagicMock(id=7, visual_key="preset-visual-02")
+        existing_agent = AgentIdentity(
+            id=uuid.uuid4(),
+            server_id=self.server.id,
+            preset_id=7,
+            handle="reviewer",
+            display_name="Reviewer",
+            description=None,
+            visual_key="preset-visual-02",
+            visibility="server",
+            lifecycle_state="active",
+            created_by="user-1",
+            updated_by="user-1",
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
+        )
+
+        with (
+            patch(
+                "app.services.agent_identity_service.require_server_admin",
+                return_value=MagicMock(role="admin"),
+            ),
+            patch(
+                "app.services.agent_identity_service.ServerRepository.get_by_id",
+                return_value=self.server,
+            ),
+            patch(
+                "app.services.agent_identity_service.PresetRepository.get_visible_by_id",
+                return_value=preset,
+            ),
+            patch(
+                "app.services.agent_identity_service.AgentIdentityRepository.get_by_server_and_display_name",
+                return_value=existing_agent,
+            ),
+            patch(
+                "app.services.agent_identity_service.AgentIdentityRepository.create"
+            ) as create_agent,
+        ):
+            with self.assertRaises(AppException) as context:
+                service.create_agent(
+                    self.db,
+                    self.user,
+                    self.server.id,
+                    AgentIdentityCreateRequest(
+                        display_name="Reviewer",
+                        preset_id=7,
+                    ),
+                )
+
+        self.assertEqual(context.exception.error_code, ErrorCode.BAD_REQUEST)
+        create_agent.assert_not_called()
+        self.db.commit.assert_not_called()
+
     def test_add_agent_to_channel_creates_membership(self) -> None:
         service = AgentIdentityService()
         agent_identity = AgentIdentity(
@@ -132,9 +193,9 @@ class AgentIdentityServiceTests(unittest.TestCase):
 
         with (
             patch(
-                "app.services.agent_identity_service.require_server_member",
-                return_value=MagicMock(role="member"),
-            ),
+                "app.services.agent_identity_service.require_server_admin",
+                return_value=MagicMock(role="admin"),
+            ) as require_admin,
             patch(
                 "app.services.agent_identity_service.ServerChannelRepository.get_by_id",
                 return_value=self.channel,
@@ -150,6 +211,9 @@ class AgentIdentityServiceTests(unittest.TestCase):
             patch(
                 "app.services.agent_identity_service.ServerChannelAgentMemberRepository.create"
             ) as create_membership,
+            patch(
+                "app.services.agent_identity_service.create_channel_event_message"
+            ) as create_event,
         ):
             now = datetime.now(UTC)
 
@@ -170,10 +234,50 @@ class AgentIdentityServiceTests(unittest.TestCase):
                 ChannelAgentMemberCreateRequest(agent_identity_id=agent_identity.id),
             )
 
+        require_admin.assert_called_once_with(self.db, self.server.id, self.user.id)
         create_membership.assert_called_once()
+        create_event.assert_called_once()
+        self.assertEqual(
+            create_event.call_args.kwargs["event_type"], "channel.agent_joined"
+        )
+        self.assertEqual(
+            create_event.call_args.kwargs["target"].target_agent_identity_id,
+            agent_identity.id,
+        )
         self.assertEqual(result.channel_id, self.channel.id)
         self.assertEqual(result.agent_identity_id, agent_identity.id)
         self.db.commit.assert_called_once()
+
+    def test_add_agent_to_channel_requires_server_admin(self) -> None:
+        service = AgentIdentityService()
+        agent_identity_id = uuid.uuid4()
+
+        with (
+            patch(
+                "app.services.agent_identity_service.require_server_admin",
+                side_effect=Exception("forbidden"),
+            ) as require_admin,
+            patch(
+                "app.services.agent_identity_service.ServerChannelRepository.get_by_id"
+            ) as get_channel,
+            patch(
+                "app.services.agent_identity_service.ServerChannelAgentMemberRepository.create"
+            ) as create_membership,
+        ):
+            with self.assertRaisesRegex(Exception, "forbidden"):
+                service.add_agent_to_channel(
+                    self.db,
+                    self.user,
+                    self.server.id,
+                    self.channel.id,
+                    ChannelAgentMemberCreateRequest(
+                        agent_identity_id=agent_identity_id
+                    ),
+                )
+
+        require_admin.assert_called_once_with(self.db, self.server.id, self.user.id)
+        get_channel.assert_not_called()
+        create_membership.assert_not_called()
 
     def test_restart_agent_cancels_current_execution_without_canceling_queue(
         self,

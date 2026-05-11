@@ -1,6 +1,8 @@
 export type ServerKind = "personal" | "shared";
 export type ServerChannelVisibility = "public" | "private";
 export type ServerConversationType = "channel" | "direct_message";
+export type ServerSystemChannelType = "personal" | "public";
+export type ServerRole = "owner" | "admin" | "member";
 
 export interface ServerUserPublicProfile {
   userId: string;
@@ -58,7 +60,7 @@ export interface ServerMemberItem {
   serverId: string;
   userId: string;
   user?: ServerUserPublicProfile | null;
-  role: string;
+  role: ServerRole;
   joinedAt: string;
   invitedBy?: string | null;
   status: string;
@@ -70,7 +72,7 @@ export interface ServerInviteItem {
   id: string;
   serverId: string;
   token: string;
-  role: string;
+  role: ServerRole;
   expiresAt: string;
   createdBy: string;
   maxUses: number;
@@ -88,6 +90,8 @@ export interface ServerChannelItem {
   description?: string | null;
   conversationType: ServerConversationType;
   visibility: ServerChannelVisibility;
+  systemChannelType?: ServerSystemChannelType | null;
+  isSystemChannel: boolean;
   directUserId?: string | null;
   directAgentIdentityId?: string | null;
   createdBy: string | null;
@@ -114,7 +118,7 @@ export interface ServerConversationMessage {
   authorUserId?: string | null;
   authorUser?: ServerUserPublicProfile | null;
   authorAgent?: ServerAgentItem | null;
-  messageType: "user" | "system" | "task";
+  messageType: "user" | "system" | "task" | "event";
   content: Record<string, unknown>;
   textPreview?: string | null;
   threadRootMessageId?: string | null;
@@ -122,6 +126,34 @@ export interface ServerConversationMessage {
   reactions: ServerConversationMessageReactionGroup[];
   createdAt: string;
   updatedAt: string;
+}
+
+export interface ServerChannelEventContent {
+  eventType: string;
+  actorType?: "user" | "agent" | string | null;
+  actorUserId?: string | null;
+  actorLabel?: string | null;
+  actorAgentIdentityId?: string | null;
+  actorAgentHandle?: string | null;
+  actorSessionId?: string | null;
+  targetUserId?: string | null;
+  targetAgentIdentityId?: string | null;
+  targetAgentHandle?: string | null;
+  targetLabel?: string | null;
+  membershipId?: number | string | null;
+  joinReason?: string | null;
+  taskId?: string | null;
+  taskNumber?: number | string | null;
+  taskTitle?: string | null;
+  title?: string | null;
+  status?: string | null;
+  priority?: string | null;
+  commentText?: string | null;
+  fromStatus?: string | null;
+  toStatus?: string | null;
+  fromAssignee?: unknown;
+  toAssignee?: unknown;
+  assignee?: unknown;
 }
 
 export interface ServerConversationMessageReactionActor {

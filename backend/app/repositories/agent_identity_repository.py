@@ -1,5 +1,6 @@
 import uuid
 
+from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
 
 from app.models.agent_identity import AgentIdentity
@@ -34,6 +35,22 @@ class AgentIdentityRepository:
         query = session_db.query(AgentIdentity).filter(
             AgentIdentity.server_id == server_id,
             AgentIdentity.handle == handle,
+        )
+        if not include_removed:
+            query = query.filter(AgentIdentity.removed_at.is_(None))
+        return query.first()
+
+    @staticmethod
+    def get_by_server_and_display_name(
+        session_db: Session,
+        server_id: uuid.UUID,
+        display_name: str,
+        *,
+        include_removed: bool = False,
+    ) -> AgentIdentity | None:
+        query = session_db.query(AgentIdentity).filter(
+            AgentIdentity.server_id == server_id,
+            func.lower(AgentIdentity.display_name) == display_name.strip().lower(),
         )
         if not include_removed:
             query = query.filter(AgentIdentity.removed_at.is_(None))

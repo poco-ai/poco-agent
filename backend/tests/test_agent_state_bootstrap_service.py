@@ -4,6 +4,7 @@ import unittest
 import uuid
 from datetime import UTC, datetime
 from pathlib import Path
+from unittest.mock import patch
 
 from app.models.agent_identity import AgentIdentity
 from app.models.agent_persistent_state import AgentPersistentState
@@ -108,6 +109,19 @@ class AgentStateBootstrapServiceTests(unittest.TestCase):
                 json.loads((root / "profile.json").read_text(encoding="utf-8")),
                 {"custom": True},
             )
+
+    def test_ensure_agent_state_bootstrap_uses_workspace_root_env(self) -> None:
+        agent, persistent_state = self._build_agent()
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with patch.dict("os.environ", {"WORKSPACE_ROOT": temp_dir}):
+                root = ensure_agent_state_bootstrap(
+                    agent_identity=agent,
+                    persistent_state=persistent_state,
+                )
+
+            self.assertEqual(root, Path(temp_dir) / persistent_state.state_root_path)
+            self.assertTrue((root / "profile.json").exists())
 
 
 if __name__ == "__main__":

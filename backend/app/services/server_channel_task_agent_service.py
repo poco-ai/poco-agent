@@ -219,7 +219,9 @@ class ServerChannelTaskAgentService:
             context.server_id,
             context.channel_id,
             request.task_id,
-            to_claim_self_request(assignee_preset_id=context.agent_preset_id),
+            to_claim_self_request(
+                assignee_agent_identity_id=context.agent_identity_id,
+            ),
             actor_context=self._build_actor_context(context),
         )
         return AgentChannelTaskOperationResponse(

@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import type { Preset } from "@/features/capabilities/presets/lib/preset-types";
+import type { ServerAgentItem } from "@/features/servers/model/types";
 import { useT } from "@/lib/i18n/client";
 
 export interface AgentPresetCreateInput {
@@ -31,20 +32,48 @@ export interface AgentPresetCreateInput {
   description: string;
 }
 
+function normalizeAgentDisplayName(value: string): string {
+  return value.trim().toLocaleLowerCase();
+}
+
+function buildUniqueAgentDisplayName(
+  displayName: string,
+  existingAgents: ServerAgentItem[],
+): string {
+  const baseName = displayName.trim() || "Agent";
+  const existingNames = new Set(
+    existingAgents.map((agent) => normalizeAgentDisplayName(agent.displayName)),
+  );
+  if (!existingNames.has(normalizeAgentDisplayName(baseName))) {
+    return baseName;
+  }
+
+  let suffix = 2;
+  while (
+    existingNames.has(normalizeAgentDisplayName(`${baseName} ${suffix}`))
+  ) {
+    suffix += 1;
+  }
+  return `${baseName} ${suffix}`;
+}
+
 export function AgentPresetDialog({
   open,
   presets,
+  existingAgents,
   isWorking,
   onOpenChange,
   onCreateAgent,
 }: {
   open: boolean;
   presets: Preset[];
+  existingAgents: ServerAgentItem[];
   isWorking: boolean;
   onOpenChange: (open: boolean) => void;
   onCreateAgent: (input: AgentPresetCreateInput) => void;
 }) {
   const { t } = useT("translation");
+  const autoDisplayNameRef = React.useRef<string | null>(null);
   const [presetId, setPresetId] = React.useState("");
   const [displayName, setDisplayName] = React.useState("");
   const [handle, setHandle] = React.useState("");
@@ -56,6 +85,7 @@ export function AgentPresetDialog({
       setDisplayName("");
       setHandle("");
       setDescription("");
+      autoDisplayNameRef.current = null;
     }
   }, [open]);
 
@@ -64,9 +94,30 @@ export function AgentPresetDialog({
     if (!preset) {
       return;
     }
-    setDisplayName((current) => current || preset.name);
+    const nextDisplayName = buildUniqueAgentDisplayName(
+      preset.name,
+      existingAgents,
+    );
+    setDisplayName((current) => {
+      if (!current || current === autoDisplayNameRef.current) {
+        autoDisplayNameRef.current = nextDisplayName;
+        return nextDisplayName;
+      }
+      return current;
+    });
     setDescription((current) => current || preset.description || "");
-  }, [presetId, presets]);
+  }, [existingAgents, presetId, presets]);
+
+  const hasDisplayNameConflict = React.useMemo(() => {
+    const normalizedDisplayName = normalizeAgentDisplayName(displayName);
+    if (!normalizedDisplayName) {
+      return false;
+    }
+    return existingAgents.some(
+      (agent) =>
+        normalizeAgentDisplayName(agent.displayName) === normalizedDisplayName,
+    );
+  }, [displayName, existingAgents]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -105,6 +156,7 @@ export function AgentPresetDialog({
               value={displayName}
               onChange={(event) => setDisplayName(event.target.value)}
               placeholder={t("conversationView.agentPreset.displayName")}
+              aria-invalid={hasDisplayNameConflict}
             />
             <Input
               value={handle}
@@ -112,6 +164,11 @@ export function AgentPresetDialog({
               placeholder={t("conversationView.agentPreset.handle")}
             />
           </div>
+          {hasDisplayNameConflict ? (
+            <p className="text-xs text-destructive">
+              {t("conversationView.agentPreset.displayNameConflict")}
+            </p>
+          ) : null}
           <Textarea
             value={description}
             onChange={(event) => setDescription(event.target.value)}
@@ -132,7 +189,12 @@ export function AgentPresetDialog({
                 description,
               })
             }
-            disabled={isWorking || !presetId || !displayName.trim()}
+            disabled={
+              isWorking ||
+              !presetId ||
+              !displayName.trim() ||
+              hasDisplayNameConflict
+            }
           >
             <Bot className="size-4" />
             {t("conversationView.agentPreset.create")}

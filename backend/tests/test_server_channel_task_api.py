@@ -21,6 +21,7 @@ def build_task_response(
         task_id=uuid.uuid4(),
         server_id=server_id,
         channel_id=channel_id,
+        display_number=1,
         title="Refine channel activity",
         description="Keep task updates inside the channel thread",
         status="todo",

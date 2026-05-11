@@ -157,7 +157,13 @@
       "executionPlaceholder": "Execution summary and runtime state will attach here once the channel task flow connects to the agent runtime.",
       "currentStatus": "Current status: {{status}}",
       "assigneeAttached": "Assignee attached",
-      "assigneePending": "Assignee pending"
+      "assigneePending": "Assignee pending",
+      "creator": "Creator",
+      "assignee": "Assignee",
+      "unassigned": "Unassigned",
+      "unknownActor": "Unknown",
+      "context": "Channel context",
+      "contextDescription": "Review the channel messages around the selected activity."
     },
     "toasts": {
       "loadFailed": "Failed to load channel tasks",
@@ -171,7 +177,10 @@
       "unclaimed": "Task unclaimed",
       "claimFailed": "Failed to update task claim",
       "statusUpdated": "Task status updated",
-      "statusFailed": "Failed to update task status"
+      "statusFailed": "Failed to update task status",
+      "assigneeUpdated": "Assignee updated",
+      "assigneeFailed": "Failed to update assignee",
+      "contextFailed": "Failed to load channel context"
     }
   },
   "conversationView": {
@@ -238,6 +247,21 @@
     "emptyTaskListTitle": "Aucune tâche pour le moment",
     "emptyTaskListDescription": "Les tâches du canal apparaîtront ici lorsque des messages seront convertis en travail.",
     "leave": "Quitter",
+    "events": {
+      "actor": "Quelqu'un",
+      "task": "Tâche sans titre",
+      "channelMemberJoined": "{{target}} a rejoint",
+      "channelAgentJoined": "{{target}} a rejoint",
+      "taskCreated": "{{actor}} a créé la tâche : {{task}}",
+      "taskCreatedAssigned": "{{actor}} a créé la tâche {{task}} et l'a assignée à {{assignee}}",
+      "taskStatusChanged": "{{actor}} a déplacé la tâche de {{fromStatus}} vers {{toStatus}}",
+      "taskAssigned": "{{actor}} a assigné la tâche {{task}} à {{toAssignee}}",
+      "taskReassigned": "{{actor}} a réassigné la tâche {{task}} à {{toAssignee}}",
+      "taskUnassigned": "{{actor}} a désassigné la tâche {{task}}",
+      "taskUpdated": "{{actor}} a mis à jour la tâche {{task}}",
+      "taskCommented": "{{actor}} a commenté la tâche {{task}} : {{comment}}",
+      "unknown": "{{actor}} a mis à jour le canal"
+    },
     "mentionCandidates": "Mentionner",
     "mentionKinds": {
       "agent": "Agent",
@@ -276,9 +300,14 @@
       "title": "Membres",
       "description": "Personnes et agents dans #{{channel}}.",
       "inviteAgents": "Inviter des agents",
+      "inviteHumans": "Inviter des membres",
       "agentSearchPlaceholder": "Rechercher un agent par nom",
+      "humanSearchPlaceholder": "Rechercher un membre par nom",
       "noAvailableAgents": "Aucun agent supplémentaire disponible.",
+      "noAvailableHumans": "Aucun membre supplémentaire disponible.",
       "addSelectedAgents": "Ajouter les agents sélectionnés",
+      "addSelectedHumans": "Ajouter les membres sélectionnés",
+      "manageAgentsPermissionHint": "Seuls les administrateurs du serveur et owner peuvent ajouter des agents aux canaux.",
       "agents": "Agents",
       "humans": "Humains",
       "noAgents": "Aucun agent dans ce canal.",
@@ -305,7 +334,8 @@
       "generateInvite": "Générer une invitation",
       "inviteMeta": "Expire le {{expiresAt}}",
       "copyInvite": "Copier",
-      "noInvites": "Aucune invitation active pour le moment."
+      "noInvites": "Aucune invitation active pour le moment.",
+      "invitePermissionHint": "Only server admins and owners can manage invite keys."
     },
     "agentPreset": {
       "title": "Ajouter un agent",
@@ -313,6 +343,7 @@
       "preset": "Preset",
       "selectPreset": "Sélectionner un preset",
       "displayName": "Nom affiché",
+      "displayNameConflict": "Un agent avec ce nom affiché existe déjà.",
       "handle": "Identifiant",
       "agentDescription": "Description",
       "create": "Créer l’agent"
@@ -324,6 +355,10 @@
       "humans": "Humains",
       "noAgents": "Aucun agent serveur pour le moment.",
       "noHumans": "Aucun membre humain pour le moment.",
+      "createAgentPermissionHint": "Seuls les administrateurs du serveur et owner peuvent créer des agents.",
+      "invitePermissionHint": "Only server admins and owners can invite members.",
+      "rolePermissionHint": "Only the server owner can change member roles.",
+      "ownerOnlyMemberActionHint": "Only the server owner can manage server members.",
       "description": "Description",
       "lifecycle": "Cycle de vie",
       "created": "Créé",
@@ -349,6 +384,9 @@
       },
       "emptyValue": "Non disponible",
       "emptySelection": "Sélectionnez un collègue pour voir ses détails.",
+      "transferOwnership": "Transfer ownership",
+      "transferOwnershipTitle": "Transfer server ownership?",
+      "transferOwnershipDescription": "This will make {{member}} the server owner. Your role will become Admin.",
       "removeMember": "Retirer le membre",
       "startAgent": "Démarrer",
       "restartAgent": "Redémarrer",
@@ -364,7 +402,8 @@
       "stopAgentDescription": "Cela abandonne le travail en cours de cet agent et l'empêche de recevoir de nouvelles tâches de canal jusqu'à ce qu'il soit redémarré. Les tâches en file d'attente sont conservées.",
       "removeAgentTitle": "Retirer {{name}} de ce serveur ?",
       "removeAgentDescription": "Cela retirera l'agent de {{channels}} et d'autres canaux, et annulera les tâches en attente qui n'ont pas commencé. Les anciens messages, réactions et résultats seront conservés.",
-      "removeAgentDescriptionUnknown": "Cela retirera l'agent des canaux de ce serveur et annulera les tâches en attente qui n'ont pas commencé. Les anciens messages, réactions et résultats seront conservés."
+      "removeAgentDescriptionUnknown": "Cela retirera l'agent des canaux de ce serveur et annulera les tâches en attente qui n'ont pas commencé. Les anciens messages, réactions et résultats seront conservés.",
+      "personalOwnershipTransferHint": "Personal servers do not support ownership transfer."
     },
     "threadMentionHint": "Les réponses dans ce fil cibleront",
     "execution": {
@@ -390,6 +429,7 @@
       "taskCreated": "Tâche créée depuis le message",
       "channelCreated": "Canal créé",
       "channelCreateFailed": "Impossible de créer le canal",
+      "systemChannelNameReserved": "Public et Personal sont des noms de canal réservés",
       "channelUpdated": "Canal mis à jour",
       "channelUpdateFailed": "Impossible de mettre à jour le canal",
       "channelArchived": "Canal archivé",
@@ -416,6 +456,10 @@
       "agentUpdated": "Agent mis à jour",
       "agentUpdateFailed": "Impossible de mettre à jour l'agent",
       "agentStarted": "Agent démarré",
+      "memberRoleUpdated": "Member role updated",
+      "memberRoleUpdateFailed": "Failed to update member role",
+      "ownershipTransferred": "Server ownership transferred",
+      "ownershipTransferFailed": "Failed to transfer ownership",
       "memberRemoved": "Membre retiré",
       "memberRemoveFailed": "Impossible de retirer le membre",
       "agentRestarted": "Agent redémarré",
@@ -435,6 +479,11 @@
       "pickerLabel": "Choisir une réaction",
       "addEmoji": "Réagir avec {{emoji}}",
       "removeEmoji": "Retirer la réaction {{emoji}}"
+    },
+    "roles": {
+      "owner": "Owner",
+      "admin": "Admin",
+      "member": "Member"
     }
   },
   "workspaces": {

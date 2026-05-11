@@ -119,6 +119,93 @@ class ServerExecutionObservabilityTests(unittest.TestCase):
         self.assertEqual(placeholder.content["trigger_message_id"], str(message.id))
         self.assertEqual(placeholder.thread_root_message_id, None)
 
+    def test_as_task_trigger_creates_threaded_execution_placeholder(self) -> None:
+        task_service = MagicMock()
+        context_service = MagicMock()
+        service = ServerAgentTriggerService(
+            task_service=task_service,
+            shared_context_service=context_service,
+        )
+        message = SimpleNamespace(
+            id=uuid.uuid4(),
+            channel_id=self.channel_id,
+            author_user_id="user-1",
+            text_preview="Please review @api-specialist",
+            content={"text": "Please review @api-specialist", "as_task": True},
+            thread_root_message_id=None,
+        )
+        channel = SimpleNamespace(
+            id=self.channel_id,
+            server_id=self.server_id,
+            conversation_type="channel",
+            direct_agent_identity_id=None,
+            name="backend",
+        )
+        agent = SimpleNamespace(
+            id=self.agent_id,
+            server_id=self.server_id,
+            preset_id=8,
+            handle="api-specialist",
+            display_name="API Specialist",
+            visual_key="preset-visual-01",
+            lifecycle_state="active",
+            created_by="owner-user",
+            removed_at=None,
+            persistent_state=SimpleNamespace(active_session_id=None),
+        )
+        membership = SimpleNamespace(
+            agent_identity_id=self.agent_id,
+            status="active",
+        )
+        context_service.extract_trigger_body.return_value = "shared prompt"
+        context_service.build_trigger_envelope.return_value = AgentTriggerEnvelope(
+            trigger_type="channel_mention",
+            server_id=self.server_id,
+            channel_id=self.channel_id,
+            trigger_message_id=message.id,
+            thread_root_message_id=message.id,
+            target_agent_identity_id=self.agent_id,
+            target_agent_handle="api-specialist",
+            source_actor=TriggerSourceActor(
+                actor_type="user",
+                user_id="user-1",
+                display_name="Alice",
+            ),
+        )
+        task_service.enqueue_task.return_value = TaskEnqueueResponse(
+            session_id=self.session_id,
+            accepted_type="run",
+            run_id=uuid.uuid4(),
+            status="queued",
+            queued_query_count=0,
+        )
+
+        with (
+            patch(
+                "app.services.server_agent_trigger_service.ServerChannelAgentMemberRepository.list_by_channel",
+                return_value=[membership],
+            ),
+            patch(
+                "app.services.server_agent_trigger_service.AgentIdentityRepository.get_by_id",
+                return_value=agent,
+            ),
+            patch(
+                "app.services.server_agent_trigger_service.ServerChannelMessageRepository.create"
+            ) as create_message,
+        ):
+            service.trigger_for_channel_message(
+                self.db,
+                current_user=self.current_user,
+                server_id=self.server_id,
+                channel=channel,
+                message=message,
+            )
+
+        placeholder = create_message.call_args.args[1]
+        self.assertEqual(placeholder.content["trigger_message_id"], str(message.id))
+        self.assertEqual(placeholder.content["thread_root_message_id"], str(message.id))
+        self.assertEqual(placeholder.thread_root_message_id, message.id)
+
     def test_callback_updates_execution_placeholder_summary(self) -> None:
         service = CallbackService.__new__(CallbackService)
         placeholder = ServerChannelMessage(

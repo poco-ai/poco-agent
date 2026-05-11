@@ -7,11 +7,13 @@ import { presetsService } from "@/features/capabilities/presets/api/presets-api"
 import type { Preset } from "@/features/capabilities/presets/lib/preset-types";
 import { useAdaptivePolling } from "@/features/chat/hooks/use-adaptive-polling";
 import { serversApi } from "@/features/servers";
+import { loadServerMembershipData } from "@/features/servers/lib/server-membership";
 import type {
   ServerAgentItem,
   ServerInviteItem,
   ServerItem,
   ServerMemberItem,
+  ServerRole,
 } from "@/features/servers/model/types";
 import { useT } from "@/lib/i18n/client";
 
@@ -49,14 +51,10 @@ export function useServerMembership({
   const [isAgentCreating, setIsAgentCreating] = React.useState(false);
 
   const refreshMembership = React.useCallback(async (serverId: string) => {
-    const [nextAgents, nextMembers, nextInvites] = await Promise.all([
-      serversApi.listAgents(serverId),
-      serversApi.listMembers(serverId),
-      serversApi.listInvites(serverId),
-    ]);
-    setServerAgents(nextAgents);
-    setServerMembers(nextMembers);
-    setServerInvites(nextInvites);
+    const next = await loadServerMembershipData(serverId, serversApi);
+    setServerAgents(next.agents);
+    setServerMembers(next.members);
+    setServerInvites(next.invites);
   }, []);
 
   React.useEffect(() => {
@@ -222,6 +220,59 @@ export function useServerMembership({
     [selectedServerId, t],
   );
 
+  const updateMemberRole = React.useCallback(
+    async (membershipId: number, role: ServerRole) => {
+      if (!selectedServerId) {
+        return;
+      }
+      try {
+        const member = await serversApi.updateMemberRole(
+          selectedServerId,
+          membershipId,
+          role,
+        );
+        setServerMembers((current) =>
+          current.map((item) => (item.id === member.id ? member : item)),
+        );
+        toast.success(t("conversationView.toasts.memberRoleUpdated"));
+      } catch (error) {
+        console.error(
+          "[ServersWorkspace] update server member role failed",
+          error,
+        );
+        toast.error(t("conversationView.toasts.memberRoleUpdateFailed"));
+        throw error;
+      }
+    },
+    [selectedServerId, t],
+  );
+
+  const transferOwnership = React.useCallback(
+    async (newOwnerUserId: string) => {
+      if (!selectedServerId) {
+        return;
+      }
+      try {
+        const server = await serversApi.transferOwnership(
+          selectedServerId,
+          newOwnerUserId,
+        );
+        await refreshMembership(selectedServerId);
+        onServersChanged(await serversApi.listServers());
+        onSwitchServer(server.id);
+        toast.success(t("conversationView.toasts.ownershipTransferred"));
+      } catch (error) {
+        console.error(
+          "[ServersWorkspace] transfer server ownership failed",
+          error,
+        );
+        toast.error(t("conversationView.toasts.ownershipTransferFailed"));
+        throw error;
+      }
+    },
+    [onServersChanged, onSwitchServer, refreshMembership, selectedServerId, t],
+  );
+
   const removeMember = React.useCallback(
     async (membershipId: number) => {
       if (!selectedServerId) {
@@ -253,6 +304,8 @@ export function useServerMembership({
     copyInvite,
     createAgent,
     updateAgentDescription,
+    updateMemberRole,
+    transferOwnership,
     removeMember,
     refreshMembership,
   };

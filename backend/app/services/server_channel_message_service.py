@@ -12,12 +12,9 @@ from app.repositories.agent_identity_repository import AgentIdentityRepository
 from app.repositories.server_channel_message_repository import (
     ServerChannelMessageRepository,
 )
-from app.repositories.server_channel_repository import (
-    ServerChannelMemberRepository,
-    ServerChannelRepository,
-)
 from app.schemas.server_channel_message import (
     ServerChannelMessageCreateRequest,
+    ServerChannelMessageContextResponse,
     ServerChannelMessageResponse,
     ServerChannelThreadResponse,
 )
@@ -27,7 +24,7 @@ from app.schemas.server_channel_message_reaction import (
 from app.schemas.agent_identity import AgentIdentityResponse
 from app.schemas.user_profile import UserPublicProfileResponse
 from app.services.server_agent_trigger_service import ServerAgentTriggerService
-from app.services.server_member_service import require_server_member
+from app.services.server_channel_access import require_channel_member_access
 from app.services.user_public_profile_service import (
     build_user_public_profile,
     list_user_public_profiles_by_id,
@@ -116,25 +113,12 @@ class ServerChannelMessageService:
         server_id: uuid.UUID,
         channel_id: uuid.UUID,
     ) -> ServerChannel:
-        require_server_member(db, server_id, current_user.id)
-        channel = ServerChannelRepository.get_by_id(db, channel_id)
-        if channel is None or channel.server_id != server_id:
-            raise AppException(
-                error_code=ErrorCode.NOT_FOUND,
-                message=f"Channel not found: {channel_id}",
-            )
-        if channel.visibility == "private":
-            membership = ServerChannelMemberRepository.get_by_channel_and_user(
-                db,
-                channel.id,
-                current_user.id,
-            )
-            if membership is None or membership.status != "active":
-                raise AppException(
-                    error_code=ErrorCode.FORBIDDEN,
-                    message="You are not a member of this private channel",
-                )
-        return channel
+        return require_channel_member_access(
+            db,
+            server_id=server_id,
+            channel_id=channel_id,
+            user_id=current_user.id,
+        )
 
     def send_message(
         self,
@@ -311,4 +295,93 @@ class ServerChannelMessageService:
                 )
                 for item in replies
             ],
+        )
+
+    def get_message_context(
+        self,
+        db: Session,
+        current_user: User,
+        server_id: uuid.UUID,
+        channel_id: uuid.UUID,
+        message_id: uuid.UUID,
+        *,
+        before: int = 20,
+        after: int = 20,
+    ) -> ServerChannelMessageContextResponse:
+        channel = self._require_channel_access(db, current_user, server_id, channel_id)
+        target = ServerChannelMessageRepository.get_by_id(db, message_id)
+        if target is None or target.channel_id != channel.id:
+            raise AppException(
+                error_code=ErrorCode.NOT_FOUND,
+                message=f"Channel message not found: {message_id}",
+            )
+        root_target = target
+        if target.thread_root_message_id is not None:
+            root = ServerChannelMessageRepository.get_by_id(
+                db,
+                target.thread_root_message_id,
+            )
+            if root is not None and root.channel_id == channel.id:
+                root_target = root
+        before_messages = ServerChannelMessageRepository.list_from_anchor(
+            db,
+            channel.id,
+            anchor_message=root_target,
+            direction="before",
+            limit=max(0, min(before, 100)),
+        )
+        after_messages = ServerChannelMessageRepository.list_from_anchor(
+            db,
+            channel.id,
+            anchor_message=root_target,
+            direction="after",
+            limit=max(0, min(after, 100)),
+        )
+        messages = [*reversed(before_messages), root_target, *after_messages]
+        if target.thread_root_message_id is not None and target.id != root_target.id:
+            messages.append(target)
+        message_by_id = {item.id: item for item in messages}
+        messages = sorted(
+            message_by_id.values(),
+            key=lambda item: (item.created_at, item.id),
+        )
+        author_profiles = list_user_public_profiles_by_id(
+            db,
+            [
+                item.author_user_id
+                for item in messages
+                if item.author_user_id is not None
+            ],
+        )
+        reply_counts = ServerChannelMessageRepository.count_replies_by_roots(
+            db,
+            [item.id for item in messages],
+        )
+        from app.services.server_channel_message_reaction_service import (
+            ServerChannelMessageReactionService,
+        )
+
+        reactions = ServerChannelMessageReactionService().list_grouped_by_messages(
+            db,
+            [item.id for item in messages],
+            current_user_id=current_user.id,
+        )
+        author_agents = self._load_author_agents(db, server_id, messages)
+        responses = [
+            self._build_message_response(
+                item,
+                reply_count=reply_counts.get(item.id, 0),
+                author_user=author_profiles.get(item.author_user_id or ""),
+                author_agent=author_agents.get(item.id),
+                reactions=reactions.get(item.id, []),
+            )
+            for item in messages
+        ]
+        target_response = next(
+            (item for item in responses if item.message_id == target.id),
+            self._build_message_response(target),
+        )
+        return ServerChannelMessageContextResponse(
+            target=target_response,
+            messages=responses,
         )

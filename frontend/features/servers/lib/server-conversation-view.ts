@@ -1,7 +1,9 @@
 import type {
   ServerAgentItem,
+  ServerChannelItem,
   ServerChannelMemberItem,
   ServerConversationMessage,
+  ServerMemberItem,
   ServerUserPublicProfile,
 } from "@/features/servers/model/types";
 
@@ -57,6 +59,33 @@ export function sortMessagesChronologically(
   });
 }
 
+function getChannelSortRank(channel: ServerChannelItem): number {
+  if (channel.systemChannelType === "personal") {
+    return 0;
+  }
+  if (channel.systemChannelType === "public") {
+    return 1;
+  }
+  return 2;
+}
+
+export function sortChannelsForSidebar(
+  channels: ServerChannelItem[],
+): ServerChannelItem[] {
+  return [...channels].sort((left, right) => {
+    const rankDiff = getChannelSortRank(left) - getChannelSortRank(right);
+    if (rankDiff !== 0) {
+      return rankDiff;
+    }
+    const createdDiff =
+      Date.parse(left.createdAt || "") - Date.parse(right.createdAt || "");
+    if (!Number.isNaN(createdDiff) && createdDiff !== 0) {
+      return createdDiff;
+    }
+    return left.name.localeCompare(right.name);
+  });
+}
+
 export function getMentionTrigger(
   value: string,
 ): { start: number; query: string } | null {
@@ -109,6 +138,21 @@ export function buildHumanMentionCandidates(
       handle: member.userId,
       kind: "human",
     }));
+}
+
+export function getAvailableChannelHumanMembers(
+  serverMembers: ServerMemberItem[],
+  channelMembers: ServerChannelMemberItem[],
+): ServerMemberItem[] {
+  const activeChannelUserIds = new Set(
+    channelMembers
+      .filter((member) => member.status === "active")
+      .map((member) => member.userId),
+  );
+  return serverMembers.filter(
+    (member) =>
+      member.status === "active" && !activeChannelUserIds.has(member.userId),
+  );
 }
 
 export function messageMentionsUser(
