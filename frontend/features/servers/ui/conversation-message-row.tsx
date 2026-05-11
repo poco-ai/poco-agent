@@ -47,6 +47,7 @@ type MessageRowProps = {
   channelLabel?: string;
   isSaved?: boolean;
   compact?: boolean;
+  defaultExpanded?: boolean;
   onOpenThread: () => void;
   onOpenExecution?: ((sessionId: string) => void) | undefined;
   onOpenAgentProfile?: ((agentId: string) => void) | undefined;
@@ -286,6 +287,7 @@ function StandardMessageRow({
   channelLabel,
   isSaved = false,
   compact = false,
+  defaultExpanded = false,
   onOpenThread,
   onOpenExecution,
   onOpenAgentProfile,
@@ -293,7 +295,7 @@ function StandardMessageRow({
   onToggleReaction,
 }: MessageRowProps) {
   const { t } = useT("translation");
-  const [isExpanded, setIsExpanded] = React.useState(false);
+  const [isExpanded, setIsExpanded] = React.useState(defaultExpanded);
   const [shouldCollapse, setShouldCollapse] = React.useState(false);
   const [reactionPickerOpen, setReactionPickerOpen] = React.useState(false);
   const agentMessageRef = React.useRef<HTMLDivElement>(null);
@@ -346,9 +348,9 @@ function StandardMessageRow({
   }, [t, text]);
 
   React.useEffect(() => {
-    setIsExpanded(false);
+    setIsExpanded(defaultExpanded);
     setReactionPickerOpen(false);
-  }, [message.id, text]);
+  }, [defaultExpanded, message.id, text]);
 
   React.useEffect(() => {
     if (!canCollapseMessage) {

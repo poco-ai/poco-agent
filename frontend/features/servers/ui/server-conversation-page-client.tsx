@@ -49,7 +49,6 @@ import { channelTasksApi } from "@/features/channel-tasks/api/channel-tasks-api"
 import { resolveChannelTaskView } from "@/features/channel-tasks/lib/channel-task-board";
 import type {
   ChannelTask,
-  ChannelTaskActivityMessage,
   ChannelTaskView,
 } from "@/features/channel-tasks/model/types";
 import type { Preset } from "@/features/capabilities/presets/lib/preset-types";
@@ -96,7 +95,6 @@ import {
   AgentDrawer,
   ExecutionDrawer,
   SharedArtifactsDrawer,
-  TaskDrawer,
   ThreadDrawer,
 } from "@/features/servers/ui/conversation-drawers";
 import {
@@ -164,7 +162,7 @@ function isDrawerCompatibleWithMode(
   }
   if (mode === "tasks") {
     return (
-      drawer.type === "task" ||
+      drawer.type === "thread" ||
       drawer.type === "artifacts" ||
       drawer.type === "execution"
     );
@@ -621,12 +619,13 @@ function ConversationContent({
               ref={scrollContainerRef}
               className="h-full min-h-0 overflow-y-auto"
             >
-              {messages.map((message) => (
+              {messages.map((message, index) => (
                 <MessageRow
                   key={message.id}
                   message={message}
                   agents={agents}
                   presets={presets}
+                  defaultExpanded={index === messages.length - 1}
                   onOpenThread={() => onOpenThread(message)}
                   onOpenExecution={onOpenExecution}
                   onOpenAgentProfile={onOpenAgentProfile}
@@ -1588,9 +1587,6 @@ export function ServerConversationPageClient({
   const [channelArtifacts, setChannelArtifacts] = React.useState<FileNode[]>(
     [],
   );
-  const [taskActivity, setTaskActivity] = React.useState<
-    ChannelTaskActivityMessage[]
-  >([]);
   const [draft, setDraft] = React.useState("");
   const [threadDraft, setThreadDraft] = React.useState("");
   const [searchValue, setSearchValue] = React.useState("");
@@ -1722,13 +1718,6 @@ export function ServerConversationPageClient({
   const contentAreaRef = React.useRef<HTMLDivElement | null>(null);
   const isResizingDrawerRef = React.useRef(false);
   const hasDesktopDrawer = drawer.type !== "none";
-  const selectedTask = React.useMemo(
-    () =>
-      drawer.type === "task"
-        ? (tasks.find((task) => task.taskId === drawer.taskId) ?? null)
-        : null,
-    [drawer, tasks],
-  );
   const feedModeActive = mode === "search" || mode === "inbox";
   const tasksModeActive = Boolean(channelId) && mode === "tasks";
   const colleaguesModeActive = mode === "colleagues";
@@ -2146,32 +2135,6 @@ export function ServerConversationPageClient({
   }, [drawer, markMessagesRead, threadMessages]);
 
   React.useEffect(() => {
-    const loadTaskActivity = async () => {
-      if (
-        !selectedServerId ||
-        !activeChannelId ||
-        !selectedTask?.threadRootMessageId
-      ) {
-        setTaskActivity([]);
-        return;
-      }
-      try {
-        setTaskActivity(
-          await channelTasksApi.getTaskThread(
-            selectedServerId,
-            activeChannelId,
-            selectedTask.threadRootMessageId,
-          ),
-        );
-      } catch (error) {
-        console.error("[ServersWorkspace] task thread load failed", error);
-      }
-    };
-
-    void loadTaskActivity();
-  }, [activeChannelId, selectedServerId, selectedTask]);
-
-  React.useEffect(() => {
     if (!selectedServerId || !activeChannelId) {
       return;
     }
@@ -2203,23 +2166,8 @@ export function ServerConversationPageClient({
             ),
           );
         }
-        if (selectedTask?.threadRootMessageId) {
-          requests.push(
-            channelTasksApi.getTaskThread(
-              selectedServerId,
-              activeChannelId,
-              selectedTask.threadRootMessageId,
-            ),
-          );
-        }
-
-        const [
-          nextMessages,
-          nextArtifacts,
-          nextTasks,
-          nextThread,
-          nextTaskActivity,
-        ] = await Promise.all(requests);
+        const [nextMessages, nextArtifacts, nextTasks, nextThread] =
+          await Promise.all(requests);
 
         if (cancelled) {
           return;
@@ -2234,11 +2182,6 @@ export function ServerConversationPageClient({
         }
         if (drawer.type === "thread" && Array.isArray(nextThread)) {
           setThreadMessages(nextThread as ServerConversationMessage[]);
-        }
-        if (
-          selectedTask && Array.isArray(nextTaskActivity)
-        ) {
-          setTaskActivity(nextTaskActivity as ChannelTaskActivityMessage[]);
         }
       } catch (error) {
         if (!cancelled) {
@@ -2263,7 +2206,6 @@ export function ServerConversationPageClient({
     drawer,
     mode,
     selectedServerId,
-    selectedTask,
   ]);
 
   const openMode = (nextMode: WorkspaceMode) => {
@@ -2492,6 +2434,63 @@ export function ServerConversationPageClient({
       toast.error(t("conversationView.toasts.replyFailed"));
     } finally {
       setIsSending(false);
+    }
+  };
+
+  const openTaskThread = (taskId: string) => {
+    const task = tasks.find((item) => item.taskId === taskId);
+    if (!task?.threadRootMessageId) {
+      toast.error(t("conversationView.toasts.threadFailed"));
+      return;
+    }
+    setDrawer({
+      type: "thread",
+      channelId: task.channelId,
+      rootMessageId: task.threadRootMessageId,
+    });
+  };
+
+  const updateTaskAssignee = async (
+    task: ChannelTask,
+    value: {
+      assigneeUserId: string | null;
+      assigneeAgentIdentityId: string | null;
+    },
+  ) => {
+    try {
+      const nextTask = await channelTasksApi.updateTask(
+        selectedServerId ?? task.serverId,
+        task.channelId,
+        task.taskId,
+        {
+          assigneeUserId: value.assigneeUserId,
+          assigneeAgentIdentityId: value.assigneeAgentIdentityId,
+          assigneePresetId: null,
+        },
+      );
+      setTasks((current) =>
+        current.map((item) =>
+          item.taskId === nextTask.taskId ? nextTask : item,
+        ),
+      );
+      if (
+        drawer.type === "thread" &&
+        nextTask.threadRootMessageId &&
+        drawer.rootMessageId === nextTask.threadRootMessageId
+      ) {
+        setThreadMessages(
+          await serversApi.getThread(
+            selectedServerId ?? nextTask.serverId,
+            nextTask.channelId,
+            nextTask.threadRootMessageId,
+          ),
+        );
+      }
+      toast.success(t("channelTasks.toasts.assigneeUpdated"));
+    } catch (error) {
+      console.error("[ServersWorkspace] task assignee update failed", error);
+      toast.error(t("channelTasks.toasts.assigneeFailed"));
+      throw error;
     }
   };
 
@@ -3178,13 +3177,18 @@ export function ServerConversationPageClient({
                 taskView={taskView}
                 activeChannelId={activeChannelId}
                 topLevelChannels={topLevelChannels}
+                members={channelMembers}
+                agents={channelAgents}
+                presets={presets}
+                canUpdateAssignee={canManageServerOps}
                 onSelectChannel={(value) => {
                   router.push(
                     `/${lng}/servers/${selectedServerId}/channels/${value}?tab=chat&mode=tasks&view=${taskView}`,
                   );
                 }}
                 onUpdateView={updateTaskView}
-                onOpenTask={(taskId) => setDrawer({ type: "task", taskId })}
+                onOpenTask={openTaskThread}
+                onUpdateAssignee={updateTaskAssignee}
               />
             ) : (
               <ConversationContent
@@ -3262,39 +3266,6 @@ export function ServerConversationPageClient({
                       void handleToggleReaction(message, emoji)
                     }
                     isSending={isSending}
-                  />
-                ) : drawer.type === "task" && selectedTask ? (
-                  <TaskDrawer
-                    serverId={selectedServerId ?? selectedTask.serverId}
-                    channelId={activeChannelId ?? selectedTask.channelId}
-                    task={selectedTask}
-                    activity={taskActivity}
-                    members={channelMembers}
-                    agents={channelAgents}
-                    onTaskUpdated={(nextTask) => {
-                      setTasks((current) =>
-                        current.map((task) =>
-                          task.taskId === nextTask.taskId ? nextTask : task,
-                        ),
-                      );
-                    }}
-                    onRefreshActivity={async () => {
-                      if (!activeChannelId) {
-                        return;
-                      }
-                      if (!selectedTask.threadRootMessageId) {
-                        setTaskActivity([]);
-                        return;
-                      }
-                      setTaskActivity(
-                        await channelTasksApi.getTaskThread(
-                          selectedServerId ?? selectedTask.serverId,
-                          activeChannelId,
-                          selectedTask.threadRootMessageId,
-                        ),
-                      );
-                    }}
-                    onClose={() => setDrawer({ type: "none" })}
                   />
                 ) : drawer.type === "execution" ? (
                   <ExecutionDrawer

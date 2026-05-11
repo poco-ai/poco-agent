@@ -1,7 +1,7 @@
-feat(channel-tasks): add delegation UI and activity context
+fix(channel-tasks): refine task board thread interactions
 
-- Add message context API for channel activity drillback
-- Show task numbers, creator, and assignee in task cards and drawers
-- Allow task detail and conversation task drawer assignee updates
-- Render task activity as single-line event rows with context highlighting
-- Mark the active task delegation spec ready for review with verification notes
+- Open task cards directly in the shared thread reply drawer
+- Add compact creator-to-assignee avatar controls with searchable assignee modal
+- Hide duplicate task detail text and clamp long task titles
+- Keep the latest channel and thread message expanded by default
+- Document the one-thread-per-task interaction model

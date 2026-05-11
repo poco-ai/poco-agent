@@ -16,8 +16,8 @@
 - [x] Phase 1: 补齐 task 编号、actor 与 assignee 数据契约
 - [x] Phase 2: 收敛 task event payload 与 activity timeline
 - [x] Phase 3: 升级 task 面板的委托关系展示与编辑
-- [x] Phase 4: 建立 activity 到频道上下文抽屉的回跳
-- [x] Phase 5: 验证、回写 spec 状态并整理提交
+- [x] Phase 4: 修正为一 thread 一 task 的 task 面板入口
+- [x] Phase 5: 验证、回写 spec 状态并等待审查
 
 ---
 
@@ -25,14 +25,14 @@
 
 ### 问题陈述
 
-`specs/constitution/2026-05-11-channel-task-collaboration-model.md` 已经固定了 channel task 的长期心智：task 是 channel-native 协作工作项，可以由人类或 agent 创建，可以分配给人类或 server agent，也可以保持未分配。Task 的重要变化必须以轻量 event message 进入 channel timeline，task activity 则是这些 event 的 task-scoped 投影。
+`specs/constitution/2026-05-11-channel-task-collaboration-model.md` 已经固定了 channel task 的长期心智：task 是 channel-native 协作工作项，可以由人类或 agent 创建，可以分配给人类或 server agent，也可以保持未分配。2026-05-11 的修正决策进一步明确：接受一 thread 一 task；用 As task 创建的消息就是 task 的 root thread，task 更新、评论和 agent 回复都追加为这个 root thread 的 replies。
 
 当前代码已经向这个方向推进了一部分：
 
 - `server_channel_tasks` 已经是独立主表，直接归属于 `server_id + channel_id`。
 - task 创建、状态变化、claim/unclaim 已经开始写入 `message_type="event"`。
 - 前端 `conversation-message-row.tsx` 已经有 `ChannelEventRow` 的初步渲染分支。
-- server conversation 页面已经有 task drawer，并能读取 `thread_root_message_id` 对应的 activity。
+- server conversation 页面已经有 task drawer，并能读取 `thread_root_message_id` 对应的 thread/activity。
 
 但现状仍有几个核心缺口：
 
@@ -40,7 +40,7 @@
 - event payload 只包含粗略 actor 和 `assignee` raw payload，没有稳定的“委托方 / 被委托方”展示契约。
 - agent assignee 仍主要通过 `assignee_preset_id` 表达，不能准确指向 server 中的某个 agent identity。
 - task 面板没有显示创建/委托关系，也不能直接更新被委托方。
-- task activity 只是消息列表，没有复用轻量 event 表达，也不能点击回到对应频道上下文。
+- task 创建来源和 thread 归属还没有完全收敛：部分 task update 被展示成主 timeline 事件，task 面板也曾尝试另开上下文抽屉，而不是直接展示 task root thread。
 
 ### 目标
 
@@ -50,8 +50,8 @@
 - 后端 task response 和 event payload 提供结构化 actor / assignee summary，前端不从 `text_preview` 反推业务信息。
 - task 创建、分配、取消分配、状态变化、字段更新、评论都形成一行轻量 event。
 - task 面板显示创建方、最近委托方和当前被委托方，使用头像 + name。
-- task 面板支持更新被委托方，并把该调整同步为 channel timeline 中的轻量提示。
-- task activity timeline 由轻量 event 组成；点击 activity 可以打开频道上下文抽屉，定位并高亮对应 event message。
+- task 面板支持更新被委托方，并把该调整同步为 task root thread 中的轻量提示。
+- task 面板点击后右侧抽屉直接展示 root thread：root message、task event replies 和 agent execution/reply 都在同一个 thread 中追踪。
 
 ### 非目标
 
@@ -71,9 +71,9 @@ UUID 适合 API 精确寻址，但不适合人在频道里讨论。用户需要�
 
 “谁创建了 task”和“当前分配给谁”不是同一个问题。一个 task 可以由 Alice 创建、Bob 重新分配、`@docs-agent` 当前负责。UI 需要同时能解释这些关系，而不是只显示 `updated_by` 或 assignee id。
 
-#### 3. Activity 是 channel event 的投影
+#### 3. Activity 是 task root thread 的投影
 
-Task activity 不应该成为孤立日志。每条 activity 都应该有对应的 channel event message，因此可以回到当时的频道上下文，理解 event 前后发生了什么。
+Task activity 不应该成为孤立日志。每条 activity 都应该是 task root thread 中的 message：As task 的原始 trigger 是 root，`task.created`、状态变化、分配变化、评论和 agent 回复都是 replies。这样 task 面板不需要再打开另一个上下文抽屉，直接显示这个 root thread 即可。
 
 #### 4. Agent assignee 应尽量指向 agent identity
 
@@ -118,7 +118,7 @@ Preset 是能力模板，agent identity 是 server 里的协作者。长期正�
 - task 可以未分配
 - 人类和 agent 都可以成为 actor
 - 被委托方最多一个
-- activity 必须可回到 channel event message
+- activity 必须可回到 task root thread message
 
 **涉及文件：**
 
@@ -396,94 +396,91 @@ class ChannelTaskActorSummary(BaseModel):
 
 ---
 
-## Phase 4: 建立 activity 到频道上下文抽屉的回跳
+## Phase 4: 修正为一 thread 一 task 的 task 面板入口
 
 ### 目标
 
-让 task activity 不再只是日志，而是可以回到对应 channel event 的上下文视图。
+让 task activity 不再是单独的上下文日志，而是直接落在 task 绑定的 root thread 中。Task 面板点击后右侧抽屉展示该 root thread，不再打开另一个频道上下文抽屉。
 
 ### 任务清单
 
-#### 4.1 将 task activity 渲染为 event timeline
+#### 4.1 固定 task thread 归属
 
-**描述：** Task activity 复用 channel event parser，显示一行轻量事件，而不是 raw message card。
+**描述：** 创建 task 时优先复用来源消息所属 root thread。As task 原消息创建 task 时，原消息就是 root；在已有 thread 中把 reply 标记为 task 时，task 绑定到已有 root；没有来源消息时才由后端创建 `task.created` root event。
 
 **涉及文件：**
 
-- `frontend/features/channel-tasks/ui/channel-task-detail-dialog.tsx`
-- `frontend/features/servers/ui/conversation-drawers.tsx`
-- `frontend/features/servers/lib/server-conversation-messages.ts`
-- `frontend/features/servers/ui/conversation-message-row.tsx`
+- `backend/app/services/server_channel_task_service.py`
+- `backend/app/repositories/server_channel_message_repository.py`
+- `backend/tests/test_server_channel_task_service.py`
 
 **验收标准：**
 
-- [x] activity 中不再显示 raw `event`/`task` badge
-- [x] activity 文案与 channel timeline 里的 event 文案一致
-- [x] activity item 最多一行，长内容截断
+- [x] `source_message_id` 对应 root message 时，task 的 `thread_root_message_id` 等于该消息 id
+- [x] `source_message_id` 对应 reply 时，task 的 `thread_root_message_id` 等于 reply 所属 root id
+- [x] agent tool 传入 `source_thread_root_message_id` 时，task 绑定到该 root
+- [x] 无来源创建 task 时仍能创建独立 root event
 
-#### 4.2 后端支持按 message 定位上下文
+#### 4.2 让 task 事件都追加为 thread replies
 
-**描述：** 增加或扩展 message API，让前端能根据 `message_id` 获取该消息附近的上下文。
+**描述：** `task.created`、`task.status_changed`、`task.assigned`、`task.unassigned`、`task.updated`、`task.commented` 都写入 task root thread。频道主 timeline 保持只展示 root messages，避免 task 更新在主 timeline 中重复刷屏。
 
-**建议接口：**
+**涉及文件：**
 
-- `GET /servers/{server_id}/channels/{channel_id}/messages/{message_id}/context?before=20&after=20`
+- `backend/app/repositories/server_channel_message_repository.py`
+- `backend/app/services/server_channel_task_service.py`
+- `backend/tests/test_server_channel_task_service.py`
+
+**验收标准：**
+
+- [x] task 更新事件使用 `thread_root_message_id=task.thread_root_message_id`
+- [x] channel message 列表不再为了 task event 特判展示 replies
+- [x] task event 继续使用轻量 event payload 和轻量提示样式
+
+#### 4.3 Task 面板展示 root thread
+
+**描述：** 在 server conversation 的 task 面板中，点击 task 后加载 `thread_root_message_id` 对应 thread，并用既有 `MessageRow` 展示 root 和 replies。轻量提示中仍保持“名称 + 下划线”的 actor 样式，不展示用户头像。
+
+**涉及文件：**
+
+- `frontend/features/servers/ui/conversation-drawers.tsx`
+- `frontend/features/servers/ui/server-conversation-page-client.tsx`
+- `frontend/features/channel-tasks/ui/channel-task-detail-dialog.tsx`
+- `frontend/features/channel-tasks/api/channel-tasks-api.ts`
+
+**验收标准：**
+
+- [x] task drawer 读取并展示 root thread，而不是 task-only activity API
+- [x] root message、task event reply、execution placeholder 和 agent reply 都在同一个抽屉里可见
+- [x] 轻量提示不展示用户头像，仅显示名称 + 下划线样式
+- [x] 更新 assignee 后刷新同一个 root thread
+
+#### 4.4 清理不再需要的 activity context 分支
+
+**描述：** 移除本轮误加的 task activity context API/前端调用路径，避免产品心智变成“task 面板 -> activity item -> 另一个上下文抽屉”。
 
 **涉及文件：**
 
 - `backend/app/api/v1/server_channel_messages.py`
 - `backend/app/services/server_channel_message_service.py`
-- `backend/app/repositories/server_channel_message_repository.py`
-- `backend/app/schemas/server_channel_message.py`
-
-**验收标准：**
-
-- [x] 只有有 channel access 的用户能读取上下文
-- [x] response 包含 target message
-- [x] response 包含 target 前后若干消息
-- [x] private channel 权限沿用现有 message access 规则
-
-#### 4.3 前端新增频道上下文抽屉
-
-**描述：** 在 task detail 内点击 activity item 后，打开第四抽屉或覆盖式上下文抽屉，展示目标 event 附近的 channel 消息，并高亮目标 message。
-
-**涉及文件：**
-
-- `frontend/features/servers/ui/conversation-drawers.tsx`
+- `frontend/services/api-client.ts`
 - `frontend/features/servers/ui/server-conversation-page-client.tsx`
+- `frontend/features/channel-tasks/api/channel-tasks-api.ts`
 - `frontend/features/channel-tasks/ui/channel-task-detail-dialog.tsx`
-- `frontend/features/servers/api/servers-api.ts`
 
 **验收标准：**
 
-- [x] 点击 activity item 打开频道上下文抽屉
-- [x] 抽屉内滚动到对应 event message
-- [x] 目标 event 有高亮态
-- [x] 关闭上下文抽屉后仍停留在 task detail
-- [x] 上下文抽屉中普通消息、event、execution placeholder 都能用既有样式渲染
-
-#### 4.4 URL 与状态同步
-
-**描述：** 如果当前页面已有 query state 管理 drawer，需要为 context drawer 增加可恢复状态。第一版可使用内存状态，不强制深链；但不能破坏现有 `task=<taskId>` 打开逻辑。
-
-**涉及文件：**
-
-- `frontend/features/servers/ui/server-conversation-page-client.tsx`
-- `frontend/features/channel-tasks/ui/channel-task-page-client.tsx`
-
-**验收标准：**
-
-- [x] 打开 activity context 不清空当前 task selection
-- [x] 切换 task 时会清空旧 context
-- [x] 页面刷新时至少不会进入错误状态
+- [x] 前端不再调用 `/tasks/{task_id}/activity`
+- [x] 右侧 task drawer 不再维护 context/highlight 状态
+- [x] 既有 message context API 可保留给其他上下文跳转，但 task 面板不依赖它
 
 ---
 
-## Phase 5: 验证、回写 spec 状态并整理提交
+## Phase 5: 验证、回写 spec 状态并等待审查
 
 ### 目标
 
-用后端服务测试、前端单测和最小人工验证覆盖 task 委托与 activity 回跳。
+用后端服务测试、前端 lint/build 和最小人工检查覆盖 task 委托与 root thread 展示。本轮按审查要求不提交。
 
 ### 任务清单
 
@@ -525,7 +522,7 @@ pnpm build
 - [x] task card 显示编号、creator、assignee
 - [x] task detail 可更新 assignee
 - [x] activity 使用轻量 event timeline
-- [x] activity 点击能打开频道上下文并高亮目标 event
+- [x] task 面板点击后展示 root thread
 - [x] i18n 文案无硬编码用户可见英文
 
 #### 5.3 手动验收路径
@@ -534,19 +531,19 @@ pnpm build
 
 **验收路径：**
 
-1. 在 channel 中创建未分配 task。
-2. 确认 channel timeline 出现 `created task #x` 轻量 event。
-3. 打开 task detail，分配给人类用户。
-4. 确认 task card/detail 显示 assignee，channel timeline 出现 assigned event。
-5. 重新分配给 agent。
-6. 确认 task activity 有 created/assigned/reassigned timeline。
-7. 点击任一 activity，确认频道上下文抽屉定位到对应 event。
+1. 在 channel 中发送一条 As task 消息。
+2. 确认该消息成为 task 的 root thread，`task.created` 作为 reply 追加。
+3. 打开 task 面板，确认右侧抽屉展示 root message 与 task replies。
+4. 在 task 面板中分配给人类用户。
+5. 确认 task card/detail 显示 assignee，root thread 出现 assigned event。
+6. 重新分配给 agent。
+7. 确认 task thread 有 created/assigned/reassigned event，agent execution placeholder 和 agent reply 也在同一个 thread 中。
 
 **验收标准：**
 
-- [ ] 上述路径可完整完成
-- [ ] event 行最多一行，长标题截断
-- [ ] 普通消息与 execution placeholder 样式不回退
+- [x] 上述路径可完整完成
+- [x] event 行最多一行，长标题截断
+- [x] 普通消息与 execution placeholder 样式不回退
 
 #### 5.4 回写实施记录
 
@@ -568,7 +565,9 @@ pnpm build
 
 - 2026-05-11：完成 Phase 0-2，第一个提交补齐 task display number、agent identity assignee、actor/assignee summary 与结构化 task event payload。
 - 2026-05-11：完成 Phase 3-4，第二个提交补齐 task 卡片/detail/drawer 的委托展示与编辑、activity event timeline，以及按 message 定位的频道上下文回跳。
+- 2026-05-11：根据审查反馈修正 Phase 4；接受一 thread 一 task，As task 原消息作为 task root，task 更新和 agent 回复统一追加到 root thread；task 面板点击直接展示 root thread。本轮不提交，等待人工审查。
 - 验证：`cd backend && uv run python -m py_compile app/api/v1/server_channel_messages.py app/schemas/server_channel_message.py app/services/server_channel_message_service.py` 通过；`cd backend && uv run python -m py_compile app/models/server_channel_task.py app/schemas/server_channel_task.py app/schemas/server_channel_task_agent.py app/services/server_channel_task_service.py app/services/server_channel_task_agent_service.py app/repositories/server_channel_task_repository.py tests/test_server_channel_task_service.py` 通过。
+- 验证：`cd backend && uv run python -m unittest tests.test_server_channel_task_service tests.test_server_execution_observability` 通过；`cd backend && uv run python -m py_compile app/services/server_channel_task_service.py app/services/server_channel_message_service.py app/repositories/server_channel_message_repository.py app/api/v1/server_channel_messages.py tests/test_server_channel_task_service.py` 通过。
 - 验证：`cd frontend && pnpm lint` 通过；`cd frontend && pnpm build` 通过。
 - 既有阻塞：`cd backend && uv run pytest tests/test_server_channel_task_service.py -q` 因当前 backend 环境未安装 `pytest` 可执行文件而无法运行。
 
@@ -586,4 +585,4 @@ pnpm build
 
 ## 总结
 
-这份计划把 channel task 的重点从“状态看板”推进到“委托协作”。完成后，task 将具备可读编号、明确的创建/委托/被委托关系、结构化轻量 event timeline，以及从 activity 回到频道上下文的能力。它继续保持 channel-native，不强制绑定 agent，但让人类和 agent 都能作为一等协作者参与 task 流转。
+这份计划把 channel task 的重点从“状态看板”推进到“委托协作”。完成后，task 将具备可读编号、明确的创建/委托/被委托关系，以及绑定 root thread 的结构化轻量 event timeline。它继续保持 channel-native，不强制绑定 agent，但让人类和 agent 都能作为一等协作者参与 task 流转。

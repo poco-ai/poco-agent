@@ -197,12 +197,13 @@ export function ThreadDrawer({
         </Button>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto">
-        {thread.map((message) => (
+        {thread.map((message, index) => (
           <MessageRow
             key={message.id}
             message={message}
             agents={agents}
             presets={presets}
+            defaultExpanded={index === thread.length - 1}
             onOpenThread={() => undefined}
             onOpenExecution={onOpenExecution}
             onToggleSaved={() => undefined}
