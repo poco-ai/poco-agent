@@ -8,6 +8,7 @@ import {
   Copy,
   MessageSquare,
   SmilePlus,
+  SquareCheckBig,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -27,6 +28,8 @@ import type {
 import { useT } from "@/lib/i18n/client";
 import { cn } from "@/lib/utils";
 import {
+  getChannelEventContent,
+  getChannelEventLabelKey,
   getMessageSessionId,
   isExecutionDrilldownMessage,
 } from "../lib/server-conversation-messages";
@@ -36,6 +39,21 @@ import { MessageReactionPicker } from "./message-reaction-picker";
 
 const MESSAGE_COLLAPSE_LINES = 8;
 const MAX_REACTION_ACTOR_NAME_LENGTH = 18;
+
+type MessageRowProps = {
+  message: ServerConversationMessage;
+  agents?: ServerAgentItem[];
+  presets?: Preset[];
+  channelLabel?: string;
+  isSaved?: boolean;
+  compact?: boolean;
+  defaultExpanded?: boolean;
+  onOpenThread: () => void;
+  onOpenExecution?: ((sessionId: string) => void) | undefined;
+  onOpenAgentProfile?: ((agentId: string) => void) | undefined;
+  onToggleSaved: () => void;
+  onToggleReaction?: (emoji: string) => void;
+};
 
 export function formatTime(value: string): string {
   const date = new Date(value);
@@ -85,6 +103,10 @@ export function getMessageText(message: ServerConversationMessage): string {
 }
 
 export function getMessageAuthor(message: ServerConversationMessage): string {
+  if (message.messageType === "event") {
+    const event = getChannelEventContent(message);
+    return event?.actorLabel?.trim() || "System";
+  }
   if (message.messageType === "system") {
     const actor = message.content.actor_label;
     if (typeof actor === "string" && actor.trim()) {
@@ -100,6 +122,93 @@ export function getMessageAuthor(message: ServerConversationMessage): string {
     return "Task";
   }
   return getUserDisplayName(message.authorUser, message.authorUserId);
+}
+
+function getEventActorLabel(value: unknown): string {
+  if (!value || typeof value !== "object") {
+    return "";
+  }
+  const label = (value as { label?: unknown }).label;
+  return typeof label === "string" ? label.trim() : "";
+}
+
+function ChannelEventRow({
+  message,
+  compact,
+}: Pick<MessageRowProps, "message" | "compact">) {
+  const { t } = useT("translation");
+  const event = getChannelEventContent(message);
+  if (!event) {
+    return null;
+  }
+
+  const actor = event.actorLabel?.trim() || t("conversationView.events.actor");
+  const target = event.targetLabel?.trim() || actor;
+  const taskTitle =
+    event.taskTitle?.trim() ||
+    event.title?.trim() ||
+    t("conversationView.events.task");
+  const taskNumber =
+    event.taskNumber === null || event.taskNumber === undefined
+      ? ""
+      : String(event.taskNumber);
+  const assignee = getEventActorLabel(event.assignee);
+  const fromAssignee = getEventActorLabel(event.fromAssignee);
+  const toAssignee = getEventActorLabel(event.toAssignee);
+  const task = taskNumber ? `#${taskNumber}: ${taskTitle}` : taskTitle;
+  const labelKey =
+    event.eventType === "task.created" && assignee
+      ? "conversationView.events.taskCreatedAssigned"
+      : getChannelEventLabelKey(event.eventType);
+  const label = t(labelKey, {
+    actor,
+    target,
+    task,
+    taskTitle,
+    taskNumber,
+    assignee,
+    fromAssignee,
+    toAssignee,
+    comment: event.commentText ?? "",
+    fromStatus: event.fromStatus ?? "",
+    toStatus: event.toStatus ?? event.status ?? "",
+  });
+  const fallbackName =
+    event.eventType === "channel.agent_joined" ? target : actor;
+  const isJoinEvent =
+    event.eventType === "channel.member_joined" ||
+    event.eventType === "channel.agent_joined";
+
+  return (
+    <article
+      className={cn(
+        "flex items-center gap-2 border-b border-border px-6 py-3 text-sm text-muted-foreground last:border-b-0",
+        compact && "py-2.5",
+      )}
+    >
+      <span className="flex size-7 shrink-0 items-center justify-center text-base">
+        {isJoinEvent ? (
+          <span aria-hidden="true">👋</span>
+        ) : (
+          <SquareCheckBig className="size-4" aria-hidden="true" />
+        )}
+      </span>
+      <div className="min-w-0 flex-1 truncate leading-6">
+        <span className="truncate">
+          <span className="font-medium text-muted-foreground underline decoration-muted-foreground/50 underline-offset-4">
+            {fallbackName}
+          </span>
+          {label.startsWith(fallbackName)
+            ? label.slice(fallbackName.length)
+            : ` ${label}`}
+        </span>
+        <span className="whitespace-nowrap">
+          {" "}
+          · {formatTime(message.createdAt)}
+        </span>
+      </div>
+    </article>
+  );
 }
 
 function getReactionActorName(
@@ -171,33 +280,22 @@ function getExecutionStatusLabelKey(status: string | null | undefined): string {
   }
 }
 
-export function MessageRow({
+function StandardMessageRow({
   message,
   agents = [],
   presets = [],
   channelLabel,
   isSaved = false,
   compact = false,
+  defaultExpanded = false,
   onOpenThread,
   onOpenExecution,
   onOpenAgentProfile,
   onToggleSaved,
   onToggleReaction,
-}: {
-  message: ServerConversationMessage;
-  agents?: ServerAgentItem[];
-  presets?: Preset[];
-  channelLabel?: string;
-  isSaved?: boolean;
-  compact?: boolean;
-  onOpenThread: () => void;
-  onOpenExecution?: ((sessionId: string) => void) | undefined;
-  onOpenAgentProfile?: ((agentId: string) => void) | undefined;
-  onToggleSaved: () => void;
-  onToggleReaction?: (emoji: string) => void;
-}) {
+}: MessageRowProps) {
   const { t } = useT("translation");
-  const [isExpanded, setIsExpanded] = React.useState(false);
+  const [isExpanded, setIsExpanded] = React.useState(defaultExpanded);
   const [shouldCollapse, setShouldCollapse] = React.useState(false);
   const [reactionPickerOpen, setReactionPickerOpen] = React.useState(false);
   const agentMessageRef = React.useRef<HTMLDivElement>(null);
@@ -250,9 +348,9 @@ export function MessageRow({
   }, [t, text]);
 
   React.useEffect(() => {
-    setIsExpanded(false);
+    setIsExpanded(defaultExpanded);
     setReactionPickerOpen(false);
-  }, [message.id, text]);
+  }, [defaultExpanded, message.id, text]);
 
   React.useEffect(() => {
     if (!canCollapseMessage) {
@@ -570,4 +668,11 @@ export function MessageRow({
       </div>
     </article>
   );
+}
+
+export function MessageRow(props: MessageRowProps) {
+  if (props.message.messageType === "event") {
+    return <ChannelEventRow message={props.message} compact={props.compact} />;
+  }
+  return <StandardMessageRow {...props} />;
 }

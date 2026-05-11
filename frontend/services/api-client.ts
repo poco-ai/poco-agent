@@ -228,6 +228,12 @@ export const API_ENDPOINTS = {
     threadRootMessageId: string,
   ) =>
     `/servers/${serverId}/channels/${channelId}/threads/${threadRootMessageId}`,
+  serverChannelMessageContext: (
+    serverId: string,
+    channelId: string,
+    messageId: string,
+  ) =>
+    `/servers/${serverId}/channels/${channelId}/messages/${messageId}/context`,
 
   // Workspaces
   workspaces: "/workspaces",
@@ -279,6 +285,7 @@ export const API_ENDPOINTS = {
   adminModelConfig: "/admin/model-config",
   adminSkills: "/admin/skills",
   adminSkill: (skillId: number) => `/admin/skills/${skillId}`,
+  adminSkillFiles: (skillId: number) => `/admin/skills/${skillId}/files`,
   adminSkillImportDiscover: "/admin/skills/import/discover",
   adminSkillImportCommit: "/admin/skills/import/commit",
   adminSkillImportJob: (jobId: string) => `/admin/skills/import/jobs/${jobId}`,

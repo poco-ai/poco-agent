@@ -9,10 +9,13 @@ from app.core.settings import get_settings
 from app.core.errors.error_codes import ErrorCode
 from app.core.errors.exceptions import AppException
 from app.models.project_file import ProjectFile
+from app.repositories.mcp_server_repository import McpServerRepository
+from app.repositories.plugin_repository import PluginRepository
 from app.repositories.project_repository import ProjectRepository
 from app.repositories.project_file_repository import ProjectFileRepository
 from app.repositories.run_repository import RunRepository
 from app.repositories.session_repository import SessionRepository
+from app.repositories.skill_repository import SkillRepository
 from app.repositories.sub_agent_repository import SubAgentRepository
 from app.repositories.user_mcp_install_repository import UserMcpInstallRepository
 from app.repositories.user_plugin_install_repository import UserPluginInstallRepository
@@ -20,6 +23,11 @@ from app.repositories.user_skill_install_repository import UserSkillInstallRepos
 from app.schemas.input_file import InputFile
 from app.schemas.session import TaskConfig
 from app.schemas.task import TaskEnqueueRequest, TaskEnqueueResponse
+from app.services.capability_policy import (
+    extract_override_enabled,
+    normalize_override_map,
+    resolve_effective_enabled,
+)
 from app.services.env_var_service import EnvVarService
 from app.services.model_config_service import (
     PROVIDER_SPEC_MAP,
@@ -544,9 +552,33 @@ class TaskService:
         base_config: dict | None = None,
     ) -> dict | None:
         merged_base: dict = dict(base_config or {})
+        base_mcp_overrides = normalize_override_map(
+            merged_base.pop("mcp_overrides", None)
+        )
+        base_skill_overrides = normalize_override_map(
+            merged_base.pop("skill_overrides", None)
+        )
+        base_plugin_overrides = normalize_override_map(
+            merged_base.pop("plugin_overrides", None)
+        )
+        # Legacy field: a few historical snapshots may still carry bool toggle
+        # maps under *_config. Keep those values by migrating them into the new
+        # explicit override fields before dropping the old keys.
+        if base_mcp_overrides is None:
+            base_mcp_overrides = normalize_override_map(merged_base.get("mcp_config"))
+        if base_skill_overrides is None:
+            base_skill_overrides = normalize_override_map(
+                merged_base.get("skill_config")
+            )
+        if base_plugin_overrides is None:
+            base_plugin_overrides = normalize_override_map(
+                merged_base.get("plugin_config")
+            )
         # Never persist full MCP server configs inside session/run snapshots.
         # They may contain sensitive values and are not needed for the UI.
         merged_base.pop("mcp_config", None)
+        merged_base.pop("skill_config", None)
+        merged_base.pop("plugin_config", None)
         # Legacy field (no longer used after switching to skill_ids).
         merged_base.pop("skill_files", None)
         # Legacy field (not used; plugins are tracked via plugin_ids).
@@ -560,9 +592,9 @@ class TaskService:
         base_skill_ids = self._normalize_skill_ids(merged_base.get("skill_ids"))
         base_plugin_ids = self._normalize_plugin_ids(merged_base.get("plugin_ids"))
 
-        mcp_toggles: dict[str, bool] | None = None
-        skill_toggles: dict[str, bool] | None = None
-        plugin_toggles: dict[str, bool] | None = None
+        mcp_toggles = base_mcp_overrides
+        skill_toggles = base_skill_overrides
+        plugin_toggles = base_plugin_overrides
         if task_config is not None:
             # Only merge fields explicitly provided by the caller to avoid
             # overriding existing session config with schema defaults.
@@ -573,12 +605,33 @@ class TaskService:
             # input_files are per-run and should not be merged into session config.
             request_config.pop("input_files", None)
             # Extract mcp_config toggles before merging (don't merge as dict)
-            mcp_toggles = request_config.pop("mcp_config", None)
+            request_mcp_toggles = normalize_override_map(
+                request_config.pop("mcp_config", None)
+            )
             # Extract skill_config toggles before merging (don't merge as dict)
-            skill_toggles = request_config.pop("skill_config", None)
+            request_skill_toggles = normalize_override_map(
+                request_config.pop("skill_config", None)
+            )
             # Extract plugin_config toggles before merging (don't merge as dict)
-            plugin_toggles = request_config.pop("plugin_config", None)
+            request_plugin_toggles = normalize_override_map(
+                request_config.pop("plugin_config", None)
+            )
             merged_base = self._merge_config_map(merged_base, request_config)
+            if request_mcp_toggles is not None:
+                mcp_toggles = {
+                    **(mcp_toggles or {}),
+                    **request_mcp_toggles,
+                }
+            if request_skill_toggles is not None:
+                skill_toggles = {
+                    **(skill_toggles or {}),
+                    **request_skill_toggles,
+                }
+            if request_plugin_toggles is not None:
+                plugin_toggles = {
+                    **(plugin_toggles or {}),
+                    **request_plugin_toggles,
+                }
 
         # Validate and normalize `model` after merging base + overrides.
         effective_default_model, allowed_model_ids = (
@@ -595,32 +648,41 @@ class TaskService:
             merged_base["mcp_server_ids"] = (
                 self._build_user_mcp_server_ids_with_toggles(db, user_id, mcp_toggles)
             )
+            merged_base["mcp_overrides"] = mcp_toggles
         elif base_mcp_server_ids is not None:
             merged_base["mcp_server_ids"] = base_mcp_server_ids
+            merged_base.pop("mcp_overrides", None)
         else:
             merged_base["mcp_server_ids"] = self._build_user_mcp_server_ids_defaults(
                 db, user_id
             )
+            merged_base.pop("mcp_overrides", None)
 
         if skill_toggles is not None:
             merged_base["skill_ids"] = self._build_user_skill_ids_with_toggles(
                 db, user_id, skill_toggles
             )
+            merged_base["skill_overrides"] = skill_toggles
         elif base_skill_ids is not None:
             merged_base["skill_ids"] = base_skill_ids
+            merged_base.pop("skill_overrides", None)
         else:
             merged_base["skill_ids"] = self._build_user_skill_ids_defaults(db, user_id)
+            merged_base.pop("skill_overrides", None)
 
         if plugin_toggles is not None:
             merged_base["plugin_ids"] = self._build_user_plugin_ids_with_toggles(
                 db, user_id, plugin_toggles
             )
+            merged_base["plugin_overrides"] = plugin_toggles
         elif base_plugin_ids is not None:
             merged_base["plugin_ids"] = base_plugin_ids
+            merged_base.pop("plugin_overrides", None)
         else:
             merged_base["plugin_ids"] = self._build_user_plugin_ids_defaults(
                 db, user_id
             )
+            merged_base.pop("plugin_overrides", None)
 
         selected_subagent_ids = self._normalize_subagent_ids(
             merged_base.get("subagent_ids")
@@ -727,13 +789,8 @@ class TaskService:
     def _build_user_mcp_server_ids_defaults(
         self, db: Session, user_id: str
     ) -> list[int]:
-        """Return enabled MCP server ids from user's installations."""
-        result: list[int] = []
-        installs = UserMcpInstallRepository.list_by_user(db, user_id)
-        for install in installs:
-            if install.enabled:
-                result.append(install.server_id)
-        return result
+        """Return enabled MCP server ids using effective policy defaults."""
+        return self._build_user_mcp_server_ids_with_toggles(db, user_id, {})
 
     def _build_user_subagent_ids_defaults(self, db: Session, user_id: str) -> list[int]:
         """Return enabled subagent ids for the user."""
@@ -746,62 +803,70 @@ class TaskService:
     def _build_user_mcp_server_ids_with_toggles(
         self, db: Session, user_id: str, toggles: dict[str, bool]
     ) -> list[int]:
-        """Return enabled MCP server ids from user's installations with task-level toggles."""
+        """Return enabled MCP server ids using effective policy + task toggles."""
         result: list[int] = []
-        installs = UserMcpInstallRepository.list_by_user(db, user_id)
-        for install in installs:
-            if str(install.server_id) in toggles:
-                if toggles[str(install.server_id)]:
-                    result.append(install.server_id)
-                continue
-            if install.enabled:
-                result.append(install.server_id)
+        installs_by_server_id = {
+            install.server_id: install
+            for install in UserMcpInstallRepository.list_by_user(db, user_id)
+        }
+        for server in McpServerRepository.list_visible(db, user_id=user_id):
+            install = installs_by_server_id.get(server.id)
+            enabled = resolve_effective_enabled(
+                force_enabled=bool(server.force_enabled),
+                default_enabled=bool(server.default_enabled),
+                install_enabled=install.enabled if install is not None else None,
+                override_enabled=extract_override_enabled(toggles, server.id),
+            )
+            if enabled:
+                result.append(server.id)
         return result
 
     def _build_user_skill_ids_defaults(self, db: Session, user_id: str) -> list[int]:
-        """Return enabled skill ids from user's installations."""
-        result: list[int] = []
-        installs = UserSkillInstallRepository.list_by_user(db, user_id)
-        for install in installs:
-            if install.enabled:
-                result.append(install.skill_id)
-        return result
+        """Return enabled skill ids using effective policy defaults."""
+        return self._build_user_skill_ids_with_toggles(db, user_id, {})
 
     def _build_user_skill_ids_with_toggles(
         self, db: Session, user_id: str, toggles: dict[str, bool]
     ) -> list[int]:
-        """Return enabled skill ids from user's installations with task-level toggles."""
+        """Return enabled skill ids using effective policy + task toggles."""
         result: list[int] = []
-        installs = UserSkillInstallRepository.list_by_user(db, user_id)
-        for install in installs:
-            if str(install.skill_id) in toggles:
-                if toggles[str(install.skill_id)]:
-                    result.append(install.skill_id)
-                continue
-            if install.enabled:
-                result.append(install.skill_id)
+        installs_by_skill_id = {
+            install.skill_id: install
+            for install in UserSkillInstallRepository.list_by_user(db, user_id)
+        }
+        for skill in SkillRepository.list_visible(db, user_id=user_id):
+            install = installs_by_skill_id.get(skill.id)
+            enabled = resolve_effective_enabled(
+                force_enabled=bool(skill.force_enabled),
+                default_enabled=bool(skill.default_enabled),
+                install_enabled=install.enabled if install is not None else None,
+                override_enabled=extract_override_enabled(toggles, skill.id),
+            )
+            if enabled:
+                result.append(skill.id)
         return result
 
     def _build_user_plugin_ids_defaults(self, db: Session, user_id: str) -> list[int]:
-        """Return enabled plugin ids from user's installations."""
-        result: list[int] = []
-        installs = UserPluginInstallRepository.list_by_user(db, user_id)
-        for install in installs:
-            if install.enabled:
-                result.append(install.plugin_id)
-        return result
+        """Return enabled plugin ids using effective policy defaults."""
+        return self._build_user_plugin_ids_with_toggles(db, user_id, {})
 
     def _build_user_plugin_ids_with_toggles(
         self, db: Session, user_id: str, toggles: dict[str, bool]
     ) -> list[int]:
-        """Return enabled plugin ids from user's installations with task-level toggles."""
+        """Return enabled plugin ids using effective policy + task toggles."""
         result: list[int] = []
-        installs = UserPluginInstallRepository.list_by_user(db, user_id)
-        for install in installs:
-            if str(install.plugin_id) in toggles:
-                if toggles[str(install.plugin_id)]:
-                    result.append(install.plugin_id)
-                continue
-            if install.enabled:
-                result.append(install.plugin_id)
+        installs_by_plugin_id = {
+            install.plugin_id: install
+            for install in UserPluginInstallRepository.list_by_user(db, user_id)
+        }
+        for plugin in PluginRepository.list_visible(db, user_id=user_id):
+            install = installs_by_plugin_id.get(plugin.id)
+            enabled = resolve_effective_enabled(
+                force_enabled=bool(plugin.force_enabled),
+                default_enabled=bool(plugin.default_enabled),
+                install_enabled=install.enabled if install is not None else None,
+                override_enabled=extract_override_enabled(toggles, plugin.id),
+            )
+            if enabled:
+                result.append(plugin.id)
         return result

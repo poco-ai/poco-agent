@@ -20,6 +20,7 @@ def build_task_response(
         task_id=uuid.uuid4(),
         server_id=server_id,
         channel_id=channel_id,
+        display_number=1,
         title="Review retry behavior",
         description="Agent created task",
         status="todo",

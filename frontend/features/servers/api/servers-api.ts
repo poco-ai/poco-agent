@@ -3,6 +3,7 @@ import type { FileNode } from "@/features/chat/types";
 import type {
   ServerAgentItem,
   ServerChannelItem,
+  ServerSystemChannelType,
   ServerChannelMemberItem,
   ServerChannelVisibility,
   ServerConversationMessage,
@@ -13,8 +14,13 @@ import type {
   ServerItem,
   ServerKind,
   ServerMemberItem,
+  ServerRole,
   ServerUserPublicProfile,
 } from "@/features/servers/model/types";
+import {
+  getServerMemberRolePath,
+  getServerOwnershipTransferPath,
+} from "@/features/servers/lib/server-member-api-paths";
 
 interface ServerUserPublicProfileResponse {
   user_id: string;
@@ -40,6 +46,8 @@ interface ServerChannelResponse {
   description?: string | null;
   conversation_type: ServerConversationType;
   visibility: ServerChannelVisibility;
+  system_channel_type?: ServerSystemChannelType | null;
+  is_system_channel?: boolean;
   direct_user_id?: string | null;
   direct_agent_identity_id?: string | null;
   created_by: string | null;
@@ -100,7 +108,7 @@ interface ServerMemberResponse {
   server_id: string;
   user_id: string;
   user?: ServerUserPublicProfileResponse | null;
-  role: string;
+  role: ServerRole;
   joined_at: string;
   invited_by?: string | null;
   status: string;
@@ -112,7 +120,7 @@ interface ServerInviteResponse {
   invite_id: string;
   server_id: string;
   token: string;
-  role: string;
+  role: ServerRole;
   expires_at: string;
   created_by: string;
   max_uses: number;
@@ -128,7 +136,7 @@ interface ServerConversationMessageResponse {
   author_user_id?: string | null;
   author_user?: ServerUserPublicProfileResponse | null;
   author_agent?: ServerAgentResponse | null;
-  message_type: "user" | "system" | "task";
+  message_type: "user" | "system" | "task" | "event";
   content: Record<string, unknown>;
   text_preview?: string | null;
   thread_root_message_id?: string | null;
@@ -194,6 +202,9 @@ function mapChannel(channel: ServerChannelResponse): ServerChannelItem {
     description: channel.description,
     conversationType: channel.conversation_type,
     visibility: channel.visibility,
+    systemChannelType: channel.system_channel_type,
+    isSystemChannel:
+      channel.is_system_channel ?? channel.system_channel_type != null,
     directUserId: channel.direct_user_id,
     directAgentIdentityId: channel.direct_agent_identity_id,
     createdBy: channel.created_by,
@@ -364,11 +375,34 @@ export const serversApi = {
     return members.map(mapServerMember);
   },
 
+  updateMemberRole: async (
+    serverId: string,
+    membershipId: number,
+    role: ServerRole,
+  ): Promise<ServerMemberItem> => {
+    const member = await apiClient.patch<ServerMemberResponse>(
+      getServerMemberRolePath(serverId, membershipId),
+      { role },
+    );
+    return mapServerMember(member);
+  },
+
   removeMember: async (
     serverId: string,
     membershipId: number,
   ): Promise<void> => {
     await apiClient.delete(`/servers/${serverId}/members/${membershipId}`);
+  },
+
+  transferOwnership: async (
+    serverId: string,
+    newOwnerUserId: string,
+  ): Promise<ServerItem> => {
+    const server = await apiClient.post<ServerResponse>(
+      getServerOwnershipTransferPath(serverId),
+      { new_owner_user_id: newOwnerUserId },
+    );
+    return mapServer(server);
   },
 
   listInvites: async (serverId: string): Promise<ServerInviteItem[]> => {
@@ -519,6 +553,7 @@ export const serversApi = {
     input: {
       text: string;
       threadRootMessageId?: string | null;
+      asTask?: boolean;
     },
   ): Promise<ServerConversationMessage> => {
     const message = await apiClient.post<ServerConversationMessageResponse>(
@@ -529,6 +564,7 @@ export const serversApi = {
         thread_root_message_id: input.threadRootMessageId ?? null,
         content: {
           text: input.text,
+          ...(input.asTask ? { as_task: true } : {}),
         },
       },
     );

@@ -34,6 +34,11 @@ from app.services.server_member_service import (
     require_server_member,
     require_server_owner,
 )
+from app.services.server_channel_event_service import (
+    ChannelEventActor,
+    ChannelEventTarget,
+    create_channel_event_message,
+)
 from app.services.user_public_profile_service import list_user_public_profiles_by_id
 
 
@@ -89,7 +94,31 @@ class ServerChannelService:
 
     @staticmethod
     def _build_channel_response(channel: ServerChannel) -> ServerChannelResponse:
-        return ServerChannelResponse.model_validate(channel)
+        return ServerChannelResponse.model_validate(channel).model_copy(
+            update={"is_system_channel": channel.system_channel_type is not None}
+        )
+
+    @staticmethod
+    def _user_label(user: User) -> str:
+        return user.display_name or user.primary_email or user.id
+
+    @staticmethod
+    def _profile_label(
+        profiles: dict[str, UserPublicProfileResponse],
+        user_id: str,
+    ) -> str:
+        profile = profiles.get(user_id)
+        if profile is not None and profile.display_name:
+            return profile.display_name
+        return user_id
+
+    @staticmethod
+    def _ensure_mutable_channel(channel: ServerChannel) -> None:
+        if channel.system_channel_type is not None:
+            raise AppException(
+                error_code=ErrorCode.BAD_REQUEST,
+                message="System channels cannot be modified",
+            )
 
     def list_channels(
         self,
@@ -215,6 +244,7 @@ class ServerChannelService:
                 error_code=ErrorCode.NOT_FOUND,
                 message=f"Channel not found: {channel_id}",
             )
+        self._ensure_mutable_channel(channel)
         channel.archived_at = datetime.now(UTC)
         db.commit()
         return self._build_channel_response(channel)
@@ -234,6 +264,7 @@ class ServerChannelService:
                 error_code=ErrorCode.NOT_FOUND,
                 message=f"Channel not found: {channel_id}",
             )
+        self._ensure_mutable_channel(channel)
 
         if request.name is not None:
             name = request.name.strip()
@@ -273,6 +304,7 @@ class ServerChannelService:
                 error_code=ErrorCode.NOT_FOUND,
                 message=f"Channel not found: {channel_id}",
             )
+        self._ensure_mutable_channel(channel)
         ServerChannelRepository.delete(db, channel)
         db.commit()
 
@@ -352,6 +384,7 @@ class ServerChannelService:
             channel_id,
             target_user_id,
         )
+        should_emit_joined_event = membership is None or membership.status != "active"
         if membership is None:
             membership = ServerChannelMemberRepository.create(
                 db,
@@ -365,9 +398,31 @@ class ServerChannelService:
         else:
             membership.role = request.role or membership.role
             membership.status = "active"
+        db.flush()
+        user_profiles = list_user_public_profiles_by_id(db, [membership.user_id])
+        if should_emit_joined_event:
+            target_label = self._profile_label(user_profiles, target_user_id)
+            create_channel_event_message(
+                db,
+                channel_id=channel.id,
+                event_type="channel.member_joined",
+                actor=ChannelEventActor(
+                    actor_type="user",
+                    actor_user_id=current_user.id,
+                    actor_label=self._user_label(current_user),
+                ),
+                target=ChannelEventTarget(
+                    target_user_id=target_user_id,
+                    target_label=target_label,
+                ),
+                content={
+                    "membership_id": membership.id,
+                    "join_reason": "admin_added",
+                },
+                text_preview=f"{target_label} joined {channel.name}",
+            )
         db.commit()
         db.refresh(membership)
-        user_profiles = list_user_public_profiles_by_id(db, [membership.user_id])
         return self._build_channel_member_response(
             membership,
             user_profiles=user_profiles,
@@ -426,6 +481,7 @@ class ServerChannelService:
             channel_id,
             current_user.id,
         )
+        should_emit_joined_event = membership is None or membership.status != "active"
         if membership is None:
             membership = ServerChannelMemberRepository.create(
                 db,
@@ -438,9 +494,31 @@ class ServerChannelService:
             )
         else:
             membership.status = "active"
+        db.flush()
+        user_profiles = list_user_public_profiles_by_id(db, [membership.user_id])
+        if should_emit_joined_event:
+            user_label = self._user_label(current_user)
+            create_channel_event_message(
+                db,
+                channel_id=channel.id,
+                event_type="channel.member_joined",
+                actor=ChannelEventActor(
+                    actor_type="user",
+                    actor_user_id=current_user.id,
+                    actor_label=user_label,
+                ),
+                target=ChannelEventTarget(
+                    target_user_id=current_user.id,
+                    target_label=user_label,
+                ),
+                content={
+                    "membership_id": membership.id,
+                    "join_reason": "self_join",
+                },
+                text_preview=f"{user_label} joined {channel.name}",
+            )
         db.commit()
         db.refresh(membership)
-        user_profiles = list_user_public_profiles_by_id(db, [membership.user_id])
         return self._build_channel_member_response(
             membership,
             user_profiles=user_profiles,
@@ -460,6 +538,7 @@ class ServerChannelService:
                 error_code=ErrorCode.NOT_FOUND,
                 message=f"Channel not found: {channel_id}",
             )
+        self._ensure_mutable_channel(channel)
         membership = ServerChannelMemberRepository.get_by_channel_and_user(
             db,
             channel_id,

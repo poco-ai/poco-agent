@@ -157,7 +157,13 @@
       "executionPlaceholder": "Execution summary and runtime state will attach here once the channel task flow connects to the agent runtime.",
       "currentStatus": "Current status: {{status}}",
       "assigneeAttached": "Assignee attached",
-      "assigneePending": "Assignee pending"
+      "assigneePending": "Assignee pending",
+      "creator": "Creator",
+      "assignee": "Assignee",
+      "unassigned": "Unassigned",
+      "unknownActor": "Unknown",
+      "context": "Channel context",
+      "contextDescription": "Review the channel messages around the selected activity."
     },
     "toasts": {
       "loadFailed": "Failed to load channel tasks",
@@ -171,7 +177,10 @@
       "unclaimed": "Task unclaimed",
       "claimFailed": "Failed to update task claim",
       "statusUpdated": "Task status updated",
-      "statusFailed": "Failed to update task status"
+      "statusFailed": "Failed to update task status",
+      "assigneeUpdated": "Assignee updated",
+      "assigneeFailed": "Failed to update assignee",
+      "contextFailed": "Failed to load channel context"
     }
   },
   "conversationView": {
@@ -238,6 +247,21 @@
     "emptyTaskListTitle": "Noch keine Aufgaben",
     "emptyTaskListDescription": "Kanalaufgaben erscheinen hier, sobald Nachrichten in Arbeit umgewandelt werden.",
     "leave": "Verlassen",
+    "events": {
+      "actor": "Jemand",
+      "task": "Unbenannte Aufgabe",
+      "channelMemberJoined": "{{target}} ist beigetreten",
+      "channelAgentJoined": "{{target}} ist beigetreten",
+      "taskCreated": "{{actor}} hat Aufgabe erstellt: {{task}}",
+      "taskCreatedAssigned": "{{actor}} hat Aufgabe {{task}} erstellt und {{assignee}} zugewiesen",
+      "taskStatusChanged": "{{actor}} hat Aufgabe von {{fromStatus}} nach {{toStatus}} verschoben",
+      "taskAssigned": "{{actor}} hat Aufgabe {{task}} an {{toAssignee}} zugewiesen",
+      "taskReassigned": "{{actor}} hat Aufgabe {{task}} an {{toAssignee}} neu zugewiesen",
+      "taskUnassigned": "{{actor}} hat Aufgabe {{task}} freigegeben",
+      "taskUpdated": "{{actor}} hat Aufgabe {{task}} aktualisiert",
+      "taskCommented": "{{actor}} hat Aufgabe {{task}} kommentiert: {{comment}}",
+      "unknown": "{{actor}} hat den Kanal aktualisiert"
+    },
     "mentionCandidates": "Erwähnen",
     "mentionKinds": {
       "agent": "Agent",
@@ -276,9 +300,14 @@
       "title": "Mitglieder",
       "description": "Personen und Agents in #{{channel}}.",
       "inviteAgents": "Agent einladen",
+      "inviteHumans": "Mitglieder einladen",
       "agentSearchPlaceholder": "Agent nach Name suchen",
+      "humanSearchPlaceholder": "Mitglieder nach Name suchen",
       "noAvailableAgents": "Keine weiteren Agents verfügbar.",
+      "noAvailableHumans": "Keine weiteren Mitglieder verfügbar.",
       "addSelectedAgents": "Ausgewählte Agents hinzufügen",
+      "addSelectedHumans": "Ausgewählte Mitglieder hinzufügen",
+      "manageAgentsPermissionHint": "Nur Server-Admins und owner können Agents zu Kanälen hinzufügen.",
       "agents": "Agents",
       "humans": "Personen",
       "noAgents": "Keine Agents in diesem Kanal.",
@@ -305,7 +334,8 @@
       "generateInvite": "Einladung erstellen",
       "inviteMeta": "Läuft ab am {{expiresAt}}",
       "copyInvite": "Kopieren",
-      "noInvites": "Noch keine aktiven Einladungen."
+      "noInvites": "Noch keine aktiven Einladungen.",
+      "invitePermissionHint": "Only server admins and owners can manage invite keys."
     },
     "agentPreset": {
       "title": "Agent hinzufügen",
@@ -313,6 +343,7 @@
       "preset": "Preset",
       "selectPreset": "Preset auswählen",
       "displayName": "Anzeigename",
+      "displayNameConflict": "Ein Agent mit diesem Anzeigenamen existiert bereits.",
       "handle": "Handle",
       "agentDescription": "Beschreibung",
       "create": "Agent erstellen"
@@ -324,6 +355,10 @@
       "humans": "Personen",
       "noAgents": "Noch keine Server-Agents.",
       "noHumans": "Noch keine Personenmitglieder.",
+      "createAgentPermissionHint": "Nur Server-Admins und owner können Agents erstellen.",
+      "invitePermissionHint": "Only server admins and owners can invite members.",
+      "rolePermissionHint": "Only the server owner can change member roles.",
+      "ownerOnlyMemberActionHint": "Only the server owner can manage server members.",
       "description": "Beschreibung",
       "lifecycle": "Lebenszyklus",
       "created": "Erstellt",
@@ -349,6 +384,9 @@
       },
       "emptyValue": "Nicht verfügbar",
       "emptySelection": "Wähle einen Kollegen aus, um Details anzuzeigen.",
+      "transferOwnership": "Transfer ownership",
+      "transferOwnershipTitle": "Transfer server ownership?",
+      "transferOwnershipDescription": "This will make {{member}} the server owner. Your role will become Admin.",
       "removeMember": "Mitglied entfernen",
       "startAgent": "Starten",
       "restartAgent": "Neustarten",
@@ -364,7 +402,8 @@
       "stopAgentDescription": "Dies verwirft aktuell laufende Arbeit dieses Agent und verhindert neue Kanalaufgaben, bis er wieder gestartet wird. Aufgaben in der Warteschlange bleiben erhalten.",
       "removeAgentTitle": "{{name}} von diesem Server entfernen?",
       "removeAgentDescription": "Dies entfernt den Agent aus {{channels}} und anderen Kanälen und bricht noch nicht gestartete Aufgaben ab. Historische Nachrichten, Reaktionen und Arbeitsergebnisse bleiben erhalten.",
-      "removeAgentDescriptionUnknown": "Dies entfernt den Agent aus den Kanälen dieses Servers und bricht noch nicht gestartete Aufgaben ab. Historische Nachrichten, Reaktionen und Arbeitsergebnisse bleiben erhalten."
+      "removeAgentDescriptionUnknown": "Dies entfernt den Agent aus den Kanälen dieses Servers und bricht noch nicht gestartete Aufgaben ab. Historische Nachrichten, Reaktionen und Arbeitsergebnisse bleiben erhalten.",
+      "personalOwnershipTransferHint": "Personal servers do not support ownership transfer."
     },
     "threadMentionHint": "Antworten in diesem Thread richten sich an",
     "execution": {
@@ -390,6 +429,7 @@
       "taskCreated": "Aufgabe aus Nachricht erstellt",
       "channelCreated": "Kanal erstellt",
       "channelCreateFailed": "Kanal konnte nicht erstellt werden",
+      "systemChannelNameReserved": "Public und Personal sind reservierte Kanalnamen",
       "channelUpdated": "Kanal aktualisiert",
       "channelUpdateFailed": "Kanal konnte nicht aktualisiert werden",
       "channelArchived": "Kanal archiviert",
@@ -416,6 +456,10 @@
       "agentUpdated": "Agent aktualisiert",
       "agentUpdateFailed": "Agent konnte nicht aktualisiert werden",
       "agentStarted": "Agent gestartet",
+      "memberRoleUpdated": "Member role updated",
+      "memberRoleUpdateFailed": "Failed to update member role",
+      "ownershipTransferred": "Server ownership transferred",
+      "ownershipTransferFailed": "Failed to transfer ownership",
       "memberRemoved": "Mitglied entfernt",
       "memberRemoveFailed": "Mitglied konnte nicht entfernt werden",
       "agentRestarted": "Agent neu gestartet",
@@ -435,6 +479,11 @@
       "pickerLabel": "Reaktion auswählen",
       "addEmoji": "Mit {{emoji}} reagieren",
       "removeEmoji": "Reaktion {{emoji}} entfernen"
+    },
+    "roles": {
+      "owner": "Owner",
+      "admin": "Admin",
+      "member": "Member"
     }
   },
   "workspaces": {
@@ -2406,7 +2455,8 @@
     "saving": "Speichern...",
     "confirm": "Bestätigen",
     "enabled": "Aktiviert",
-    "disabled": "Deaktiviert"
+    "disabled": "Deaktiviert",
+    "deleting": "Wird gelöscht..."
   },
   "pagination": {
     "previous": "Zurück",
@@ -2643,7 +2693,8 @@
       "runtimeVisibilityDescription": "Steuert, ob diese Variable automatisch in Aufgabenlaufzeit-Container injiziert werden darf.",
       "runtimeVisibilityNoneHint": "Nie automatisch in Aufgaben-Container injizieren.",
       "runtimeVisibilityAdminsOnlyHint": "Nur in Laufzeitumgebungen injizieren, die von Administratoren gestartet werden.",
-      "runtimeVisibilityAllUsersHint": "Für alle Benutzerlaufzeiten injizierbar, sofern die globale Richtlinie dies zulässt."
+      "runtimeVisibilityAllUsersHint": "Für alle Benutzerlaufzeiten injizierbar, sofern die globale Richtlinie dies zulässt.",
+      "policyDisabledForUsers": "Für Benutzer deaktiviert"
     }
   },
   "validation": {

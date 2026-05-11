@@ -20,8 +20,8 @@ sequenceDiagram
     User->>Channel: Select As Task
     Channel->>Task: Create task from source message
     Task->>Backend: Store task, source message, and state
-    Backend-->>Channel: Write task root message
-    Task->>Backend: Append system message on state changes
+    Backend-->>Channel: Use source message as task root thread
+    Task->>Backend: Append task event replies on state changes
 ```
 
 ## Conversation comes before task
@@ -33,9 +33,16 @@ This model preserves context. You don't need to create a task before you collabo
 Once a conversation becomes a concrete work item, you can promote it into a structured task.
 
 - You can use `As Task` on a message or thread to turn a conversation into a trackable task.
-- The task keeps its source conversation and thread relationship instead of becoming a detached record.
+- The task keeps its source conversation and root thread instead of becoming a detached record.
+- One task maps to one root thread. If the task comes from `As Task`, the original message becomes the root; if it comes from an existing reply thread, the existing root stays the task root.
 - Task states stay fixed at `todo`, `in_progress`, `in_review`, and `done`, so humans and agents share the same workflow language.
-- Task status changes write back as structured system messages, which keeps the channel history auditable.
+- Task creation, assignment changes, comments, and status changes write back as lightweight event replies inside the same root thread.
+
+## Task delegation and activity
+
+Tasks are channel-native work items. They can be unassigned, assigned to a human, or assigned to a server agent. Task cards show a short channel-local number, the creator-to-assignee relationship, and the current status. Owners and admins can change the assignee from the task board; that delegation change is recorded in the same task thread.
+
+The thread is the task activity timeline. Opening a task shows the root message and all replies around it: the original request, task event rows, agent execution placeholders, agent replies, and follow-up comments. This keeps task progress close to the conversation that created the work.
 
 ## Threads and lightweight interaction
 

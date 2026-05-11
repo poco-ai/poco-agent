@@ -150,9 +150,15 @@
       "description": "Review the task overview, collaboration activity, and execution handoff without leaving the channel context.",
       "overview": "Overview",
       "overviewDescription": "Keep the task title, description, and workflow state aligned with the current collaboration plan.",
+      "creator": "Creator",
+      "assignee": "Assignee",
+      "unassigned": "Unassigned",
+      "unknownActor": "Unknown",
       "activity": "Collaboration activity",
       "activityDescription": "Task creation, claim changes, and status updates stay attached to the channel thread.",
       "emptyActivity": "No activity yet.",
+      "context": "Channel context",
+      "contextDescription": "Review the channel messages around the selected activity.",
       "execution": "Execution summary",
       "executionDescription": "This section reserves the stable handoff point for later agent runtime work.",
       "executionPlaceholder": "Execution summary and runtime state will attach here once the channel task flow connects to the agent runtime.",
@@ -171,6 +177,9 @@
       "claimed": "Task claimed",
       "unclaimed": "Task unclaimed",
       "claimFailed": "Failed to update task claim",
+      "assigneeUpdated": "Assignee updated",
+      "assigneeFailed": "Failed to update assignee",
+      "contextFailed": "Failed to load channel context",
       "statusUpdated": "Task status updated",
       "statusFailed": "Failed to update task status"
     }
@@ -239,6 +248,21 @@
     "emptyTaskListTitle": "No tasks yet",
     "emptyTaskListDescription": "Channel tasks will appear here once messages are converted into work.",
     "leave": "Leave",
+    "events": {
+      "actor": "Someone",
+      "task": "Untitled task",
+      "channelMemberJoined": "{{target}} joined",
+      "channelAgentJoined": "{{target}} joined",
+      "taskCreated": "{{actor}} created task {{task}}",
+      "taskCreatedAssigned": "{{actor}} created task {{task}} and assigned it to {{assignee}}",
+      "taskStatusChanged": "{{actor}} moved task from {{fromStatus}} to {{toStatus}}",
+      "taskAssigned": "{{actor}} assigned task {{task}} to {{toAssignee}}",
+      "taskReassigned": "{{actor}} reassigned task {{task}} to {{toAssignee}}",
+      "taskUnassigned": "{{actor}} unassigned task {{task}}",
+      "taskUpdated": "{{actor}} updated task {{task}}",
+      "taskCommented": "{{actor}} commented on task {{task}}: {{comment}}",
+      "unknown": "{{actor}} updated the channel"
+    },
     "mentionCandidates": "Mention",
     "mentionKinds": {
       "agent": "Agent",
@@ -277,9 +301,14 @@
       "title": "Members",
       "description": "People and agents in #{{channel}}.",
       "inviteAgents": "Invite agents",
+      "inviteHumans": "Invite members",
       "agentSearchPlaceholder": "Search agents by name",
+      "humanSearchPlaceholder": "Search members by name",
       "noAvailableAgents": "No additional agents available.",
+      "noAvailableHumans": "No additional members available.",
       "addSelectedAgents": "Add selected agents",
+      "addSelectedHumans": "Add selected members",
+      "manageAgentsPermissionHint": "Only server admins and owners can add agents to channels.",
       "agents": "Agents",
       "humans": "Humans",
       "noAgents": "No agents in this channel.",
@@ -306,7 +335,8 @@
       "generateInvite": "Generate",
       "inviteMeta": "{{used}} / {{max}} used",
       "copyInvite": "Copy invite key",
-      "noInvites": "No invite key generated yet."
+      "noInvites": "No invite key generated yet.",
+      "invitePermissionHint": "Only server admins and owners can manage invite keys."
     },
     "agentPreset": {
       "title": "Add agent",
@@ -314,6 +344,7 @@
       "preset": "Preset",
       "selectPreset": "Select preset",
       "displayName": "Display name",
+      "displayNameConflict": "An agent with this display name already exists.",
       "handle": "Handle",
       "agentDescription": "Description",
       "create": "Create agent"
@@ -325,6 +356,10 @@
       "humans": "Humans",
       "noAgents": "No server agents yet.",
       "noHumans": "No human members yet.",
+      "createAgentPermissionHint": "Only server admins and owners can create agents.",
+      "invitePermissionHint": "Only server admins and owners can invite members.",
+      "rolePermissionHint": "Only the server owner can change member roles.",
+      "ownerOnlyMemberActionHint": "Only the server owner can manage server members.",
       "description": "Description",
       "lifecycle": "Lifecycle",
       "created": "Created",
@@ -353,6 +388,9 @@
       },
       "emptyValue": "Not available",
       "emptySelection": "Select a colleague to inspect their profile.",
+      "transferOwnership": "Transfer ownership",
+      "transferOwnershipTitle": "Transfer server ownership?",
+      "transferOwnershipDescription": "This will make {{member}} the server owner. Your role will become Admin.",
       "removeMember": "Remove member",
       "startAgent": "Start",
       "restartAgent": "Restart",
@@ -368,7 +406,8 @@
       "stopAgentDescription": "This will discard any currently running work for this agent and prevent new channel tasks until it is started again. Queued work is kept.",
       "removeAgentTitle": "Remove {{name}} from this server?",
       "removeAgentDescription": "This will remove the agent from {{channels}} and other channels, and cancel queued work that has not started. Historical messages, reactions, and work output will be kept.",
-      "removeAgentDescriptionUnknown": "This will remove the agent from this server's channels and cancel queued work that has not started. Historical messages, reactions, and work output will be kept."
+      "removeAgentDescriptionUnknown": "This will remove the agent from this server's channels and cancel queued work that has not started. Historical messages, reactions, and work output will be kept.",
+      "personalOwnershipTransferHint": "Personal servers do not support ownership transfer."
     },
     "threadMentionHint": "Replies in this thread will target",
     "execution": {
@@ -394,6 +433,7 @@
       "taskCreated": "Task created from message",
       "channelCreated": "Channel created",
       "channelCreateFailed": "Failed to create channel",
+      "systemChannelNameReserved": "Public and Personal are reserved channel names",
       "channelUpdated": "Channel updated",
       "channelUpdateFailed": "Failed to update channel",
       "channelArchived": "Channel archived",
@@ -426,6 +466,10 @@
       "agentStopFailed": "Failed to stop agent",
       "agentRemoved": "Agent removed",
       "agentRemoveFailed": "Failed to remove agent",
+      "memberRoleUpdated": "Member role updated",
+      "memberRoleUpdateFailed": "Failed to update member role",
+      "ownershipTransferred": "Server ownership transferred",
+      "ownershipTransferFailed": "Failed to transfer ownership",
       "memberRemoved": "Member removed",
       "memberRemoveFailed": "Failed to remove member",
       "agentRemovedFromChannel": "Agent removed from channel",
@@ -439,6 +483,11 @@
       "pickerLabel": "Choose a reaction",
       "addEmoji": "React with {{emoji}}",
       "removeEmoji": "Remove {{emoji}} reaction"
+    },
+    "roles": {
+      "owner": "Owner",
+      "admin": "Admin",
+      "member": "Member"
     }
   },
   "workspaces": {
@@ -871,9 +920,9 @@
     },
     "warnings": {
       "tooManyMcps": "Too many MCP servers enabled ({{count}}). This may slow down system loading and reduce performance.",
-      "tooManySkills": "Too many skills enabled ({{count}}). This may slow down system loading and reduce performance.",
+      "tooManySkills": "Too many user-enabled skills ({{count}}, recommended no more than {{limit}}). This may slow down system loading and reduce performance. Built-in system skills do not count toward this recommendation.",
       "mcpLimitReached": "Enabling this MCP will exceed the recommended limit (3 servers). Too many MCPs may slow down system loading.",
-      "skillLimitReached": "Enabling this skill will exceed the recommended limit (5 skills). Too many skills may slow down system loading."
+      "skillLimitReached": "Enabling this skill will bring user-enabled skills to {{count}}, above the recommended limit ({{limit}}). Built-in system skills do not count toward this recommendation."
     }
   },
   "prompts": {
@@ -1797,7 +1846,8 @@
       "stats": {
         "available": "Available",
         "installed": "Installed",
-        "enabled": "Enabled"
+        "enabled": "Enabled",
+        "recommendedEnabled": "User-enabled {{count}} / recommended {{limit}}"
       },
       "section": {
         "title": "Skills"
@@ -2386,7 +2436,8 @@
     "enabled": "Enabled",
     "disabled": "Disabled",
     "default": "Default",
-    "forced": "Forced"
+    "forced": "Forced",
+    "deleting": "Deleting..."
   },
   "pagination": {
     "previous": "Previous",
@@ -2715,7 +2766,8 @@
       "runtimeVisibilityAdminsOnlyHint": "Only tasks launched by system admins can read it.",
       "runtimeVisibilityAllUsers": "All users",
       "runtimeVisibilityAllUsersHint": "Make it available to every user's task runtime.",
-      "runtimeVisibilityProtectedWarning": "This key matches a protected runtime key/prefix. The visibility setting can be saved, but automatic runtime injection will still be blocked."
+      "runtimeVisibilityProtectedWarning": "This key matches a protected runtime key/prefix. The visibility setting can be saved, but automatic runtime injection will still be blocked.",
+      "policyDisabledForUsers": "Disabled for users"
     }
   },
   "validation": {

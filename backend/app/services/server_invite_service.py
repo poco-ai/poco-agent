@@ -7,8 +7,14 @@ from sqlalchemy.orm import Session
 from app.core.errors.error_codes import ErrorCode
 from app.core.errors.exceptions import AppException
 from app.models.server_invite import ServerInvite
+from app.models.server_channel import ServerChannel
+from app.models.server_channel_member import ServerChannelMember
 from app.models.server_member import ServerMember
 from app.models.user import User
+from app.repositories.server_channel_repository import (
+    ServerChannelMemberRepository,
+    ServerChannelRepository,
+)
 from app.repositories.server_invite_repository import ServerInviteRepository
 from app.repositories.server_member_repository import ServerMemberRepository
 from app.repositories.server_repository import ServerRepository
@@ -19,6 +25,11 @@ from app.schemas.server_invite import (
     ServerInviteRevokeRequest,
 )
 from app.schemas.server_member import ServerMemberResponse
+from app.services.server_channel_event_service import (
+    ChannelEventActor,
+    ChannelEventTarget,
+    create_channel_event_message,
+)
 from app.services.server_member_service import require_server_admin
 
 
@@ -31,6 +42,44 @@ class ServerInviteService:
     @staticmethod
     def _build_invite_response(invite: ServerInvite) -> ServerInviteResponse:
         return ServerInviteResponse.model_validate(invite)
+
+    @staticmethod
+    def _user_label(user: User) -> str:
+        return user.display_name or user.primary_email or user.id
+
+    @staticmethod
+    def _ensure_public_channel(
+        db: Session, server_id: uuid.UUID, created_by: str
+    ) -> ServerChannel:
+        public_channel = ServerChannelRepository.get_system_channel(
+            db,
+            server_id,
+            "public",
+        )
+        if public_channel is not None:
+            return public_channel
+
+        slug = "public"
+        suffix = 2
+        while (
+            ServerChannelRepository.get_by_server_slug(db, server_id, slug) is not None
+        ):
+            slug = f"public-{suffix}"
+            suffix += 1
+        channel = ServerChannelRepository.create(
+            db,
+            ServerChannel(
+                server_id=server_id,
+                name="Public",
+                slug=slug,
+                conversation_type="channel",
+                visibility="public",
+                system_channel_type="public",
+                created_by=created_by,
+            ),
+        )
+        db.flush()
+        return channel
 
     def create_invite(
         self,
@@ -170,6 +219,54 @@ class ServerInviteService:
                 status="active",
             ),
         )
+        if server.kind == "shared":
+            public_channel = self._ensure_public_channel(
+                db,
+                server.id,
+                invite.created_by,
+            )
+            channel_membership = ServerChannelMemberRepository.get_by_channel_and_user(
+                db,
+                public_channel.id,
+                current_user.id,
+            )
+            should_emit_joined_event = (
+                channel_membership is None or channel_membership.status != "active"
+            )
+            if channel_membership is None:
+                channel_membership = ServerChannelMemberRepository.create(
+                    db,
+                    ServerChannelMember(
+                        channel_id=public_channel.id,
+                        user_id=current_user.id,
+                        role="member",
+                        status="active",
+                    ),
+                )
+            else:
+                channel_membership.status = "active"
+            db.flush()
+            if should_emit_joined_event:
+                user_label = self._user_label(current_user)
+                create_channel_event_message(
+                    db,
+                    channel_id=public_channel.id,
+                    event_type="channel.member_joined",
+                    actor=ChannelEventActor(
+                        actor_type="user",
+                        actor_user_id=current_user.id,
+                        actor_label=user_label,
+                    ),
+                    target=ChannelEventTarget(
+                        target_user_id=current_user.id,
+                        target_label=user_label,
+                    ),
+                    content={
+                        "membership_id": channel_membership.id,
+                        "join_reason": "server_invite",
+                    },
+                    text_preview=f"{user_label} joined {public_channel.name}",
+                )
         invite.used_count += 1
         db.commit()
         if isinstance(membership, ServerMember):

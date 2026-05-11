@@ -1,7 +1,7 @@
-feat(server-agent): preserve removed agent history
+fix(channel-tasks): refine task board thread interactions
 
-- Add soft removal fields and migrate server agent removal away from identity deletion
-- Filter removed agents from active channel and mention flows while hydrating historical message authors
-- Keep channel and server removal scoped to queued work, placeholders, and inactive memberships
-- Add Remove confirmation copy and historical agent avatar/profile entry in server UI
-- Record lifecycle constitution and active implementation spec
+- Open task cards directly in the shared thread reply drawer
+- Add compact creator-to-assignee avatar controls with searchable assignee modal
+- Hide duplicate task detail text and clamp long task titles
+- Keep the latest channel and thread message expanded by default
+- Document the one-thread-per-task interaction model

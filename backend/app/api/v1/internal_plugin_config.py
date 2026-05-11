@@ -23,6 +23,9 @@ async def resolve_plugin_config(
     db: Session = Depends(get_db),
 ) -> JSONResponse:
     resolved = service.resolve_user_plugin_files(
-        db=db, user_id=user_id, plugin_ids=request.plugin_ids
+        db=db,
+        user_id=user_id,
+        plugin_ids=request.plugin_ids,
+        plugin_overrides=request.plugin_overrides,
     )
     return Response.success(data=resolved, message="Plugin config resolved")

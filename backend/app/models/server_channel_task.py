@@ -8,6 +8,7 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    CheckConstraint,
     text,
 )
 from sqlalchemy.orm import Mapped, mapped_column
@@ -21,6 +22,21 @@ class ServerChannelTask(Base, TimestampMixin):
         UniqueConstraint(
             "thread_root_message_id",
             name="uq_server_channel_tasks_thread_root_message_id",
+        ),
+        UniqueConstraint(
+            "channel_id",
+            "display_number",
+            name="uq_server_channel_tasks_channel_display_number",
+        ),
+        CheckConstraint(
+            """
+            num_nonnulls(
+                assignee_user_id,
+                assignee_preset_id,
+                assignee_agent_identity_id
+            ) <= 1
+            """,
+            name="ck_server_channel_tasks_single_assignee",
         ),
     )
 
@@ -39,6 +55,7 @@ class ServerChannelTask(Base, TimestampMixin):
         index=True,
     )
     title: Mapped[str] = mapped_column(String(255), nullable=False)
+    display_number: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[str] = mapped_column(
         String(50),
@@ -65,6 +82,11 @@ class ServerChannelTask(Base, TimestampMixin):
     )
     assignee_preset_id: Mapped[int | None] = mapped_column(
         ForeignKey("presets.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    assignee_agent_identity_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("agent_identities.id", ondelete="SET NULL"),
         nullable=True,
         index=True,
     )

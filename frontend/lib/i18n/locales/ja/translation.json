@@ -157,7 +157,13 @@
       "executionPlaceholder": "Execution summary and runtime state will attach here once the channel task flow connects to the agent runtime.",
       "currentStatus": "Current status: {{status}}",
       "assigneeAttached": "Assignee attached",
-      "assigneePending": "Assignee pending"
+      "assigneePending": "Assignee pending",
+      "creator": "Creator",
+      "assignee": "Assignee",
+      "unassigned": "Unassigned",
+      "unknownActor": "Unknown",
+      "context": "Channel context",
+      "contextDescription": "Review the channel messages around the selected activity."
     },
     "toasts": {
       "loadFailed": "Failed to load channel tasks",
@@ -171,7 +177,10 @@
       "unclaimed": "Task unclaimed",
       "claimFailed": "Failed to update task claim",
       "statusUpdated": "Task status updated",
-      "statusFailed": "Failed to update task status"
+      "statusFailed": "Failed to update task status",
+      "assigneeUpdated": "Assignee updated",
+      "assigneeFailed": "Failed to update assignee",
+      "contextFailed": "Failed to load channel context"
     }
   },
   "conversationView": {
@@ -238,6 +247,21 @@
     "emptyTaskListTitle": "タスクはまだありません",
     "emptyTaskListDescription": "メッセージがタスクに変換されると、チャンネルタスクがここに表示されます。",
     "leave": "退出",
+    "events": {
+      "actor": "誰か",
+      "task": "無題のタスク",
+      "channelMemberJoined": "{{target}} が参加しました",
+      "channelAgentJoined": "{{target}} が参加しました",
+      "taskCreated": "{{actor}} がタスクを作成しました: {{task}}",
+      "taskCreatedAssigned": "{{actor}} がタスク {{task}} を作成して {{assignee}} に割り当てました",
+      "taskStatusChanged": "{{actor}} がタスクを {{fromStatus}} から {{toStatus}} に移動しました",
+      "taskAssigned": "{{actor}} がタスク {{task}} を {{toAssignee}} に割り当てました",
+      "taskReassigned": "{{actor}} がタスク {{task}} を {{toAssignee}} に再割り当てしました",
+      "taskUnassigned": "{{actor}} がタスク {{task}} の割り当てを解除しました",
+      "taskUpdated": "{{actor}} がタスク {{task}} を更新しました",
+      "taskCommented": "{{actor}} がタスク {{task}} にコメントしました: {{comment}}",
+      "unknown": "{{actor}} がチャンネルを更新しました"
+    },
     "mentionCandidates": "メンション",
     "mentionKinds": {
       "agent": "Agent",
@@ -276,9 +300,14 @@
       "title": "メンバー",
       "description": "#{{channel}} 内のメンバーと Agent。",
       "inviteAgents": "Agent を招待",
+      "inviteHumans": "メンバーを招待",
       "agentSearchPlaceholder": "名前で Agent を検索",
+      "humanSearchPlaceholder": "名前でメンバーを検索",
       "noAvailableAgents": "追加可能な Agent はありません。",
+      "noAvailableHumans": "追加可能なメンバーはいません。",
       "addSelectedAgents": "選択した Agent を追加",
+      "addSelectedHumans": "選択したメンバーを追加",
+      "manageAgentsPermissionHint": "サーバー管理者と owner のみがチャンネルに Agent を追加できます。",
       "agents": "Agent",
       "humans": "メンバー",
       "noAgents": "このチャンネルには Agent がいません。",
@@ -305,7 +334,8 @@
       "generateInvite": "招待を生成",
       "inviteMeta": "{{expiresAt}} に期限切れ",
       "copyInvite": "コピー",
-      "noInvites": "有効な招待はまだありません。"
+      "noInvites": "有効な招待はまだありません。",
+      "invitePermissionHint": "Only server admins and owners can manage invite keys."
     },
     "agentPreset": {
       "title": "Agent を追加",
@@ -313,6 +343,7 @@
       "preset": "プリセット",
       "selectPreset": "プリセットを選択",
       "displayName": "表示名",
+      "displayNameConflict": "この表示名の Agent はすでに存在します。",
       "handle": "ハンドル",
       "agentDescription": "説明",
       "create": "Agent を作成"
@@ -324,6 +355,10 @@
       "humans": "メンバー",
       "noAgents": "サーバー Agent はまだありません。",
       "noHumans": "人間のメンバーはまだいません。",
+      "createAgentPermissionHint": "サーバー管理者と owner のみが Agent を作成できます。",
+      "invitePermissionHint": "Only server admins and owners can invite members.",
+      "rolePermissionHint": "Only the server owner can change member roles.",
+      "ownerOnlyMemberActionHint": "Only the server owner can manage server members.",
       "description": "説明",
       "lifecycle": "ライフサイクル",
       "created": "作成日時",
@@ -349,6 +384,9 @@
       },
       "emptyValue": "利用不可",
       "emptySelection": "詳細を見る同僚を選択してください。",
+      "transferOwnership": "Transfer ownership",
+      "transferOwnershipTitle": "Transfer server ownership?",
+      "transferOwnershipDescription": "This will make {{member}} the server owner. Your role will become Admin.",
       "removeMember": "メンバーを削除",
       "startAgent": "開始",
       "restartAgent": "再起動",
@@ -364,7 +402,8 @@
       "stopAgentDescription": "このエージェントで現在実行中の作業を破棄し、再度開始するまで新しいチャンネルタスクを受け取らないようにします。キュー済みタスクは保持されます。",
       "removeAgentTitle": "{{name}} をこのサーバーから削除しますか？",
       "removeAgentDescription": "{{channels}} などのチャンネルから削除し、まだ開始していないタスクをキャンセルします。過去のメッセージ、リアクション、作業出力は保持されます。",
-      "removeAgentDescriptionUnknown": "このサーバーのチャンネルから削除し、まだ開始していないタスクをキャンセルします。過去のメッセージ、リアクション、作業出力は保持されます。"
+      "removeAgentDescriptionUnknown": "このサーバーのチャンネルから削除し、まだ開始していないタスクをキャンセルします。過去のメッセージ、リアクション、作業出力は保持されます。",
+      "personalOwnershipTransferHint": "Personal servers do not support ownership transfer."
     },
     "threadMentionHint": "このスレッドの返信は次宛てになります",
     "execution": {
@@ -390,6 +429,7 @@
       "taskCreated": "メッセージからタスクを作成しました",
       "channelCreated": "チャンネルを作成しました",
       "channelCreateFailed": "チャンネルの作成に失敗しました",
+      "systemChannelNameReserved": "Public と Personal は予約済みのチャンネル名です",
       "channelUpdated": "チャンネルを更新しました",
       "channelUpdateFailed": "チャンネルの更新に失敗しました",
       "channelArchived": "チャンネルをアーカイブしました",
@@ -416,6 +456,10 @@
       "agentUpdated": "Agent を更新しました",
       "agentUpdateFailed": "Agent の更新に失敗しました",
       "agentStarted": "Agent を開始しました",
+      "memberRoleUpdated": "Member role updated",
+      "memberRoleUpdateFailed": "Failed to update member role",
+      "ownershipTransferred": "Server ownership transferred",
+      "ownershipTransferFailed": "Failed to transfer ownership",
       "memberRemoved": "メンバーを削除しました",
       "memberRemoveFailed": "メンバーの削除に失敗しました",
       "agentRestarted": "Agent を再起動しました",
@@ -435,6 +479,11 @@
       "pickerLabel": "リアクションを選択",
       "addEmoji": "{{emoji}} でリアクション",
       "removeEmoji": "{{emoji}} のリアクションを削除"
+    },
+    "roles": {
+      "owner": "Owner",
+      "admin": "Admin",
+      "member": "Member"
     }
   },
   "workspaces": {
@@ -2407,7 +2456,8 @@
     "saving": "保存中...",
     "confirm": "確認",
     "enabled": "有効",
-    "disabled": "無効"
+    "disabled": "無効",
+    "deleting": "削除中..."
   },
   "pagination": {
     "previous": "前へ",
@@ -2644,7 +2694,8 @@
       "runtimeVisibilityDescription": "この変数をタスク実行コンテナへ自動注入できるかを制御します。",
       "runtimeVisibilityNoneHint": "タスクコンテナへ自動注入しません。",
       "runtimeVisibilityAdminsOnlyHint": "管理者が開始した実行環境にのみ注入します。",
-      "runtimeVisibilityAllUsersHint": "グローバルポリシーで許可されている場合、すべてのユーザー実行環境に注入できます。"
+      "runtimeVisibilityAllUsersHint": "グローバルポリシーで許可されている場合、すべてのユーザー実行環境に注入できます。",
+      "policyDisabledForUsers": "ユーザー向けに無効化"
     }
   },
   "validation": {

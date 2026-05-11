@@ -23,6 +23,9 @@ async def resolve_skill_config(
     db: Session = Depends(get_db),
 ) -> JSONResponse:
     resolved = service.resolve_user_skill_files(
-        db=db, user_id=user_id, skill_ids=request.skill_ids
+        db=db,
+        user_id=user_id,
+        skill_ids=request.skill_ids,
+        skill_overrides=request.skill_overrides,
     )
     return Response.success(data=resolved, message="Skill config resolved")

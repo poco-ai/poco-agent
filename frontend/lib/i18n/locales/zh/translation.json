@@ -150,9 +150,15 @@
       "description": "在不离开频道上下文的情况下查看任务概览、协作活动和后续执行挂点。",
       "overview": "概览",
       "overviewDescription": "让标题、描述和工作流状态与当前协作计划保持一致。",
+      "creator": "创建者",
+      "assignee": "被委托方",
+      "unassigned": "未分配",
+      "unknownActor": "未知",
       "activity": "协作活动",
       "activityDescription": "任务创建、认领变化和状态流转都会挂在同一个频道 thread 下。",
       "emptyActivity": "还没有协作活动。",
+      "context": "频道上下文",
+      "contextDescription": "查看所选活动附近的频道消息。",
       "execution": "执行摘要",
       "executionDescription": "这里预留给后续 agent runtime 接入时使用的稳定挂点。",
       "executionPlaceholder": "等 channel task 流程接上 agent runtime 后，执行摘要和 runtime state 会出现在这里。",
@@ -171,6 +177,9 @@
       "claimed": "任务已认领",
       "unclaimed": "已取消认领",
       "claimFailed": "更新认领状态失败",
+      "assigneeUpdated": "已更新被委托方",
+      "assigneeFailed": "更新被委托方失败",
+      "contextFailed": "加载频道上下文失败",
       "statusUpdated": "任务状态已更新",
       "statusFailed": "更新任务状态失败"
     }
@@ -239,6 +248,21 @@
     "emptyTaskListTitle": "暂无任务",
     "emptyTaskListDescription": "消息被转换为任务后，会在这里展示为列表。",
     "leave": "离开",
+    "events": {
+      "actor": "有人",
+      "task": "未命名任务",
+      "channelMemberJoined": "{{target}} 加入了频道",
+      "channelAgentJoined": "{{target}} 加入了频道",
+      "taskCreated": "{{actor}} 创建了任务：{{task}}",
+      "taskCreatedAssigned": "{{actor}} 创建了任务 {{task}} 并分配给 {{assignee}}",
+      "taskStatusChanged": "{{actor}} 将任务从 {{fromStatus}} 移到 {{toStatus}}",
+      "taskAssigned": "{{actor}} 将任务 {{task}} 分配给 {{toAssignee}}",
+      "taskReassigned": "{{actor}} 将任务 {{task}} 重新分配给 {{toAssignee}}",
+      "taskUnassigned": "{{actor}} 取消分配任务：{{task}}",
+      "taskUpdated": "{{actor}} 更新了任务：{{task}}",
+      "taskCommented": "{{actor}} 评论了任务 {{task}}：{{comment}}",
+      "unknown": "{{actor}} 更新了频道"
+    },
     "mentionCandidates": "提及",
     "mentionKinds": {
       "agent": "Agent",
@@ -277,9 +301,14 @@
       "title": "成员",
       "description": "#{{channel}} 内的成员和 Agent。",
       "inviteAgents": "邀请 Agent",
+      "inviteHumans": "邀请成员",
       "agentSearchPlaceholder": "按名称搜索 Agent",
+      "humanSearchPlaceholder": "按名称搜索成员",
       "noAvailableAgents": "没有可添加的 Agent。",
+      "noAvailableHumans": "没有可添加的成员。",
       "addSelectedAgents": "添加已选 Agent",
+      "addSelectedHumans": "添加已选成员",
+      "manageAgentsPermissionHint": "只有服务器管理员和 owner 可以向频道添加 Agent。",
       "agents": "Agent",
       "humans": "成员",
       "noAgents": "这个频道还没有 Agent。",
@@ -306,7 +335,8 @@
       "generateInvite": "生成",
       "inviteMeta": "已使用 {{used}} / {{max}}",
       "copyInvite": "复制邀请 key",
-      "noInvites": "还没有生成邀请 key。"
+      "noInvites": "还没有生成邀请 key。",
+      "invitePermissionHint": "只有服务器管理员和 owner 可以管理邀请 key。"
     },
     "agentPreset": {
       "title": "添加 Agent",
@@ -314,6 +344,7 @@
       "preset": "Preset",
       "selectPreset": "选择 preset",
       "displayName": "显示名称",
+      "displayNameConflict": "已存在同名 Agent，请换一个显示名称。",
       "handle": "标识",
       "agentDescription": "描述",
       "create": "创建 Agent"
@@ -325,6 +356,10 @@
       "humans": "成员",
       "noAgents": "还没有服务器 Agent。",
       "noHumans": "还没有成员。",
+      "createAgentPermissionHint": "只有服务器管理员和 owner 可以创建 Agent。",
+      "invitePermissionHint": "只有服务器管理员和 owner 可以邀请成员。",
+      "rolePermissionHint": "只有服务器 owner 可以修改成员角色。",
+      "ownerOnlyMemberActionHint": "只有服务器 owner 可以管理服务器成员。",
       "description": "描述",
       "lifecycle": "生命周期",
       "created": "创建时间",
@@ -353,6 +388,9 @@
       },
       "emptyValue": "暂无",
       "emptySelection": "选择一个同事查看资料。",
+      "transferOwnership": "转移所有权",
+      "transferOwnershipTitle": "确认转移服务器所有权？",
+      "transferOwnershipDescription": "这会将 {{member}} 设为服务器 owner，你的角色会变为管理员。",
       "removeMember": "移除成员",
       "startAgent": "启动",
       "restartAgent": "重启",
@@ -368,7 +406,8 @@
       "stopAgentDescription": "这会直接丢弃该 Agent 当前正在执行的任务，并阻止它接收新的频道任务，直到再次启动。已有队列任务会保留。",
       "removeAgentTitle": "确认将 {{name}} 从当前 server 移除吗？",
       "removeAgentDescription": "将会从 {{channels}} 等频道中移除，并取消尚未开始的任务。历史消息、表情互动和工作输出仍会保留。",
-      "removeAgentDescriptionUnknown": "将会从当前 server 的频道中移除，并取消尚未开始的任务。历史消息、表情互动和工作输出仍会保留。"
+      "removeAgentDescriptionUnknown": "将会从当前 server 的频道中移除，并取消尚未开始的任务。历史消息、表情互动和工作输出仍会保留。",
+      "personalOwnershipTransferHint": "Personal 服务器不支持转移所有权。"
     },
     "threadMentionHint": "当前 thread 默认会回复给",
     "execution": {
@@ -394,6 +433,7 @@
       "taskCreated": "已从消息创建任务",
       "channelCreated": "频道已创建",
       "channelCreateFailed": "创建频道失败",
+      "systemChannelNameReserved": "Public 和 Personal 是系统保留频道名",
       "channelUpdated": "频道已更新",
       "channelUpdateFailed": "更新频道失败",
       "channelArchived": "频道已归档",
@@ -426,6 +466,10 @@
       "agentStopFailed": "关闭 Agent 失败",
       "agentRemoved": "Agent 已移除",
       "agentRemoveFailed": "移除 Agent 失败",
+      "memberRoleUpdated": "成员角色已更新",
+      "memberRoleUpdateFailed": "更新成员角色失败",
+      "ownershipTransferred": "服务器所有权已转移",
+      "ownershipTransferFailed": "转移所有权失败",
       "memberRemoved": "成员已移除",
       "memberRemoveFailed": "移除成员失败",
       "agentRemovedFromChannel": "Agent 已从频道移除",
@@ -439,6 +483,11 @@
       "pickerLabel": "选择表情反应",
       "addEmoji": "用 {{emoji}} 反应",
       "removeEmoji": "移除 {{emoji}} 反应"
+    },
+    "roles": {
+      "owner": "所有者",
+      "admin": "管理员",
+      "member": "成员"
     }
   },
   "workspaces": {
@@ -871,9 +920,9 @@
     },
     "warnings": {
       "tooManyMcps": "启用的 MCP 服务器过多（{{count}} 个），可能会导致系统加载变慢、性能下降。",
-      "tooManySkills": "启用的技能过多（{{count}} 个），可能会导致系统加载变慢、性能下降。",
+      "tooManySkills": "用户主动启用的技能过多（{{count}} 个，建议不超过 {{limit}} 个），可能会导致系统加载变慢、性能下降。系统内置技能不计入该推荐额度。",
       "mcpLimitReached": "启用此 MCP 将超过推荐数量（3 个）。过多的 MCP 可能会导致系统加载变慢。",
-      "skillLimitReached": "启用此技能将超过推荐数量（5 个）。过多的技能可能会导致系统加载变慢。"
+      "skillLimitReached": "启用此技能后，用户主动启用的技能将达到 {{count}} 个，超过建议数量（{{limit}} 个）。系统内置技能不计入该推荐额度。"
     }
   },
   "prompts": {
@@ -1797,7 +1846,8 @@
       "stats": {
         "available": "可用技能",
         "installed": "已安装",
-        "enabled": "已启用"
+        "enabled": "已启用",
+        "recommendedEnabled": "用户启用 {{count}} / 建议 {{limit}}"
       },
       "section": {
         "title": "Skills"
@@ -2386,7 +2436,8 @@
     "edit": "编辑",
     "saving": "保存中...",
     "default": "默认",
-    "forced": "强制"
+    "forced": "强制",
+    "deleting": "删除中..."
   },
   "pagination": {
     "previous": "上一页",
@@ -2715,7 +2766,8 @@
       "runtimeVisibilityAdminsOnlyHint": "只有系统管理员发起的任务可以读取它。",
       "runtimeVisibilityAllUsers": "所有用户任务",
       "runtimeVisibilityAllUsersHint": "自动注入到所有用户的任务运行环境中。",
-      "runtimeVisibilityProtectedWarning": "该 key 命中了受保护的运行时 key/前缀。可见范围设置可以保存，但自动运行时注入仍会被阻止。"
+      "runtimeVisibilityProtectedWarning": "该 key 命中了受保护的运行时 key/前缀。可见范围设置可以保存，但自动运行时注入仍会被阻止。",
+      "policyDisabledForUsers": "对用户禁用"
     }
   },
   "validation": {
