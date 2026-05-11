@@ -143,11 +143,16 @@ export interface ServerChannelEventContent {
   membershipId?: number | string | null;
   joinReason?: string | null;
   taskId?: string | null;
+  taskNumber?: number | string | null;
+  taskTitle?: string | null;
   title?: string | null;
   status?: string | null;
   priority?: string | null;
+  commentText?: string | null;
   fromStatus?: string | null;
   toStatus?: string | null;
+  fromAssignee?: unknown;
+  toAssignee?: unknown;
   assignee?: unknown;
 }
 

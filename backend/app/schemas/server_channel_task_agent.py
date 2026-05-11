@@ -89,8 +89,8 @@ def to_status_request(
 
 def to_claim_self_request(
     *,
-    assignee_preset_id: int,
+    assignee_agent_identity_id: UUID,
 ) -> ServerChannelTaskClaimRequest:
     return ServerChannelTaskClaimRequest(
-        assignee_preset_id=assignee_preset_id,
+        assignee_agent_identity_id=assignee_agent_identity_id,
     )

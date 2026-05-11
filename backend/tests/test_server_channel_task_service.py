@@ -47,6 +47,10 @@ class ServerChannelTaskServiceTests(unittest.TestCase):
             patch(
                 "app.services.server_channel_task_service.ServerChannelTaskRepository.create"
             ) as create_task,
+            patch(
+                "app.services.server_channel_task_service.ServerChannelTaskRepository.get_max_display_number",
+                return_value=None,
+            ),
             patch.object(service, "_create_task_root_message") as create_root_message,
         ):
             now = datetime.now(UTC)
@@ -85,6 +89,7 @@ class ServerChannelTaskServiceTests(unittest.TestCase):
             id=uuid.uuid4(),
             server_id=self.server_id,
             channel_id=self.channel.id,
+            display_number=1,
             title="Ship board view",
             description=None,
             status="todo",
@@ -119,6 +124,7 @@ class ServerChannelTaskServiceTests(unittest.TestCase):
             id=uuid.uuid4(),
             server_id=self.server_id,
             channel_id=self.channel.id,
+            display_number=1,
             title="Ship board view",
             description=None,
             status="todo",
@@ -153,6 +159,7 @@ class ServerChannelTaskServiceTests(unittest.TestCase):
             id=uuid.uuid4(),
             server_id=self.server_id,
             channel_id=self.channel.id,
+            display_number=1,
             title="Ship board view",
             description=None,
             status="todo",
@@ -205,6 +212,7 @@ class ServerChannelTaskServiceTests(unittest.TestCase):
             id=uuid.uuid4(),
             server_id=self.server_id,
             channel_id=self.channel.id,
+            display_number=1,
             title="Ship board view",
             description=None,
             status="in_review",
@@ -240,6 +248,7 @@ class ServerChannelTaskServiceTests(unittest.TestCase):
             id=uuid.uuid4(),
             server_id=self.server_id,
             channel_id=self.channel.id,
+            display_number=1,
             title="Review detail drawer",
             description=None,
             status="todo",
@@ -270,7 +279,7 @@ class ServerChannelTaskServiceTests(unittest.TestCase):
             )
 
         create_system_message.assert_called_once()
-        self.assertEqual(create_system_message.call_args.kwargs["event"], "task.claimed")
+        self.assertEqual(create_system_message.call_args.kwargs["event"], "task.assigned")
         self.assertEqual(task.assignee_user_id, "user-1")
         self.assertEqual(result.assignee_user_id, "user-1")
 

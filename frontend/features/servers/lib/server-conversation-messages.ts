@@ -89,11 +89,16 @@ export function getChannelEventContent(
     membershipId: readNumberOrString(message.content, "membership_id"),
     joinReason: readString(message.content, "join_reason"),
     taskId: readString(message.content, "task_id"),
+    taskNumber: readNumberOrString(message.content, "task_number"),
+    taskTitle: readString(message.content, "task_title"),
     title: readString(message.content, "title"),
     status: readString(message.content, "status"),
     priority: readString(message.content, "priority"),
+    commentText: readString(message.content, "comment_text"),
     fromStatus: readString(message.content, "from_status"),
     toStatus: readString(message.content, "to_status"),
+    fromAssignee: message.content.from_assignee,
+    toAssignee: message.content.to_assignee,
     assignee: message.content.assignee,
   };
 }
@@ -108,10 +113,16 @@ export function getChannelEventLabelKey(eventType: string): string {
       return "conversationView.events.taskCreated";
     case "task.status_changed":
       return "conversationView.events.taskStatusChanged";
-    case "task.claimed":
-      return "conversationView.events.taskClaimed";
-    case "task.unclaimed":
-      return "conversationView.events.taskUnclaimed";
+    case "task.assigned":
+      return "conversationView.events.taskAssigned";
+    case "task.reassigned":
+      return "conversationView.events.taskReassigned";
+    case "task.unassigned":
+      return "conversationView.events.taskUnassigned";
+    case "task.updated":
+      return "conversationView.events.taskUpdated";
+    case "task.commented":
+      return "conversationView.events.taskCommented";
     default:
       return "conversationView.events.unknown";
   }
