@@ -10,6 +10,7 @@ import {
   Files,
   Hash,
   Lock,
+  LogOut,
   Plus,
   Search,
   Settings2,
@@ -42,6 +43,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import type { FileNode } from "@/features/chat/types";
 import { channelTasksApi } from "@/features/channel-tasks/api/channel-tasks-api";
 import { resolveChannelTaskView } from "@/features/channel-tasks/lib/channel-task-board";
@@ -302,6 +304,81 @@ function inferThreadMentionHandle(
   return null;
 }
 
+function ChannelActionButtons({
+  channel,
+  memberCount,
+  compact = false,
+  className,
+  onOpenSettings,
+  onOpenMembers,
+  onOpenArtifacts,
+  onOpenLeaveConfirm,
+}: {
+  channel: ServerChannelItem | null;
+  memberCount: number;
+  compact?: boolean;
+  className?: string;
+  onOpenSettings: () => void;
+  onOpenMembers: () => void;
+  onOpenArtifacts: () => void;
+  onOpenLeaveConfirm: () => void;
+}) {
+  const { t } = useT("translation");
+  const iconButtonClassName = compact ? "size-9 px-0" : undefined;
+
+  return (
+    <div className={cn("flex shrink-0 items-center gap-2", className)}>
+      <Button
+        type="button"
+        variant="outline"
+        size={compact ? "icon" : "sm"}
+        className={iconButtonClassName}
+        onClick={onOpenSettings}
+        aria-label={t("common.settings")}
+        title={t("common.settings")}
+      >
+        <Settings2 className="size-4" />
+      </Button>
+      <Button
+        type="button"
+        variant="outline"
+        size={compact ? "icon" : "sm"}
+        className={iconButtonClassName}
+        onClick={onOpenLeaveConfirm}
+        disabled={!channel}
+        aria-label={t("conversationView.leave")}
+        title={t("conversationView.leave")}
+      >
+        <LogOut className="size-4" />
+      </Button>
+      <Button
+        type="button"
+        variant="outline"
+        size={compact ? "icon" : "sm"}
+        className={iconButtonClassName}
+        onClick={onOpenArtifacts}
+        disabled={!channel}
+        aria-label={t("conversationView.sharedArtifacts.title")}
+        title={t("conversationView.sharedArtifacts.title")}
+      >
+        <Files className="size-4" />
+      </Button>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className={compact ? "h-9 px-2.5" : undefined}
+        onClick={onOpenMembers}
+        aria-label={t("conversationView.members.title")}
+        title={t("conversationView.members.title")}
+      >
+        <Users className="size-4" />
+        <span className="tabular-nums">{memberCount}</span>
+      </Button>
+    </div>
+  );
+}
+
 function ConversationContent({
   channel,
   agents,
@@ -502,7 +579,7 @@ function ConversationContent({
 
   return (
     <section className="flex min-h-0 min-w-0 flex-1 flex-col">
-      <div className="border-b border-border px-6 py-5">
+      <div className="hidden border-b border-border px-6 py-5 md:block">
         <div className="flex items-center justify-between gap-4">
           <div className="min-w-0 flex items-center gap-4">
             <div className="flex size-12 shrink-0 items-center justify-center rounded-md border border-border bg-primary/15 text-foreground">
@@ -514,43 +591,14 @@ function ConversationContent({
               </h2>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={onOpenSettings}
-            >
-              <Settings2 className="size-4" />
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={onOpenLeaveConfirm}
-              disabled={!channel}
-            >
-              {t("conversationView.leave")}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={onOpenArtifacts}
-              disabled={!channel}
-            >
-              <Files className="size-4" />
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={onOpenMembers}
-            >
-              <Users className="size-4" />
-              {members.length + agents.length}
-            </Button>
-          </div>
+          <ChannelActionButtons
+            channel={channel}
+            memberCount={members.length + agents.length}
+            onOpenSettings={onOpenSettings}
+            onOpenMembers={onOpenMembers}
+            onOpenArtifacts={onOpenArtifacts}
+            onOpenLeaveConfirm={onOpenLeaveConfirm}
+          />
         </div>
       </div>
 
@@ -1011,8 +1059,8 @@ function ChannelSettingsDialog({
             />
           </div>
         </div>
-        <DialogFooter className="items-center sm:justify-between">
-          <div className="flex flex-wrap gap-2">
+        <DialogFooter className="flex-row items-center justify-between sm:justify-between">
+          <div className="flex min-w-0 flex-wrap gap-2">
             <Button
               type="button"
               variant="outline"
@@ -1041,7 +1089,7 @@ function ChannelSettingsDialog({
             onClick={() => onSave({ name, description })}
             disabled={!name.trim()}
           >
-            {t("conversationView.channelSettings.save")}
+            {t("conversationView.save")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -1079,6 +1127,9 @@ function ChannelMembersDialog({
   onRemoveMember: (membershipId: number) => void;
 }) {
   const { t } = useT("translation");
+  const [activePane, setActivePane] = React.useState<"agents" | "humans">(
+    "agents",
+  );
   const [agentSearch, setAgentSearch] = React.useState("");
   const [humanSearch, setHumanSearch] = React.useState("");
   const [selectedAgentIds, setSelectedAgentIds] = React.useState<Set<string>>(
@@ -1098,6 +1149,7 @@ function ChannelMembersDialog({
       setSelectedHumanIds(new Set());
       setIsAddingAgents(false);
       setIsAddingHumans(false);
+      setActivePane("agents");
     }
   }, [open]);
 
@@ -1179,7 +1231,7 @@ function ChannelMembersDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-xl">
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>{t("conversationView.members.title")}</DialogTitle>
           <DialogDescription>
@@ -1188,96 +1240,50 @@ function ChannelMembersDialog({
             })}
           </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <section className="space-y-3">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-semibold text-foreground">
-                {t("conversationView.members.agents")}
-              </p>
+        <div className="space-y-4">
+          <ToggleGroup
+            type="single"
+            value={activePane}
+            onValueChange={(value) => {
+              if (value === "agents" || value === "humans") {
+                setActivePane(value);
+              }
+            }}
+            variant="outline"
+            size="sm"
+            className="inline-flex w-fit justify-start rounded-md bg-muted/30 p-1"
+          >
+            <ToggleGroupItem value="agents" className="gap-2 px-3">
+              <Bot className="size-4" />
+              {t("conversationView.members.agents")}
               <span className="text-xs tabular-nums text-muted-foreground">
                 {agents.length}
               </span>
-            </div>
-            <div className="space-y-2">
-              {agents.length > 0 ? (
-                agents.map((agent) => (
-                  <div
-                    key={agent.id}
-                    className="flex items-center gap-3 rounded-md border border-border bg-card px-3 py-3"
-                  >
-                    <button
-                      type="button"
-                      onClick={() => onOpenDm(agent.id)}
-                      className="flex min-w-0 flex-1 items-center gap-3 text-left"
+            </ToggleGroupItem>
+            <ToggleGroupItem value="humans" className="gap-2 px-3">
+              <UserRound className="size-4" />
+              {t("conversationView.members.humans")}
+              <span className="text-xs tabular-nums text-muted-foreground">
+                {humans.length}
+              </span>
+            </ToggleGroupItem>
+          </ToggleGroup>
+
+          {activePane === "agents" ? (
+            <section className="space-y-4">
+              <div className="space-y-2">
+                {agents.length > 0 ? (
+                  agents.map((agent) => (
+                    <div
+                      key={agent.id}
+                      className="group/member-item flex items-center gap-3 rounded-md border border-border bg-card px-3 py-3 transition-colors hover:bg-muted/20"
                     >
-                      <span className="flex size-8 shrink-0 items-center justify-center rounded-md border border-border bg-muted text-foreground">
-                        <Bot className="size-4" />
-                      </span>
-                      <span className="min-w-0">
-                        <span className="block truncate text-sm font-medium text-foreground">
-                          {agent.displayName}
-                        </span>
-                        <span className="block truncate text-xs text-muted-foreground">
-                          @{agent.handle}
-                        </span>
-                      </span>
-                    </button>
-                    {canManageMembers ? (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="size-8 shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                        onClick={() => onRemoveAgent(agent.id)}
-                        aria-label={t("conversationView.members.removeAgent")}
-                      >
-                        <Trash2 className="size-4" />
-                      </Button>
-                    ) : null}
-                  </div>
-                ))
-              ) : (
-                <div className="rounded-md border border-dashed border-border px-3 py-8 text-center text-sm text-muted-foreground">
-                  {t("conversationView.members.noAgents")}
-                </div>
-              )}
-            </div>
-            <div className="space-y-3 rounded-md border border-border bg-card px-3 py-3">
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-sm font-semibold text-foreground">
-                  {t("conversationView.members.inviteAgents")}
-                </p>
-                <span className="text-xs text-muted-foreground">
-                  {visibleAvailableAgents.length}
-                </span>
-              </div>
-              <Input
-                value={agentSearch}
-                onChange={(event) => setAgentSearch(event.target.value)}
-                placeholder={t(
-                  "conversationView.members.agentSearchPlaceholder",
-                )}
-                disabled={!canManageMembers}
-              />
-              <div className="max-h-56 overflow-y-auto space-y-1">
-                {visibleAvailableAgents.length > 0 ? (
-                  visibleAvailableAgents.map((agent) => {
-                    const selected = selectedAgentIds.has(agent.id);
-                    return (
                       <button
-                        key={agent.id}
                         type="button"
-                        onClick={() => toggleAgentSelection(agent.id)}
-                        disabled={!canManageMembers}
-                        className={cn(
-                          "flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm transition-colors",
-                          selected
-                            ? "bg-primary/15 text-foreground"
-                            : "hover:bg-muted/30",
-                          !canManageMembers && "cursor-not-allowed opacity-60",
-                        )}
+                        onClick={() => onOpenDm(agent.id)}
+                        className="flex min-w-0 flex-1 items-center gap-3 text-left"
                       >
-                        <span className="flex size-7 shrink-0 items-center justify-center rounded-md border border-border bg-muted">
+                        <span className="flex size-8 shrink-0 items-center justify-center rounded-md border border-border bg-muted text-foreground">
                           <Bot className="size-4" />
                         </span>
                         <span className="min-w-0 flex-1">
@@ -1288,150 +1294,225 @@ function ChannelMembersDialog({
                             @{agent.handle}
                           </span>
                         </span>
-                        {selected ? (
-                          <Check className="size-4 text-primary" />
+                        {agent.description ? (
+                          <span className="hidden max-w-[45%] shrink-0 text-right text-xs leading-5 text-muted-foreground sm:block">
+                            <span className="line-clamp-2 opacity-0 transition-opacity group-hover/member-item:opacity-100 group-focus-within/member-item:opacity-100">
+                              {agent.description}
+                            </span>
+                          </span>
                         ) : null}
                       </button>
-                    );
-                  })
+                      {canManageMembers ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="size-8 shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                          onClick={() => onRemoveAgent(agent.id)}
+                          aria-label={t("conversationView.members.removeAgent")}
+                        >
+                          <Trash2 className="size-4" />
+                        </Button>
+                      ) : null}
+                    </div>
+                  ))
                 ) : (
-                  <div className="rounded-md border border-dashed border-border px-3 py-6 text-center text-sm text-muted-foreground">
-                    {t("conversationView.members.noAvailableAgents")}
+                  <div className="rounded-md border border-dashed border-border px-3 py-8 text-center text-sm text-muted-foreground">
+                    {t("conversationView.members.noAgents")}
                   </div>
                 )}
               </div>
-              <Button
-                type="button"
-                onClick={() => void handleAddAgents()}
-                disabled={
-                  !canManageMembers ||
-                  selectedAgentIds.size === 0 ||
-                  isAddingAgents
-                }
-              >
-                <Plus className="size-4" />
-                {t("conversationView.members.addSelectedAgents")}
-              </Button>
-              {!canManageMembers ? (
-                <p className="text-xs text-muted-foreground">
-                  {t("conversationView.members.manageAgentsPermissionHint")}
-                </p>
-              ) : null}
-            </div>
-          </section>
-
-          <section className="space-y-3">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-semibold text-foreground">
-                {t("conversationView.members.humans")}
-              </p>
-              <span className="text-xs tabular-nums text-muted-foreground">
-                {humans.length}
-              </span>
-            </div>
-            <div className="space-y-2">
-              {humans.length > 0 ? (
-                humans.map((human) => (
-                  <div
-                    key={human.id}
-                    className="flex items-center gap-3 rounded-md border border-border bg-card px-3 py-3"
-                  >
-                    <span className="flex size-8 shrink-0 items-center justify-center rounded-md border border-border bg-muted text-foreground">
-                      <UserRound className="size-4" />
-                    </span>
-                    <span className="min-w-0">
-                      <span className="block truncate text-sm font-medium text-foreground">
-                        {getUserDisplayName(human.user, human.userId)}
-                      </span>
-                      <span className="block truncate text-xs text-muted-foreground">
-                        {human.role}
-                      </span>
-                    </span>
-                    {canManageMembers && human.role !== "owner" ? (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="ml-auto size-8 shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                        onClick={() => onRemoveMember(human.id)}
-                        aria-label={t("conversationView.members.removeHuman")}
-                      >
-                        <Trash2 className="size-4" />
-                      </Button>
-                    ) : null}
-                  </div>
-                ))
-              ) : (
-                <div className="rounded-md border border-dashed border-border px-3 py-8 text-center text-sm text-muted-foreground">
-                  {t("conversationView.members.noHumans")}
+              <div className="space-y-3 rounded-md border border-border bg-card px-3 py-3">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm font-semibold text-foreground">
+                    {t("conversationView.members.inviteAgents")}
+                  </p>
+                  <span className="text-xs text-muted-foreground">
+                    {visibleAvailableAgents.length}
+                  </span>
                 </div>
-              )}
-            </div>
-            <div className="space-y-3 rounded-md border border-border bg-card px-3 py-3">
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-sm font-semibold text-foreground">
-                  {t("conversationView.members.inviteHumans")}
-                </p>
-                <span className="text-xs text-muted-foreground">
-                  {visibleAvailableHumans.length}
-                </span>
+                <Input
+                  value={agentSearch}
+                  onChange={(event) => setAgentSearch(event.target.value)}
+                  placeholder={t(
+                    "conversationView.members.agentSearchPlaceholder",
+                  )}
+                  disabled={!canManageMembers}
+                />
+                <div className="max-h-72 overflow-y-auto space-y-1">
+                  {visibleAvailableAgents.length > 0 ? (
+                    visibleAvailableAgents.map((agent) => {
+                      const selected = selectedAgentIds.has(agent.id);
+                      return (
+                        <button
+                          key={agent.id}
+                          type="button"
+                          onClick={() => toggleAgentSelection(agent.id)}
+                          disabled={!canManageMembers}
+                          className={cn(
+                            "group/member-item flex w-full items-center gap-3 rounded-md px-3 py-3 text-left text-sm transition-colors",
+                            selected
+                              ? "bg-primary/15 text-foreground"
+                              : "hover:bg-muted/30",
+                            !canManageMembers &&
+                              "cursor-not-allowed opacity-60",
+                          )}
+                        >
+                          <span className="flex size-7 shrink-0 items-center justify-center rounded-md border border-border bg-muted">
+                            <Bot className="size-4" />
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-sm font-medium text-foreground">
+                              {agent.displayName}
+                            </span>
+                            <span className="block truncate text-xs text-muted-foreground">
+                              @{agent.handle}
+                            </span>
+                          </span>
+                          {agent.description ? (
+                            <span className="hidden max-w-[42%] shrink-0 text-right text-xs leading-5 text-muted-foreground sm:block">
+                              <span className="line-clamp-2 opacity-0 transition-opacity group-hover/member-item:opacity-100 group-focus-within/member-item:opacity-100">
+                                {agent.description}
+                              </span>
+                            </span>
+                          ) : null}
+                          {selected ? (
+                            <Check className="size-4 shrink-0 text-primary" />
+                          ) : null}
+                        </button>
+                      );
+                    })
+                  ) : (
+                    <div className="rounded-md border border-dashed border-border px-3 py-6 text-center text-sm text-muted-foreground">
+                      {t("conversationView.members.noAvailableAgents")}
+                    </div>
+                  )}
+                </div>
+                <Button
+                  type="button"
+                  onClick={() => void handleAddAgents()}
+                  disabled={
+                    !canManageMembers ||
+                    selectedAgentIds.size === 0 ||
+                    isAddingAgents
+                  }
+                >
+                  <Plus className="size-4" />
+                  {t("conversationView.members.addSelectedAgents")}
+                </Button>
+                {!canManageMembers ? (
+                  <p className="text-xs text-muted-foreground">
+                    {t("conversationView.members.manageAgentsPermissionHint")}
+                  </p>
+                ) : null}
               </div>
-              <Input
-                value={humanSearch}
-                onChange={(event) => setHumanSearch(event.target.value)}
-                placeholder={t(
-                  "conversationView.members.humanSearchPlaceholder",
-                )}
-              />
-              <div className="max-h-56 overflow-y-auto space-y-1">
-                {visibleAvailableHumans.length > 0 ? (
-                  visibleAvailableHumans.map((human) => {
-                    const selected = selectedHumanIds.has(human.userId);
-                    return (
-                      <button
-                        key={human.userId}
-                        type="button"
-                        onClick={() => toggleHumanSelection(human.userId)}
-                        className={cn(
-                          "flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm transition-colors",
-                          selected
-                            ? "bg-primary/15 text-foreground"
-                            : "hover:bg-muted/30",
-                        )}
-                      >
-                        <span className="flex size-7 shrink-0 items-center justify-center rounded-md border border-border bg-muted">
-                          <UserRound className="size-4" />
+            </section>
+          ) : (
+            <section className="space-y-4">
+              <div className="space-y-2">
+                {humans.length > 0 ? (
+                  humans.map((human) => (
+                    <div
+                      key={human.id}
+                      className="flex items-center gap-3 rounded-md border border-border bg-card px-3 py-3 transition-colors hover:bg-muted/20"
+                    >
+                      <span className="flex size-8 shrink-0 items-center justify-center rounded-md border border-border bg-muted text-foreground">
+                        <UserRound className="size-4" />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-medium text-foreground">
+                          {getUserDisplayName(human.user, human.userId)}
                         </span>
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate text-sm font-medium text-foreground">
-                            {getUserDisplayName(human.user, human.userId)}
-                          </span>
-                          <span className="block truncate text-xs text-muted-foreground">
-                            {human.userId}
-                          </span>
+                        <span className="block truncate text-xs text-muted-foreground">
+                          {human.role}
                         </span>
-                        {selected ? (
-                          <Check className="size-4 text-primary" />
-                        ) : null}
-                      </button>
-                    );
-                  })
+                      </span>
+                      {canManageMembers && human.role !== "owner" ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="ml-auto size-8 shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                          onClick={() => onRemoveMember(human.id)}
+                          aria-label={t("conversationView.members.removeHuman")}
+                        >
+                          <Trash2 className="size-4" />
+                        </Button>
+                      ) : null}
+                    </div>
+                  ))
                 ) : (
-                  <div className="rounded-md border border-dashed border-border px-3 py-6 text-center text-sm text-muted-foreground">
-                    {t("conversationView.members.noAvailableHumans")}
+                  <div className="rounded-md border border-dashed border-border px-3 py-8 text-center text-sm text-muted-foreground">
+                    {t("conversationView.members.noHumans")}
                   </div>
                 )}
               </div>
-              <Button
-                type="button"
-                onClick={() => void handleAddHumans()}
-                disabled={selectedHumanIds.size === 0 || isAddingHumans}
-              >
-                <Plus className="size-4" />
-                {t("conversationView.members.addSelectedHumans")}
-              </Button>
-            </div>
-          </section>
+              <div className="space-y-3 rounded-md border border-border bg-card px-3 py-3">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm font-semibold text-foreground">
+                    {t("conversationView.members.inviteHumans")}
+                  </p>
+                  <span className="text-xs text-muted-foreground">
+                    {visibleAvailableHumans.length}
+                  </span>
+                </div>
+                <Input
+                  value={humanSearch}
+                  onChange={(event) => setHumanSearch(event.target.value)}
+                  placeholder={t(
+                    "conversationView.members.humanSearchPlaceholder",
+                  )}
+                />
+                <div className="max-h-72 overflow-y-auto space-y-1">
+                  {visibleAvailableHumans.length > 0 ? (
+                    visibleAvailableHumans.map((human) => {
+                      const selected = selectedHumanIds.has(human.userId);
+                      return (
+                        <button
+                          key={human.userId}
+                          type="button"
+                          onClick={() => toggleHumanSelection(human.userId)}
+                          className={cn(
+                            "flex w-full items-center gap-3 rounded-md px-3 py-3 text-left text-sm transition-colors",
+                            selected
+                              ? "bg-primary/15 text-foreground"
+                              : "hover:bg-muted/30",
+                          )}
+                        >
+                          <span className="flex size-7 shrink-0 items-center justify-center rounded-md border border-border bg-muted">
+                            <UserRound className="size-4" />
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-sm font-medium text-foreground">
+                              {getUserDisplayName(human.user, human.userId)}
+                            </span>
+                            <span className="block truncate text-xs text-muted-foreground">
+                              {human.userId}
+                            </span>
+                          </span>
+                          {selected ? (
+                            <Check className="size-4 shrink-0 text-primary" />
+                          ) : null}
+                        </button>
+                      );
+                    })
+                  ) : (
+                    <div className="rounded-md border border-dashed border-border px-3 py-6 text-center text-sm text-muted-foreground">
+                      {t("conversationView.members.noAvailableHumans")}
+                    </div>
+                  )}
+                </div>
+                <Button
+                  type="button"
+                  onClick={() => void handleAddHumans()}
+                  disabled={selectedHumanIds.size === 0 || isAddingHumans}
+                >
+                  <Plus className="size-4" />
+                  {t("conversationView.members.addSelectedHumans")}
+                </Button>
+              </div>
+            </section>
+          )}
         </div>
       </DialogContent>
     </Dialog>
@@ -1637,6 +1718,7 @@ export function ServerConversationPageClient({
   const tasksModeActive = Boolean(channelId) && mode === "tasks";
   const colleaguesModeActive = mode === "colleagues";
   const showMobileBack = !isDesktop && isMobileDetailVisible;
+  const showMobileChannelActions = showMobileBack && mode === "conversation";
   const colleagueSelection = React.useMemo<ColleagueSelection | null>(() => {
     if (drawer.type === "colleague" && drawer.selection) {
       return drawer.selection;
@@ -2920,7 +3002,7 @@ export function ServerConversationPageClient({
             >
               <ChevronLeft className="size-4" />
             </Button>
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <h1 className="truncate text-lg font-semibold text-foreground">
                 {mobileDetailTitle}
               </h1>
@@ -2930,6 +3012,18 @@ export function ServerConversationPageClient({
                 </p>
               ) : null}
             </div>
+            {showMobileChannelActions ? (
+              <ChannelActionButtons
+                channel={selectedChannel}
+                memberCount={channelMembers.length + channelAgents.length}
+                compact
+                className="-mr-1 gap-1.5"
+                onOpenSettings={() => setSettingsOpen(true)}
+                onOpenMembers={() => setMembersOpen(true)}
+                onOpenArtifacts={() => setDrawer({ type: "artifacts" })}
+                onOpenLeaveConfirm={() => setLeaveChannelOpen(true)}
+              />
+            ) : null}
           </header>
         ) : null}
 
