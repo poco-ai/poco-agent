@@ -1144,7 +1144,7 @@ function ChannelMembersDialog({
   };
 
   const handleAddAgents = async () => {
-    if (selectedAgentIds.size === 0) {
+    if (!canManageMembers || selectedAgentIds.size === 0) {
       return;
     }
     setIsAddingAgents(true);
@@ -1251,6 +1251,7 @@ function ChannelMembersDialog({
                 placeholder={t(
                   "conversationView.members.agentSearchPlaceholder",
                 )}
+                disabled={!canManageMembers}
               />
               <div className="max-h-56 overflow-y-auto space-y-1">
                 {visibleAvailableAgents.length > 0 ? (
@@ -1261,11 +1262,13 @@ function ChannelMembersDialog({
                         key={agent.id}
                         type="button"
                         onClick={() => toggleAgentSelection(agent.id)}
+                        disabled={!canManageMembers}
                         className={cn(
                           "flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm transition-colors",
                           selected
                             ? "bg-primary/15 text-foreground"
                             : "hover:bg-muted/30",
+                          !canManageMembers && "cursor-not-allowed opacity-60",
                         )}
                       >
                         <span className="flex size-7 shrink-0 items-center justify-center rounded-md border border-border bg-muted">
@@ -1294,11 +1297,20 @@ function ChannelMembersDialog({
               <Button
                 type="button"
                 onClick={() => void handleAddAgents()}
-                disabled={selectedAgentIds.size === 0 || isAddingAgents}
+                disabled={
+                  !canManageMembers ||
+                  selectedAgentIds.size === 0 ||
+                  isAddingAgents
+                }
               >
                 <Plus className="size-4" />
                 {t("conversationView.members.addSelectedAgents")}
               </Button>
+              {!canManageMembers ? (
+                <p className="text-xs text-muted-foreground">
+                  {t("conversationView.members.manageAgentsPermissionHint")}
+                </p>
+              ) : null}
             </div>
           </section>
 
@@ -1637,6 +1649,16 @@ export function ServerConversationPageClient({
     () => getAvailableChannelHumanMembers(serverMembers, channelMembers),
     [channelMembers, serverMembers],
   );
+  const currentServerMembership = React.useMemo(() => {
+    if (!profile?.id) {
+      return null;
+    }
+    return (
+      serverMembers.find(
+        (member) => member.userId === profile.id && member.status === "active",
+      ) ?? null
+    );
+  }, [profile?.id, serverMembers]);
   const isChannelOwner = Boolean(
     selectedChannel &&
     profile?.id &&
@@ -1646,9 +1668,10 @@ export function ServerConversationPageClient({
       )),
   );
   const canManageServer = Boolean(
-    selectedServer?.ownerUserId &&
     profile?.id &&
-    selectedServer.ownerUserId === profile.id,
+      (selectedServer?.ownerUserId === profile.id ||
+        currentServerMembership?.role === "owner" ||
+        currentServerMembership?.role === "admin"),
   );
 
   const allFeedItems = React.useMemo<FeedItem[]>(() => {
@@ -2990,6 +3013,7 @@ export function ServerConversationPageClient({
                 members={serverMembers}
                 selection={colleagueSelection}
                 activeChannelIdByAgentId={activeChannelIdByAgentId}
+                canCreateAgent={canManageServer}
                 onSelect={(selection) => {
                   setColleagueDetailClosed(false);
                   setDrawer({ type: "colleague", selection });

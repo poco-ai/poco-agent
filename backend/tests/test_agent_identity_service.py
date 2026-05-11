@@ -132,9 +132,9 @@ class AgentIdentityServiceTests(unittest.TestCase):
 
         with (
             patch(
-                "app.services.agent_identity_service.require_server_member",
-                return_value=MagicMock(role="member"),
-            ),
+                "app.services.agent_identity_service.require_server_admin",
+                return_value=MagicMock(role="admin"),
+            ) as require_admin,
             patch(
                 "app.services.agent_identity_service.ServerChannelRepository.get_by_id",
                 return_value=self.channel,
@@ -170,10 +170,40 @@ class AgentIdentityServiceTests(unittest.TestCase):
                 ChannelAgentMemberCreateRequest(agent_identity_id=agent_identity.id),
             )
 
+        require_admin.assert_called_once_with(self.db, self.server.id, self.user.id)
         create_membership.assert_called_once()
         self.assertEqual(result.channel_id, self.channel.id)
         self.assertEqual(result.agent_identity_id, agent_identity.id)
         self.db.commit.assert_called_once()
+
+    def test_add_agent_to_channel_requires_server_admin(self) -> None:
+        service = AgentIdentityService()
+        agent_identity_id = uuid.uuid4()
+
+        with (
+            patch(
+                "app.services.agent_identity_service.require_server_admin",
+                side_effect=Exception("forbidden"),
+            ) as require_admin,
+            patch(
+                "app.services.agent_identity_service.ServerChannelRepository.get_by_id"
+            ) as get_channel,
+            patch(
+                "app.services.agent_identity_service.ServerChannelAgentMemberRepository.create"
+            ) as create_membership,
+        ):
+            with self.assertRaisesRegex(Exception, "forbidden"):
+                service.add_agent_to_channel(
+                    self.db,
+                    self.user,
+                    self.server.id,
+                    self.channel.id,
+                    ChannelAgentMemberCreateRequest(agent_identity_id=agent_identity_id),
+                )
+
+        require_admin.assert_called_once_with(self.db, self.server.id, self.user.id)
+        get_channel.assert_not_called()
+        create_membership.assert_not_called()
 
     def test_restart_agent_cancels_current_execution_without_canceling_queue(
         self,

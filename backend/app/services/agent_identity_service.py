@@ -245,7 +245,7 @@ class AgentIdentityService:
         channel_id: uuid.UUID,
         request: ChannelAgentMemberCreateRequest,
     ) -> ChannelAgentMemberResponse:
-        require_server_member(db, server_id, current_user.id)
+        require_server_admin(db, server_id, current_user.id)
         channel = ServerChannelRepository.get_by_id(db, channel_id)
         if channel is None or channel.server_id != server_id:
             raise AppException(
