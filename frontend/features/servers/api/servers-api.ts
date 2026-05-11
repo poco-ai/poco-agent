@@ -13,8 +13,13 @@ import type {
   ServerItem,
   ServerKind,
   ServerMemberItem,
+  ServerRole,
   ServerUserPublicProfile,
 } from "@/features/servers/model/types";
+import {
+  getServerMemberRolePath,
+  getServerOwnershipTransferPath,
+} from "@/features/servers/lib/server-member-api-paths";
 
 interface ServerUserPublicProfileResponse {
   user_id: string;
@@ -100,7 +105,7 @@ interface ServerMemberResponse {
   server_id: string;
   user_id: string;
   user?: ServerUserPublicProfileResponse | null;
-  role: string;
+  role: ServerRole;
   joined_at: string;
   invited_by?: string | null;
   status: string;
@@ -112,7 +117,7 @@ interface ServerInviteResponse {
   invite_id: string;
   server_id: string;
   token: string;
-  role: string;
+  role: ServerRole;
   expires_at: string;
   created_by: string;
   max_uses: number;
@@ -364,11 +369,34 @@ export const serversApi = {
     return members.map(mapServerMember);
   },
 
+  updateMemberRole: async (
+    serverId: string,
+    membershipId: number,
+    role: ServerRole,
+  ): Promise<ServerMemberItem> => {
+    const member = await apiClient.patch<ServerMemberResponse>(
+      getServerMemberRolePath(serverId, membershipId),
+      { role },
+    );
+    return mapServerMember(member);
+  },
+
   removeMember: async (
     serverId: string,
     membershipId: number,
   ): Promise<void> => {
     await apiClient.delete(`/servers/${serverId}/members/${membershipId}`);
+  },
+
+  transferOwnership: async (
+    serverId: string,
+    newOwnerUserId: string,
+  ): Promise<ServerItem> => {
+    const server = await apiClient.post<ServerResponse>(
+      getServerOwnershipTransferPath(serverId),
+      { new_owner_user_id: newOwnerUserId },
+    );
+    return mapServer(server);
   },
 
   listInvites: async (serverId: string): Promise<ServerInviteItem[]> => {

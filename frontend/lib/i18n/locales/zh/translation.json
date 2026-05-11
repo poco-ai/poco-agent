@@ -311,7 +311,8 @@
       "generateInvite": "生成",
       "inviteMeta": "已使用 {{used}} / {{max}}",
       "copyInvite": "复制邀请 key",
-      "noInvites": "还没有生成邀请 key。"
+      "noInvites": "还没有生成邀请 key。",
+      "invitePermissionHint": "只有服务器管理员和 owner 可以管理邀请 key。"
     },
     "agentPreset": {
       "title": "添加 Agent",
@@ -331,6 +332,9 @@
       "noAgents": "还没有服务器 Agent。",
       "noHumans": "还没有成员。",
       "createAgentPermissionHint": "只有服务器管理员和 owner 可以创建 Agent。",
+      "invitePermissionHint": "只有服务器管理员和 owner 可以邀请成员。",
+      "rolePermissionHint": "只有服务器 owner 可以修改成员角色。",
+      "ownerOnlyMemberActionHint": "只有服务器 owner 可以管理服务器成员。",
       "description": "描述",
       "lifecycle": "生命周期",
       "created": "创建时间",
@@ -359,6 +363,9 @@
       },
       "emptyValue": "暂无",
       "emptySelection": "选择一个同事查看资料。",
+      "transferOwnership": "转移所有权",
+      "transferOwnershipTitle": "确认转移服务器所有权？",
+      "transferOwnershipDescription": "这会将 {{member}} 设为服务器 owner，你的角色会变为管理员。",
       "removeMember": "移除成员",
       "startAgent": "启动",
       "restartAgent": "重启",
@@ -374,7 +381,8 @@
       "stopAgentDescription": "这会直接丢弃该 Agent 当前正在执行的任务，并阻止它接收新的频道任务，直到再次启动。已有队列任务会保留。",
       "removeAgentTitle": "确认将 {{name}} 从当前 server 移除吗？",
       "removeAgentDescription": "将会从 {{channels}} 等频道中移除，并取消尚未开始的任务。历史消息、表情互动和工作输出仍会保留。",
-      "removeAgentDescriptionUnknown": "将会从当前 server 的频道中移除，并取消尚未开始的任务。历史消息、表情互动和工作输出仍会保留。"
+      "removeAgentDescriptionUnknown": "将会从当前 server 的频道中移除，并取消尚未开始的任务。历史消息、表情互动和工作输出仍会保留。",
+      "personalOwnershipTransferHint": "Personal 服务器不支持转移所有权。"
     },
     "threadMentionHint": "当前 thread 默认会回复给",
     "execution": {
@@ -432,6 +440,10 @@
       "agentStopFailed": "关闭 Agent 失败",
       "agentRemoved": "Agent 已移除",
       "agentRemoveFailed": "移除 Agent 失败",
+      "memberRoleUpdated": "成员角色已更新",
+      "memberRoleUpdateFailed": "更新成员角色失败",
+      "ownershipTransferred": "服务器所有权已转移",
+      "ownershipTransferFailed": "转移所有权失败",
       "memberRemoved": "成员已移除",
       "memberRemoveFailed": "移除成员失败",
       "agentRemovedFromChannel": "Agent 已从频道移除",
@@ -445,6 +457,11 @@
       "pickerLabel": "选择表情反应",
       "addEmoji": "用 {{emoji}} 反应",
       "removeEmoji": "移除 {{emoji}} 反应"
+    },
+    "roles": {
+      "owner": "所有者",
+      "admin": "管理员",
+      "member": "成员"
     }
   },
   "workspaces": {

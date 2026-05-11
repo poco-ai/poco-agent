@@ -310,7 +310,8 @@
       "generateInvite": "招待を生成",
       "inviteMeta": "{{expiresAt}} に期限切れ",
       "copyInvite": "コピー",
-      "noInvites": "有効な招待はまだありません。"
+      "noInvites": "有効な招待はまだありません。",
+      "invitePermissionHint": "Only server admins and owners can manage invite keys."
     },
     "agentPreset": {
       "title": "Agent を追加",
@@ -330,6 +331,9 @@
       "noAgents": "サーバー Agent はまだありません。",
       "noHumans": "人間のメンバーはまだいません。",
       "createAgentPermissionHint": "サーバー管理者と owner のみが Agent を作成できます。",
+      "invitePermissionHint": "Only server admins and owners can invite members.",
+      "rolePermissionHint": "Only the server owner can change member roles.",
+      "ownerOnlyMemberActionHint": "Only the server owner can manage server members.",
       "description": "説明",
       "lifecycle": "ライフサイクル",
       "created": "作成日時",
@@ -355,6 +359,9 @@
       },
       "emptyValue": "利用不可",
       "emptySelection": "詳細を見る同僚を選択してください。",
+      "transferOwnership": "Transfer ownership",
+      "transferOwnershipTitle": "Transfer server ownership?",
+      "transferOwnershipDescription": "This will make {{member}} the server owner. Your role will become Admin.",
       "removeMember": "メンバーを削除",
       "startAgent": "開始",
       "restartAgent": "再起動",
@@ -370,7 +377,8 @@
       "stopAgentDescription": "このエージェントで現在実行中の作業を破棄し、再度開始するまで新しいチャンネルタスクを受け取らないようにします。キュー済みタスクは保持されます。",
       "removeAgentTitle": "{{name}} をこのサーバーから削除しますか？",
       "removeAgentDescription": "{{channels}} などのチャンネルから削除し、まだ開始していないタスクをキャンセルします。過去のメッセージ、リアクション、作業出力は保持されます。",
-      "removeAgentDescriptionUnknown": "このサーバーのチャンネルから削除し、まだ開始していないタスクをキャンセルします。過去のメッセージ、リアクション、作業出力は保持されます。"
+      "removeAgentDescriptionUnknown": "このサーバーのチャンネルから削除し、まだ開始していないタスクをキャンセルします。過去のメッセージ、リアクション、作業出力は保持されます。",
+      "personalOwnershipTransferHint": "Personal servers do not support ownership transfer."
     },
     "threadMentionHint": "このスレッドの返信は次宛てになります",
     "execution": {
@@ -422,6 +430,10 @@
       "agentUpdated": "Agent を更新しました",
       "agentUpdateFailed": "Agent の更新に失敗しました",
       "agentStarted": "Agent を開始しました",
+      "memberRoleUpdated": "Member role updated",
+      "memberRoleUpdateFailed": "Failed to update member role",
+      "ownershipTransferred": "Server ownership transferred",
+      "ownershipTransferFailed": "Failed to transfer ownership",
       "memberRemoved": "メンバーを削除しました",
       "memberRemoveFailed": "メンバーの削除に失敗しました",
       "agentRestarted": "Agent を再起動しました",
@@ -441,6 +453,11 @@
       "pickerLabel": "リアクションを選択",
       "addEmoji": "{{emoji}} でリアクション",
       "removeEmoji": "{{emoji}} のリアクションを削除"
+    },
+    "roles": {
+      "owner": "Owner",
+      "admin": "Admin",
+      "member": "Member"
     }
   },
   "workspaces": {

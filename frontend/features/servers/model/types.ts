@@ -1,6 +1,7 @@
 export type ServerKind = "personal" | "shared";
 export type ServerChannelVisibility = "public" | "private";
 export type ServerConversationType = "channel" | "direct_message";
+export type ServerRole = "owner" | "admin" | "member";
 
 export interface ServerUserPublicProfile {
   userId: string;
@@ -58,7 +59,7 @@ export interface ServerMemberItem {
   serverId: string;
   userId: string;
   user?: ServerUserPublicProfile | null;
-  role: string;
+  role: ServerRole;
   joinedAt: string;
   invitedBy?: string | null;
   status: string;
@@ -70,7 +71,7 @@ export interface ServerInviteItem {
   id: string;
   serverId: string;
   token: string;
-  role: string;
+  role: ServerRole;
   expiresAt: string;
   createdBy: string;
   maxUses: number;

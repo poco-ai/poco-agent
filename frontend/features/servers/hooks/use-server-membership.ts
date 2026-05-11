@@ -13,6 +13,7 @@ import type {
   ServerInviteItem,
   ServerItem,
   ServerMemberItem,
+  ServerRole,
 } from "@/features/servers/model/types";
 import { useT } from "@/lib/i18n/client";
 
@@ -219,6 +220,53 @@ export function useServerMembership({
     [selectedServerId, t],
   );
 
+  const updateMemberRole = React.useCallback(
+    async (membershipId: number, role: ServerRole) => {
+      if (!selectedServerId) {
+        return;
+      }
+      try {
+        const member = await serversApi.updateMemberRole(
+          selectedServerId,
+          membershipId,
+          role,
+        );
+        setServerMembers((current) =>
+          current.map((item) => (item.id === member.id ? member : item)),
+        );
+        toast.success(t("conversationView.toasts.memberRoleUpdated"));
+      } catch (error) {
+        console.error("[ServersWorkspace] update server member role failed", error);
+        toast.error(t("conversationView.toasts.memberRoleUpdateFailed"));
+        throw error;
+      }
+    },
+    [selectedServerId, t],
+  );
+
+  const transferOwnership = React.useCallback(
+    async (newOwnerUserId: string) => {
+      if (!selectedServerId) {
+        return;
+      }
+      try {
+        const server = await serversApi.transferOwnership(
+          selectedServerId,
+          newOwnerUserId,
+        );
+        await refreshMembership(selectedServerId);
+        onServersChanged(await serversApi.listServers());
+        onSwitchServer(server.id);
+        toast.success(t("conversationView.toasts.ownershipTransferred"));
+      } catch (error) {
+        console.error("[ServersWorkspace] transfer server ownership failed", error);
+        toast.error(t("conversationView.toasts.ownershipTransferFailed"));
+        throw error;
+      }
+    },
+    [onServersChanged, onSwitchServer, refreshMembership, selectedServerId, t],
+  );
+
   const removeMember = React.useCallback(
     async (membershipId: number) => {
       if (!selectedServerId) {
@@ -250,6 +298,8 @@ export function useServerMembership({
     copyInvite,
     createAgent,
     updateAgentDescription,
+    updateMemberRole,
+    transferOwnership,
     removeMember,
     refreshMembership,
   };

@@ -59,6 +59,7 @@ import type {
   ServerConversationMessage,
   ServerItem,
   ServerMemberItem,
+  ServerRole,
 } from "@/features/servers/model/types";
 import { useServerMembership } from "@/features/servers/hooks/use-server-membership";
 import {
@@ -74,6 +75,11 @@ import {
   getMentionTrigger,
 } from "@/features/servers/lib/server-conversation-view";
 import { getMessageSessionId } from "@/features/servers/lib/server-conversation-messages";
+import {
+  canManageServerMembers,
+  canManageServerOperations,
+  isServerRole,
+} from "@/features/servers/lib/server-member-permissions";
 import {
   toggleMessageReaction,
   updateMessageById,
@@ -542,7 +548,7 @@ function ConversationContent({
               onClick={onOpenMembers}
             >
               <Users className="size-4" />
-              {agents.length}
+              {members.length + agents.length}
             </Button>
           </div>
         </div>
@@ -1562,6 +1568,8 @@ export function ServerConversationPageClient({
     copyInvite,
     createAgent,
     updateAgentDescription,
+    updateMemberRole,
+    transferOwnership,
     removeMember,
     refreshMembership,
   } = useServerMembership({
@@ -1667,12 +1675,17 @@ export function ServerConversationPageClient({
         (member) => member.userId === profile.id && member.role === "owner",
       )),
   );
-  const canManageServer = Boolean(
-    profile?.id &&
-      (selectedServer?.ownerUserId === profile.id ||
-        currentServerMembership?.role === "owner" ||
-        currentServerMembership?.role === "admin"),
-  );
+  const currentServerRole = React.useMemo<ServerRole | null>(() => {
+    if (isServerRole(currentServerMembership?.role)) {
+      return currentServerMembership.role;
+    }
+    if (profile?.id && selectedServer?.ownerUserId === profile.id) {
+      return "owner";
+    }
+    return null;
+  }, [currentServerMembership?.role, profile?.id, selectedServer?.ownerUserId]);
+  const canManageServerOps = canManageServerOperations(currentServerRole);
+  const canManageServerMemberRoles = canManageServerMembers(currentServerRole);
 
   const allFeedItems = React.useMemo<FeedItem[]>(() => {
     return channels
@@ -3013,7 +3026,8 @@ export function ServerConversationPageClient({
                 members={serverMembers}
                 selection={colleagueSelection}
                 activeChannelIdByAgentId={activeChannelIdByAgentId}
-                canCreateAgent={canManageServer}
+                canCreateAgent={canManageServerOps}
+                canInviteMembers={canManageServerOps}
                 onSelect={(selection) => {
                   setColleagueDetailClosed(false);
                   setDrawer({ type: "colleague", selection });
@@ -3152,10 +3166,14 @@ export function ServerConversationPageClient({
                     presets={presets}
                     members={serverMembers}
                     serverId={selectedServerId}
+                    serverKind={selectedServer?.kind}
                     canInspectPersistentFiles={
                       selectedServer?.ownerUserId === profile?.id
                     }
-                    canManageServer={canManageServer}
+                    currentUserId={profile?.id}
+                    currentServerRole={currentServerRole}
+                    canManageServerOperations={canManageServerOps}
+                    canManageServerMembers={canManageServerMemberRoles}
                     activeChannelId={activeChannelId}
                     channelMembers={channelMembers}
                     activeChannelIdByAgentId={activeChannelIdByAgentId}
@@ -3166,6 +3184,10 @@ export function ServerConversationPageClient({
                     }}
                     onOpenDm={handleOpenDm}
                     onOpenActiveChannel={openChannelById}
+                    onUpdateMemberRole={(membershipId, role) =>
+                      updateMemberRole(membershipId, role)
+                    }
+                    onTransferOwnership={(userId) => transferOwnership(userId)}
                     onRemoveMember={(membershipId) =>
                       void removeMember(membershipId)
                     }
@@ -3248,7 +3270,7 @@ export function ServerConversationPageClient({
         availableAgents={availableChannelAgents}
         availableHumans={availableChannelHumans}
         humans={channelMembers}
-        canManageMembers={canManageServer}
+        canManageMembers={canManageServerOps}
         onOpenChange={setMembersOpen}
         onOpenDm={(agentId) => {
           setMembersOpen(false);
@@ -3266,6 +3288,7 @@ export function ServerConversationPageClient({
         server={selectedServer}
         invites={serverInvites}
         isWorking={isServerAccessWorking}
+        canCreateInvite={canManageServerOps}
         onOpenChange={setServerAccessOpen}
         onCreateServer={(name) => void createServer(name)}
         onAcceptInvite={(token) => void acceptInvite(token)}

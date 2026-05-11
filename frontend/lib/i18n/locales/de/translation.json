@@ -310,7 +310,8 @@
       "generateInvite": "Einladung erstellen",
       "inviteMeta": "Läuft ab am {{expiresAt}}",
       "copyInvite": "Kopieren",
-      "noInvites": "Noch keine aktiven Einladungen."
+      "noInvites": "Noch keine aktiven Einladungen.",
+      "invitePermissionHint": "Only server admins and owners can manage invite keys."
     },
     "agentPreset": {
       "title": "Agent hinzufügen",
@@ -330,6 +331,9 @@
       "noAgents": "Noch keine Server-Agents.",
       "noHumans": "Noch keine Personenmitglieder.",
       "createAgentPermissionHint": "Nur Server-Admins und owner können Agents erstellen.",
+      "invitePermissionHint": "Only server admins and owners can invite members.",
+      "rolePermissionHint": "Only the server owner can change member roles.",
+      "ownerOnlyMemberActionHint": "Only the server owner can manage server members.",
       "description": "Beschreibung",
       "lifecycle": "Lebenszyklus",
       "created": "Erstellt",
@@ -355,6 +359,9 @@
       },
       "emptyValue": "Nicht verfügbar",
       "emptySelection": "Wähle einen Kollegen aus, um Details anzuzeigen.",
+      "transferOwnership": "Transfer ownership",
+      "transferOwnershipTitle": "Transfer server ownership?",
+      "transferOwnershipDescription": "This will make {{member}} the server owner. Your role will become Admin.",
       "removeMember": "Mitglied entfernen",
       "startAgent": "Starten",
       "restartAgent": "Neustarten",
@@ -370,7 +377,8 @@
       "stopAgentDescription": "Dies verwirft aktuell laufende Arbeit dieses Agent und verhindert neue Kanalaufgaben, bis er wieder gestartet wird. Aufgaben in der Warteschlange bleiben erhalten.",
       "removeAgentTitle": "{{name}} von diesem Server entfernen?",
       "removeAgentDescription": "Dies entfernt den Agent aus {{channels}} und anderen Kanälen und bricht noch nicht gestartete Aufgaben ab. Historische Nachrichten, Reaktionen und Arbeitsergebnisse bleiben erhalten.",
-      "removeAgentDescriptionUnknown": "Dies entfernt den Agent aus den Kanälen dieses Servers und bricht noch nicht gestartete Aufgaben ab. Historische Nachrichten, Reaktionen und Arbeitsergebnisse bleiben erhalten."
+      "removeAgentDescriptionUnknown": "Dies entfernt den Agent aus den Kanälen dieses Servers und bricht noch nicht gestartete Aufgaben ab. Historische Nachrichten, Reaktionen und Arbeitsergebnisse bleiben erhalten.",
+      "personalOwnershipTransferHint": "Personal servers do not support ownership transfer."
     },
     "threadMentionHint": "Antworten in diesem Thread richten sich an",
     "execution": {
@@ -422,6 +430,10 @@
       "agentUpdated": "Agent aktualisiert",
       "agentUpdateFailed": "Agent konnte nicht aktualisiert werden",
       "agentStarted": "Agent gestartet",
+      "memberRoleUpdated": "Member role updated",
+      "memberRoleUpdateFailed": "Failed to update member role",
+      "ownershipTransferred": "Server ownership transferred",
+      "ownershipTransferFailed": "Failed to transfer ownership",
       "memberRemoved": "Mitglied entfernt",
       "memberRemoveFailed": "Mitglied konnte nicht entfernt werden",
       "agentRestarted": "Agent neu gestartet",
@@ -441,6 +453,11 @@
       "pickerLabel": "Reaktion auswählen",
       "addEmoji": "Mit {{emoji}} reagieren",
       "removeEmoji": "Reaktion {{emoji}} entfernen"
+    },
+    "roles": {
+      "owner": "Owner",
+      "admin": "Admin",
+      "member": "Member"
     }
   },
   "workspaces": {

@@ -23,6 +23,7 @@ export function ServerAccessDialog({
   server,
   invites,
   isWorking,
+  canCreateInvite,
   onOpenChange,
   onCreateServer,
   onAcceptInvite,
@@ -33,6 +34,7 @@ export function ServerAccessDialog({
   server: ServerItem | null;
   invites: ServerInviteItem[];
   isWorking: boolean;
+  canCreateInvite: boolean;
   onOpenChange: (open: boolean) => void;
   onCreateServer: (name: string) => void;
   onAcceptInvite: (token: string) => void;
@@ -131,12 +133,22 @@ export function ServerAccessDialog({
               variant="outline"
               size="sm"
               onClick={onCreateInvite}
-              disabled={isWorking || !server}
+              disabled={isWorking || !server || !canCreateInvite}
+              title={
+                canCreateInvite
+                  ? undefined
+                  : t("conversationView.serverAccess.invitePermissionHint")
+              }
             >
               <RefreshCw className="size-4" />
               {t("conversationView.serverAccess.generateInvite")}
             </Button>
           </div>
+          {!canCreateInvite ? (
+            <p className="text-xs text-muted-foreground">
+              {t("conversationView.serverAccess.invitePermissionHint")}
+            </p>
+          ) : null}
           <div className="space-y-2">
             {invites.length > 0 ? (
               invites.map((invite) => (

@@ -17,6 +17,13 @@ import {
 
 import { Button } from "@/components/ui/button";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -34,13 +41,24 @@ import {
   getUserDisplayName,
 } from "@/features/servers/lib/server-conversation-view";
 import {
+  canEditServerMemberRole,
+  canRemoveServerMember,
+  canShowTransferServerOwnershipAction,
+  canTransferServerOwnership,
+  getInvitedByDisplay,
+  getServerRoleLabelKey,
+  isServerRole,
+} from "@/features/servers/lib/server-member-permissions";
+import {
   getAgentRuntimeDotClassName,
   getAgentRuntimeStatus,
 } from "@/features/servers/lib/agent-runtime-status";
 import type {
   ServerAgentItem,
   ServerChannelMemberItem,
+  ServerKind,
   ServerMemberItem,
+  ServerRole,
 } from "@/features/servers/model/types";
 import type { ColleagueSelection } from "@/features/servers/ui/server-workspace-types";
 import { useT } from "@/lib/i18n/client";
@@ -57,8 +75,12 @@ export function ColleagueDetail({
   presets,
   members,
   serverId,
+  serverKind,
   canInspectPersistentFiles,
-  canManageServer,
+  currentUserId,
+  currentServerRole,
+  canManageServerOperations,
+  canManageServerMembers,
   activeChannelId,
   channelMembers = [],
   activeChannelIdByAgentId = {},
@@ -66,6 +88,8 @@ export function ColleagueDetail({
   onClose,
   onOpenDm,
   onOpenActiveChannel,
+  onUpdateMemberRole,
+  onTransferOwnership,
   onRemoveMember,
   onRestartAgent,
   onStopAgent,
@@ -78,8 +102,12 @@ export function ColleagueDetail({
   presets: Preset[];
   members: ServerMemberItem[];
   serverId?: string | null;
+  serverKind?: ServerKind | null;
   canInspectPersistentFiles?: boolean;
-  canManageServer?: boolean;
+  currentUserId?: string | null;
+  currentServerRole?: string | null;
+  canManageServerOperations?: boolean;
+  canManageServerMembers?: boolean;
   activeChannelId?: string | null;
   channelMembers?: ServerChannelMemberItem[];
   activeChannelIdByAgentId?: Record<string, string>;
@@ -87,6 +115,8 @@ export function ColleagueDetail({
   onClose: () => void;
   onOpenDm: (agentId: string) => void;
   onOpenActiveChannel?: (channelId: string) => void;
+  onUpdateMemberRole: (membershipId: number, role: ServerRole) => Promise<void>;
+  onTransferOwnership: (userId: string) => Promise<void>;
   onRemoveMember: (membershipId: number) => void;
   onRestartAgent: (agentId: string) => void;
   onStopAgent: (agentId: string) => void;
@@ -120,6 +150,39 @@ export function ColleagueDetail({
           (member) => member.userId === selectedMember.userId,
         ) ?? null)
       : null;
+  const invitedByDisplay = selectedMember
+    ? getInvitedByDisplay(selectedMember, members)
+    : null;
+  const canEditSelectedMemberRole = selectedMember
+    ? canEditServerMemberRole({
+        currentUserId,
+        currentUserRole: currentServerRole,
+        targetMember: selectedMember,
+      })
+    : false;
+  const canShowTransferSelectedMemberOwnership = selectedMember
+    ? canShowTransferServerOwnershipAction({
+        currentUserId,
+        currentUserRole: currentServerRole,
+        targetMember: selectedMember,
+      })
+    : false;
+  const canTransferSelectedMemberOwnership = selectedMember
+    ? canTransferServerOwnership({
+        currentUserId,
+        currentUserRole: currentServerRole,
+        targetMember: selectedMember,
+        serverKind,
+      })
+    : false;
+  const isPersonalServer = serverKind === "personal";
+  const canRemoveSelectedMember = selectedMember
+    ? canRemoveServerMember({
+        currentUserId,
+        currentUserRole: currentServerRole,
+        targetMember: selectedMember,
+      })
+    : false;
   const [persistentFiles, setPersistentFiles] = React.useState<FileNode[]>([]);
   const [isLoadingPersistentFiles, setIsLoadingPersistentFiles] =
     React.useState(false);
@@ -131,6 +194,9 @@ export function ColleagueDetail({
   const [isEditingDescription, setIsEditingDescription] = React.useState(false);
   const [descriptionDraft, setDescriptionDraft] = React.useState("");
   const [isSavingDescription, setIsSavingDescription] = React.useState(false);
+  const [isUpdatingMemberRole, setIsUpdatingMemberRole] = React.useState(false);
+  const [transferOwnershipConfirmOpen, setTransferOwnershipConfirmOpen] =
+    React.useState(false);
   const selectedAgentChannelNames = selectedAgent
     ? (channelNamesByAgentId[selectedAgent.id] ?? [])
     : [];
@@ -159,6 +225,31 @@ export function ColleagueDetail({
     } finally {
       setIsSavingDescription(false);
     }
+  };
+
+  const handleMemberRoleChange = async (role: string) => {
+    if (
+      !selectedMember ||
+      !isServerRole(role) ||
+      role === "owner" ||
+      role === selectedMember.role ||
+      isUpdatingMemberRole
+    ) {
+      return;
+    }
+    setIsUpdatingMemberRole(true);
+    try {
+      await onUpdateMemberRole(selectedMember.id, role);
+    } finally {
+      setIsUpdatingMemberRole(false);
+    }
+  };
+
+  const handleTransferOwnership = async () => {
+    if (!selectedMember || !canTransferSelectedMemberOwnership) {
+      return;
+    }
+    await onTransferOwnership(selectedMember.userId);
   };
 
   React.useEffect(() => {
@@ -279,7 +370,7 @@ export function ColleagueDetail({
                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                   {t("conversationView.colleagues.description")}
                 </p>
-                {canManageServer && !selectedAgentRemoved ? (
+                {canManageServerOperations && !selectedAgentRemoved ? (
                   <Button
                     type="button"
                     variant="ghost"
@@ -355,7 +446,7 @@ export function ColleagueDetail({
                   {t("conversationView.backToContext")}
                 </Button>
               ) : null}
-              {canManageServer ? (
+              {canManageServerOperations ? (
                 <>
                   <Button
                     type="button"
@@ -555,53 +646,128 @@ export function ColleagueDetail({
               </div>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
-              <InfoTile
-                icon={<Shield className="size-4" />}
-                label={t("conversationView.colleagues.role")}
-                value={selectedMember.role}
-              />
+              <div className="rounded-md border border-border bg-background px-4 py-3">
+                <p className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                  <Shield className="size-4" />
+                  {t("conversationView.colleagues.role")}
+                </p>
+                {canEditSelectedMemberRole ? (
+                  <Select
+                    value={selectedMember.role}
+                    onValueChange={(value) => void handleMemberRoleChange(value)}
+                    disabled={isUpdatingMemberRole}
+                  >
+                    <SelectTrigger className="mt-2 w-full border-border bg-card">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="admin">
+                        {t("conversationView.roles.admin")}
+                      </SelectItem>
+                      <SelectItem value="member">
+                        {t("conversationView.roles.member")}
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <>
+                    <p className="mt-2 break-all text-sm text-foreground">
+                      {t(getServerRoleLabelKey(selectedMember.role))}
+                    </p>
+                    {!canManageServerMembers ? (
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        {t("conversationView.colleagues.rolePermissionHint")}
+                      </p>
+                    ) : null}
+                  </>
+                )}
+              </div>
               <InfoTile
                 icon={<CalendarDays className="size-4" />}
                 label={t("conversationView.colleagues.joined")}
                 value={selectedMember.joinedAt}
               />
             </div>
-            <InfoTile
-              icon={<UserPlus className="size-4" />}
-              label={t("conversationView.colleagues.invitedBy")}
-              value={
-                selectedMember.invitedBy ||
-                t("conversationView.colleagues.emptyValue")
-              }
-            />
-            <div className="flex flex-wrap gap-2 border-t border-border pt-5">
-              {canManageServer && selectedMemberChannelMembership ? (
+            <div className="rounded-md border border-border bg-background px-4 py-3">
+              <p className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                <UserPlus className="size-4" />
+                {t("conversationView.colleagues.invitedBy")}
+              </p>
+              <p className="mt-2 break-all text-sm text-foreground">
+                {invitedByDisplay?.primary ??
+                  t("conversationView.colleagues.emptyValue")}
+              </p>
+              {invitedByDisplay?.secondary ? (
+                <p className="mt-1 break-all text-xs text-muted-foreground">
+                  {invitedByDisplay.secondary}
+                </p>
+              ) : null}
+            </div>
+            <div className="space-y-3 border-t border-border pt-5">
+              <div className="flex flex-wrap gap-2">
+                {canManageServerOperations && selectedMemberChannelMembership ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      onRemoveMemberFromChannel(
+                        selectedMemberChannelMembership.id,
+                      )
+                    }
+                    className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  >
+                    <Trash2 className="size-4" />
+                    {t("conversationView.colleagues.removeFromChannel")}
+                  </Button>
+                ) : null}
+                {canShowTransferSelectedMemberOwnership ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setTransferOwnershipConfirmOpen(true)}
+                    disabled={!canTransferSelectedMemberOwnership}
+                    title={
+                      isPersonalServer
+                        ? t(
+                            "conversationView.colleagues.personalOwnershipTransferHint",
+                          )
+                        : undefined
+                    }
+                    className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  >
+                    <Shield className="size-4" />
+                    {t("conversationView.colleagues.transferOwnership")}
+                  </Button>
+                ) : null}
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() =>
-                    onRemoveMemberFromChannel(
-                      selectedMemberChannelMembership.id,
-                    )
+                  onClick={() => onRemoveMember(selectedMember.id)}
+                  disabled={!canRemoveSelectedMember}
+                  title={
+                    canRemoveSelectedMember
+                      ? undefined
+                      : t("conversationView.colleagues.ownerOnlyMemberActionHint")
                   }
                   className="text-destructive hover:bg-destructive/10 hover:text-destructive"
                 >
                   <Trash2 className="size-4" />
-                  {t("conversationView.colleagues.removeFromChannel")}
+                  {t("conversationView.colleagues.removeMember")}
                 </Button>
+              </div>
+              {isPersonalServer && canShowTransferSelectedMemberOwnership ? (
+                <p className="text-xs text-muted-foreground">
+                  {t("conversationView.colleagues.personalOwnershipTransferHint")}
+                </p>
               ) : null}
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => onRemoveMember(selectedMember.id)}
-                disabled={!canManageServer}
-                className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-              >
-                <Trash2 className="size-4" />
-                {t("conversationView.colleagues.removeMember")}
-              </Button>
+              {!canManageServerMembers ? (
+                <p className="text-xs text-muted-foreground">
+                  {t("conversationView.colleagues.ownerOnlyMemberActionHint")}
+                </p>
+              ) : null}
             </div>
           </div>
         ) : (
@@ -610,6 +776,37 @@ export function ColleagueDetail({
           </div>
         )}
       </div>
+      {selectedMember ? (
+        <AlertDialog
+          open={transferOwnershipConfirmOpen}
+          onOpenChange={setTransferOwnershipConfirmOpen}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                {t("conversationView.colleagues.transferOwnershipTitle")}
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                {t("conversationView.colleagues.transferOwnershipDescription", {
+                  member: getUserDisplayName(
+                    selectedMember.user,
+                    selectedMember.userId,
+                  ),
+                })}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => void handleTransferOwnership()}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {t("conversationView.colleagues.transferOwnership")}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      ) : null}
     </aside>
   );
 }

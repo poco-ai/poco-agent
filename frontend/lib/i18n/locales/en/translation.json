@@ -311,7 +311,8 @@
       "generateInvite": "Generate",
       "inviteMeta": "{{used}} / {{max}} used",
       "copyInvite": "Copy invite key",
-      "noInvites": "No invite key generated yet."
+      "noInvites": "No invite key generated yet.",
+      "invitePermissionHint": "Only server admins and owners can manage invite keys."
     },
     "agentPreset": {
       "title": "Add agent",
@@ -331,6 +332,9 @@
       "noAgents": "No server agents yet.",
       "noHumans": "No human members yet.",
       "createAgentPermissionHint": "Only server admins and owners can create agents.",
+      "invitePermissionHint": "Only server admins and owners can invite members.",
+      "rolePermissionHint": "Only the server owner can change member roles.",
+      "ownerOnlyMemberActionHint": "Only the server owner can manage server members.",
       "description": "Description",
       "lifecycle": "Lifecycle",
       "created": "Created",
@@ -359,6 +363,9 @@
       },
       "emptyValue": "Not available",
       "emptySelection": "Select a colleague to inspect their profile.",
+      "transferOwnership": "Transfer ownership",
+      "transferOwnershipTitle": "Transfer server ownership?",
+      "transferOwnershipDescription": "This will make {{member}} the server owner. Your role will become Admin.",
       "removeMember": "Remove member",
       "startAgent": "Start",
       "restartAgent": "Restart",
@@ -374,7 +381,8 @@
       "stopAgentDescription": "This will discard any currently running work for this agent and prevent new channel tasks until it is started again. Queued work is kept.",
       "removeAgentTitle": "Remove {{name}} from this server?",
       "removeAgentDescription": "This will remove the agent from {{channels}} and other channels, and cancel queued work that has not started. Historical messages, reactions, and work output will be kept.",
-      "removeAgentDescriptionUnknown": "This will remove the agent from this server's channels and cancel queued work that has not started. Historical messages, reactions, and work output will be kept."
+      "removeAgentDescriptionUnknown": "This will remove the agent from this server's channels and cancel queued work that has not started. Historical messages, reactions, and work output will be kept.",
+      "personalOwnershipTransferHint": "Personal servers do not support ownership transfer."
     },
     "threadMentionHint": "Replies in this thread will target",
     "execution": {
@@ -432,6 +440,10 @@
       "agentStopFailed": "Failed to stop agent",
       "agentRemoved": "Agent removed",
       "agentRemoveFailed": "Failed to remove agent",
+      "memberRoleUpdated": "Member role updated",
+      "memberRoleUpdateFailed": "Failed to update member role",
+      "ownershipTransferred": "Server ownership transferred",
+      "ownershipTransferFailed": "Failed to transfer ownership",
       "memberRemoved": "Member removed",
       "memberRemoveFailed": "Failed to remove member",
       "agentRemovedFromChannel": "Agent removed from channel",
@@ -445,6 +457,11 @@
       "pickerLabel": "Choose a reaction",
       "addEmoji": "React with {{emoji}}",
       "removeEmoji": "Remove {{emoji}} reaction"
+    },
+    "roles": {
+      "owner": "Owner",
+      "admin": "Admin",
+      "member": "Member"
     }
   },
   "workspaces": {

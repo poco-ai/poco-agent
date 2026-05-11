@@ -29,6 +29,7 @@ export function ColleaguesPanel({
   selection,
   activeChannelIdByAgentId = {},
   canCreateAgent,
+  canInviteMembers,
   onSelect,
   onOpenActiveChannel,
   onAddAgent,
@@ -40,6 +41,7 @@ export function ColleaguesPanel({
   selection: ColleagueSelection | null;
   activeChannelIdByAgentId?: Record<string, string>;
   canCreateAgent: boolean;
+  canInviteMembers: boolean;
   onSelect: (selection: ColleagueSelection) => void;
   onOpenActiveChannel?: (channelId: string) => void;
   onAddAgent: () => void;
@@ -166,12 +168,23 @@ export function ColleaguesPanel({
               variant="outline"
               size="icon"
               onClick={onInviteMember}
+              disabled={!canInviteMembers}
               aria-label={t("conversationView.serverAccess.invitesTitle")}
+              title={
+                canInviteMembers
+                  ? undefined
+                  : t("conversationView.colleagues.invitePermissionHint")
+              }
               className="size-8"
             >
               <Plus className="size-4" />
             </Button>
           </div>
+          {!canInviteMembers ? (
+            <p className="px-1 text-xs text-muted-foreground">
+              {t("conversationView.colleagues.invitePermissionHint")}
+            </p>
+          ) : null}
           <div className="space-y-2">
             {members.length > 0 ? (
               members.map((member) => (
