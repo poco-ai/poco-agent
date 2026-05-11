@@ -163,11 +163,8 @@ class ServerAgentTriggerService:
                 or agent.removed_at is not None
             ):
                 continue
-            mention_keys = {
-                agent.handle.strip().lower(),
-                agent.display_name.strip().lower(),
-            }
-            if handles.intersection(mention_keys):
+            agent_handle = agent.handle.strip().lower()
+            if agent_handle in handles:
                 matched.append(agent)
         return matched
 

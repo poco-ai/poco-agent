@@ -319,6 +319,7 @@
       "preset": "Preset",
       "selectPreset": "Preset auswählen",
       "displayName": "Anzeigename",
+      "displayNameConflict": "Ein Agent mit diesem Anzeigenamen existiert bereits.",
       "handle": "Handle",
       "agentDescription": "Beschreibung",
       "create": "Agent erstellen"

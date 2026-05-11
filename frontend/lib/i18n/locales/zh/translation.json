@@ -320,6 +320,7 @@
       "preset": "Preset",
       "selectPreset": "选择 preset",
       "displayName": "显示名称",
+      "displayNameConflict": "已存在同名 Agent，请换一个显示名称。",
       "handle": "标识",
       "agentDescription": "描述",
       "create": "创建 Agent"

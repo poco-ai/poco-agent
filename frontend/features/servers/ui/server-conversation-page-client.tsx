@@ -3392,6 +3392,7 @@ export function ServerConversationPageClient({
       <AgentPresetDialog
         open={agentPresetOpen}
         presets={presets}
+        existingAgents={serverAgents}
         isWorking={isAgentCreating}
         onOpenChange={setAgentPresetOpen}
         onCreateAgent={(input) => void createAgent(input)}

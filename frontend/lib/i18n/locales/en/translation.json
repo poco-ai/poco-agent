@@ -320,6 +320,7 @@
       "preset": "Preset",
       "selectPreset": "Select preset",
       "displayName": "Display name",
+      "displayNameConflict": "An agent with this display name already exists.",
       "handle": "Handle",
       "agentDescription": "Description",
       "create": "Create agent"

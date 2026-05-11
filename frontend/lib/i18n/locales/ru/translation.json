@@ -319,6 +319,7 @@
       "preset": "Пресет",
       "selectPreset": "Выберите пресет",
       "displayName": "Отображаемое имя",
+      "displayNameConflict": "Агент с таким отображаемым именем уже существует.",
       "handle": "Идентификатор",
       "agentDescription": "Описание",
       "create": "Создать агента"

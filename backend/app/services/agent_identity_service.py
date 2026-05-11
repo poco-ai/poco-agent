@@ -138,6 +138,23 @@ class AgentIdentityService:
             )
 
         preset = self._resolve_preset_for_user(db, current_user.id, request.preset_id)
+        display_name = request.display_name.strip()
+        if not display_name:
+            raise AppException(
+                error_code=ErrorCode.BAD_REQUEST,
+                message="Agent display name must not be empty",
+            )
+        existing_display_name = AgentIdentityRepository.get_by_server_and_display_name(
+            db,
+            server.id,
+            display_name,
+            include_removed=False,
+        )
+        if existing_display_name is not None:
+            raise AppException(
+                error_code=ErrorCode.BAD_REQUEST,
+                message=f"Agent display name already exists: {display_name}",
+            )
         handle_seed = request.handle or request.display_name
         handle = self._unique_handle(db, server.id, handle_seed)
         visual_key = (request.visual_key or "").strip() or preset.visual_key
@@ -147,7 +164,7 @@ class AgentIdentityService:
                 server_id=server.id,
                 preset_id=preset.id,
                 handle=handle,
-                display_name=request.display_name.strip(),
+                display_name=display_name,
                 description=(request.description or "").strip() or None,
                 visual_key=visual_key,
                 visibility=request.visibility.strip() or "server",

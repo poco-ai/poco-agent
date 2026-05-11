@@ -319,6 +319,7 @@
       "preset": "プリセット",
       "selectPreset": "プリセットを選択",
       "displayName": "表示名",
+      "displayNameConflict": "この表示名の Agent はすでに存在します。",
       "handle": "ハンドル",
       "agentDescription": "説明",
       "create": "Agent を作成"
