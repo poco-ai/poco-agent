@@ -57,7 +57,7 @@ interface ChannelTaskMessageResponse {
   message_id: string;
   channel_id: string;
   author_user_id?: string | null;
-  message_type: "user" | "system" | "task";
+  message_type: "user" | "system" | "task" | "event";
   content: Record<string, unknown>;
   text_preview?: string | null;
   thread_root_message_id?: string | null;

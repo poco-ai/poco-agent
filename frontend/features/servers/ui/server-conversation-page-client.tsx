@@ -72,6 +72,7 @@ import {
   getMentionSearchText,
   getUserDisplayName,
   hasInboxSignal,
+  sortChannelsForSidebar,
   sortMessagesChronologically,
   type MentionCandidate,
   getMentionTrigger,
@@ -325,6 +326,9 @@ function ChannelActionButtons({
 }) {
   const { t } = useT("translation");
   const iconButtonClassName = compact ? "size-9 px-0" : undefined;
+  const isSystemChannel = Boolean(
+    channel?.isSystemChannel || channel?.systemChannelType,
+  );
 
   return (
     <div className={cn("flex shrink-0 items-center gap-2", className)}>
@@ -339,18 +343,20 @@ function ChannelActionButtons({
       >
         <Settings2 className="size-4" />
       </Button>
-      <Button
-        type="button"
-        variant="outline"
-        size={compact ? "icon" : "sm"}
-        className={iconButtonClassName}
-        onClick={onOpenLeaveConfirm}
-        disabled={!channel}
-        aria-label={t("conversationView.leave")}
-        title={t("conversationView.leave")}
-      >
-        <LogOut className="size-4" />
-      </Button>
+      {!isSystemChannel ? (
+        <Button
+          type="button"
+          variant="outline"
+          size={compact ? "icon" : "sm"}
+          className={iconButtonClassName}
+          onClick={onOpenLeaveConfirm}
+          disabled={!channel}
+          aria-label={t("conversationView.leave")}
+          title={t("conversationView.leave")}
+        >
+          <LogOut className="size-4" />
+        </Button>
+      ) : null}
       <Button
         type="button"
         variant="outline"
@@ -1015,6 +1021,9 @@ function ChannelSettingsDialog({
   const [description, setDescription] = React.useState(
     channel?.description ?? "",
   );
+  const isSystemChannel = Boolean(
+    channel?.isSystemChannel || channel?.systemChannelType,
+  );
 
   React.useEffect(() => {
     if (open) {
@@ -1042,6 +1051,7 @@ function ChannelSettingsDialog({
             <Input
               value={name}
               onChange={(event) => setName(event.target.value)}
+              disabled={isSystemChannel}
             />
           </div>
           <div className="space-y-2">
@@ -1056,11 +1066,13 @@ function ChannelSettingsDialog({
                 "conversationView.channelSettings.descriptionPlaceholder",
               )}
               className="rounded-md border-border bg-background shadow-none"
+              disabled={isSystemChannel}
             />
           </div>
         </div>
         <DialogFooter className="flex-row items-center justify-between sm:justify-between">
-          <div className="flex min-w-0 flex-wrap gap-2">
+          {!isSystemChannel ? (
+            <div className="flex min-w-0 flex-wrap gap-2">
             <Button
               type="button"
               variant="outline"
@@ -1082,12 +1094,15 @@ function ChannelSettingsDialog({
               <Trash2 className="size-4" />
               {t("conversationView.channelSettings.delete")}
             </Button>
-          </div>
+            </div>
+          ) : (
+            <div />
+          )}
           <Button
             type="button"
             size="sm"
             onClick={() => onSave({ name, description })}
-            disabled={!name.trim()}
+            disabled={!name.trim() || isSystemChannel}
           >
             {t("conversationView.save")}
           </Button>
@@ -1672,8 +1687,8 @@ export function ServerConversationPageClient({
     servers.find((server) => server.id === selectedServerId) ?? null;
   const selectedChannel =
     channels.find((channel) => channel.id === activeChannelId) ?? null;
-  const topLevelChannels = channels.filter(
-    (channel) => channel.conversationType === "channel",
+  const topLevelChannels = sortChannelsForSidebar(
+    channels.filter((channel) => channel.conversationType === "channel"),
   );
   const directMessages = channels.filter(
     (channel) => channel.conversationType === "direct_message",
@@ -2502,6 +2517,11 @@ export function ServerConversationPageClient({
     if (!selectedServerId) {
       return;
     }
+    const normalizedName = input.name.trim().toLowerCase();
+    if (normalizedName === "public" || normalizedName === "personal") {
+      toast.error(t("conversationView.toasts.systemChannelNameReserved"));
+      throw new Error("Reserved system channel name");
+    }
     try {
       const channel = await serversApi.createChannel(selectedServerId, {
         name: input.name.trim(),
@@ -2524,7 +2544,12 @@ export function ServerConversationPageClient({
   };
 
   const handleLeaveChannel = async () => {
-    if (!selectedServerId || !activeChannelId) {
+    if (
+      !selectedServerId ||
+      !activeChannelId ||
+      selectedChannel?.isSystemChannel ||
+      selectedChannel?.systemChannelType
+    ) {
       return;
     }
     setIsLeavingChannel(true);
@@ -2637,7 +2662,12 @@ export function ServerConversationPageClient({
   );
 
   const handleArchiveChannel = async () => {
-    if (!selectedServerId || !activeChannelId) {
+    if (
+      !selectedServerId ||
+      !activeChannelId ||
+      selectedChannel?.isSystemChannel ||
+      selectedChannel?.systemChannelType
+    ) {
       return;
     }
     setIsArchivingChannel(true);
@@ -2665,7 +2695,12 @@ export function ServerConversationPageClient({
     name: string;
     description: string;
   }) => {
-    if (!selectedServerId || !activeChannelId) {
+    if (
+      !selectedServerId ||
+      !activeChannelId ||
+      selectedChannel?.isSystemChannel ||
+      selectedChannel?.systemChannelType
+    ) {
       return;
     }
     try {
@@ -2691,7 +2726,12 @@ export function ServerConversationPageClient({
   };
 
   const handleDeleteChannel = async () => {
-    if (!selectedServerId || !activeChannelId) {
+    if (
+      !selectedServerId ||
+      !activeChannelId ||
+      selectedChannel?.isSystemChannel ||
+      selectedChannel?.systemChannelType
+    ) {
       return;
     }
     try {

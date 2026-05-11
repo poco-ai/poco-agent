@@ -3,6 +3,7 @@ import type { FileNode } from "@/features/chat/types";
 import type {
   ServerAgentItem,
   ServerChannelItem,
+  ServerSystemChannelType,
   ServerChannelMemberItem,
   ServerChannelVisibility,
   ServerConversationMessage,
@@ -45,6 +46,8 @@ interface ServerChannelResponse {
   description?: string | null;
   conversation_type: ServerConversationType;
   visibility: ServerChannelVisibility;
+  system_channel_type?: ServerSystemChannelType | null;
+  is_system_channel?: boolean;
   direct_user_id?: string | null;
   direct_agent_identity_id?: string | null;
   created_by: string | null;
@@ -133,7 +136,7 @@ interface ServerConversationMessageResponse {
   author_user_id?: string | null;
   author_user?: ServerUserPublicProfileResponse | null;
   author_agent?: ServerAgentResponse | null;
-  message_type: "user" | "system" | "task";
+  message_type: "user" | "system" | "task" | "event";
   content: Record<string, unknown>;
   text_preview?: string | null;
   thread_root_message_id?: string | null;
@@ -199,6 +202,9 @@ function mapChannel(channel: ServerChannelResponse): ServerChannelItem {
     description: channel.description,
     conversationType: channel.conversation_type,
     visibility: channel.visibility,
+    systemChannelType: channel.system_channel_type,
+    isSystemChannel:
+      channel.is_system_channel ?? channel.system_channel_type != null,
     directUserId: channel.direct_user_id,
     directAgentIdentityId: channel.direct_agent_identity_id,
     createdBy: channel.created_by,

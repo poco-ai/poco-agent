@@ -238,6 +238,17 @@
     "emptyTaskListTitle": "タスクはまだありません",
     "emptyTaskListDescription": "メッセージがタスクに変換されると、チャンネルタスクがここに表示されます。",
     "leave": "退出",
+    "events": {
+      "actor": "誰か",
+      "task": "無題のタスク",
+      "channelMemberJoined": "{{target}} が参加しました",
+      "channelAgentJoined": "{{target}} が参加しました",
+      "taskCreated": "{{actor}} がタスクを作成しました: {{task}}",
+      "taskStatusChanged": "{{actor}} がタスクを {{fromStatus}} から {{toStatus}} に移動しました",
+      "taskClaimed": "{{actor}} がタスクを引き受けました: {{task}}",
+      "taskUnclaimed": "{{actor}} がタスクの担当を解除しました: {{task}}",
+      "unknown": "{{actor}} がチャンネルを更新しました"
+    },
     "mentionCandidates": "メンション",
     "mentionKinds": {
       "agent": "Agent",
@@ -405,6 +416,7 @@
       "taskCreated": "メッセージからタスクを作成しました",
       "channelCreated": "チャンネルを作成しました",
       "channelCreateFailed": "チャンネルの作成に失敗しました",
+      "systemChannelNameReserved": "Public と Personal は予約済みのチャンネル名です",
       "channelUpdated": "チャンネルを更新しました",
       "channelUpdateFailed": "チャンネルの更新に失敗しました",
       "channelArchived": "チャンネルをアーカイブしました",

@@ -44,7 +44,7 @@ export interface ChannelTaskActivityMessage {
   messageId: string;
   channelId: string;
   authorUserId?: string | null;
-  messageType: "user" | "system" | "task";
+  messageType: "user" | "system" | "task" | "event";
   content: Record<string, unknown>;
   textPreview?: string | null;
   threadRootMessageId?: string | null;

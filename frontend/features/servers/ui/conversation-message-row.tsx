@@ -27,6 +27,8 @@ import type {
 import { useT } from "@/lib/i18n/client";
 import { cn } from "@/lib/utils";
 import {
+  getChannelEventContent,
+  getChannelEventLabelKey,
   getMessageSessionId,
   isExecutionDrilldownMessage,
 } from "../lib/server-conversation-messages";
@@ -36,6 +38,20 @@ import { MessageReactionPicker } from "./message-reaction-picker";
 
 const MESSAGE_COLLAPSE_LINES = 8;
 const MAX_REACTION_ACTOR_NAME_LENGTH = 18;
+
+type MessageRowProps = {
+  message: ServerConversationMessage;
+  agents?: ServerAgentItem[];
+  presets?: Preset[];
+  channelLabel?: string;
+  isSaved?: boolean;
+  compact?: boolean;
+  onOpenThread: () => void;
+  onOpenExecution?: ((sessionId: string) => void) | undefined;
+  onOpenAgentProfile?: ((agentId: string) => void) | undefined;
+  onToggleSaved: () => void;
+  onToggleReaction?: (emoji: string) => void;
+};
 
 export function formatTime(value: string): string {
   const date = new Date(value);
@@ -85,6 +101,10 @@ export function getMessageText(message: ServerConversationMessage): string {
 }
 
 export function getMessageAuthor(message: ServerConversationMessage): string {
+  if (message.messageType === "event") {
+    const event = getChannelEventContent(message);
+    return event?.actorLabel?.trim() || "System";
+  }
   if (message.messageType === "system") {
     const actor = message.content.actor_label;
     if (typeof actor === "string" && actor.trim()) {
@@ -100,6 +120,75 @@ export function getMessageAuthor(message: ServerConversationMessage): string {
     return "Task";
   }
   return getUserDisplayName(message.authorUser, message.authorUserId);
+}
+
+function ChannelEventRow({
+  message,
+  agents = [],
+  presets = [],
+  compact,
+}: Pick<MessageRowProps, "message" | "agents" | "presets" | "compact">) {
+  const { t } = useT("translation");
+  const event = getChannelEventContent(message);
+  if (!event) {
+    return null;
+  }
+
+  const actor = event.actorLabel?.trim() || t("conversationView.events.actor");
+  const target = event.targetLabel?.trim() || actor;
+  const task = event.title?.trim() || t("conversationView.events.task");
+  const label = t(getChannelEventLabelKey(event.eventType), {
+    actor,
+    target,
+    task,
+    fromStatus: event.fromStatus ?? "",
+    toStatus: event.toStatus ?? event.status ?? "",
+  });
+  const agentIdentityId =
+    event.eventType === "channel.agent_joined"
+      ? event.targetAgentIdentityId
+      : event.actorAgentIdentityId;
+  const agentHandle =
+    event.eventType === "channel.agent_joined"
+      ? event.targetAgentHandle
+      : event.actorAgentHandle;
+  const matchingAgent =
+    agents.find((agent) => agent.id === agentIdentityId) ??
+    agents.find((agent) => agent.handle === agentHandle) ??
+    null;
+  const fallbackName =
+    event.eventType === "channel.agent_joined" ? target : actor;
+
+  return (
+    <article
+      className={cn(
+        "flex gap-3 border-b border-border px-6 py-3 last:border-b-0",
+        compact && "py-2.5",
+      )}
+    >
+      {matchingAgent ? (
+        <ServerAgentAvatar
+          agent={matchingAgent}
+          presets={presets}
+          className="mt-0.5 size-7 shrink-0"
+          fallbackClassName="text-xs"
+        />
+      ) : (
+        <Avatar className="mt-0.5 size-7 shrink-0 rounded-md border border-border">
+          <AvatarFallback className="rounded-md bg-muted text-xs font-semibold text-muted-foreground">
+            {getInitials(fallbackName)}
+          </AvatarFallback>
+        </Avatar>
+      )}
+      <div className="min-w-0 rounded-md bg-muted/20 px-3 py-1.5 text-sm leading-6 text-muted-foreground">
+        <span className="break-words">{label}</span>
+        <span className="whitespace-nowrap">
+          {" "}
+          · {formatTime(message.createdAt)}
+        </span>
+      </div>
+    </article>
+  );
 }
 
 function getReactionActorName(
@@ -171,7 +260,7 @@ function getExecutionStatusLabelKey(status: string | null | undefined): string {
   }
 }
 
-export function MessageRow({
+function StandardMessageRow({
   message,
   agents = [],
   presets = [],
@@ -183,19 +272,7 @@ export function MessageRow({
   onOpenAgentProfile,
   onToggleSaved,
   onToggleReaction,
-}: {
-  message: ServerConversationMessage;
-  agents?: ServerAgentItem[];
-  presets?: Preset[];
-  channelLabel?: string;
-  isSaved?: boolean;
-  compact?: boolean;
-  onOpenThread: () => void;
-  onOpenExecution?: ((sessionId: string) => void) | undefined;
-  onOpenAgentProfile?: ((agentId: string) => void) | undefined;
-  onToggleSaved: () => void;
-  onToggleReaction?: (emoji: string) => void;
-}) {
+}: MessageRowProps) {
   const { t } = useT("translation");
   const [isExpanded, setIsExpanded] = React.useState(false);
   const [shouldCollapse, setShouldCollapse] = React.useState(false);
@@ -570,4 +647,18 @@ export function MessageRow({
       </div>
     </article>
   );
+}
+
+export function MessageRow(props: MessageRowProps) {
+  if (props.message.messageType === "event") {
+    return (
+      <ChannelEventRow
+        message={props.message}
+        agents={props.agents ?? []}
+        presets={props.presets ?? []}
+        compact={props.compact}
+      />
+    );
+  }
+  return <StandardMessageRow {...props} />;
 }

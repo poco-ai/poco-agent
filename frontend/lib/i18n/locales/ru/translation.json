@@ -238,6 +238,17 @@
     "emptyTaskListTitle": "Задач пока нет",
     "emptyTaskListDescription": "Задачи канала появятся здесь, когда сообщения будут преобразованы в работу.",
     "leave": "Покинуть",
+    "events": {
+      "actor": "Кто-то",
+      "task": "Задача без названия",
+      "channelMemberJoined": "{{target}} присоединился",
+      "channelAgentJoined": "{{target}} присоединился",
+      "taskCreated": "{{actor}} создал задачу: {{task}}",
+      "taskStatusChanged": "{{actor}} переместил задачу из {{fromStatus}} в {{toStatus}}",
+      "taskClaimed": "{{actor}} взял задачу: {{task}}",
+      "taskUnclaimed": "{{actor}} снял себя с задачи: {{task}}",
+      "unknown": "{{actor}} обновил канал"
+    },
     "mentionCandidates": "Упомянуть",
     "mentionKinds": {
       "agent": "Агент",
@@ -405,6 +416,7 @@
       "taskCreated": "Задача создана из сообщения",
       "channelCreated": "Канал создан",
       "channelCreateFailed": "Не удалось создать канал",
+      "systemChannelNameReserved": "Public и Personal — зарезервированные названия каналов",
       "channelUpdated": "Канал обновлён",
       "channelUpdateFailed": "Не удалось обновить канал",
       "channelArchived": "Канал архивирован",

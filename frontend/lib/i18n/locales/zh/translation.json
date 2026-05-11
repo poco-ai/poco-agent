@@ -239,6 +239,17 @@
     "emptyTaskListTitle": "暂无任务",
     "emptyTaskListDescription": "消息被转换为任务后，会在这里展示为列表。",
     "leave": "离开",
+    "events": {
+      "actor": "有人",
+      "task": "未命名任务",
+      "channelMemberJoined": "{{target}} 加入了频道",
+      "channelAgentJoined": "{{target}} 加入了频道",
+      "taskCreated": "{{actor}} 创建了任务：{{task}}",
+      "taskStatusChanged": "{{actor}} 将任务从 {{fromStatus}} 移到 {{toStatus}}",
+      "taskClaimed": "{{actor}} 认领了任务：{{task}}",
+      "taskUnclaimed": "{{actor}} 取消认领任务：{{task}}",
+      "unknown": "{{actor}} 更新了频道"
+    },
     "mentionCandidates": "提及",
     "mentionKinds": {
       "agent": "Agent",
@@ -409,6 +420,7 @@
       "taskCreated": "已从消息创建任务",
       "channelCreated": "频道已创建",
       "channelCreateFailed": "创建频道失败",
+      "systemChannelNameReserved": "Public 和 Personal 是系统保留频道名",
       "channelUpdated": "频道已更新",
       "channelUpdateFailed": "更新频道失败",
       "channelArchived": "频道已归档",

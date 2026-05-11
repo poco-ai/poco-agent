@@ -8,15 +8,15 @@
 | **预期改动范围** | backend server/channel models / server invite accept flow / channel member and agent membership services / channel task messages / frontend server conversation rendering / i18n / migrations / tests |
 | **改动类型** | feat |
 | **优先级** | P1 |
-| **状态** | in-progress |
+| **状态** | review |
 
 ## 实施阶段
 
 - [x] Phase 0: 固定系统频道与轻量事件的产品边界（2026-05-11）
 - [x] Phase 1: 后端补齐系统频道模型、迁移与默认成员关系（2026-05-11）
 - [x] Phase 2: 后端把加入频道与 task 操作落成结构化 event message（2026-05-11）
-- [ ] Phase 3: 前端实现轻量事件行与系统频道保护交互
-- [ ] Phase 4: 验证、回写 spec 状态并整理提交
+- [x] Phase 3: 前端实现轻量事件行与系统频道保护交互（2026-05-11）
+- [x] Phase 4: 验证、回写 spec 状态并整理提交（2026-05-11）
 
 ---
 
@@ -527,3 +527,17 @@ pnpm build
 ## 总结
 
 本计划把 Public/Personal 从“默认创建的普通频道”提升为系统频道，并把 invite、channel membership 和 task 操作统一收敛到结构化 event message。实现后，频道时间线会有三种清晰形态：普通聊天消息、agent execution 卡片、轻量协作事件行；通过 invite key 加入 server 的同事也会真正成为 Public channel 成员，而不是只“看得到 public channel”。
+
+## 实施记录
+
+- 2026-05-11：完成后端系统频道字段、迁移 backfill、默认 Public membership、系统频道保护、channel/user/agent/task event message；已提交 `02dd7345`。
+- 2026-05-11：完成前端 event message 类型、轻量事件行、系统频道危险操作隐藏/禁用、系统频道排序与 i18n；等待最终验收。
+
+### 验证记录
+
+- `cd backend && uv run -m alembic upgrade head`
+- `cd backend && uv run python -m py_compile app/models/server_channel.py app/schemas/server_channel.py app/schemas/server_channel_message.py app/repositories/server_channel_repository.py app/services/server_service.py app/services/server_channel_service.py app/services/server_invite_service.py app/services/server_channel_event_service.py app/services/agent_identity_service.py app/services/server_channel_task_service.py tests/test_server_service.py tests/test_agent_identity_service.py tests/test_server_channel_task_service.py alembic/versions/accd5cb3b1da_add_server_system_channels.py`
+- `cd backend && uv run python -m unittest tests.test_server_service tests.test_agent_identity_service tests.test_server_channel_task_service`
+- `cd frontend && node --test --experimental-strip-types --experimental-specifier-resolution=node features/servers/lib/server-conversation-messages.test.ts`
+- `cd frontend && pnpm lint`
+- `cd frontend && pnpm build`

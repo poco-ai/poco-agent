@@ -239,6 +239,17 @@
     "emptyTaskListTitle": "No tasks yet",
     "emptyTaskListDescription": "Channel tasks will appear here once messages are converted into work.",
     "leave": "Leave",
+    "events": {
+      "actor": "Someone",
+      "task": "Untitled task",
+      "channelMemberJoined": "{{target}} joined",
+      "channelAgentJoined": "{{target}} joined",
+      "taskCreated": "{{actor}} created task: {{task}}",
+      "taskStatusChanged": "{{actor}} moved task from {{fromStatus}} to {{toStatus}}",
+      "taskClaimed": "{{actor}} claimed task: {{task}}",
+      "taskUnclaimed": "{{actor}} unclaimed task: {{task}}",
+      "unknown": "{{actor}} updated the channel"
+    },
     "mentionCandidates": "Mention",
     "mentionKinds": {
       "agent": "Agent",
@@ -409,6 +420,7 @@
       "taskCreated": "Task created from message",
       "channelCreated": "Channel created",
       "channelCreateFailed": "Failed to create channel",
+      "systemChannelNameReserved": "Public and Personal are reserved channel names",
       "channelUpdated": "Channel updated",
       "channelUpdateFailed": "Failed to update channel",
       "channelArchived": "Channel archived",

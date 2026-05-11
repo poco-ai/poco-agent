@@ -238,6 +238,17 @@
     "emptyTaskListTitle": "Aucune tâche pour le moment",
     "emptyTaskListDescription": "Les tâches du canal apparaîtront ici lorsque des messages seront convertis en travail.",
     "leave": "Quitter",
+    "events": {
+      "actor": "Quelqu'un",
+      "task": "Tâche sans titre",
+      "channelMemberJoined": "{{target}} a rejoint",
+      "channelAgentJoined": "{{target}} a rejoint",
+      "taskCreated": "{{actor}} a créé la tâche : {{task}}",
+      "taskStatusChanged": "{{actor}} a déplacé la tâche de {{fromStatus}} vers {{toStatus}}",
+      "taskClaimed": "{{actor}} a pris la tâche : {{task}}",
+      "taskUnclaimed": "{{actor}} a libéré la tâche : {{task}}",
+      "unknown": "{{actor}} a mis à jour le canal"
+    },
     "mentionCandidates": "Mentionner",
     "mentionKinds": {
       "agent": "Agent",
@@ -405,6 +416,7 @@
       "taskCreated": "Tâche créée depuis le message",
       "channelCreated": "Canal créé",
       "channelCreateFailed": "Impossible de créer le canal",
+      "systemChannelNameReserved": "Public et Personal sont des noms de canal réservés",
       "channelUpdated": "Canal mis à jour",
       "channelUpdateFailed": "Impossible de mettre à jour le canal",
       "channelArchived": "Canal archivé",

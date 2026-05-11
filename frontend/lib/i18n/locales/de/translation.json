@@ -238,6 +238,17 @@
     "emptyTaskListTitle": "Noch keine Aufgaben",
     "emptyTaskListDescription": "Kanalaufgaben erscheinen hier, sobald Nachrichten in Arbeit umgewandelt werden.",
     "leave": "Verlassen",
+    "events": {
+      "actor": "Jemand",
+      "task": "Unbenannte Aufgabe",
+      "channelMemberJoined": "{{target}} ist beigetreten",
+      "channelAgentJoined": "{{target}} ist beigetreten",
+      "taskCreated": "{{actor}} hat Aufgabe erstellt: {{task}}",
+      "taskStatusChanged": "{{actor}} hat Aufgabe von {{fromStatus}} nach {{toStatus}} verschoben",
+      "taskClaimed": "{{actor}} hat Aufgabe übernommen: {{task}}",
+      "taskUnclaimed": "{{actor}} hat Aufgabe freigegeben: {{task}}",
+      "unknown": "{{actor}} hat den Kanal aktualisiert"
+    },
     "mentionCandidates": "Erwähnen",
     "mentionKinds": {
       "agent": "Agent",
@@ -405,6 +416,7 @@
       "taskCreated": "Aufgabe aus Nachricht erstellt",
       "channelCreated": "Kanal erstellt",
       "channelCreateFailed": "Kanal konnte nicht erstellt werden",
+      "systemChannelNameReserved": "Public und Personal sind reservierte Kanalnamen",
       "channelUpdated": "Kanal aktualisiert",
       "channelUpdateFailed": "Kanal konnte nicht aktualisiert werden",
       "channelArchived": "Kanal archiviert",
