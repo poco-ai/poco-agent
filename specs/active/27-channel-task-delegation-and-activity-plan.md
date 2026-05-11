@@ -8,16 +8,16 @@
 | **预期改动范围** | backend channel task model / task event payload / task schemas and profile hydration / frontend channel task board and drawer / channel event row / context drawer / i18n / migrations / tests |
 | **改动类型** | feat |
 | **优先级** | P1 |
-| **状态** | in-progress |
+| **状态** | review |
 
 ## 实施阶段
 
 - [x] Phase 0: 对齐当前实现与设计边界
 - [x] Phase 1: 补齐 task 编号、actor 与 assignee 数据契约
 - [x] Phase 2: 收敛 task event payload 与 activity timeline
-- [ ] Phase 3: 升级 task 面板的委托关系展示与编辑
-- [ ] Phase 4: 建立 activity 到频道上下文抽屉的回跳
-- [ ] Phase 5: 验证、回写 spec 状态并整理提交
+- [x] Phase 3: 升级 task 面板的委托关系展示与编辑
+- [x] Phase 4: 建立 activity 到频道上下文抽屉的回跳
+- [x] Phase 5: 验证、回写 spec 状态并整理提交
 
 ---
 
@@ -336,10 +336,10 @@ class ChannelTaskActorSummary(BaseModel):
 
 **验收标准：**
 
-- [ ] `ChannelTask` 包含 `displayNumber`
-- [ ] `ChannelTask` 包含 `creator`
-- [ ] `ChannelTask` 包含 `assignee`
-- [ ] mapper 不再只保留裸 `creatorUserId` / `assigneeUserId`
+- [x] `ChannelTask` 包含 `displayNumber`
+- [x] `ChannelTask` 包含 `creator`
+- [x] `ChannelTask` 包含 `assignee`
+- [x] mapper 不再只保留裸 `creatorUserId` / `assigneeUserId`
 
 #### 3.2 Task 卡片展示 creator 与 assignee
 
@@ -353,11 +353,11 @@ class ChannelTaskActorSummary(BaseModel):
 
 **验收标准：**
 
-- [ ] task card 显示 `#<displayNumber>`
-- [ ] task card 显示 creator 头像 + name
-- [ ] task card 显示 assignee 头像 + name，未分配时显示 Unassigned
-- [ ] agent assignee 使用 agent avatar，user assignee 使用 user avatar
-- [ ] 移动端不出现文字溢出
+- [x] task card 显示 `#<displayNumber>`
+- [x] task card 显示 creator 头像 + name
+- [x] task card 显示 assignee 头像 + name，未分配时显示 Unassigned
+- [x] agent assignee 使用 agent avatar，user assignee 使用 user avatar
+- [x] 移动端不出现文字溢出
 
 #### 3.3 Task detail 支持更新 assignee
 
@@ -372,11 +372,11 @@ class ChannelTaskActorSummary(BaseModel):
 
 **验收标准：**
 
-- [ ] detail 中可把 task 分配给 user
-- [ ] detail 中可把 task 分配给 agent
-- [ ] detail 中可清空 assignee
-- [ ] 成功更新后 task card 和 detail 同步刷新
-- [ ] 更新 assignee 后 channel timeline 中出现轻量 event
+- [x] detail 中可把 task 分配给 user
+- [x] detail 中可把 task 分配给 agent
+- [x] detail 中可清空 assignee
+- [x] 成功更新后 task card 和 detail 同步刷新
+- [x] 更新 assignee 后 channel timeline 中出现轻量 event
 
 #### 3.4 同步 server conversation 内嵌 task drawer
 
@@ -390,9 +390,9 @@ class ChannelTaskActorSummary(BaseModel):
 
 **验收标准：**
 
-- [ ] 从 server conversation 打开的 task drawer 显示 creator/assignee
-- [ ] 从 channel task 页面打开的 detail 显示一致
-- [ ] 两个入口更新 assignee 后都刷新 activity
+- [x] 从 server conversation 打开的 task drawer 显示 creator/assignee
+- [x] 从 channel task 页面打开的 detail 显示一致
+- [x] 两个入口更新 assignee 后都刷新 activity
 
 ---
 
@@ -417,9 +417,9 @@ class ChannelTaskActorSummary(BaseModel):
 
 **验收标准：**
 
-- [ ] activity 中不再显示 raw `event`/`task` badge
-- [ ] activity 文案与 channel timeline 里的 event 文案一致
-- [ ] activity item 最多一行，长内容截断
+- [x] activity 中不再显示 raw `event`/`task` badge
+- [x] activity 文案与 channel timeline 里的 event 文案一致
+- [x] activity item 最多一行，长内容截断
 
 #### 4.2 后端支持按 message 定位上下文
 
@@ -438,10 +438,10 @@ class ChannelTaskActorSummary(BaseModel):
 
 **验收标准：**
 
-- [ ] 只有有 channel access 的用户能读取上下文
-- [ ] response 包含 target message
-- [ ] response 包含 target 前后若干消息
-- [ ] private channel 权限沿用现有 message access 规则
+- [x] 只有有 channel access 的用户能读取上下文
+- [x] response 包含 target message
+- [x] response 包含 target 前后若干消息
+- [x] private channel 权限沿用现有 message access 规则
 
 #### 4.3 前端新增频道上下文抽屉
 
@@ -456,11 +456,11 @@ class ChannelTaskActorSummary(BaseModel):
 
 **验收标准：**
 
-- [ ] 点击 activity item 打开频道上下文抽屉
-- [ ] 抽屉内滚动到对应 event message
-- [ ] 目标 event 有高亮态
-- [ ] 关闭上下文抽屉后仍停留在 task detail
-- [ ] 上下文抽屉中普通消息、event、execution placeholder 都能用既有样式渲染
+- [x] 点击 activity item 打开频道上下文抽屉
+- [x] 抽屉内滚动到对应 event message
+- [x] 目标 event 有高亮态
+- [x] 关闭上下文抽屉后仍停留在 task detail
+- [x] 上下文抽屉中普通消息、event、execution placeholder 都能用既有样式渲染
 
 #### 4.4 URL 与状态同步
 
@@ -473,9 +473,9 @@ class ChannelTaskActorSummary(BaseModel):
 
 **验收标准：**
 
-- [ ] 打开 activity context 不清空当前 task selection
-- [ ] 切换 task 时会清空旧 context
-- [ ] 页面刷新时至少不会进入错误状态
+- [x] 打开 activity context 不清空当前 task selection
+- [x] 切换 task 时会清空旧 context
+- [x] 页面刷新时至少不会进入错误状态
 
 ---
 
@@ -500,11 +500,11 @@ uv run pytest tests/test_server_channel_task_service.py tests/test_server_channe
 
 **验收标准：**
 
-- [ ] 创建 task 自动分配 display number
-- [ ] 设置 user/agent assignee 生成正确 event
-- [ ] 清空 assignee 生成正确 event
-- [ ] agent claim 写入 agent identity assignee
-- [ ] message context API 权限和返回范围正确
+- [x] 创建 task 自动分配 display number
+- [x] 设置 user/agent assignee 生成正确 event
+- [x] 清空 assignee 生成正确 event
+- [x] agent claim 写入 agent identity assignee
+- [x] message context API 权限和返回范围正确
 
 #### 5.2 前端验证
 
@@ -522,11 +522,11 @@ pnpm build
 
 **验收标准：**
 
-- [ ] task card 显示编号、creator、assignee
-- [ ] task detail 可更新 assignee
-- [ ] activity 使用轻量 event timeline
-- [ ] activity 点击能打开频道上下文并高亮目标 event
-- [ ] i18n 文案无硬编码用户可见英文
+- [x] task card 显示编号、creator、assignee
+- [x] task detail 可更新 assignee
+- [x] activity 使用轻量 event timeline
+- [x] activity 点击能打开频道上下文并高亮目标 event
+- [x] i18n 文案无硬编码用户可见英文
 
 #### 5.3 手动验收路径
 
@@ -558,10 +558,19 @@ pnpm build
 
 **验收标准：**
 
-- [ ] 文档 phase 状态与实际实现一致
-- [ ] 记录最终验证命令和任何既有失败
+- [x] 文档 phase 状态与实际实现一致
+- [x] 记录最终验证命令和任何既有失败
 
 ---
+
+
+## 实施记录
+
+- 2026-05-11：完成 Phase 0-2，第一个提交补齐 task display number、agent identity assignee、actor/assignee summary 与结构化 task event payload。
+- 2026-05-11：完成 Phase 3-4，第二个提交补齐 task 卡片/detail/drawer 的委托展示与编辑、activity event timeline，以及按 message 定位的频道上下文回跳。
+- 验证：`cd backend && uv run python -m py_compile app/api/v1/server_channel_messages.py app/schemas/server_channel_message.py app/services/server_channel_message_service.py` 通过；`cd backend && uv run python -m py_compile app/models/server_channel_task.py app/schemas/server_channel_task.py app/schemas/server_channel_task_agent.py app/services/server_channel_task_service.py app/services/server_channel_task_agent_service.py app/repositories/server_channel_task_repository.py tests/test_server_channel_task_service.py` 通过。
+- 验证：`cd frontend && pnpm lint` 通过；`cd frontend && pnpm build` 通过。
+- 既有阻塞：`cd backend && uv run pytest tests/test_server_channel_task_service.py -q` 因当前 backend 环境未安装 `pytest` 可执行文件而无法运行。
 
 ## 风险与缓解
 

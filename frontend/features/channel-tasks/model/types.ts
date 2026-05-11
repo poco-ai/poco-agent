@@ -69,3 +69,8 @@ export interface ChannelTaskActivityMessage {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface ChannelTaskMessageContext {
+  target: ChannelTaskActivityMessage;
+  messages: ChannelTaskActivityMessage[];
+}

@@ -157,7 +157,13 @@
       "executionPlaceholder": "Execution summary and runtime state will attach here once the channel task flow connects to the agent runtime.",
       "currentStatus": "Current status: {{status}}",
       "assigneeAttached": "Assignee attached",
-      "assigneePending": "Assignee pending"
+      "assigneePending": "Assignee pending",
+      "creator": "Creator",
+      "assignee": "Assignee",
+      "unassigned": "Unassigned",
+      "unknownActor": "Unknown",
+      "context": "Channel context",
+      "contextDescription": "Review the channel messages around the selected activity."
     },
     "toasts": {
       "loadFailed": "Failed to load channel tasks",
@@ -171,7 +177,10 @@
       "unclaimed": "Task unclaimed",
       "claimFailed": "Failed to update task claim",
       "statusUpdated": "Task status updated",
-      "statusFailed": "Failed to update task status"
+      "statusFailed": "Failed to update task status",
+      "assigneeUpdated": "Assignee updated",
+      "assigneeFailed": "Failed to update assignee",
+      "contextFailed": "Failed to load channel context"
     }
   },
   "conversationView": {

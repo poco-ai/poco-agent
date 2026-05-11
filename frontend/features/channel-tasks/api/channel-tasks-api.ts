@@ -5,6 +5,7 @@ import type {
   ChannelTask,
   ChannelTaskActorSummary,
   ChannelTaskCreateInput,
+  ChannelTaskMessageContext,
   ChannelTaskStatusUpdateInput,
   ChannelTaskStatus,
   ChannelTaskUpdateInput,
@@ -104,6 +105,11 @@ interface ChannelTaskMessageResponse {
 interface ChannelTaskThreadResponse {
   root: ChannelTaskMessageResponse;
   replies: ChannelTaskMessageResponse[];
+}
+
+interface ChannelTaskMessageContextResponse {
+  target: ChannelTaskMessageResponse;
+  messages: ChannelTaskMessageResponse[];
 }
 
 function mapActivityMessage(
@@ -231,5 +237,23 @@ export const channelTasksApi = {
       ),
     );
     return [thread.root, ...thread.replies].map(mapActivityMessage);
+  },
+
+  getMessageContext: async (
+    serverId: string,
+    channelId: string,
+    messageId: string,
+  ): Promise<ChannelTaskMessageContext> => {
+    const context = await apiClient.get<ChannelTaskMessageContextResponse>(
+      `${API_ENDPOINTS.serverChannelMessageContext(
+        serverId,
+        channelId,
+        messageId,
+      )}?before=20&after=20`,
+    );
+    return {
+      target: mapActivityMessage(context.target),
+      messages: context.messages.map(mapActivityMessage),
+    };
   },
 };

@@ -23,6 +23,7 @@ import type {
   ChannelTask,
   ChannelTaskActivityMessage,
 } from "@/features/channel-tasks/model/types";
+import { channelTasksApi } from "@/features/channel-tasks/api/channel-tasks-api";
 import { TaskHistoryProvider } from "@/features/projects/contexts/task-history-context";
 import type {
   ServerAgentItem,
@@ -570,15 +571,56 @@ export function ExecutionDrawer({
 }
 
 export function TaskDrawer({
+  serverId,
+  channelId,
   task,
   activity,
+  members,
+  agents,
+  onTaskUpdated,
+  onRefreshActivity,
   onClose,
 }: {
+  serverId: string;
+  channelId: string;
   task: ChannelTask;
   activity: ChannelTaskActivityMessage[];
+  members: ServerChannelMemberItem[];
+  agents: ServerAgentItem[];
+  onTaskUpdated: (task: ChannelTask) => void;
+  onRefreshActivity: () => Promise<void>;
   onClose: () => void;
 }) {
   const { t } = useT("translation");
+  const [isSaving, setIsSaving] = React.useState(false);
+
+  const updateAssignee = async (value: string) => {
+    const [kind, id] = value.split(":", 2);
+    setIsSaving(true);
+    try {
+      const nextTask = await channelTasksApi.updateTask(
+        serverId,
+        channelId,
+        task.taskId,
+        {
+          title: task.title,
+          description: task.description,
+          assigneeUserId: kind === "user" ? id : null,
+          assigneeAgentIdentityId: kind === "agent" ? id : null,
+          assigneePresetId: null,
+        },
+      );
+      onTaskUpdated(nextTask);
+      await onRefreshActivity();
+      toast.success(t("channelTasks.toasts.assigneeUpdated"));
+    } catch (error) {
+      console.error("[TaskDrawer] assignee update failed", error);
+      toast.error(t("channelTasks.toasts.assigneeFailed"));
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
     <aside className={overlayDrawerClassName}>
       <div className={drawerHeaderClassName}>
@@ -605,9 +647,51 @@ export function TaskDrawer({
             <p className="text-xs font-medium text-muted-foreground">
               {t("conversationView.taskDetail")}
             </p>
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+              <Badge variant="secondary">#{task.displayNumber}</Badge>
+              <Badge variant="outline">
+                {t("channelTasks.detail.creator")}:{" "}
+                {task.creator?.label || task.creatorUserId}
+              </Badge>
+              <Badge variant="outline">
+                {t("channelTasks.detail.assignee")}:{" "}
+                {task.assignee?.label || t("channelTasks.detail.unassigned")}
+              </Badge>
+            </div>
             <p className="mt-2 text-sm leading-7 text-foreground">
               {task.description || t("servers.agents.emptyDescription")}
             </p>
+            <label className="mt-4 block space-y-1.5">
+              <span className="text-xs font-medium text-muted-foreground">
+                {t("channelTasks.detail.assignee")}
+              </span>
+              <select
+                value={
+                  task.assigneeAgentIdentityId
+                    ? `agent:${task.assigneeAgentIdentityId}`
+                    : task.assigneeUserId
+                      ? `user:${task.assigneeUserId}`
+                      : "none:"
+                }
+                disabled={isSaving}
+                onChange={(event) => void updateAssignee(event.target.value)}
+                className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm text-foreground shadow-none"
+              >
+                <option value="none:">
+                  {t("channelTasks.detail.unassigned")}
+                </option>
+                {members.map((member) => (
+                  <option key={member.id} value={`user:${member.userId}`}>
+                    {member.user?.displayName || member.userId}
+                  </option>
+                ))}
+                {agents.map((agent) => (
+                  <option key={agent.id} value={`agent:${agent.id}`}>
+                    @{agent.handle} / {agent.displayName}
+                  </option>
+                ))}
+              </select>
+            </label>
           </div>
           <div className="rounded-md border border-border px-4 py-4">
             <p className="text-xs font-medium text-muted-foreground">

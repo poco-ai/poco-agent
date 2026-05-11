@@ -9,6 +9,7 @@ from app.models.user import User
 from app.schemas.response import Response, ResponseSchema
 from app.schemas.server_channel_message import (
     ServerChannelMessageCreateRequest,
+    ServerChannelMessageContextResponse,
     ServerChannelMessageResponse,
     ServerChannelThreadResponse,
 )
@@ -93,6 +94,34 @@ async def get_channel_thread(
     return Response.success(
         data=result,
         message="Server channel thread retrieved successfully",
+    )
+
+
+@router.get(
+    "/messages/{message_id}/context",
+    response_model=ResponseSchema[ServerChannelMessageContextResponse],
+)
+async def get_channel_message_context(
+    server_id: uuid.UUID,
+    channel_id: uuid.UUID,
+    message_id: uuid.UUID,
+    before: int = Query(default=20, ge=0, le=100),
+    after: int = Query(default=20, ge=0, le=100),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> JSONResponse:
+    result = service.get_message_context(
+        db,
+        current_user,
+        server_id,
+        channel_id,
+        message_id,
+        before=before,
+        after=after,
+    )
+    return Response.success(
+        data=result,
+        message="Server channel message context retrieved successfully",
     )
 
 

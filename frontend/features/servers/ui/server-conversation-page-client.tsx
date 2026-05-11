@@ -3264,8 +3264,31 @@ export function ServerConversationPageClient({
                   />
                 ) : drawer.type === "task" && selectedTask ? (
                   <TaskDrawer
+                    serverId={selectedServerId ?? selectedTask.serverId}
+                    channelId={activeChannelId ?? selectedTask.channelId}
                     task={selectedTask}
                     activity={taskActivity}
+                    members={channelMembers}
+                    agents={channelAgents}
+                    onTaskUpdated={(nextTask) => {
+                      setTasks((current) =>
+                        current.map((task) =>
+                          task.taskId === nextTask.taskId ? nextTask : task,
+                        ),
+                      );
+                    }}
+                    onRefreshActivity={async () => {
+                      if (!selectedTask.threadRootMessageId || !activeChannelId) {
+                        return;
+                      }
+                      setTaskActivity(
+                        await channelTasksApi.getTaskThread(
+                          selectedServerId ?? selectedTask.serverId,
+                          activeChannelId,
+                          selectedTask.threadRootMessageId,
+                        ),
+                      );
+                    }}
                     onClose={() => setDrawer({ type: "none" })}
                   />
                 ) : drawer.type === "execution" ? (

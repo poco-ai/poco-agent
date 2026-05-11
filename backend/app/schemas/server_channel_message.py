@@ -43,3 +43,8 @@ class ServerChannelMessageResponse(BaseModel):
 class ServerChannelThreadResponse(BaseModel):
     root: ServerChannelMessageResponse
     replies: list[ServerChannelMessageResponse]
+
+
+class ServerChannelMessageContextResponse(BaseModel):
+    target: ServerChannelMessageResponse
+    messages: list[ServerChannelMessageResponse]
