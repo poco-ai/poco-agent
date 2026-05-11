@@ -17,10 +17,7 @@ from app.repositories.server_channel_message_repository import (
 from app.repositories.server_channel_agent_member_repository import (
     ServerChannelAgentMemberRepository,
 )
-from app.repositories.server_channel_repository import (
-    ServerChannelMemberRepository,
-    ServerChannelRepository,
-)
+from app.repositories.server_channel_repository import ServerChannelRepository
 from app.repositories.server_member_repository import ServerMemberRepository
 from app.repositories.server_channel_task_repository import (
     ServerChannelTaskRepository,
@@ -35,6 +32,7 @@ from app.schemas.server_channel_task import (
     ServerChannelTaskStatusUpdateRequest,
     ServerChannelTaskUpdateRequest,
 )
+from app.services.server_channel_access import require_channel_member_access
 from app.services.server_member_service import require_server_member
 
 
@@ -196,25 +194,12 @@ class ServerChannelTaskService:
         server_id: uuid.UUID,
         channel_id: uuid.UUID,
     ) -> ServerChannel:
-        require_server_member(db, server_id, current_user.id)
-        channel = ServerChannelRepository.get_by_id(db, channel_id)
-        if channel is None or channel.server_id != server_id:
-            raise AppException(
-                error_code=ErrorCode.NOT_FOUND,
-                message=f"Channel not found: {channel_id}",
-            )
-        if channel.visibility == "private":
-            membership = ServerChannelMemberRepository.get_by_channel_and_user(
-                db,
-                channel.id,
-                current_user.id,
-            )
-            if membership is None or membership.status != "active":
-                raise AppException(
-                    error_code=ErrorCode.FORBIDDEN,
-                    message="You are not a member of this private channel",
-                )
-        return channel
+        return require_channel_member_access(
+            db,
+            server_id=server_id,
+            channel_id=channel_id,
+            user_id=current_user.id,
+        )
 
     def _require_task_access(
         self,

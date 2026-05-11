@@ -50,20 +50,15 @@ class ServerChannelRepository:
     ) -> list[ServerChannel]:
         return (
             session_db.query(ServerChannel)
-            .outerjoin(
+            .join(
                 ServerChannelMember,
-                ServerChannelMember.channel_id == ServerChannel.id,
+                (ServerChannelMember.channel_id == ServerChannel.id)
+                & (ServerChannelMember.user_id == user_id)
+                & (ServerChannelMember.status == "active"),
             )
             .filter(
                 ServerChannel.server_id == server_id,
                 ServerChannel.archived_at.is_(None),
-                (
-                    (ServerChannel.visibility == "public")
-                    | (
-                        (ServerChannelMember.user_id == user_id)
-                        & (ServerChannelMember.status == "active")
-                    )
-                ),
             )
             .order_by(ServerChannel.created_at.asc(), ServerChannel.name.asc())
             .all()

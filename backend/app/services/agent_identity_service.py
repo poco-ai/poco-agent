@@ -32,6 +32,7 @@ from app.schemas.agent_identity import (
     ChannelAgentMemberResponse,
 )
 from app.services.agent_state_bootstrap_service import ensure_agent_state_bootstrap
+from app.services.server_channel_access import require_channel_member_access
 from app.services.server_member_service import (
     require_server_admin,
     require_server_member,
@@ -240,13 +241,12 @@ class AgentIdentityService:
         server_id: uuid.UUID,
         channel_id: uuid.UUID,
     ) -> list[AgentIdentityResponse]:
-        require_server_member(db, server_id, current_user.id)
-        channel = ServerChannelRepository.get_by_id(db, channel_id)
-        if channel is None or channel.server_id != server_id:
-            raise AppException(
-                error_code=ErrorCode.NOT_FOUND,
-                message=f"Channel not found: {channel_id}",
-            )
+        channel = require_channel_member_access(
+            db,
+            server_id=server_id,
+            channel_id=channel_id,
+            user_id=current_user.id,
+        )
 
         memberships = ServerChannelAgentMemberRepository.list_by_channel(db, channel.id)
         agent_responses: list[AgentIdentityResponse] = []

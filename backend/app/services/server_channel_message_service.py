@@ -12,10 +12,6 @@ from app.repositories.agent_identity_repository import AgentIdentityRepository
 from app.repositories.server_channel_message_repository import (
     ServerChannelMessageRepository,
 )
-from app.repositories.server_channel_repository import (
-    ServerChannelMemberRepository,
-    ServerChannelRepository,
-)
 from app.schemas.server_channel_message import (
     ServerChannelMessageCreateRequest,
     ServerChannelMessageContextResponse,
@@ -28,7 +24,7 @@ from app.schemas.server_channel_message_reaction import (
 from app.schemas.agent_identity import AgentIdentityResponse
 from app.schemas.user_profile import UserPublicProfileResponse
 from app.services.server_agent_trigger_service import ServerAgentTriggerService
-from app.services.server_member_service import require_server_member
+from app.services.server_channel_access import require_channel_member_access
 from app.services.user_public_profile_service import (
     build_user_public_profile,
     list_user_public_profiles_by_id,
@@ -117,25 +113,12 @@ class ServerChannelMessageService:
         server_id: uuid.UUID,
         channel_id: uuid.UUID,
     ) -> ServerChannel:
-        require_server_member(db, server_id, current_user.id)
-        channel = ServerChannelRepository.get_by_id(db, channel_id)
-        if channel is None or channel.server_id != server_id:
-            raise AppException(
-                error_code=ErrorCode.NOT_FOUND,
-                message=f"Channel not found: {channel_id}",
-            )
-        if channel.visibility == "private":
-            membership = ServerChannelMemberRepository.get_by_channel_and_user(
-                db,
-                channel.id,
-                current_user.id,
-            )
-            if membership is None or membership.status != "active":
-                raise AppException(
-                    error_code=ErrorCode.FORBIDDEN,
-                    message="You are not a member of this private channel",
-                )
-        return channel
+        return require_channel_member_access(
+            db,
+            server_id=server_id,
+            channel_id=channel_id,
+            user_id=current_user.id,
+        )
 
     def send_message(
         self,
