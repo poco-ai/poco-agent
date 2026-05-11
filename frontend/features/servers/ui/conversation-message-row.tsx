@@ -8,6 +8,7 @@ import {
   Copy,
   MessageSquare,
   SmilePlus,
+  SquareCheckBig,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -124,10 +125,8 @@ export function getMessageAuthor(message: ServerConversationMessage): string {
 
 function ChannelEventRow({
   message,
-  agents = [],
-  presets = [],
   compact,
-}: Pick<MessageRowProps, "message" | "agents" | "presets" | "compact">) {
+}: Pick<MessageRowProps, "message" | "compact">) {
   const { t } = useT("translation");
   const event = getChannelEventContent(message);
   if (!event) {
@@ -144,44 +143,35 @@ function ChannelEventRow({
     fromStatus: event.fromStatus ?? "",
     toStatus: event.toStatus ?? event.status ?? "",
   });
-  const agentIdentityId =
-    event.eventType === "channel.agent_joined"
-      ? event.targetAgentIdentityId
-      : event.actorAgentIdentityId;
-  const agentHandle =
-    event.eventType === "channel.agent_joined"
-      ? event.targetAgentHandle
-      : event.actorAgentHandle;
-  const matchingAgent =
-    agents.find((agent) => agent.id === agentIdentityId) ??
-    agents.find((agent) => agent.handle === agentHandle) ??
-    null;
   const fallbackName =
     event.eventType === "channel.agent_joined" ? target : actor;
+  const isJoinEvent =
+    event.eventType === "channel.member_joined" ||
+    event.eventType === "channel.agent_joined";
 
   return (
     <article
       className={cn(
-        "flex gap-3 border-b border-border px-6 py-3 last:border-b-0",
+        "flex items-center gap-2 border-b border-border px-6 py-3 text-sm text-muted-foreground last:border-b-0",
         compact && "py-2.5",
       )}
     >
-      {matchingAgent ? (
-        <ServerAgentAvatar
-          agent={matchingAgent}
-          presets={presets}
-          className="mt-0.5 size-7 shrink-0"
-          fallbackClassName="text-xs"
-        />
-      ) : (
-        <Avatar className="mt-0.5 size-7 shrink-0 rounded-md border border-border">
-          <AvatarFallback className="rounded-md bg-muted text-xs font-semibold text-muted-foreground">
-            {getInitials(fallbackName)}
-          </AvatarFallback>
-        </Avatar>
-      )}
-      <div className="min-w-0 rounded-md bg-muted/20 px-3 py-1.5 text-sm leading-6 text-muted-foreground">
-        <span className="break-words">{label}</span>
+      <span className="flex size-7 shrink-0 items-center justify-center text-base">
+        {isJoinEvent ? (
+          <span aria-hidden="true">👋</span>
+        ) : (
+          <SquareCheckBig className="size-4" aria-hidden="true" />
+        )}
+      </span>
+      <div className="min-w-0 leading-6">
+        <span className="break-words">
+          <span className="font-medium text-muted-foreground underline decoration-muted-foreground/50 underline-offset-4">
+            {fallbackName}
+          </span>
+          {label.startsWith(fallbackName)
+            ? label.slice(fallbackName.length)
+            : ` ${label}`}
+        </span>
         <span className="whitespace-nowrap">
           {" "}
           · {formatTime(message.createdAt)}
@@ -654,8 +644,6 @@ export function MessageRow(props: MessageRowProps) {
     return (
       <ChannelEventRow
         message={props.message}
-        agents={props.agents ?? []}
-        presets={props.presets ?? []}
         compact={props.compact}
       />
     );

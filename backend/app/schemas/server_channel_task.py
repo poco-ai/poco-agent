@@ -20,6 +20,7 @@ class ServerChannelTaskCreateRequest(BaseModel):
     assignee_preset_id: int | None = None
     reporter_user_id: str | None = None
     related_project_id: UUID | None = None
+    source_message_id: UUID | None = None
 
     @model_validator(mode="after")
     def normalize_assignee(self) -> "ServerChannelTaskCreateRequest":

@@ -27,6 +27,7 @@ export interface ChannelTaskCreateInput {
   title: string;
   description?: string | null;
   priority?: "low" | "medium" | "high" | "urgent" | null;
+  sourceMessageId?: string | null;
 }
 
 export interface ChannelTaskStatusUpdateInput {

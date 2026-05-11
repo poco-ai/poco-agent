@@ -110,6 +110,43 @@ class ServerChannelTaskServiceTests(unittest.TestCase):
         self.assertEqual(kwargs["content"]["event_type"], "task.created")
         self.assertEqual(kwargs["content"]["actor_type"], "user")
 
+    def test_create_task_root_message_records_source_message_without_replying(
+        self,
+    ) -> None:
+        service = ServerChannelTaskService()
+        source_message_id = uuid.uuid4()
+        task = ServerChannelTask(
+            id=uuid.uuid4(),
+            server_id=self.server_id,
+            channel_id=self.channel.id,
+            title="Ship board view",
+            description=None,
+            status="todo",
+            position=0,
+            priority="medium",
+            creator_user_id="user-1",
+            updated_by="user-1",
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
+        )
+
+        with patch.object(service, "_create_message") as create_message:
+            service._create_task_root_message(
+                self.db,
+                current_user=self.user,
+                task=task,
+                source_message_id=source_message_id,
+            )
+
+        create_message.assert_called_once()
+        kwargs = create_message.call_args.kwargs
+        self.assertEqual(kwargs["message_type"], "event")
+        self.assertIsNone(kwargs.get("thread_root_message_id"))
+        self.assertEqual(
+            kwargs["content"]["source_message_id"],
+            str(source_message_id),
+        )
+
     def test_update_task_status_emits_event_message_for_status_change(self) -> None:
         service = ServerChannelTaskService()
         task = ServerChannelTask(

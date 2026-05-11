@@ -2367,23 +2367,24 @@ export function ServerConversationPageClient({
     setIsSending(true);
     try {
       if (asTask) {
+        const message = await serversApi.sendMessage(
+          selectedServerId,
+          activeChannelId,
+          {
+            text: content,
+          },
+        );
         const title =
           content.split("\n")[0]?.trim().slice(0, 80) || content.slice(0, 80);
-        const createdTask = await channelTasksApi.createTask(
+        await channelTasksApi.createTask(
           selectedServerId,
           activeChannelId,
           {
             title,
             description: content,
+            sourceMessageId: message.id,
           },
         );
-        const explicitMentions = getExplicitMentionHandles(content);
-        if (createdTask.threadRootMessageId && explicitMentions.length > 0) {
-          await serversApi.sendMessage(selectedServerId, activeChannelId, {
-            text: content,
-            threadRootMessageId: createdTask.threadRootMessageId,
-          });
-        }
         toast.success(t("conversationView.toasts.taskCreated"));
       } else {
         await serversApi.sendMessage(selectedServerId, activeChannelId, {
@@ -2421,31 +2422,31 @@ export function ServerConversationPageClient({
     try {
       const trimmedDraft = threadDraft.trim();
       if (threadAsTask) {
+        const explicitMentions = getExplicitMentionHandles(trimmedDraft);
+        const replyText =
+          threadMentionHandle && !explicitMentions.includes(threadMentionHandle)
+            ? `@${threadMentionHandle} ${trimmedDraft}`
+            : trimmedDraft;
+        const message = await serversApi.sendMessage(
+          selectedServerId,
+          drawer.channelId,
+          {
+            text: replyText,
+            threadRootMessageId: drawer.rootMessageId,
+          },
+        );
         const title =
           trimmedDraft.split("\n")[0]?.trim().slice(0, 80) ||
           trimmedDraft.slice(0, 80);
-        const createdTask = await channelTasksApi.createTask(
+        await channelTasksApi.createTask(
           selectedServerId,
           drawer.channelId,
           {
             title,
             description: trimmedDraft,
+            sourceMessageId: message.id,
           },
         );
-        const explicitMentions = getExplicitMentionHandles(trimmedDraft);
-        const followupText =
-          threadMentionHandle && !explicitMentions.includes(threadMentionHandle)
-            ? `@${threadMentionHandle} ${trimmedDraft}`
-            : trimmedDraft;
-        if (
-          createdTask.threadRootMessageId &&
-          (explicitMentions.length > 0 || Boolean(threadMentionHandle))
-        ) {
-          await serversApi.sendMessage(selectedServerId, drawer.channelId, {
-            text: followupText,
-            threadRootMessageId: createdTask.threadRootMessageId,
-          });
-        }
         setThreadDraft("");
         setThreadAsTask(false);
         setTasks(

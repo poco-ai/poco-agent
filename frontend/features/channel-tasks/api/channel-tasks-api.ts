@@ -104,7 +104,12 @@ export const channelTasksApi = {
   ): Promise<ChannelTask> => {
     const task = await apiClient.post<ChannelTaskResponse>(
       API_ENDPOINTS.serverChannelTasks(serverId, channelId),
-      input,
+      {
+        title: input.title,
+        description: input.description,
+        priority: input.priority,
+        source_message_id: input.sourceMessageId ?? null,
+      },
     );
     return mapTask(task);
   },

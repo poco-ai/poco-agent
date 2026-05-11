@@ -206,7 +206,7 @@ class ServerChannelTaskService:
         current_user: User,
         task: ServerChannelTask,
         actor_context: TaskActorContext | None = None,
-        source_thread_root_message_id: uuid.UUID | None = None,
+        source_message_id: uuid.UUID | None = None,
     ) -> ServerChannelMessage:
         actor = self._build_actor_context(current_user, actor_context)
         return self._create_message(
@@ -235,8 +235,8 @@ class ServerChannelTaskService:
                 "actor_session_id": str(actor.actor_session_id)
                 if actor.actor_session_id
                 else None,
-                "source_thread_root_message_id": str(source_thread_root_message_id)
-                if source_thread_root_message_id
+                "source_message_id": str(source_message_id)
+                if source_message_id
                 else None,
             },
         )
@@ -336,7 +336,7 @@ class ServerChannelTaskService:
             current_user=current_user,
             task=task,
             actor_context=actor_context,
-            source_thread_root_message_id=source_thread_root_message_id,
+            source_message_id=request.source_message_id,
         )
         task.thread_root_message_id = root_message.id
 
