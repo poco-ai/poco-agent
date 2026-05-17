@@ -4,8 +4,15 @@ import * as React from "react";
 import Image from "next/image";
 import { Loader2, Plus, Save, Trash2 } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -113,6 +120,11 @@ export function PresetEditorPanel({
   const [subagentConfigs, setSubagentConfigs] = React.useState<
     PresetSubAgentConfig[]
   >([]);
+  const [activeTab, setActiveTab] = React.useState("general");
+  const [visualDialogOpen, setVisualDialogOpen] = React.useState(false);
+  const [draftVisualKey, setDraftVisualKey] = React.useState(
+    getPresetFormInitialVisualKey(),
+  );
 
   React.useEffect(() => {
     if (mode === "edit" && preset) {
@@ -140,6 +152,11 @@ export function PresetEditorPanel({
     setPluginIds([]);
     setSubagentConfigs([]);
   }, [mode, preset]);
+
+  React.useEffect(() => {
+    if (!visualDialogOpen) return;
+    setDraftVisualKey(visualKey);
+  }, [visualDialogOpen, visualKey]);
 
   React.useEffect(() => {
     let active = true;
@@ -262,164 +279,59 @@ export function PresetEditorPanel({
     description,
   ]);
 
-  const title =
-    mode === "create"
-      ? t("library.presetsPage.dialog.createTitle")
-      : t("library.presetsPage.dialog.editTitle");
-  const subtitle =
-    mode === "create"
-      ? t(
-          "library.presetsPage.panel.createDescription",
-          "Build a reusable preset with default capabilities and instructions.",
-        )
-      : t(
-          "library.presetsPage.panel.editDescription",
-          "Review and adjust this preset without leaving the library.",
-        );
-
   const detailPreset = preset ?? {
     name: name || t("library.presetsPage.panel.newPresetLabel", "New preset"),
     visual_key: visualKey,
     visual_url: selectedVisualOption?.url ?? null,
   };
 
+  const headerName =
+    name.trim() || t("library.presetsPage.panel.newPresetLabel", "New preset");
+  const headerDescription =
+    description.trim() ||
+    t(
+      "library.presetsPage.panel.headerDescriptionFallback",
+      "No description yet",
+    );
+
+  const handleVisualApply = React.useCallback(() => {
+    setVisualKey(draftVisualKey);
+    setVisualDialogOpen(false);
+  }, [draftVisualKey]);
+
   return (
+    <>
     <section className="flex min-h-0 flex-1 flex-col overflow-hidden">
       <div className="border-b border-border/50 px-6 pb-5 pt-6">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="flex min-w-0 items-start gap-4">
+        <div className="flex items-start gap-4">
+          <button
+            type="button"
+            onClick={() => setVisualDialogOpen(true)}
+            className="shrink-0 rounded-[28px] transition-opacity hover:opacity-85"
+            aria-label={t(
+              "library.presetsPage.panel.changeVisual",
+              "Change preset avatar",
+            )}
+          >
             <PresetGlyph preset={detailPreset} variant="card" />
-            <div className="min-w-0 space-y-2">
-              <div className="space-y-1">
-                <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
-                  {t("library.presetsPage.panel.detailLabel", "Preset detail")}
-                </p>
-                <h2 className="text-xl font-semibold text-foreground">
-                  {title}
-                </h2>
-              </div>
-              <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-                {subtitle}
-              </p>
-              <div className="flex flex-wrap gap-2">
-                <Badge variant="secondary">
-                  {t("library.presetsPage.tabs.capabilities")}{" "}
-                  {skillIds.length + mcpServerIds.length + pluginIds.length}
-                </Badge>
-                {browserEnabled ? (
-                  <Badge variant="outline">
-                    {t("library.presetsPage.flags.browser")}
-                  </Badge>
-                ) : null}
-                {memoryEnabled ? (
-                  <Badge variant="outline">
-                    {t("library.presetsPage.flags.memory")}
-                  </Badge>
-                ) : null}
-                {subagentConfigs.length > 0 ? (
-                  <Badge variant="outline">
-                    {t("library.presetsPage.tabs.subagents")}{" "}
-                    {subagentConfigs.length}
-                  </Badge>
-                ) : null}
-              </div>
-            </div>
-          </div>
-
-          <div className="flex shrink-0 items-center gap-2">
-            {mode === "create" && onCancelCreate ? (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={onCancelCreate}
-                disabled={isSaving}
-              >
-                {t("common.cancel")}
-              </Button>
-            ) : null}
-            {mode === "edit" && preset && onDelete ? (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  void handleDelete();
-                }}
-                disabled={isSaving}
-                className="text-destructive hover:text-destructive"
-              >
-                <Trash2 className="mr-2 size-4" />
-                {t("common.delete")}
-              </Button>
-            ) : null}
-            <Button
-              type="button"
-              onClick={() => {
-                void handleSubmit();
-              }}
-              disabled={!isValid || isSaving}
-            >
-              {isSaving ? (
-                <>
-                  <Loader2 className="mr-2 size-4 animate-spin" />
-                  {t("common.saving")}
-                </>
-              ) : (
-                <>
-                  {mode === "create" ? (
-                    <Plus className="mr-2 size-4" />
-                  ) : (
-                    <Save className="mr-2 size-4" />
-                  )}
-                  {mode === "create" ? t("common.create") : t("common.save")}
-                </>
-              )}
-            </Button>
+          </button>
+          <div className="min-w-0 space-y-1">
+            <h2 className="truncate text-xl font-semibold text-foreground">
+              {headerName}
+            </h2>
+            <p className="line-clamp-2 text-sm leading-6 text-muted-foreground">
+              {headerDescription}
+            </p>
           </div>
         </div>
-
-        {mode === "edit" && preset ? (
-          <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <div className="rounded-2xl border border-border/50 bg-background/40 px-4 py-3">
-              <div className="text-xs text-muted-foreground">
-                {t("library.presetsPage.panel.scopeLabel", "Scope")}
-              </div>
-              <div className="mt-1 text-sm font-medium text-foreground">
-                {preset.scope ?? t("library.presetsPage.panel.scopeFallback", "Personal")}
-              </div>
-            </div>
-            <div className="rounded-2xl border border-border/50 bg-background/40 px-4 py-3">
-              <div className="text-xs text-muted-foreground">
-                {t("library.presetsPage.panel.visualLabel", "Avatar")}
-              </div>
-              <div className="mt-1 truncate text-sm font-medium text-foreground">
-                {selectedVisualOption?.name ||
-                  selectedVisualOption?.key ||
-                  preset.visual_name ||
-                  preset.visual_key}
-              </div>
-            </div>
-            <div className="rounded-2xl border border-border/50 bg-background/40 px-4 py-3">
-              <div className="text-xs text-muted-foreground">
-                {t("library.presetsPage.panel.createdLabel", "Created")}
-              </div>
-              <div className="mt-1 text-sm font-medium text-foreground">
-                {formatTimestamp(preset.created_at) ?? "—"}
-              </div>
-            </div>
-            <div className="rounded-2xl border border-border/50 bg-background/40 px-4 py-3">
-              <div className="text-xs text-muted-foreground">
-                {t("library.presetsPage.panel.updatedLabel", "Updated")}
-              </div>
-              <div className="mt-1 text-sm font-medium text-foreground">
-                {formatTimestamp(preset.updated_at) ?? "—"}
-              </div>
-            </div>
-          </div>
-        ) : null}
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
-        <Tabs defaultValue="general" className="flex flex-col gap-5">
+        <Tabs
+          value={activeTab}
+          onValueChange={setActiveTab}
+          className="flex flex-col gap-5"
+        >
           <TabsList className="w-full justify-start overflow-x-auto">
             <TabsTrigger value="general">
               {t("library.presetsPage.tabs.general")}
@@ -433,160 +345,132 @@ export function PresetEditorPanel({
           </TabsList>
 
           <TabsContent value="general" className="space-y-5">
-            <div className="grid gap-5 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
-              <div className="space-y-5">
+            <div className="space-y-5">
+              <div className="space-y-2">
+                <Label htmlFor="preset-name-inline">
+                  {t("library.presetsPage.form.name")}
+                </Label>
+                <Input
+                  id="preset-name-inline"
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                  placeholder={t("library.presetsPage.form.namePlaceholder")}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="preset-description-inline">
+                  {t("library.presetsPage.form.description")}
+                </Label>
+                <Textarea
+                  id="preset-description-inline"
+                  value={description}
+                  onChange={(event) => setDescription(event.target.value)}
+                  placeholder={t(
+                    "library.presetsPage.form.descriptionPlaceholder",
+                  )}
+                  rows={4}
+                />
+              </div>
+              {mode === "edit" && preset ? (
                 <div className="space-y-2">
-                  <Label htmlFor="preset-name-inline">
-                    {t("library.presetsPage.form.name")}
-                  </Label>
-                  <Input
-                    id="preset-name-inline"
-                    value={name}
-                    onChange={(event) => setName(event.target.value)}
-                    placeholder={t("library.presetsPage.form.namePlaceholder")}
+                  <Label>{t("library.presetsPage.panel.createdLabel", "Created")}</Label>
+                  <div className="rounded-md border border-border/50 bg-background/40 px-3 py-2 text-sm text-muted-foreground">
+                    {formatTimestamp(preset.created_at) ?? "—"}
+                  </div>
+                </div>
+              ) : null}
+              <div className="space-y-2">
+                <Label htmlFor="preset-prompt-inline">
+                  {t("library.presetsPage.form.promptTemplate")}
+                </Label>
+                <Textarea
+                  id="preset-prompt-inline"
+                  value={promptTemplate}
+                  onChange={(event) => setPromptTemplate(event.target.value)}
+                  placeholder={t(
+                    "library.presetsPage.form.promptTemplatePlaceholder",
+                  )}
+                  rows={10}
+                />
+              </div>
+              <div className="space-y-3 rounded-2xl border border-border/60 bg-background/40 p-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-medium text-foreground">
+                      {t("library.presetsPage.form.browserEnabled")}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {t("library.presetsPage.form.browserEnabledHint")}
+                    </p>
+                  </div>
+                  <Switch
+                    checked={browserEnabled}
+                    onCheckedChange={setBrowserEnabled}
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="preset-description-inline">
-                    {t("library.presetsPage.form.description")}
-                  </Label>
-                  <Textarea
-                    id="preset-description-inline"
-                    value={description}
-                    onChange={(event) => setDescription(event.target.value)}
-                    placeholder={t(
-                      "library.presetsPage.form.descriptionPlaceholder",
-                    )}
-                    rows={4}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="preset-prompt-inline">
-                    {t("library.presetsPage.form.promptTemplate")}
-                  </Label>
-                  <Textarea
-                    id="preset-prompt-inline"
-                    value={promptTemplate}
-                    onChange={(event) => setPromptTemplate(event.target.value)}
-                    placeholder={t(
-                      "library.presetsPage.form.promptTemplatePlaceholder",
-                    )}
-                    rows={10}
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-medium text-foreground">
+                      {t("library.presetsPage.form.memoryEnabled")}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {t("library.presetsPage.form.memoryEnabledHint")}
+                    </p>
+                  </div>
+                  <Switch
+                    checked={memoryEnabled}
+                    onCheckedChange={setMemoryEnabled}
                   />
                 </div>
               </div>
-
-              <div className="space-y-5">
-                <div className="space-y-2">
-                  <Label>{t("library.presetsPage.form.visual")}</Label>
-                  <div className="rounded-2xl border border-border/60 bg-background/40 p-4">
-                    <div className="mb-4 flex items-center gap-3 rounded-2xl border border-border/60 bg-background/70 p-3">
-                      <div className="flex size-14 items-center justify-center rounded-2xl border border-border/60 bg-muted/30">
-                        {selectedVisualOption?.url ? (
-                          <Image
-                            src={selectedVisualOption.url}
-                            alt=""
-                            width={40}
-                            height={40}
-                            unoptimized
-                            className="size-10 object-contain object-center"
-                          />
-                        ) : (
-                          <span className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                            {selectedVisualOption?.key ?? visualKey}
-                          </span>
-                        )}
-                      </div>
-                      <div className="min-w-0">
-                        <div className="truncate text-sm font-medium text-foreground">
-                          {selectedVisualOption?.name ||
-                            selectedVisualOption?.key ||
-                            visualKey}
-                        </div>
-                        <div className="truncate text-xs text-muted-foreground">
-                          {t(
-                            "library.presetsPage.panel.visualHint",
-                            "This avatar appears in the preset list and related entry points.",
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="max-h-[20rem] overflow-y-auto">
-                      {isLoadingVisualOptions ? (
-                        <div className="flex min-h-32 items-center justify-center text-sm text-muted-foreground">
-                          <Loader2 className="mr-2 size-4 animate-spin" />
-                          {t("common.loading")}
-                        </div>
+              <div className="flex flex-wrap justify-end gap-2 border-t border-border/50 pt-4">
+                {mode === "create" && onCancelCreate ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={onCancelCreate}
+                    disabled={isSaving}
+                  >
+                    {t("common.cancel")}
+                  </Button>
+                ) : null}
+                {mode === "edit" && preset && onDelete ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      void handleDelete();
+                    }}
+                    disabled={isSaving}
+                    className="text-destructive hover:text-destructive"
+                  >
+                    <Trash2 className="mr-2 size-4" />
+                    {t("common.delete")}
+                  </Button>
+                ) : null}
+                <Button
+                  type="button"
+                  onClick={() => {
+                    void handleSubmit();
+                  }}
+                  disabled={!isValid || isSaving}
+                >
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="mr-2 size-4 animate-spin" />
+                      {t("common.saving")}
+                    </>
+                  ) : (
+                    <>
+                      {mode === "create" ? (
+                        <Plus className="mr-2 size-4" />
                       ) : (
-                        <div className="grid grid-cols-4 gap-3">
-                          {visualOptions.map((option) => {
-                            const selected = option.key === visualKey;
-                            return (
-                              <button
-                                key={option.key}
-                                type="button"
-                                onClick={() => setVisualKey(option.key)}
-                                aria-pressed={selected}
-                                className={
-                                  selected
-                                    ? "flex aspect-square items-center justify-center rounded-2xl border border-primary/30 bg-primary/10 p-3 shadow-sm transition-colors"
-                                    : "flex aspect-square items-center justify-center rounded-2xl border border-border/60 bg-card p-3 transition-colors hover:border-border hover:bg-accent/40"
-                                }
-                              >
-                                {option.url ? (
-                                  <Image
-                                    src={option.url}
-                                    alt=""
-                                    width={52}
-                                    height={52}
-                                    unoptimized
-                                    className="size-12 object-contain object-center"
-                                  />
-                                ) : (
-                                  <span className="text-xs font-semibold tracking-[0.18em] text-muted-foreground">
-                                    {option.key}
-                                  </span>
-                                )}
-                              </button>
-                            );
-                          })}
-                        </div>
+                        <Save className="mr-2 size-4" />
                       )}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-3 rounded-2xl border border-border/60 bg-background/40 p-4">
-                  <div className="flex items-center justify-between gap-4">
-                    <div>
-                      <p className="text-sm font-medium text-foreground">
-                        {t("library.presetsPage.form.browserEnabled")}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {t("library.presetsPage.form.browserEnabledHint")}
-                      </p>
-                    </div>
-                    <Switch
-                      checked={browserEnabled}
-                      onCheckedChange={setBrowserEnabled}
-                    />
-                  </div>
-                  <div className="flex items-center justify-between gap-4">
-                    <div>
-                      <p className="text-sm font-medium text-foreground">
-                        {t("library.presetsPage.form.memoryEnabled")}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {t("library.presetsPage.form.memoryEnabledHint")}
-                      </p>
-                    </div>
-                    <Switch
-                      checked={memoryEnabled}
-                      onCheckedChange={setMemoryEnabled}
-                    />
-                  </div>
-                </div>
+                      {mode === "create" ? t("common.create") : t("common.save")}
+                    </>
+                  )}
+                </Button>
               </div>
             </div>
           </TabsContent>
@@ -812,5 +696,78 @@ export function PresetEditorPanel({
         </Tabs>
       </div>
     </section>
+    <Dialog open={visualDialogOpen} onOpenChange={setVisualDialogOpen}>
+      <DialogContent className="max-w-3xl" ariaTitle={t("library.presetsPage.form.visual")}>
+        <DialogHeader>
+          <DialogTitle>
+            {t(
+              "library.presetsPage.panel.changeVisual",
+              "Change preset avatar",
+            )}
+          </DialogTitle>
+          <DialogDescription>
+            {t(
+              "library.presetsPage.panel.visualHint",
+              "This avatar appears in the preset list and related entry points.",
+            )}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="max-h-[60vh] overflow-y-auto">
+          {isLoadingVisualOptions ? (
+            <div className="flex min-h-40 items-center justify-center text-sm text-muted-foreground">
+              <Loader2 className="mr-2 size-4 animate-spin" />
+              {t("common.loading")}
+            </div>
+          ) : (
+            <div className="grid grid-cols-4 gap-3">
+              {visualOptions.map((option) => {
+                const selected = option.key === draftVisualKey;
+                return (
+                  <button
+                    key={option.key}
+                    type="button"
+                    onClick={() => setDraftVisualKey(option.key)}
+                    aria-pressed={selected}
+                    className={
+                      selected
+                        ? "flex aspect-square items-center justify-center rounded-2xl border border-primary/30 bg-primary/10 p-3 shadow-sm transition-colors"
+                        : "flex aspect-square items-center justify-center rounded-2xl border border-border/60 bg-card p-3 transition-colors hover:border-border hover:bg-accent/40"
+                    }
+                  >
+                    {option.url ? (
+                      <Image
+                        src={option.url}
+                        alt=""
+                        width={52}
+                        height={52}
+                        unoptimized
+                        className="size-12 object-contain object-center"
+                      />
+                    ) : (
+                      <span className="text-xs font-semibold tracking-[0.18em] text-muted-foreground">
+                        {option.key}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+        <DialogFooter>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setVisualDialogOpen(false)}
+          >
+            {t("common.cancel")}
+          </Button>
+          <Button type="button" onClick={handleVisualApply}>
+            {t("common.save")}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
