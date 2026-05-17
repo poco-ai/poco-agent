@@ -2265,7 +2265,15 @@
         "updated": "Vorlage aktualisiert",
         "deleted": "Vorlage gelöscht",
         "saveFailed": "Vorlage konnte nicht gespeichert werden",
-        "deleteFailed": "Vorlage konnte nicht gelöscht werden"
+        "deleteFailed": "Vorlage konnte nicht gelöscht werden",
+        "deleteBlocked": "Can't delete this preset yet: {{dependencies}}"
+      },
+      "deleteDependencies": {
+        "project_default": "{{count}} project defaults",
+        "live_agent_identity": "{{count}} live agents",
+        "active_assignment": "{{count}} active assignments",
+        "channel_task_assignee": "{{count}} channel task assignees",
+        "unknown": "{{count}} unknown dependencies"
       }
     },
     "skillSettings": {
