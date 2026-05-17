@@ -102,10 +102,7 @@ export function SubAgentDialog({
       : t("library.subAgents.dialog.editTitle");
   const resolvedNameHint =
     nameHint ??
-    t(
-      "library.subAgents.fields.nameHint",
-      "Only A-Za-z0-9._- are allowed.",
-    );
+    t("library.subAgents.fields.nameHint", "Only A-Za-z0-9._- are allowed.");
 
   const isValid =
     Boolean(name.trim()) &&

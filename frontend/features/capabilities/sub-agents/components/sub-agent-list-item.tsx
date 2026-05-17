@@ -63,7 +63,9 @@ export function SubAgentListItem({
           </Badge>
         </div>
         {description ? (
-          <p className="text-sm text-muted-foreground truncate">{description}</p>
+          <p className="text-sm text-muted-foreground truncate">
+            {description}
+          </p>
         ) : null}
         {toolsLabel ? (
           <p className="text-xs text-muted-foreground font-mono mt-1 truncate">
@@ -71,7 +73,9 @@ export function SubAgentListItem({
           </p>
         ) : null}
       </div>
-      {trailing ? <div className="flex shrink-0 items-center gap-2">{trailing}</div> : null}
+      {trailing ? (
+        <div className="flex shrink-0 items-center gap-2">{trailing}</div>
+      ) : null}
     </div>
   );
 

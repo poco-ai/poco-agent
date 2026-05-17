@@ -86,70 +86,70 @@ export function SubAgentsList({
 
               return (
                 <SubAgentListItem
-                    name={agent.name}
-                    description={agent.description}
-                    tools={agent.tools}
-                    mode={agent.mode}
-                    source={agent.source}
-                    enabled={agent.enabled}
-                    trailing={
-                      <>
-                    <div className={hoverActionsClass}>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="size-8"
-                        onClick={() => onEdit?.(agent)}
-                        disabled={busy}
-                        title={t("common.edit")}
-                      >
-                        <Settings className="size-4" />
-                      </Button>
+                  name={agent.name}
+                  description={agent.description}
+                  tools={agent.tools}
+                  mode={agent.mode}
+                  source={agent.source}
+                  enabled={agent.enabled}
+                  trailing={
+                    <>
+                      <div className={hoverActionsClass}>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-8"
+                          onClick={() => onEdit?.(agent)}
+                          disabled={busy}
+                          title={t("common.edit")}
+                        >
+                          <Settings className="size-4" />
+                        </Button>
 
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="size-8"
-                            disabled={busy}
-                            title={t("common.delete")}
-                          >
-                            <Trash2 className="size-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>
-                              {t("library.subAgents.delete.title")}
-                            </AlertDialogTitle>
-                            <AlertDialogDescription>
-                              {t("library.subAgents.delete.description")}
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>
-                              {t("common.cancel")}
-                            </AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => onDelete?.(agent)}
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="size-8"
+                              disabled={busy}
+                              title={t("common.delete")}
                             >
-                              {t("common.delete")}
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-                    <Switch
-                      checked={agent.enabled}
-                      onCheckedChange={(checked) =>
-                        onToggleEnabled?.(agent.id, checked)
-                      }
-                      disabled={busy}
-                    />
-                      </>
-                    }
-                  />
+                              <Trash2 className="size-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>
+                                {t("library.subAgents.delete.title")}
+                              </AlertDialogTitle>
+                              <AlertDialogDescription>
+                                {t("library.subAgents.delete.description")}
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>
+                                {t("common.cancel")}
+                              </AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => onDelete?.(agent)}
+                              >
+                                {t("common.delete")}
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                      <Switch
+                        checked={agent.enabled}
+                        onCheckedChange={(checked) =>
+                          onToggleEnabled?.(agent.id, checked)
+                        }
+                        disabled={busy}
+                      />
+                    </>
+                  }
+                />
               );
             }}
           />
