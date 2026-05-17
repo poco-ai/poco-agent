@@ -1,11 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { ChevronRight } from "lucide-react";
 
 import { PresetGlyph } from "@/features/capabilities/presets/components/preset-glyph";
 import type { Preset } from "@/features/capabilities/presets/lib/preset-types";
-import { useT } from "@/lib/i18n/client";
 import { cn } from "@/lib/utils";
 
 interface PresetListItemProps {
@@ -19,36 +17,20 @@ export function PresetListItem({
   selected = false,
   onSelect,
 }: PresetListItemProps) {
-  const { t } = useT("translation");
-
   return (
     <button
       type="button"
       onClick={() => onSelect(preset)}
       className={cn(
-        "flex w-full items-center gap-3 rounded-2xl border px-3 py-3 text-left transition-colors",
+        "flex w-full items-center gap-1 rounded-md px-2 py-1 text-left text-sm transition-colors",
         selected
-          ? "border-primary/30 bg-primary/10 shadow-sm"
-          : "border-border/60 bg-card/70 hover:bg-accent/40",
+          ? "bg-muted text-foreground"
+          : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
       )}
-      aria-pressed={selected}
+      aria-current={selected ? "true" : undefined}
     >
       <PresetGlyph preset={preset} variant="picker" />
-      <div className="min-w-0 flex-1">
-        <div className="truncate text-sm font-medium text-foreground">
-          {preset.name}
-        </div>
-        <div className="mt-1 truncate text-xs text-muted-foreground">
-          {preset.description?.trim() ||
-            t("library.presetsPage.emptyDescription")}
-        </div>
-      </div>
-      <ChevronRight
-        className={cn(
-          "size-4 shrink-0 text-muted-foreground transition-transform",
-          selected && "translate-x-0.5 text-foreground",
-        )}
-      />
+      <span className="truncate font-medium">{preset.name}</span>
     </button>
   );
 }
