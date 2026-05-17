@@ -2232,7 +2232,15 @@
         "updated": "预设已更新",
         "deleted": "预设已删除",
         "saveFailed": "保存预设失败",
-        "deleteFailed": "删除预设失败"
+        "deleteFailed": "删除预设失败",
+        "deleteBlocked": "暂时无法删除该预设：{{dependencies}}"
+      },
+      "deleteDependencies": {
+        "project_default": "{{count}} 个项目默认预设",
+        "live_agent_identity": "{{count}} 个存活 agent",
+        "active_assignment": "{{count}} 个活跃 assignment",
+        "channel_task_assignee": "{{count}} 个频道任务分配",
+        "unknown": "{{count}} 个未知依赖"
       }
     },
     "skillSettings": {
