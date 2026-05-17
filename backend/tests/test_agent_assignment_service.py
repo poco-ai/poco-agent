@@ -90,6 +90,187 @@ class AgentAssignmentServiceTests(unittest.TestCase):
         )
         enqueue_run.assert_called_once()
 
+    def test_sync_issue_assignment_resets_runtime_when_preset_changes(self) -> None:
+        db = MagicMock()
+        issue = WorkspaceIssue(
+            id=uuid.uuid4(),
+            workspace_id=uuid.uuid4(),
+            board_id=uuid.uuid4(),
+            title="Harden retries",
+            description="Retry external calls.",
+            status="in_progress",
+            type="task",
+            priority="high",
+            assignee_preset_id=5,
+            creator_user_id="user-1",
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
+        )
+        current_user = User(
+            id="user-1",
+            primary_email="alice@example.com",
+            display_name="Alice",
+            avatar_url=None,
+            status="active",
+        )
+        existing = MagicMock(
+            workspace_id=issue.workspace_id,
+            issue_id=issue.id,
+            preset_id=5,
+            trigger_mode="persistent_sandbox",
+            prompt="Existing prompt",
+            created_by="user-1",
+            status="running",
+            session_id=uuid.uuid4(),
+            container_id="exec-old",
+            last_triggered_at=datetime.now(UTC),
+            last_completed_at=datetime.now(UTC),
+            schedule_cron=None,
+        )
+        next_preset = Preset(
+            id=9,
+            user_id="user-1",
+            name="Reviewer",
+            visual_key="preset-visual-02",
+            prompt_template="",
+            browser_enabled=False,
+            memory_enabled=False,
+            container_mode="persistent",
+            skill_ids=[],
+            mcp_server_ids=[],
+            plugin_ids=[],
+            subagent_configs=[],
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
+        )
+
+        service = AgentAssignmentService(task_service=MagicMock())
+
+        with (
+            patch(
+                "app.services.agent_assignment_service.AgentAssignmentRepository.get_by_issue_id",
+                return_value=existing,
+            ),
+            patch(
+                "app.services.agent_assignment_service.PresetRepository.get_visible_by_id",
+                return_value=next_preset,
+            ),
+            patch.object(
+                service._prompt_builder,
+                "build_issue_prompt",
+                return_value="Harden retries\n\nRetry external calls.",
+            ),
+        ):
+            assignment = service.sync_issue_assignment(
+                db,
+                current_user=current_user,
+                issue=issue,
+                preset_id=9,
+                trigger_mode="persistent_sandbox",
+                schedule_cron=None,
+                prompt_override=None,
+                auto_trigger=False,
+            )
+
+        self.assertIs(assignment, existing)
+        self.assertEqual(assignment.preset_id, 9)
+        self.assertIsNone(assignment.session_id)
+        self.assertIsNone(assignment.container_id)
+        self.assertIsNone(assignment.last_triggered_at)
+        self.assertIsNone(assignment.last_completed_at)
+
+    def test_sync_issue_assignment_resets_runtime_when_trigger_mode_changes(
+        self,
+    ) -> None:
+        db = MagicMock()
+        issue = WorkspaceIssue(
+            id=uuid.uuid4(),
+            workspace_id=uuid.uuid4(),
+            board_id=uuid.uuid4(),
+            title="Schedule reviews",
+            description="Run every morning.",
+            status="in_progress",
+            type="task",
+            priority="high",
+            assignee_preset_id=5,
+            creator_user_id="user-1",
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
+        )
+        current_user = User(
+            id="user-1",
+            primary_email="alice@example.com",
+            display_name="Alice",
+            avatar_url=None,
+            status="active",
+        )
+        existing = MagicMock(
+            workspace_id=issue.workspace_id,
+            issue_id=issue.id,
+            preset_id=5,
+            trigger_mode="persistent_sandbox",
+            prompt="Existing prompt",
+            created_by="user-1",
+            status="running",
+            session_id=uuid.uuid4(),
+            container_id="exec-old",
+            last_triggered_at=datetime.now(UTC),
+            last_completed_at=datetime.now(UTC),
+            schedule_cron=None,
+        )
+        preset = Preset(
+            id=5,
+            user_id="user-1",
+            name="Reviewer",
+            visual_key="preset-visual-02",
+            prompt_template="",
+            browser_enabled=False,
+            memory_enabled=False,
+            container_mode="persistent",
+            skill_ids=[],
+            mcp_server_ids=[],
+            plugin_ids=[],
+            subagent_configs=[],
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
+        )
+
+        service = AgentAssignmentService(task_service=MagicMock())
+
+        with (
+            patch(
+                "app.services.agent_assignment_service.AgentAssignmentRepository.get_by_issue_id",
+                return_value=existing,
+            ),
+            patch(
+                "app.services.agent_assignment_service.PresetRepository.get_visible_by_id",
+                return_value=preset,
+            ),
+            patch.object(
+                service._prompt_builder,
+                "build_issue_prompt",
+                return_value="Schedule reviews\n\nRun every morning.",
+            ),
+        ):
+            assignment = service.sync_issue_assignment(
+                db,
+                current_user=current_user,
+                issue=issue,
+                preset_id=5,
+                trigger_mode="scheduled_task",
+                schedule_cron="0 9 * * *",
+                prompt_override=None,
+                auto_trigger=False,
+            )
+
+        self.assertIs(assignment, existing)
+        self.assertEqual(assignment.trigger_mode, "scheduled_task")
+        self.assertEqual(assignment.schedule_cron, "0 9 * * *")
+        self.assertIsNone(assignment.session_id)
+        self.assertIsNone(assignment.container_id)
+        self.assertIsNone(assignment.last_triggered_at)
+        self.assertIsNone(assignment.last_completed_at)
+
     def test_sync_callback_status_marks_issue_done(self) -> None:
         db = MagicMock()
         session_id = uuid.uuid4()

@@ -3,6 +3,8 @@ import uuid
 from datetime import UTC, datetime
 from unittest.mock import MagicMock, patch
 
+from app.core.errors.error_codes import ErrorCode
+from app.core.errors.exceptions import AppException
 from app.models.server_channel import ServerChannel
 from app.models.server_channel_message import ServerChannelMessage
 from app.models.server_channel_task import ServerChannelTask
@@ -12,6 +14,7 @@ from app.schemas.server_channel_task import (
     ServerChannelTaskCreateRequest,
     ServerChannelTaskStatusUpdateRequest,
 )
+from app.services import server_channel_task_service as server_channel_task_module
 from app.services.server_channel_task_service import ServerChannelTaskService
 
 
@@ -83,6 +86,56 @@ class ServerChannelTaskServiceTests(unittest.TestCase):
         self.assertEqual(created_task.title, "Refactor channel task detail")
         self.assertEqual(result.channel_id, self.channel.id)
         self.db.commit.assert_called_once()
+
+    def test_create_task_rejects_invisible_preset_assignee(self) -> None:
+        service = ServerChannelTaskService()
+
+        with (
+            patch.object(service, "_require_channel_access", return_value=self.channel),
+            patch(
+                "app.services.server_channel_task_service.ServerChannelTaskRepository.list_by_channel_and_status",
+                return_value=[],
+            ),
+            patch(
+                "app.services.server_channel_task_service.ServerChannelTaskRepository.create"
+            ) as create_task,
+            patch(
+                "app.services.server_channel_task_service.ServerChannelTaskRepository.get_max_display_number",
+                return_value=None,
+            ),
+            patch.object(service, "_create_task_root_message") as create_root_message,
+            patch.object(
+                server_channel_task_module,
+                "PresetRepository",
+                create=True,
+            ) as preset_repo,
+        ):
+            now = datetime.now(UTC)
+
+            def build_task(_db, task):
+                task.id = uuid.uuid4()
+                task.created_at = now
+                task.updated_at = now
+                return task
+
+            create_task.side_effect = build_task
+            create_root_message.return_value = MagicMock(id=uuid.uuid4())
+            preset_repo.get_visible_by_id.return_value = None
+            with self.assertRaises(AppException) as context:
+                service.create_task(
+                    self.db,
+                    self.user,
+                    self.server_id,
+                    self.channel.id,
+                    ServerChannelTaskCreateRequest(
+                        title="Refactor channel task detail",
+                        assignee_preset_id=7,
+                    ),
+                )
+
+        self.assertEqual(context.exception.error_code, ErrorCode.BAD_REQUEST)
+        self.assertIn("preset", context.exception.message.lower())
+        preset_repo.get_visible_by_id.assert_called_once_with(self.db, 7, self.user.id)
 
     def test_create_task_root_message_is_event_without_author(self) -> None:
         service = ServerChannelTaskService()
@@ -309,6 +362,51 @@ class ServerChannelTaskServiceTests(unittest.TestCase):
         )
         self.assertEqual(result.status, "in_review")
         self.db.commit.assert_called_once()
+
+    def test_claim_task_rejects_invisible_preset_assignee(self) -> None:
+        service = ServerChannelTaskService()
+        task = ServerChannelTask(
+            id=uuid.uuid4(),
+            server_id=self.server_id,
+            channel_id=self.channel.id,
+            display_number=1,
+            title="Ship board view",
+            description=None,
+            status="todo",
+            position=0,
+            priority="medium",
+            creator_user_id="user-1",
+            updated_by="user-1",
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
+        )
+
+        with (
+            patch.object(
+                service,
+                "_require_task_access",
+                return_value=(self.channel, task),
+            ),
+            patch.object(
+                server_channel_task_module,
+                "PresetRepository",
+                create=True,
+            ) as preset_repo,
+        ):
+            preset_repo.get_visible_by_id.return_value = None
+            with self.assertRaises(AppException) as context:
+                service.claim_task(
+                    self.db,
+                    self.user,
+                    self.server_id,
+                    self.channel.id,
+                    task.id,
+                    ServerChannelTaskClaimRequest(assignee_preset_id=7),
+                )
+
+        self.assertEqual(context.exception.error_code, ErrorCode.BAD_REQUEST)
+        self.assertIn("preset", context.exception.message.lower())
+        preset_repo.get_visible_by_id.assert_called_once_with(self.db, 7, self.user.id)
 
     def test_task_status_system_message_helper_creates_event_reply(self) -> None:
         service = ServerChannelTaskService()

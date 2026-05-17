@@ -1,14 +1,18 @@
 from collections.abc import Callable, Sequence
 from pathlib import Path
 
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
+from app.models.agent_assignment import AgentAssignment
+from app.models.agent_identity import AgentIdentity
 from app.core.errors.error_codes import ErrorCode
 from app.core.errors.exceptions import AppException
 from app.models.mcp_server import McpServer
 from app.models.plugin import Plugin
 from app.models.preset import Preset
 from app.models.preset_visual import PresetVisual
+from app.models.server_channel_task import ServerChannelTask
 from app.models.skill import Skill
 from app.repositories.mcp_server_repository import McpServerRepository
 from app.repositories.plugin_repository import PluginRepository
@@ -288,11 +292,12 @@ class PresetService:
                 message="Cannot delete system presets",
             )
 
-        usage_count = PresetRepository.count_projects_using_as_default(db, preset_id)
-        if usage_count > 0:
+        dependencies = self._collect_delete_dependencies(db, preset_id)
+        if dependencies:
             raise AppException(
                 error_code=ErrorCode.BAD_REQUEST,
-                message="Preset is still used as a project default preset",
+                message="Preset is still referenced by active resources",
+                details={"dependencies": dependencies},
             )
 
         PresetRepository.soft_delete(db, preset)
@@ -336,6 +341,71 @@ class PresetService:
             db, user_id=user_id, mcp_server_ids=mcp_server_ids
         )
         self._validate_visible_plugins(db, user_id=user_id, plugin_ids=plugin_ids)
+
+    @staticmethod
+    def _collect_delete_dependencies(
+        db: Session,
+        preset_id: int,
+    ) -> list[dict[str, int | str]]:
+        dependencies: list[dict[str, int | str]] = []
+
+        project_default_count = PresetRepository.count_projects_using_as_default(
+            db, preset_id
+        )
+        if project_default_count > 0:
+            dependencies.append(
+                {"type": "project_default", "count": project_default_count}
+            )
+
+        live_agent_identity_count = (
+            db.query(AgentIdentity)
+            .filter(
+                AgentIdentity.preset_id == preset_id,
+                AgentIdentity.removed_at.is_(None),
+            )
+            .count()
+        )
+        if live_agent_identity_count > 0:
+            dependencies.append(
+                {
+                    "type": "live_agent_identity",
+                    "count": live_agent_identity_count,
+                }
+            )
+
+        active_assignment_count = (
+            db.query(AgentAssignment)
+            .filter(
+                AgentAssignment.preset_id == preset_id,
+                or_(
+                    AgentAssignment.status.in_(("pending", "running")),
+                    AgentAssignment.trigger_mode == "scheduled_task",
+                ),
+            )
+            .count()
+        )
+        if active_assignment_count > 0:
+            dependencies.append(
+                {"type": "active_assignment", "count": active_assignment_count}
+            )
+
+        channel_task_assignee_count = (
+            db.query(ServerChannelTask)
+            .filter(
+                ServerChannelTask.assignee_preset_id == preset_id,
+                ServerChannelTask.status != "done",
+            )
+            .count()
+        )
+        if channel_task_assignee_count > 0:
+            dependencies.append(
+                {
+                    "type": "channel_task_assignee",
+                    "count": channel_task_assignee_count,
+                }
+            )
+
+        return dependencies
 
     @staticmethod
     def _normalize_optional_str(value: str | None) -> str | None:
