@@ -284,8 +284,8 @@ export function PresetEditorPanel({
   };
 
   return (
-    <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[28px] border border-border/60 bg-card/70">
-      <div className="border-b border-border/60 px-5 py-5">
+    <section className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <div className="border-b border-border/50 px-6 pb-5 pt-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex min-w-0 items-start gap-4">
             <PresetGlyph preset={detailPreset} variant="card" />
@@ -379,7 +379,7 @@ export function PresetEditorPanel({
 
         {mode === "edit" && preset ? (
           <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <div className="rounded-2xl border border-border/60 bg-background/60 px-4 py-3">
+            <div className="rounded-2xl border border-border/50 bg-background/40 px-4 py-3">
               <div className="text-xs text-muted-foreground">
                 {t("library.presetsPage.panel.scopeLabel", "Scope")}
               </div>
@@ -387,7 +387,7 @@ export function PresetEditorPanel({
                 {preset.scope ?? t("library.presetsPage.panel.scopeFallback", "Personal")}
               </div>
             </div>
-            <div className="rounded-2xl border border-border/60 bg-background/60 px-4 py-3">
+            <div className="rounded-2xl border border-border/50 bg-background/40 px-4 py-3">
               <div className="text-xs text-muted-foreground">
                 {t("library.presetsPage.panel.visualLabel", "Avatar")}
               </div>
@@ -398,7 +398,7 @@ export function PresetEditorPanel({
                   preset.visual_key}
               </div>
             </div>
-            <div className="rounded-2xl border border-border/60 bg-background/60 px-4 py-3">
+            <div className="rounded-2xl border border-border/50 bg-background/40 px-4 py-3">
               <div className="text-xs text-muted-foreground">
                 {t("library.presetsPage.panel.createdLabel", "Created")}
               </div>
@@ -406,7 +406,7 @@ export function PresetEditorPanel({
                 {formatTimestamp(preset.created_at) ?? "—"}
               </div>
             </div>
-            <div className="rounded-2xl border border-border/60 bg-background/60 px-4 py-3">
+            <div className="rounded-2xl border border-border/50 bg-background/40 px-4 py-3">
               <div className="text-xs text-muted-foreground">
                 {t("library.presetsPage.panel.updatedLabel", "Updated")}
               </div>
@@ -418,7 +418,7 @@ export function PresetEditorPanel({
         ) : null}
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
+      <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
         <Tabs defaultValue="general" className="flex flex-col gap-5">
           <TabsList className="w-full justify-start overflow-x-auto">
             <TabsTrigger value="general">
