@@ -9,9 +9,65 @@ from app.models.agent_persistent_state import AgentPersistentState
 from app.repositories.agent_persistent_state_repository import (
     AgentPersistentStateRepository,
 )
+from app.repositories.run_repository import RunRepository
+from app.repositories.session_queue_item_repository import (
+    SessionQueueItemRepository,
+)
+from app.repositories.session_repository import SessionRepository
 
 
 class AgentRuntimeService:
+    LIVE_SESSION_STATUSES = {"pending", "running", "canceling"}
+
+    @classmethod
+    def _session_has_live_work(cls, db: Session, session_id: uuid.UUID) -> bool:
+        session = SessionRepository.get_by_id(db, session_id)
+        if session is not None and session.status in cls.LIVE_SESSION_STATUSES:
+            return True
+        if RunRepository.get_blocking_by_session(db, session_id) is not None:
+            return True
+        return SessionQueueItemRepository.has_active_items(db, session_id)
+
+    @staticmethod
+    def _terminal_runtime_status(db: Session, session_id: uuid.UUID) -> str:
+        session = SessionRepository.get_by_id(db, session_id)
+        if session is not None and session.status == "failed":
+            return "failed"
+        latest_terminal_run = RunRepository.get_latest_terminal_by_session(db, session_id)
+        if latest_terminal_run is not None and latest_terminal_run.status == "failed":
+            return "failed"
+        return "idle"
+
+    @staticmethod
+    def _clear_runtime_binding(
+        state: AgentPersistentState,
+        *,
+        runtime_status: str,
+    ) -> AgentPersistentState:
+        now = datetime.now(timezone.utc)
+        state.runtime_status = runtime_status
+        state.active_session_id = None
+        state.active_task_id = None
+        state.last_synced_at = now
+        state.last_written_at = now
+        return state
+
+    def reconcile_persistent_state(
+        self,
+        db: Session,
+        state: AgentPersistentState,
+    ) -> AgentPersistentState:
+        if state.runtime_status != "busy":
+            return state
+        if state.active_session_id is None:
+            return self._clear_runtime_binding(state, runtime_status="idle")
+        if self._session_has_live_work(db, state.active_session_id):
+            return state
+        return self._clear_runtime_binding(
+            state,
+            runtime_status=self._terminal_runtime_status(db, state.active_session_id),
+        )
+
     @staticmethod
     def get_persistent_state(
         db: Session,
@@ -26,7 +82,7 @@ class AgentRuntimeService:
                 error_code=ErrorCode.NOT_FOUND,
                 message=f"Agent persistent state not found: {agent_identity_id}",
             )
-        return state
+        return AgentRuntimeService().reconcile_persistent_state(db, state)
 
     def reserve_persistent_runtime(
         self,
@@ -69,11 +125,10 @@ class AgentRuntimeService:
 
         normalized = (callback_status or "").strip().lower()
         if normalized == "failed":
-            state.runtime_status = "failed"
-        else:
-            state.runtime_status = "idle"
-        state.active_session_id = None
-        state.active_task_id = None
-        state.last_synced_at = datetime.now(timezone.utc)
-        state.last_written_at = datetime.now(timezone.utc)
-        return state
+            return self._clear_runtime_binding(state, runtime_status="failed")
+        if self._session_has_live_work(db, session_id):
+            state.runtime_status = "busy"
+            state.active_session_id = session_id
+            state.last_synced_at = datetime.now(timezone.utc)
+            return state
+        return self._clear_runtime_binding(state, runtime_status="idle")

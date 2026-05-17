@@ -304,6 +304,17 @@ class AgentAssignmentService:
         )
 
         created = existing is None
+        previous_preset_id = existing.preset_id if existing is not None else None
+        previous_trigger_mode = (
+            existing.trigger_mode if existing is not None else None
+        )
+        config_changed = (
+            existing is not None
+            and (
+                previous_preset_id != preset.id
+                or previous_trigger_mode != mode
+            )
+        )
         assignment = existing or AgentAssignment(
             workspace_id=issue.workspace_id,
             issue_id=issue.id,
@@ -321,7 +332,12 @@ class AgentAssignmentService:
             AgentAssignmentRepository.create(db, assignment)
         else:
             assignment.status = "pending"
-            if existing.preset_id != preset.id or existing.trigger_mode != mode:
+            if config_changed:
+                self._cancel_existing_session(
+                    db,
+                    actor_user_id=current_user.id,
+                    assignment=existing,
+                )
                 assignment.session_id = None
                 assignment.container_id = None
                 assignment.last_triggered_at = None

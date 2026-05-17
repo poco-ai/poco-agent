@@ -11,6 +11,7 @@ from app.models.server_channel_message import ServerChannelMessage
 from app.models.server_channel_task import ServerChannelTask
 from app.models.user import User
 from app.repositories.agent_identity_repository import AgentIdentityRepository
+from app.repositories.preset_repository import PresetRepository
 from app.repositories.server_channel_message_repository import (
     ServerChannelMessageRepository,
 )
@@ -263,13 +264,29 @@ class ServerChannelTaskService:
                 message="Task assignee agent must be an active channel member",
             )
 
+    @staticmethod
+    def _validate_preset_assignee(
+        db: Session,
+        *,
+        user_id: str,
+        preset_id: int,
+    ) -> None:
+        preset = PresetRepository.get_visible_by_id(db, preset_id, user_id)
+        if preset is None:
+            raise AppException(
+                error_code=ErrorCode.BAD_REQUEST,
+                message="Task assignee preset is not available",
+            )
+
     def _validate_task_assignee(
         self,
         db: Session,
         *,
+        current_user_id: str,
         server_id: uuid.UUID,
         channel_id: uuid.UUID,
         assignee_user_id: str | None,
+        assignee_preset_id: int | None,
         assignee_agent_identity_id: uuid.UUID | None,
     ) -> None:
         if assignee_user_id is not None:
@@ -277,6 +294,12 @@ class ServerChannelTaskService:
                 db,
                 server_id=server_id,
                 user_id=assignee_user_id,
+            )
+        if assignee_preset_id is not None:
+            self._validate_preset_assignee(
+                db,
+                user_id=current_user_id,
+                preset_id=assignee_preset_id,
             )
         if assignee_agent_identity_id is not None:
             self._validate_agent_assignee(
@@ -577,9 +600,11 @@ class ServerChannelTaskService:
         self._validate_status(request.status)
         self._validate_task_assignee(
             db,
+            current_user_id=current_user.id,
             server_id=server_id,
             channel_id=channel.id,
             assignee_user_id=request.assignee_user_id,
+            assignee_preset_id=request.assignee_preset_id,
             assignee_agent_identity_id=request.assignee_agent_identity_id,
         )
         activity_thread_root_message_id = self._resolve_task_thread_root_message_id(
@@ -707,9 +732,11 @@ class ServerChannelTaskService:
         ):
             self._validate_task_assignee(
                 db,
+                current_user_id=current_user.id,
                 server_id=server_id,
                 channel_id=channel_id,
                 assignee_user_id=request.assignee_user_id,
+                assignee_preset_id=request.assignee_preset_id,
                 assignee_agent_identity_id=request.assignee_agent_identity_id,
             )
             task.assignee_user_id = request.assignee_user_id
@@ -837,9 +864,11 @@ class ServerChannelTaskService:
             assignee_agent_identity_id = actor_context.actor_agent_identity_id
         self._validate_task_assignee(
             db,
+            current_user_id=current_user.id,
             server_id=server_id,
             channel_id=channel_id,
             assignee_user_id=assignee_user_id,
+            assignee_preset_id=assignee_preset_id,
             assignee_agent_identity_id=assignee_agent_identity_id,
         )
         task.assignee_user_id = assignee_user_id

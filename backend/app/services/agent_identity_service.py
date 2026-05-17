@@ -31,6 +31,7 @@ from app.schemas.agent_identity import (
     ChannelAgentMemberCreateRequest,
     ChannelAgentMemberResponse,
 )
+from app.services.agent_runtime_service import AgentRuntimeService
 from app.services.agent_state_bootstrap_service import ensure_agent_state_bootstrap
 from app.services.server_channel_access import require_channel_member_access
 from app.services.server_member_service import (
@@ -47,11 +48,25 @@ from app.services.session_service import SessionService
 
 
 class AgentIdentityService:
-    def __init__(self, *, session_service: SessionService | None = None) -> None:
+    def __init__(
+        self,
+        *,
+        session_service: SessionService | None = None,
+        runtime_service: AgentRuntimeService | None = None,
+    ) -> None:
         self._session_service = session_service or SessionService()
+        self._runtime_service = runtime_service or AgentRuntimeService()
 
-    @staticmethod
-    def _to_agent_response(agent_identity: AgentIdentity) -> AgentIdentityResponse:
+    def _to_agent_response(
+        self,
+        db: Session,
+        agent_identity: AgentIdentity,
+    ) -> AgentIdentityResponse:
+        if agent_identity.persistent_state is not None:
+            self._runtime_service.reconcile_persistent_state(
+                db,
+                agent_identity.persistent_state,
+            )
         return AgentIdentityResponse.model_validate(agent_identity)
 
     @staticmethod
@@ -108,7 +123,7 @@ class AgentIdentityService:
     ) -> list[AgentIdentityResponse]:
         require_server_member(db, server_id, current_user.id)
         return [
-            self._to_agent_response(item)
+            self._to_agent_response(db, item)
             for item in AgentIdentityRepository.list_by_server(
                 db,
                 server_id,
@@ -130,7 +145,7 @@ class AgentIdentityService:
                 error_code=ErrorCode.NOT_FOUND,
                 message=f"Agent identity not found: {agent_identity_id}",
             )
-        return self._to_agent_response(agent_identity)
+        return self._to_agent_response(db, agent_identity)
 
     def create_agent(
         self,
@@ -205,7 +220,7 @@ class AgentIdentityService:
             AgentIdentity,
             AgentIdentityRepository.get_by_id(db, agent_identity.id),
         )
-        return self._to_agent_response(agent_identity)
+        return self._to_agent_response(db, agent_identity)
 
     def update_agent(
         self,
@@ -232,7 +247,7 @@ class AgentIdentityService:
         agent_identity.updated_by = current_user.id
         db.commit()
         db.refresh(agent_identity)
-        return self._to_agent_response(agent_identity)
+        return self._to_agent_response(db, agent_identity)
 
     def list_channel_agents(
         self,
@@ -260,7 +275,7 @@ class AgentIdentityService:
                 continue
             if self._is_removed(agent_identity):
                 continue
-            agent_responses.append(self._to_agent_response(agent_identity))
+            agent_responses.append(self._to_agent_response(db, agent_identity))
         return agent_responses
 
     def add_agent_to_channel(
@@ -462,7 +477,7 @@ class AgentIdentityService:
             agent_identity.persistent_state.active_task_id = None
         db.commit()
         db.refresh(agent_identity)
-        return self._to_agent_response(agent_identity)
+        return self._to_agent_response(db, agent_identity)
 
     def stop_agent(
         self,
@@ -491,7 +506,7 @@ class AgentIdentityService:
             agent_identity.persistent_state.active_task_id = None
         db.commit()
         db.refresh(agent_identity)
-        return self._to_agent_response(agent_identity)
+        return self._to_agent_response(db, agent_identity)
 
     def _require_owner_agent(
         self,
