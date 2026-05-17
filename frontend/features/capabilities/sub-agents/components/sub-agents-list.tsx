@@ -7,11 +7,10 @@ import { useT } from "@/lib/i18n/client";
 import type { SubAgent } from "@/features/capabilities/sub-agents/types";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { SkeletonShimmer } from "@/components/ui/skeleton-shimmer";
 import { StaggeredList } from "@/components/ui/staggered-entrance";
 import { CapabilityCreateCard } from "@/features/capabilities/components/capability-create-card";
-import { CapabilitySourceAvatar } from "@/features/capabilities/components/capability-source-avatar";
+import { SubAgentListItem } from "@/features/capabilities/sub-agents/components/sub-agent-list-item";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -84,47 +83,17 @@ export function SubAgentsList({
             duration={400}
             renderItem={(agent) => {
               const busy = savingId === agent.id;
-              const modeLabel =
-                agent.mode === "structured"
-                  ? t("library.subAgents.mode.structured")
-                  : t("library.subAgents.mode.raw");
-              const toolsLabel =
-                Array.isArray(agent.tools) && agent.tools.length > 0
-                  ? agent.tools.join(", ")
-                  : "";
 
               return (
-                <div className="group flex items-center gap-4 rounded-xl border border-border/70 bg-card px-4 py-3 min-h-[64px]">
-                  <CapabilitySourceAvatar
+                <SubAgentListItem
                     name={agent.name}
+                    description={agent.description}
+                    tools={agent.tools}
+                    mode={agent.mode}
                     source={agent.source}
-                    status={agent.enabled ? "active" : "inactive"}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-medium font-mono">
-                        {agent.name}
-                      </span>
-                      <Badge
-                        variant="outline"
-                        className="text-xs text-muted-foreground"
-                      >
-                        {modeLabel}
-                      </Badge>
-                    </div>
-                    {agent.description ? (
-                      <p className="text-sm text-muted-foreground truncate">
-                        {agent.description}
-                      </p>
-                    ) : null}
-                    {toolsLabel ? (
-                      <p className="text-xs text-muted-foreground font-mono mt-1 truncate">
-                        {toolsLabel}
-                      </p>
-                    ) : null}
-                  </div>
-
-                  <div className="flex items-center gap-2 flex-shrink-0">
+                    enabled={agent.enabled}
+                    trailing={
+                      <>
                     <div className={hoverActionsClass}>
                       <Button
                         variant="ghost"
@@ -178,8 +147,9 @@ export function SubAgentsList({
                       }
                       disabled={busy}
                     />
-                  </div>
-                </div>
+                      </>
+                    }
+                  />
               );
             }}
           />

@@ -1676,6 +1676,7 @@
       "fields": {
         "name": "Nom",
         "namePlaceholder": "code-reviewer",
+        "nameHint": "Seuls A-Za-z0-9._- sont autorisés.",
         "enabled": "Activé",
         "description": "Description",
         "descriptionOptional": "Description (optionnelle)",
@@ -2232,10 +2233,21 @@
         "createTitle": "Créer un préréglage",
         "editTitle": "Modifier le préréglage"
       },
+      "panel": {
+        "newPresetLabel": "Nouveau préréglage",
+        "headerDescriptionFallback": "Aucune description pour le moment",
+        "changeVisual": "Changer l’avatar du préréglage",
+        "visualHint": "Cet avatar apparaît dans la liste des préréglages et aux points d’entrée associés.",
+        "createdLabel": "Créé"
+      },
       "subagents": {
         "title": "Sous-agents inline",
         "description": "Définissez des sous-agents supplémentaires à injecter avec ce préréglage.",
         "add": "Ajouter un sous-agent",
+        "import": "Importer",
+        "importDialogTitle": "Importer des sous-agents existants",
+        "importDialogDescription": "Sélectionnez des sous-agents structurés déjà configurés dans Capacités et copiez-les dans ce préréglage.",
+        "importEmpty": "Aucun sous-agent structuré disponible à importer.",
         "empty": "Aucun sous-agent configuré",
         "itemTitle": "Sous-agent {{index}}",
         "fields": {
@@ -2446,12 +2458,14 @@
     "delete": "Supprimer"
   },
   "common": {
+    "add": "Ajouter",
     "cancel": "Annuler",
     "close": "Fermer",
     "create": "Créer",
     "delete": "Supprimer",
     "deleted": "Supprimé",
     "edit": "Modifier",
+    "import": "Importer",
     "save": "Enregistrer",
     "saving": "Enregistrement...",
     "confirm": "Confirmer",
