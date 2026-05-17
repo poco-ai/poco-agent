@@ -72,7 +72,10 @@ function normalizeSubagentConfig(
 }
 
 function toPresetSubAgentConfig(
-  subAgent: Pick<SubAgent, "mode" | "name" | "description" | "prompt" | "tools">,
+  subAgent: Pick<
+    SubAgent,
+    "mode" | "name" | "description" | "prompt" | "tools"
+  >,
 ): PresetSubAgentConfig | null {
   if (subAgent.mode !== "structured") {
     return null;
@@ -125,9 +128,9 @@ export function PresetEditorPanel({
   const [visualOptions, setVisualOptions] = React.useState<
     PresetVisualOption[]
   >([]);
-  const [availableSubAgents, setAvailableSubAgents] = React.useState<SubAgent[]>(
-    [],
-  );
+  const [availableSubAgents, setAvailableSubAgents] = React.useState<
+    SubAgent[]
+  >([]);
   const [isLoadingCapabilities, setIsLoadingCapabilities] =
     React.useState(false);
   const [isLoadingVisualOptions, setIsLoadingVisualOptions] =
@@ -154,9 +157,8 @@ export function PresetEditorPanel({
   const [subAgentDialogOpen, setSubAgentDialogOpen] = React.useState(false);
   const [importDialogOpen, setImportDialogOpen] = React.useState(false);
   const [importSearchQuery, setImportSearchQuery] = React.useState("");
-  const [selectedImportSubAgentId, setSelectedImportSubAgentId] = React.useState<
-    number | null
-  >(null);
+  const [selectedImportSubAgentId, setSelectedImportSubAgentId] =
+    React.useState<number | null>(null);
   const [draftVisualKey, setDraftVisualKey] = React.useState(
     getPresetFormInitialVisualKey(),
   );
@@ -202,13 +204,14 @@ export function PresetEditorPanel({
       setIsLoadingVisualOptions(true);
       setIsLoadingImportSubAgents(true);
       try {
-        const [skills, servers, plugins, visuals, subAgents] = await Promise.all([
-          skillsService.listSkills({ revalidate: 0 }),
-          mcpService.listServers({ revalidate: 0 }),
-          pluginsService.listPlugins({ revalidate: 0 }),
-          presetsService.listPresetVisuals({ revalidate: 0 }),
-          subAgentsService.list({ revalidate: 0 }),
-        ]);
+        const [skills, servers, plugins, visuals, subAgents] =
+          await Promise.all([
+            skillsService.listSkills({ revalidate: 0 }),
+            mcpService.listServers({ revalidate: 0 }),
+            pluginsService.listPlugins({ revalidate: 0 }),
+            presetsService.listPresetVisuals({ revalidate: 0 }),
+            subAgentsService.list({ revalidate: 0 }),
+          ]);
         if (!active) return;
         setCapabilityItems({
           skills: skills.map((skill) => ({
@@ -253,7 +256,9 @@ export function PresetEditorPanel({
   }, []);
 
   const isSaving =
-    mode === "create" ? savingKey === "create" : savingKey === String(preset?.preset_id);
+    mode === "create"
+      ? savingKey === "create"
+      : savingKey === String(preset?.preset_id);
   const isValid = isPresetFormValid({ name, visualKey });
 
   const selectedVisualOption = React.useMemo(
@@ -471,406 +476,421 @@ export function PresetEditorPanel({
 
               <TabsContent value="general" className="space-y-5">
                 <div className="space-y-5">
-              <div className="space-y-2">
-                <Label htmlFor="preset-name-inline">
-                  {t("library.presetsPage.form.name")}
-                </Label>
-                <Input
-                  id="preset-name-inline"
-                  value={name}
-                  onChange={(event) => setName(event.target.value)}
-                  placeholder={t("library.presetsPage.form.namePlaceholder")}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="preset-description-inline">
-                  {t("library.presetsPage.form.description")}
-                </Label>
-                <Textarea
-                  id="preset-description-inline"
-                  value={description}
-                  onChange={(event) => setDescription(event.target.value)}
-                  placeholder={t(
-                    "library.presetsPage.form.descriptionPlaceholder",
-                  )}
-                  rows={4}
-                />
-              </div>
-              {mode === "edit" && preset ? (
-                <div className="space-y-2">
-                  <Label>{t("library.presetsPage.panel.createdLabel", "Created")}</Label>
-                  <div className="rounded-md border border-border/50 bg-background/40 px-3 py-2 text-sm text-muted-foreground">
-                    {formatTimestamp(preset.created_at) ?? "—"}
-                  </div>
-                </div>
-              ) : null}
-              <div className="space-y-2">
-                <Label htmlFor="preset-prompt-inline">
-                  {t("library.presetsPage.form.promptTemplate")}
-                </Label>
-                <Textarea
-                  id="preset-prompt-inline"
-                  value={promptTemplate}
-                  onChange={(event) => setPromptTemplate(event.target.value)}
-                  placeholder={t(
-                    "library.presetsPage.form.promptTemplatePlaceholder",
-                  )}
-                  rows={10}
-                />
-              </div>
-              <div className="space-y-3 rounded-2xl border border-border/60 bg-background/40 p-4">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <p className="text-sm font-medium text-foreground">
-                      {t("library.presetsPage.form.browserEnabled")}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {t("library.presetsPage.form.browserEnabledHint")}
-                    </p>
-                  </div>
-                  <Switch
-                    checked={browserEnabled}
-                    onCheckedChange={setBrowserEnabled}
-                  />
-                </div>
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <p className="text-sm font-medium text-foreground">
-                      {t("library.presetsPage.form.memoryEnabled")}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {t("library.presetsPage.form.memoryEnabledHint")}
-                    </p>
-                  </div>
-                  <Switch
-                    checked={memoryEnabled}
-                    onCheckedChange={setMemoryEnabled}
-                  />
-                </div>
-              </div>
-              <div className="flex flex-wrap justify-end gap-2 border-t border-border/50 pt-4">
-                {mode === "create" && onCancelCreate ? (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={onCancelCreate}
-                    disabled={isSaving}
-                  >
-                    {t("common.cancel")}
-                  </Button>
-                ) : null}
-                {mode === "edit" && preset && onDelete ? (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      void handleDelete();
-                    }}
-                    disabled={isSaving}
-                    className="text-destructive hover:text-destructive"
-                  >
-                    <Trash2 className="mr-2 size-4" />
-                    {t("common.delete")}
-                  </Button>
-                ) : null}
-                <Button
-                  type="button"
-                  onClick={() => {
-                    void handleSubmit();
-                  }}
-                  disabled={!isValid || isSaving}
-                >
-                  {isSaving ? (
-                    <>
-                      <Loader2 className="mr-2 size-4 animate-spin" />
-                      {t("common.saving")}
-                    </>
-                  ) : (
-                    <>
-                      {mode === "create" ? (
-                        <Plus className="mr-2 size-4" />
-                      ) : (
-                        <Save className="mr-2 size-4" />
+                  <div className="space-y-2">
+                    <Label htmlFor="preset-name-inline">
+                      {t("library.presetsPage.form.name")}
+                    </Label>
+                    <Input
+                      id="preset-name-inline"
+                      value={name}
+                      onChange={(event) => setName(event.target.value)}
+                      placeholder={t(
+                        "library.presetsPage.form.namePlaceholder",
                       )}
-                      {mode === "create" ? t("common.create") : t("common.save")}
-                    </>
-                  )}
-                </Button>
-              </div>
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="preset-description-inline">
+                      {t("library.presetsPage.form.description")}
+                    </Label>
+                    <Textarea
+                      id="preset-description-inline"
+                      value={description}
+                      onChange={(event) => setDescription(event.target.value)}
+                      placeholder={t(
+                        "library.presetsPage.form.descriptionPlaceholder",
+                      )}
+                      rows={4}
+                    />
+                  </div>
+                  {mode === "edit" && preset ? (
+                    <div className="space-y-2">
+                      <Label>
+                        {t("library.presetsPage.panel.createdLabel", "Created")}
+                      </Label>
+                      <div className="rounded-md border border-border/50 bg-background/40 px-3 py-2 text-sm text-muted-foreground">
+                        {formatTimestamp(preset.created_at) ?? "—"}
+                      </div>
+                    </div>
+                  ) : null}
+                  <div className="space-y-2">
+                    <Label htmlFor="preset-prompt-inline">
+                      {t("library.presetsPage.form.promptTemplate")}
+                    </Label>
+                    <Textarea
+                      id="preset-prompt-inline"
+                      value={promptTemplate}
+                      onChange={(event) =>
+                        setPromptTemplate(event.target.value)
+                      }
+                      placeholder={t(
+                        "library.presetsPage.form.promptTemplatePlaceholder",
+                      )}
+                      rows={10}
+                    />
+                  </div>
+                  <div className="space-y-3 rounded-2xl border border-border/60 bg-background/40 p-4">
+                    <div className="flex items-center justify-between gap-4">
+                      <div>
+                        <p className="text-sm font-medium text-foreground">
+                          {t("library.presetsPage.form.browserEnabled")}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {t("library.presetsPage.form.browserEnabledHint")}
+                        </p>
+                      </div>
+                      <Switch
+                        checked={browserEnabled}
+                        onCheckedChange={setBrowserEnabled}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between gap-4">
+                      <div>
+                        <p className="text-sm font-medium text-foreground">
+                          {t("library.presetsPage.form.memoryEnabled")}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {t("library.presetsPage.form.memoryEnabledHint")}
+                        </p>
+                      </div>
+                      <Switch
+                        checked={memoryEnabled}
+                        onCheckedChange={setMemoryEnabled}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap justify-end gap-2 border-t border-border/50 pt-4">
+                    {mode === "create" && onCancelCreate ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={onCancelCreate}
+                        disabled={isSaving}
+                      >
+                        {t("common.cancel")}
+                      </Button>
+                    ) : null}
+                    {mode === "edit" && preset && onDelete ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          void handleDelete();
+                        }}
+                        disabled={isSaving}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="mr-2 size-4" />
+                        {t("common.delete")}
+                      </Button>
+                    ) : null}
+                    <Button
+                      type="button"
+                      onClick={() => {
+                        void handleSubmit();
+                      }}
+                      disabled={!isValid || isSaving}
+                    >
+                      {isSaving ? (
+                        <>
+                          <Loader2 className="mr-2 size-4 animate-spin" />
+                          {t("common.saving")}
+                        </>
+                      ) : (
+                        <>
+                          {mode === "create" ? (
+                            <Plus className="mr-2 size-4" />
+                          ) : (
+                            <Save className="mr-2 size-4" />
+                          )}
+                          {mode === "create"
+                            ? t("common.create")
+                            : t("common.save")}
+                        </>
+                      )}
+                    </Button>
+                  </div>
                 </div>
               </TabsContent>
 
               <TabsContent value="capabilities" className="space-y-4">
-            {isLoadingCapabilities ? (
-              <div className="flex min-h-40 items-center justify-center rounded-2xl border border-dashed border-border/60 text-sm text-muted-foreground">
-                <Loader2 className="mr-2 size-4 animate-spin" />
-                {t("library.presetsPage.loadingCapabilities")}
-              </div>
-            ) : (
-              <div className="grid gap-4 2xl:grid-cols-3">
-                <CapabilitySelector
-                  title={t("cardNav.skills")}
-                  description={t("library.presetsPage.selectors.skills")}
-                  items={capabilityItems.skills}
-                  selectedIds={skillIds}
-                  onChange={setSkillIds}
-                  searchPlaceholder={t("library.skillsPage.searchPlaceholder")}
-                  emptyLabel={t("library.presetsPage.emptySkills")}
-                />
-                <CapabilitySelector
-                  title={t("cardNav.mcp")}
-                  description={t("library.presetsPage.selectors.mcp")}
-                  items={capabilityItems.mcp}
-                  selectedIds={mcpServerIds}
-                  onChange={setMcpServerIds}
-                  searchPlaceholder={t("library.mcpLibrary.searchPlaceholder")}
-                  emptyLabel={t("library.presetsPage.emptyMcp")}
-                />
-                <CapabilitySelector
-                  title={t("cardNav.plugins")}
-                  description={t("library.presetsPage.selectors.plugins")}
-                  items={capabilityItems.plugins}
-                  selectedIds={pluginIds}
-                  onChange={setPluginIds}
-                  searchPlaceholder={t(
-                    "library.pluginsPage.searchPlaceholder",
-                  )}
-                  emptyLabel={t("library.presetsPage.emptyPlugins")}
-                />
-              </div>
-            )}
+                {isLoadingCapabilities ? (
+                  <div className="flex min-h-40 items-center justify-center rounded-2xl border border-dashed border-border/60 text-sm text-muted-foreground">
+                    <Loader2 className="mr-2 size-4 animate-spin" />
+                    {t("library.presetsPage.loadingCapabilities")}
+                  </div>
+                ) : (
+                  <div className="grid gap-4 2xl:grid-cols-3">
+                    <CapabilitySelector
+                      title={t("cardNav.skills")}
+                      description={t("library.presetsPage.selectors.skills")}
+                      items={capabilityItems.skills}
+                      selectedIds={skillIds}
+                      onChange={setSkillIds}
+                      searchPlaceholder={t(
+                        "library.skillsPage.searchPlaceholder",
+                      )}
+                      emptyLabel={t("library.presetsPage.emptySkills")}
+                    />
+                    <CapabilitySelector
+                      title={t("cardNav.mcp")}
+                      description={t("library.presetsPage.selectors.mcp")}
+                      items={capabilityItems.mcp}
+                      selectedIds={mcpServerIds}
+                      onChange={setMcpServerIds}
+                      searchPlaceholder={t(
+                        "library.mcpLibrary.searchPlaceholder",
+                      )}
+                      emptyLabel={t("library.presetsPage.emptyMcp")}
+                    />
+                    <CapabilitySelector
+                      title={t("cardNav.plugins")}
+                      description={t("library.presetsPage.selectors.plugins")}
+                      items={capabilityItems.plugins}
+                      selectedIds={pluginIds}
+                      onChange={setPluginIds}
+                      searchPlaceholder={t(
+                        "library.pluginsPage.searchPlaceholder",
+                      )}
+                      emptyLabel={t("library.presetsPage.emptyPlugins")}
+                    />
+                  </div>
+                )}
               </TabsContent>
 
               <TabsContent value="subagents" className="space-y-4">
-            <div className="flex items-center justify-between gap-4 rounded-2xl border border-border/60 bg-background/40 p-4">
-              <div>
-                <p className="text-sm font-medium text-foreground">
-                  {t("library.presetsPage.subagents.title")}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {t("library.presetsPage.subagents.description")}
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setSubAgentDialogOpen(true)}
-                >
-                  <Plus className="mr-2 size-4" />
-                  {t("common.add")}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setImportDialogOpen(true)}
-                >
-                  <ArrowDownToLine className="mr-2 size-4" />
-                  {t(
-                    "library.presetsPage.subagents.import",
-                    "导入",
-                  )}
-                </Button>
-              </div>
-            </div>
-
-            {subagentConfigs.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-border/60 px-4 py-8 text-center text-sm text-muted-foreground">
-                {t("library.presetsPage.subagents.empty")}
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {subagentConfigs.map((config, index) => (
-                  <div
-                    key={`${index}-${config.name}`}
-                    className="space-y-3"
-                  >
-                    <SubAgentListItem
-                      name={config.name}
-                      description={config.description}
-                      tools={config.tools}
-                      mode="structured"
-                      trailing={
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() =>
-                            setSubagentConfigs((prev) =>
-                              prev.filter(
-                                (_, itemIndex) => itemIndex !== index,
-                              ),
-                            )
-                          }
-                        >
-                          <Trash2 className="size-4" />
-                        </Button>
-                      }
-                    />
+                <div className="flex items-center justify-between gap-4 rounded-2xl border border-border/60 bg-background/40 p-4">
+                  <div>
+                    <p className="text-sm font-medium text-foreground">
+                      {t("library.presetsPage.subagents.title")}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {t("library.presetsPage.subagents.description")}
+                    </p>
                   </div>
-                ))}
-              </div>
-            )}
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setSubAgentDialogOpen(true)}
+                    >
+                      <Plus className="mr-2 size-4" />
+                      {t("common.add")}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setImportDialogOpen(true)}
+                    >
+                      <ArrowDownToLine className="mr-2 size-4" />
+                      {t("library.presetsPage.subagents.import", "导入")}
+                    </Button>
+                  </div>
+                </div>
+
+                {subagentConfigs.length === 0 ? (
+                  <div className="rounded-2xl border border-dashed border-border/60 px-4 py-8 text-center text-sm text-muted-foreground">
+                    {t("library.presetsPage.subagents.empty")}
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {subagentConfigs.map((config, index) => (
+                      <div
+                        key={`${index}-${config.name}`}
+                        className="space-y-3"
+                      >
+                        <SubAgentListItem
+                          name={config.name}
+                          description={config.description}
+                          tools={config.tools}
+                          mode="structured"
+                          trailing={
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() =>
+                                setSubagentConfigs((prev) =>
+                                  prev.filter(
+                                    (_, itemIndex) => itemIndex !== index,
+                                  ),
+                                )
+                              }
+                            >
+                              <Trash2 className="size-4" />
+                            </Button>
+                          }
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
               </TabsContent>
             </Tabs>
           </div>
         </div>
       </section>
-    <SubAgentDialog
-      open={subAgentDialogOpen}
-      onOpenChange={setSubAgentDialogOpen}
-      mode="create"
-      isSaving={isCreatingSubAgent}
-      nameHint={t(
-        "library.subAgents.fields.nameHint",
-        "Only A-Za-z0-9._- are allowed.",
-      )}
-      onCreate={handleCreateSubAgent}
-      onUpdate={async () => null}
-    />
-    <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
-      <DialogContent className="max-w-3xl" ariaTitle={t("library.presetsPage.subagents.import", "导入")}>
-        <DialogHeader>
-          <DialogTitle>
-            {t(
-              "library.presetsPage.subagents.importDialogTitle",
-              "导入已有子代理",
-            )}
-          </DialogTitle>
-          <DialogDescription>
-            {t(
-              "library.presetsPage.subagents.importDialogDescription",
-              "从能力模块中已配置的结构化子代理里选择，并复制到当前预设。",
-            )}
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-4">
-          <HeaderSearchInput
-            value={importSearchQuery}
-            onChange={setImportSearchQuery}
-            placeholder={t("library.subAgents.searchPlaceholder")}
-            className="w-full"
-          />
-          <div className="max-h-[60vh] space-y-3 overflow-y-auto">
-            {isLoadingImportSubAgents ? (
-              <div className="flex min-h-32 items-center justify-center text-sm text-muted-foreground">
+      <SubAgentDialog
+        open={subAgentDialogOpen}
+        onOpenChange={setSubAgentDialogOpen}
+        mode="create"
+        isSaving={isCreatingSubAgent}
+        nameHint={t(
+          "library.subAgents.fields.nameHint",
+          "Only A-Za-z0-9._- are allowed.",
+        )}
+        onCreate={handleCreateSubAgent}
+        onUpdate={async () => null}
+      />
+      <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
+        <DialogContent
+          className="max-w-3xl"
+          ariaTitle={t("library.presetsPage.subagents.import", "导入")}
+        >
+          <DialogHeader>
+            <DialogTitle>
+              {t(
+                "library.presetsPage.subagents.importDialogTitle",
+                "导入已有子代理",
+              )}
+            </DialogTitle>
+            <DialogDescription>
+              {t(
+                "library.presetsPage.subagents.importDialogDescription",
+                "从能力模块中已配置的结构化子代理里选择，并复制到当前预设。",
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <HeaderSearchInput
+              value={importSearchQuery}
+              onChange={setImportSearchQuery}
+              placeholder={t("library.subAgents.searchPlaceholder")}
+              className="w-full"
+            />
+            <div className="max-h-[60vh] space-y-3 overflow-y-auto">
+              {isLoadingImportSubAgents ? (
+                <div className="flex min-h-32 items-center justify-center text-sm text-muted-foreground">
+                  <Loader2 className="mr-2 size-4 animate-spin" />
+                  {t("common.loading")}
+                </div>
+              ) : importableSubAgents.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-border/60 px-4 py-6 text-center text-sm text-muted-foreground">
+                  {t(
+                    "library.presetsPage.subagents.importEmpty",
+                    "暂无可导入的结构化子代理。",
+                  )}
+                </div>
+              ) : (
+                importableSubAgents.map((agent) => (
+                  <SubAgentListItem
+                    key={agent.id}
+                    name={agent.name}
+                    description={agent.description}
+                    tools={agent.tools}
+                    mode={agent.mode}
+                    source={agent.source}
+                    enabled={agent.enabled}
+                    selected={agent.id === selectedImportSubAgentId}
+                    onClick={() => setSelectedImportSubAgentId(agent.id)}
+                  />
+                ))
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setImportDialogOpen(false)}
+            >
+              {t("common.cancel")}
+            </Button>
+            <Button
+              type="button"
+              onClick={handleImportSelectedSubAgent}
+              disabled={selectedImportSubAgentId === null}
+            >
+              {t("common.import", "导入")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={visualDialogOpen} onOpenChange={setVisualDialogOpen}>
+        <DialogContent
+          className="max-w-3xl"
+          ariaTitle={t("library.presetsPage.form.visual")}
+        >
+          <DialogHeader>
+            <DialogTitle>
+              {t(
+                "library.presetsPage.panel.changeVisual",
+                "Change preset avatar",
+              )}
+            </DialogTitle>
+            <DialogDescription>
+              {t(
+                "library.presetsPage.panel.visualHint",
+                "This avatar appears in the preset list and related entry points.",
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[60vh] overflow-y-auto">
+            {isLoadingVisualOptions ? (
+              <div className="flex min-h-40 items-center justify-center text-sm text-muted-foreground">
                 <Loader2 className="mr-2 size-4 animate-spin" />
                 {t("common.loading")}
               </div>
-            ) : importableSubAgents.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-border/60 px-4 py-6 text-center text-sm text-muted-foreground">
-                {t(
-                  "library.presetsPage.subagents.importEmpty",
-                  "暂无可导入的结构化子代理。",
-                )}
-              </div>
             ) : (
-              importableSubAgents.map((agent) => (
-                <SubAgentListItem
-                  key={agent.id}
-                  name={agent.name}
-                  description={agent.description}
-                  tools={agent.tools}
-                  mode={agent.mode}
-                  source={agent.source}
-                  enabled={agent.enabled}
-                  selected={agent.id === selectedImportSubAgentId}
-                  onClick={() => setSelectedImportSubAgentId(agent.id)}
-                />
-              ))
+              <div className="grid grid-cols-4 gap-3">
+                {visualOptions.map((option) => {
+                  const selected = option.key === draftVisualKey;
+                  return (
+                    <button
+                      key={option.key}
+                      type="button"
+                      onClick={() => setDraftVisualKey(option.key)}
+                      aria-pressed={selected}
+                      className={
+                        selected
+                          ? "flex aspect-square items-center justify-center rounded-2xl border border-primary/30 bg-primary/10 p-3 shadow-sm transition-colors"
+                          : "flex aspect-square items-center justify-center rounded-2xl border border-border/60 bg-card p-3 transition-colors hover:border-border hover:bg-accent/40"
+                      }
+                    >
+                      {option.url ? (
+                        <Image
+                          src={option.url}
+                          alt=""
+                          width={52}
+                          height={52}
+                          unoptimized
+                          className="size-12 object-contain object-center"
+                        />
+                      ) : (
+                        <span className="text-xs font-semibold tracking-[0.18em] text-muted-foreground">
+                          {option.key}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
             )}
           </div>
-        </div>
-        <DialogFooter>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setImportDialogOpen(false)}
-          >
-            {t("common.cancel")}
-          </Button>
-          <Button
-            type="button"
-            onClick={handleImportSelectedSubAgent}
-            disabled={selectedImportSubAgentId === null}
-          >
-            {t("common.import", "导入")}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-    <Dialog open={visualDialogOpen} onOpenChange={setVisualDialogOpen}>
-      <DialogContent className="max-w-3xl" ariaTitle={t("library.presetsPage.form.visual")}>
-        <DialogHeader>
-          <DialogTitle>
-            {t(
-              "library.presetsPage.panel.changeVisual",
-              "Change preset avatar",
-            )}
-          </DialogTitle>
-          <DialogDescription>
-            {t(
-              "library.presetsPage.panel.visualHint",
-              "This avatar appears in the preset list and related entry points.",
-            )}
-          </DialogDescription>
-        </DialogHeader>
-        <div className="max-h-[60vh] overflow-y-auto">
-          {isLoadingVisualOptions ? (
-            <div className="flex min-h-40 items-center justify-center text-sm text-muted-foreground">
-              <Loader2 className="mr-2 size-4 animate-spin" />
-              {t("common.loading")}
-            </div>
-          ) : (
-            <div className="grid grid-cols-4 gap-3">
-              {visualOptions.map((option) => {
-                const selected = option.key === draftVisualKey;
-                return (
-                  <button
-                    key={option.key}
-                    type="button"
-                    onClick={() => setDraftVisualKey(option.key)}
-                    aria-pressed={selected}
-                    className={
-                      selected
-                        ? "flex aspect-square items-center justify-center rounded-2xl border border-primary/30 bg-primary/10 p-3 shadow-sm transition-colors"
-                        : "flex aspect-square items-center justify-center rounded-2xl border border-border/60 bg-card p-3 transition-colors hover:border-border hover:bg-accent/40"
-                    }
-                  >
-                    {option.url ? (
-                      <Image
-                        src={option.url}
-                        alt=""
-                        width={52}
-                        height={52}
-                        unoptimized
-                        className="size-12 object-contain object-center"
-                      />
-                    ) : (
-                      <span className="text-xs font-semibold tracking-[0.18em] text-muted-foreground">
-                        {option.key}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
-        <DialogFooter>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setVisualDialogOpen(false)}
-          >
-            {t("common.cancel")}
-          </Button>
-          <Button type="button" onClick={handleVisualApply}>
-            {t("common.save")}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setVisualDialogOpen(false)}
+            >
+              {t("common.cancel")}
+            </Button>
+            <Button type="button" onClick={handleVisualApply}>
+              {t("common.save")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

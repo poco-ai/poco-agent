@@ -156,7 +156,8 @@ export function PresetsPageClient() {
                         key={preset.preset_id}
                         preset={preset}
                         selected={
-                          mode !== "create" && preset.preset_id === activePresetId
+                          mode !== "create" &&
+                          preset.preset_id === activePresetId
                         }
                         onSelect={handleSelectPreset}
                       />
