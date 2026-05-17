@@ -1676,6 +1676,7 @@
       "fields": {
         "name": "Name",
         "namePlaceholder": "code-reviewer",
+        "nameHint": "Nur A-Za-z0-9._- sind erlaubt.",
         "enabled": "Aktiviert",
         "description": "Beschreibung",
         "descriptionOptional": "Beschreibung (optional)",
@@ -2231,10 +2232,21 @@
         "createTitle": "Vorlage erstellen",
         "editTitle": "Vorlage bearbeiten"
       },
+      "panel": {
+        "newPresetLabel": "Neue Vorlage",
+        "headerDescriptionFallback": "Noch keine Beschreibung",
+        "changeVisual": "Vorlagen-Avatar ändern",
+        "visualHint": "Dieser Avatar erscheint in der Vorlagenliste und an verwandten Einstiegen.",
+        "createdLabel": "Erstellt"
+      },
       "subagents": {
         "title": "Inline-Subagents",
         "description": "Definiere zusätzliche Subagents, die mit dieser Vorlage injiziert werden.",
         "add": "Subagent hinzufügen",
+        "import": "Importieren",
+        "importDialogTitle": "Vorhandene Subagents importieren",
+        "importDialogDescription": "Wähle bereits in den Fähigkeiten konfigurierte strukturierte Subagents aus und kopiere sie in diese Vorlage.",
+        "importEmpty": "Keine strukturierten Subagents zum Importieren verfügbar.",
         "empty": "Keine Subagents konfiguriert",
         "itemTitle": "Subagent {{index}}",
         "fields": {
@@ -2445,12 +2457,14 @@
     "delete": "Löschen"
   },
   "common": {
+    "add": "Hinzufügen",
     "cancel": "Abbrechen",
     "close": "Schließen",
     "create": "Erstellen",
     "delete": "Löschen",
     "deleted": "Gelöscht",
     "edit": "Bearbeiten",
+    "import": "Importieren",
     "save": "Speichern",
     "saving": "Speichern...",
     "confirm": "Bestätigen",

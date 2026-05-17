@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 
+import { ApiError } from "@/lib/errors";
 import { useT } from "@/lib/i18n/client";
 import { subAgentsService } from "@/features/capabilities/sub-agents/api/sub-agents-api";
 import type {
@@ -44,7 +45,11 @@ export function useSubAgentsStore() {
         return created;
       } catch (error) {
         console.error("[SubAgents] create failed:", error);
-        toast.error(t("library.subAgents.toasts.error"));
+        toast.error(
+          error instanceof ApiError && error.message.trim()
+            ? error.message
+            : t("library.subAgents.toasts.error"),
+        );
         return null;
       } finally {
         setSavingId(null);
@@ -65,7 +70,11 @@ export function useSubAgentsStore() {
         return updated;
       } catch (error) {
         console.error("[SubAgents] update failed:", error);
-        toast.error(t("library.subAgents.toasts.error"));
+        toast.error(
+          error instanceof ApiError && error.message.trim()
+            ? error.message
+            : t("library.subAgents.toasts.error"),
+        );
         return null;
       } finally {
         setSavingId(null);
@@ -83,7 +92,11 @@ export function useSubAgentsStore() {
         toast.success(t("library.subAgents.toasts.deleted"));
       } catch (error) {
         console.error("[SubAgents] delete failed:", error);
-        toast.error(t("library.subAgents.toasts.error"));
+        toast.error(
+          error instanceof ApiError && error.message.trim()
+            ? error.message
+            : t("library.subAgents.toasts.error"),
+        );
       } finally {
         setSavingId(null);
       }

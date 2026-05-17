@@ -1676,6 +1676,7 @@
       "fields": {
         "name": "名前",
         "namePlaceholder": "code-reviewer",
+        "nameHint": "使用できるのは A-Za-z0-9._- のみです。",
         "enabled": "有効",
         "description": "説明",
         "descriptionOptional": "説明（オプション）",
@@ -2232,10 +2233,21 @@
         "createTitle": "プリセットを作成",
         "editTitle": "プリセットを編集"
       },
+      "panel": {
+        "newPresetLabel": "新しいプリセット",
+        "headerDescriptionFallback": "説明はまだありません",
+        "changeVisual": "プリセットのアバターを変更",
+        "visualHint": "このアバターはプリセット一覧と関連する入口に表示されます。",
+        "createdLabel": "作成日時"
+      },
       "subagents": {
         "title": "インラインサブエージェント",
         "description": "このプリセットと一緒に注入する追加サブエージェントを定義します。",
         "add": "サブエージェントを追加",
+        "import": "インポート",
+        "importDialogTitle": "既存のサブエージェントをインポート",
+        "importDialogDescription": "Capabilities ですでに設定されている構造化サブエージェントを選択し、このプリセットにコピーします。",
+        "importEmpty": "インポートできる構造化サブエージェントがありません。",
         "empty": "サブエージェントは未設定です",
         "itemTitle": "サブエージェント {{index}}",
         "fields": {
@@ -2446,12 +2458,14 @@
     "delete": "削除"
   },
   "common": {
+    "add": "追加",
     "cancel": "キャンセル",
     "close": "閉じる",
     "create": "作成",
     "delete": "削除",
     "deleted": "削除済み",
     "edit": "編集",
+    "import": "インポート",
     "save": "保存",
     "saving": "保存中...",
     "confirm": "確認",
