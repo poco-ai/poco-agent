@@ -34,6 +34,7 @@ import {
 import type {
   ChannelTaskActorSummary,
   ChannelTask,
+  ChannelTaskStatus,
   ChannelTaskView,
 } from "@/features/channel-tasks/model/types";
 import type {
@@ -108,6 +109,13 @@ function taskAssigneeValue(task: ChannelTask): string {
   }
   return "none:";
 }
+
+const TASK_STATUS_OPTIONS: ChannelTaskStatus[] = [
+  "todo",
+  "in_progress",
+  "in_review",
+  "done",
+];
 
 type AssigneeOption = {
   value: string;
@@ -328,6 +336,41 @@ function TaskAssignmentControl({
   );
 }
 
+function TaskStatusControl({
+  task,
+  disabled,
+  canUpdateStatus,
+  onUpdateStatus,
+}: {
+  task: ChannelTask;
+  disabled: boolean;
+  canUpdateStatus: boolean;
+  onUpdateStatus: (task: ChannelTask, status: ChannelTaskStatus) => Promise<void>;
+}) {
+  const { t } = useT("translation");
+
+  return (
+    <div onClick={(event) => event.stopPropagation()}>
+      <Select
+        value={task.status}
+        onValueChange={(value) => void onUpdateStatus(task, value as ChannelTaskStatus)}
+        disabled={disabled || !canUpdateStatus}
+      >
+        <SelectTrigger className="h-7 w-auto min-w-[8rem] border-border bg-background text-xs">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {TASK_STATUS_OPTIONS.map((status) => (
+            <SelectItem key={status} value={status}>
+              {t(`channelTasks.statuses.${status}`)}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
 function TaskCard({
   task,
   members,
@@ -335,8 +378,10 @@ function TaskCard({
   presets,
   isSaving,
   canUpdateAssignee,
+  canUpdateStatus,
   onOpenTask,
   onUpdateAssignee,
+  onUpdateStatus,
 }: {
   task: ChannelTask;
   members: ServerChannelMemberItem[];
@@ -344,6 +389,7 @@ function TaskCard({
   presets: Preset[];
   isSaving: boolean;
   canUpdateAssignee: boolean;
+  canUpdateStatus: boolean;
   onOpenTask: (taskId: string) => void;
   onUpdateAssignee: (
     task: ChannelTask,
@@ -352,6 +398,7 @@ function TaskCard({
       assigneeAgentIdentityId: string | null;
     },
   ) => Promise<void>;
+  onUpdateStatus: (task: ChannelTask, status: ChannelTaskStatus) => Promise<void>;
 }) {
   const title = normalizeTaskText(task.title);
   const description = normalizeTaskText(task.description);
@@ -371,9 +418,17 @@ function TaskCard({
       className="w-full rounded-md border border-border bg-card px-4 py-4 text-left transition-colors hover:bg-muted/20"
     >
       <div className="flex min-w-0 items-start justify-between gap-3">
-        <p className="min-w-0 truncate text-xs font-medium text-muted-foreground">
-          #{task.displayNumber}
-        </p>
+        <div className="min-w-0 space-y-2">
+          <p className="min-w-0 truncate text-xs font-medium text-muted-foreground">
+            #{task.displayNumber}
+          </p>
+          <TaskStatusControl
+            task={task}
+            disabled={isSaving}
+            canUpdateStatus={canUpdateStatus}
+            onUpdateStatus={onUpdateStatus}
+          />
+        </div>
         <TaskAssignmentControl
           task={task}
           members={members}
@@ -405,10 +460,12 @@ export function ChannelTasksWorkspace({
   agents,
   presets,
   canUpdateAssignee,
+  canUpdateStatus,
   onSelectChannel,
   onUpdateView,
   onOpenTask,
   onUpdateAssignee,
+  onUpdateStatus,
 }: {
   tasks: ChannelTask[];
   taskView: ChannelTaskView;
@@ -418,6 +475,7 @@ export function ChannelTasksWorkspace({
   agents: ServerAgentItem[];
   presets: Preset[];
   canUpdateAssignee: boolean;
+  canUpdateStatus: boolean;
   onSelectChannel: (channelId: string) => void;
   onUpdateView: (view: ChannelTaskView) => void;
   onOpenTask: (taskId: string) => void;
@@ -428,6 +486,7 @@ export function ChannelTasksWorkspace({
       assigneeAgentIdentityId: string | null;
     },
   ) => Promise<void>;
+  onUpdateStatus: (task: ChannelTask, status: ChannelTaskStatus) => Promise<void>;
 }) {
   const { t } = useT("translation");
   const [savingTaskId, setSavingTaskId] = React.useState<string | null>(null);
@@ -515,8 +574,10 @@ export function ChannelTasksWorkspace({
                           presets={presets}
                           isSaving={savingTaskId === task.taskId}
                           canUpdateAssignee={canUpdateAssignee}
+                          canUpdateStatus={canUpdateStatus}
                           onOpenTask={onOpenTask}
                           onUpdateAssignee={updateAssignee}
+                          onUpdateStatus={onUpdateStatus}
                         />
                       ))
                     ) : (
@@ -553,8 +614,10 @@ export function ChannelTasksWorkspace({
                       presets={presets}
                       isSaving={savingTaskId === task.taskId}
                       canUpdateAssignee={canUpdateAssignee}
+                      canUpdateStatus={canUpdateStatus}
                       onOpenTask={onOpenTask}
                       onUpdateAssignee={updateAssignee}
+                      onUpdateStatus={onUpdateStatus}
                     />
                   ))}
                 </div>

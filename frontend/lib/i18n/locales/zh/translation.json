@@ -85,6 +85,7 @@
       "stateRoot": "状态根目录",
       "memoryFile": "记忆文件",
       "activeTask": "当前任务",
+      "activeSession": "当前会话",
       "preset": "Preset #{{id}}",
       "tempRuntime": "临时 runtime",
       "promote": "提升结果",

@@ -19,8 +19,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  getAgentRuntimeDotClassName,
+  getAgentRuntimeStatus,
+} from "@/features/servers/lib/agent-runtime-status";
 import type { ServerAgentItem } from "@/features/servers/model/types";
 import { useT } from "@/lib/i18n/client";
+import { cn } from "@/lib/utils";
 
 function formatDateTime(value: string | null | undefined): string | null {
   if (!value) {
@@ -49,6 +54,7 @@ export function ServerAgentDetailDialog({
   if (!agent) {
     return null;
   }
+  const runtimeStatus = getAgentRuntimeStatus(agent);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -75,6 +81,15 @@ export function ServerAgentDetailDialog({
             <div className="flex flex-wrap gap-2">
               <Badge variant="secondary">{agent.lifecycleState}</Badge>
               <Badge variant="outline">{agent.visibility}</Badge>
+              <Badge variant="outline" className="inline-flex items-center gap-2">
+                <span
+                  className={cn(
+                    "size-2 rounded-full",
+                    getAgentRuntimeDotClassName(runtimeStatus.tone),
+                  )}
+                />
+                {t(runtimeStatus.labelKey)}
+              </Badge>
               <Badge variant="outline">
                 {t("servers.agents.preset", { id: agent.presetId })}
               </Badge>
@@ -87,8 +102,10 @@ export function ServerAgentDetailDialog({
                   <span>{t("servers.agents.runtimeStatus")}</span>
                 </div>
                 <p className="mt-2 text-sm font-semibold text-foreground">
-                  {agent.persistentState?.runtimeStatus ??
-                    t("servers.agents.unknown")}
+                  {t(runtimeStatus.labelKey)}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {runtimeStatus.rawRuntimeStatus ?? t("servers.agents.unknown")}
                 </p>
               </div>
               <div className="rounded-2xl border border-border/60 bg-background/80 p-4">
@@ -163,6 +180,16 @@ export function ServerAgentDetailDialog({
                 </div>
                 <p className="mt-2 break-all text-foreground">
                   {agent.persistentState?.activeTaskId ??
+                    t("servers.agents.emptyValue")}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-border/60 bg-background/80 p-4">
+                <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                  <Container className="size-3.5" />
+                  <span>{t("servers.agents.activeSession")}</span>
+                </div>
+                <p className="mt-2 break-all text-foreground">
+                  {agent.persistentState?.activeSessionId ??
                     t("servers.agents.emptyValue")}
                 </p>
               </div>
