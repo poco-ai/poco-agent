@@ -49,6 +49,7 @@ import { channelTasksApi } from "@/features/channel-tasks/api/channel-tasks-api"
 import { resolveChannelTaskView } from "@/features/channel-tasks/lib/channel-task-board";
 import type {
   ChannelTask,
+  ChannelTaskStatus,
   ChannelTaskView,
 } from "@/features/channel-tasks/model/types";
 import type { Preset } from "@/features/capabilities/presets/lib/preset-types";
@@ -2537,6 +2538,46 @@ export function ServerConversationPageClient({
     }
   };
 
+  const updateTaskStatus = async (
+    task: ChannelTask,
+    status: ChannelTaskStatus,
+  ) => {
+    try {
+      const nextTask = await channelTasksApi.updateTaskStatus(
+        selectedServerId ?? task.serverId,
+        task.channelId,
+        task.taskId,
+        {
+          status,
+          position: task.position,
+        },
+      );
+      setTasks((current) =>
+        current.map((item) =>
+          item.taskId === nextTask.taskId ? nextTask : item,
+        ),
+      );
+      if (
+        drawer.type === "thread" &&
+        nextTask.threadRootMessageId &&
+        drawer.rootMessageId === nextTask.threadRootMessageId
+      ) {
+        setThreadMessages(
+          await serversApi.getThread(
+            selectedServerId ?? nextTask.serverId,
+            nextTask.channelId,
+            nextTask.threadRootMessageId,
+          ),
+        );
+      }
+      toast.success(t("channelTasks.toasts.statusUpdated"));
+    } catch (error) {
+      console.error("[ServersWorkspace] task status update failed", error);
+      toast.error(t("channelTasks.toasts.statusFailed"));
+      throw error;
+    }
+  };
+
   const handleOpenDm = async (agentId: string) => {
     if (!selectedServerId) {
       return;
@@ -3049,7 +3090,7 @@ export function ServerConversationPageClient({
     topLevelChannels,
     directMessages,
     activeChannelId,
-    onSelectServer: setSelectedServerId,
+    onSelectServer: switchServer,
     onOpenServerAccess: () => setServerAccessOpen(true),
     onOpenMode: openMode,
     onOpenTasks: openTaskMode,
@@ -3224,6 +3265,7 @@ export function ServerConversationPageClient({
                 agents={channelAgents}
                 presets={presets}
                 canUpdateAssignee={canManageServerOps}
+                canUpdateStatus={canManageServerOps}
                 onSelectChannel={(value) => {
                   router.push(
                     `/${lng}/servers/${selectedServerId}/channels/${value}?tab=chat&mode=tasks&view=${taskView}`,
@@ -3232,6 +3274,7 @@ export function ServerConversationPageClient({
                 onUpdateView={updateTaskView}
                 onOpenTask={openTaskThread}
                 onUpdateAssignee={updateTaskAssignee}
+                onUpdateStatus={updateTaskStatus}
               />
             ) : (
               <ConversationContent

@@ -84,6 +84,7 @@
       "stateRoot": "State root",
       "memoryFile": "Memory file",
       "activeTask": "Active task",
+      "activeSession": "Active session",
       "preset": "Preset #{{id}}",
       "tempRuntime": "Temporary runtime",
       "promote": "Promote result",
