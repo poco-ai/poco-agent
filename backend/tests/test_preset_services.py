@@ -20,11 +20,11 @@ class PresetServiceTests(unittest.TestCase):
         self.user_id = "user-1"
         self.now = datetime.now(UTC)
 
-    @patch("app.services.preset_service.PresetRepository.exists_by_user_name")
+    @patch("app.services.preset_service.PresetRepository.exists_by_scope_name")
     def test_create_preset_rejects_duplicate_name(
-        self, exists_by_user_name: MagicMock
+        self, exists_by_scope_name: MagicMock
     ) -> None:
-        exists_by_user_name.return_value = True
+        exists_by_scope_name.return_value = True
 
         with self.assertRaises(AppException) as context:
             self.service.create_preset(
@@ -37,20 +37,26 @@ class PresetServiceTests(unittest.TestCase):
             )
 
         self.assertEqual(context.exception.error_code, ErrorCode.PRESET_ALREADY_EXISTS)
-        exists_by_user_name.assert_called_once_with(self.db, self.user_id, "Frontend")
+        exists_by_scope_name.assert_called_once_with(
+            self.db,
+            scope="personal",
+            name="Frontend",
+            user_id=self.user_id,
+            workspace_id=None,
+        )
 
     @patch.object(PresetService, "_validate_components")
     @patch("app.services.preset_service.PresetVisualRepository.get_by_key")
     @patch("app.services.preset_service.PresetRepository.create")
-    @patch("app.services.preset_service.PresetRepository.exists_by_user_name")
+    @patch("app.services.preset_service.PresetRepository.exists_by_scope_name")
     def test_create_preset_persists_trimmed_fields(
         self,
-        exists_by_user_name: MagicMock,
+        exists_by_scope_name: MagicMock,
         create: MagicMock,
         get_visual_by_key: MagicMock,
         validate_components: MagicMock,
     ) -> None:
-        exists_by_user_name.return_value = False
+        exists_by_scope_name.return_value = False
         get_visual_by_key.return_value = PresetVisual(
             id=1,
             key="preset-visual-01",
@@ -111,12 +117,12 @@ class PresetServiceTests(unittest.TestCase):
         self.assertEqual(result.visual_version, "abc123")
 
     @patch.object(PresetService, "_validate_components")
-    @patch("app.services.preset_service.PresetRepository.exists_by_user_name")
+    @patch("app.services.preset_service.PresetRepository.exists_by_scope_name")
     @patch("app.services.preset_service.PresetRepository.get_by_id")
     def test_update_preset_rejects_blank_name(
         self,
         get_by_id: MagicMock,
-        exists_by_user_name: MagicMock,
+        exists_by_scope_name: MagicMock,
         validate_components: MagicMock,
     ) -> None:
         get_by_id.return_value = Preset(
@@ -136,7 +142,7 @@ class PresetServiceTests(unittest.TestCase):
             created_at=self.now,
             updated_at=self.now,
         )
-        exists_by_user_name.return_value = False
+        exists_by_scope_name.return_value = False
 
         with self.assertRaises(AppException) as context:
             self.service.update_preset(
@@ -176,6 +182,10 @@ class PresetServiceTests(unittest.TestCase):
             updated_at=self.now,
         )
         count_projects_using_as_default.return_value = 2
+        query_mocks = [MagicMock(), MagicMock(), MagicMock()]
+        for query_mock in query_mocks:
+            query_mock.filter.return_value.count.return_value = 0
+        self.db.query.side_effect = query_mocks
 
         with self.assertRaises(AppException) as context:
             self.service.delete_preset(self.db, self.user_id, 9)
@@ -183,14 +193,63 @@ class PresetServiceTests(unittest.TestCase):
         self.assertEqual(context.exception.error_code, ErrorCode.BAD_REQUEST)
         self.db.commit.assert_not_called()
 
-    @patch("app.services.preset_service.PresetRepository.exists_by_user_name")
+    @patch(
+        "app.services.preset_service.PresetRepository.count_projects_using_as_default"
+    )
+    @patch("app.services.preset_service.PresetRepository.get_by_id")
+    def test_delete_preset_rejects_live_agent_and_assignment_references(
+        self,
+        get_by_id: MagicMock,
+        count_projects_using_as_default: MagicMock,
+    ) -> None:
+        get_by_id.return_value = Preset(
+            id=9,
+            user_id=self.user_id,
+            name="Shared",
+            description=None,
+            visual_key="preset-visual-01",
+            prompt_template=None,
+            browser_enabled=False,
+            memory_enabled=False,
+            skill_ids=[],
+            mcp_server_ids=[],
+            plugin_ids=[],
+            subagent_configs=[],
+            is_deleted=False,
+            created_at=self.now,
+            updated_at=self.now,
+        )
+        count_projects_using_as_default.return_value = 0
+        query_mocks = [MagicMock(), MagicMock(), MagicMock()]
+        query_mocks[0].filter.return_value.count.return_value = 2
+        query_mocks[1].filter.return_value.count.return_value = 1
+        query_mocks[2].filter.return_value.count.return_value = 3
+        self.db.query.side_effect = query_mocks
+
+        with self.assertRaises(AppException) as context:
+            self.service.delete_preset(self.db, self.user_id, 9)
+
+        self.assertEqual(context.exception.error_code, ErrorCode.BAD_REQUEST)
+        self.assertEqual(
+            context.exception.details,
+            {
+                "dependencies": [
+                    {"type": "live_agent_identity", "count": 2},
+                    {"type": "active_assignment", "count": 1},
+                    {"type": "channel_task_assignee", "count": 3},
+                ]
+            },
+        )
+        self.db.commit.assert_not_called()
+
+    @patch("app.services.preset_service.PresetRepository.exists_by_scope_name")
     @patch("app.services.preset_service.PresetVisualRepository.get_by_key")
     def test_create_preset_rejects_unknown_visual_key(
         self,
         get_visual_by_key: MagicMock,
-        exists_by_user_name: MagicMock,
+        exists_by_scope_name: MagicMock,
     ) -> None:
-        exists_by_user_name.return_value = False
+        exists_by_scope_name.return_value = False
         get_visual_by_key.return_value = None
 
         with self.assertRaises(AppException) as context:

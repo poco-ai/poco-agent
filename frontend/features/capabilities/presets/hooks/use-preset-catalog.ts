@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 
+import { ApiError } from "@/lib/errors";
 import { useT } from "@/lib/i18n/client";
 import { presetsService } from "@/features/capabilities/presets/api/presets-api";
 import type {
@@ -78,6 +79,38 @@ export function usePresetCatalog() {
     [t],
   );
 
+  const formatDeleteFailure = useCallback(
+    (error: unknown): string => {
+      if (!(error instanceof ApiError)) {
+        return t("library.presetsPage.toasts.deleteFailed");
+      }
+      const payload = error.details as
+        | {
+            data?: {
+              dependencies?: Array<{
+                type?: string;
+                count?: number;
+              }>;
+            };
+          }
+        | undefined;
+      const dependencies = payload?.data?.dependencies;
+      if (!Array.isArray(dependencies) || dependencies.length === 0) {
+        return t("library.presetsPage.toasts.deleteFailed");
+      }
+      const labels = dependencies.map((dependency) =>
+        t(
+          `library.presetsPage.deleteDependencies.${dependency.type ?? "unknown"}`,
+          { count: dependency.count ?? 0 },
+        ),
+      );
+      return t("library.presetsPage.toasts.deleteBlocked", {
+        dependencies: labels.join(", "),
+      });
+    },
+    [t],
+  );
+
   const deletePreset = useCallback(
     async (presetId: number) => {
       setSavingKey(String(presetId));
@@ -89,12 +122,12 @@ export function usePresetCatalog() {
         toast.success(t("library.presetsPage.toasts.deleted"));
       } catch (error) {
         console.error("[Presets] delete failed:", error);
-        toast.error(t("library.presetsPage.toasts.deleteFailed"));
+        toast.error(formatDeleteFailure(error));
       } finally {
         setSavingKey(null);
       }
     },
-    [t],
+    [formatDeleteFailure, t],
   );
 
   return {

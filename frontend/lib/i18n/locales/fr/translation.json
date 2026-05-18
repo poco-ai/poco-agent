@@ -84,6 +84,7 @@
       "stateRoot": "State root",
       "memoryFile": "Memory file",
       "activeTask": "Active task",
+      "activeSession": "Active session",
       "preset": "Preset #{{id}}",
       "tempRuntime": "Temporary runtime",
       "promote": "Promote result",
@@ -2265,7 +2266,15 @@
         "updated": "Préréglage mis à jour",
         "deleted": "Préréglage supprimé",
         "saveFailed": "Échec de l’enregistrement du préréglage",
-        "deleteFailed": "Échec de la suppression du préréglage"
+        "deleteFailed": "Échec de la suppression du préréglage",
+        "deleteBlocked": "Can't delete this preset yet: {{dependencies}}"
+      },
+      "deleteDependencies": {
+        "project_default": "{{count}} project defaults",
+        "live_agent_identity": "{{count}} live agents",
+        "active_assignment": "{{count}} active assignments",
+        "channel_task_assignee": "{{count}} channel task assignees",
+        "unknown": "{{count}} unknown dependencies"
       }
     },
     "skillSettings": {

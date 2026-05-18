@@ -427,8 +427,13 @@ export function AgentDrawer({
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Badge variant="secondary">
-                {selectedAgent.persistentState?.runtimeStatus ??
+              {selectedRuntimeStatus ? (
+                <Badge variant="secondary">
+                  {t(selectedRuntimeStatus.labelKey)}
+                </Badge>
+              ) : null}
+              <Badge variant="outline">
+                {selectedRuntimeStatus?.rawRuntimeStatus ??
                   t("servers.agents.unknown")}
               </Badge>
               <Badge variant="outline">@{selectedAgent.handle}</Badge>
