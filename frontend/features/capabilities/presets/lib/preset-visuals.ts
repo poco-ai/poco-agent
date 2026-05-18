@@ -23,6 +23,13 @@ export function getPresetGlyphVariantClassName(
 export function getPresetGlyphFrameClassName(
   variant: PresetGlyphVariant,
 ): string {
+  if (variant === "picker") {
+    return [
+      "flex shrink-0 items-center justify-center overflow-hidden bg-transparent text-foreground",
+      GLYPH_VARIANT_CLASS_NAMES[variant],
+    ].join(" ");
+  }
+
   return [
     "flex shrink-0 items-center justify-center overflow-hidden border border-border/60 bg-muted/[0.36] text-foreground",
     GLYPH_VARIANT_CLASS_NAMES[variant],

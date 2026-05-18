@@ -1651,6 +1651,7 @@
       "fields": {
         "name": "Name",
         "namePlaceholder": "code-reviewer",
+        "nameHint": "Only A-Za-z0-9._- are allowed.",
         "enabled": "Enabled",
         "description": "Description",
         "descriptionOptional": "Description (optional)",
@@ -2210,10 +2211,21 @@
         "createTitle": "Create preset",
         "editTitle": "Edit preset"
       },
+      "panel": {
+        "newPresetLabel": "New preset",
+        "headerDescriptionFallback": "No description yet",
+        "changeVisual": "Change preset avatar",
+        "visualHint": "This avatar appears in the preset list and related entry points.",
+        "createdLabel": "Created"
+      },
       "subagents": {
         "title": "Inline subagents",
         "description": "Define extra subagents that should be injected with this preset.",
         "add": "Add subagent",
+        "import": "Import",
+        "importDialogTitle": "Import existing subagents",
+        "importDialogDescription": "Select structured subagents already configured in Capabilities and copy them into this preset.",
+        "importEmpty": "No structured subagents available to import.",
         "empty": "No subagents configured",
         "itemTitle": "Subagent {{index}}",
         "fields": {
@@ -2424,12 +2436,14 @@
     "delete": "Delete"
   },
   "common": {
+    "add": "Add",
     "cancel": "Cancel",
     "close": "Close",
     "create": "Create",
     "delete": "Delete",
     "deleted": "Deleted",
     "edit": "Edit",
+    "import": "Import",
     "save": "Save",
     "saving": "Saving...",
     "confirm": "Confirm",

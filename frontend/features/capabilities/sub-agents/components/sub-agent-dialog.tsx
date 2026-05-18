@@ -27,6 +27,8 @@ interface SubAgentDialogProps {
   mode: SubAgentDialogMode;
   initialAgent?: SubAgent | null;
   isSaving?: boolean;
+  allowedModes?: SubAgentMode[];
+  nameHint?: string;
   onCreate: (input: SubAgentCreateInput) => Promise<SubAgent | null>;
   onUpdate: (
     subAgentId: number,
@@ -48,6 +50,8 @@ export function SubAgentDialog({
   mode,
   initialAgent,
   isSaving = false,
+  allowedModes = ["structured", "raw"],
+  nameHint,
   onCreate,
   onUpdate,
 }: SubAgentDialogProps) {
@@ -87,16 +91,25 @@ export function SubAgentDialog({
     setRawMarkdown("");
   }, [open, mode, initialAgent]);
 
+  React.useEffect(() => {
+    if (allowedModes.includes(agentMode)) return;
+    setAgentMode(allowedModes[0] ?? "structured");
+  }, [agentMode, allowedModes]);
+
   const title =
     mode === "create"
       ? t("library.subAgents.dialog.createTitle")
       : t("library.subAgents.dialog.editTitle");
+  const resolvedNameHint =
+    nameHint ??
+    t("library.subAgents.fields.nameHint", "Only A-Za-z0-9._- are allowed.");
 
   const isValid =
     Boolean(name.trim()) &&
     (agentMode === "raw"
       ? Boolean(rawMarkdown.trim())
       : Boolean(description.trim()) && Boolean(prompt.trim()));
+  const visibleModes = allowedModes.length > 0 ? allowedModes : ["structured"];
   const formId = "sub-agent-dialog-form";
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -204,6 +217,9 @@ export function SubAgentDialog({
                   disabled={isSaving}
                   className="font-mono"
                 />
+                <p className="text-xs text-muted-foreground">
+                  {resolvedNameHint}
+                </p>
               </div>
 
               <div className="space-y-2">
@@ -226,12 +242,16 @@ export function SubAgentDialog({
               onValueChange={(v) => setAgentMode(v as SubAgentMode)}
             >
               <TabsList>
-                <TabsTrigger value="structured">
-                  {t("library.subAgents.mode.structured")}
-                </TabsTrigger>
-                <TabsTrigger value="raw">
-                  {t("library.subAgents.mode.raw")}
-                </TabsTrigger>
+                {visibleModes.includes("structured") ? (
+                  <TabsTrigger value="structured">
+                    {t("library.subAgents.mode.structured")}
+                  </TabsTrigger>
+                ) : null}
+                {visibleModes.includes("raw") ? (
+                  <TabsTrigger value="raw">
+                    {t("library.subAgents.mode.raw")}
+                  </TabsTrigger>
+                ) : null}
               </TabsList>
 
               <TabsContent value="structured">
