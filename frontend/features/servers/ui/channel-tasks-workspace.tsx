@@ -3,6 +3,7 @@
 import * as React from "react";
 import {
   CornerDownRight,
+  GripVertical,
   LayoutGrid,
   LayoutList,
   UserRound,
@@ -109,13 +110,6 @@ function taskAssigneeValue(task: ChannelTask): string {
   }
   return "none:";
 }
-
-const TASK_STATUS_OPTIONS: ChannelTaskStatus[] = [
-  "todo",
-  "in_progress",
-  "in_review",
-  "done",
-];
 
 type AssigneeOption = {
   value: string;
@@ -336,41 +330,6 @@ function TaskAssignmentControl({
   );
 }
 
-function TaskStatusControl({
-  task,
-  disabled,
-  canUpdateStatus,
-  onUpdateStatus,
-}: {
-  task: ChannelTask;
-  disabled: boolean;
-  canUpdateStatus: boolean;
-  onUpdateStatus: (task: ChannelTask, status: ChannelTaskStatus) => Promise<void>;
-}) {
-  const { t } = useT("translation");
-
-  return (
-    <div onClick={(event) => event.stopPropagation()}>
-      <Select
-        value={task.status}
-        onValueChange={(value) => void onUpdateStatus(task, value as ChannelTaskStatus)}
-        disabled={disabled || !canUpdateStatus}
-      >
-        <SelectTrigger className="h-7 w-auto min-w-[8rem] border-border bg-background text-xs">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {TASK_STATUS_OPTIONS.map((status) => (
-            <SelectItem key={status} value={status}>
-              {t(`channelTasks.statuses.${status}`)}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
-  );
-}
-
 function TaskCard({
   task,
   members,
@@ -379,9 +338,11 @@ function TaskCard({
   isSaving,
   canUpdateAssignee,
   canUpdateStatus,
+  isDragging,
   onOpenTask,
+  onDragStart,
+  onDragEnd,
   onUpdateAssignee,
-  onUpdateStatus,
 }: {
   task: ChannelTask;
   members: ServerChannelMemberItem[];
@@ -390,7 +351,10 @@ function TaskCard({
   isSaving: boolean;
   canUpdateAssignee: boolean;
   canUpdateStatus: boolean;
+  isDragging: boolean;
   onOpenTask: (taskId: string) => void;
+  onDragStart: (taskId: string) => void;
+  onDragEnd: () => void;
   onUpdateAssignee: (
     task: ChannelTask,
     value: {
@@ -398,7 +362,6 @@ function TaskCard({
       assigneeAgentIdentityId: string | null;
     },
   ) => Promise<void>;
-  onUpdateStatus: (task: ChannelTask, status: ChannelTaskStatus) => Promise<void>;
 }) {
   const title = normalizeTaskText(task.title);
   const description = normalizeTaskText(task.description);
@@ -406,8 +369,11 @@ function TaskCard({
 
   return (
     <div
+      draggable={canUpdateStatus && !isSaving}
       role="button"
       tabIndex={0}
+      onDragStart={() => onDragStart(task.taskId)}
+      onDragEnd={onDragEnd}
       onClick={() => onOpenTask(task.taskId)}
       onKeyDown={(event) => {
         if (event.key === "Enter" || event.key === " ") {
@@ -415,20 +381,21 @@ function TaskCard({
           onOpenTask(task.taskId);
         }
       }}
-      className="w-full rounded-md border border-border bg-card px-4 py-4 text-left transition-colors hover:bg-muted/20"
+      className={cn(
+        "group relative w-full rounded-md border border-border bg-card px-4 py-4 text-left transition-colors hover:bg-muted/20",
+        canUpdateStatus ? "cursor-grab active:cursor-grabbing" : "",
+        isDragging ? "opacity-45" : "",
+      )}
     >
-      <div className="flex min-w-0 items-start justify-between gap-3">
-        <div className="min-w-0 space-y-2">
-          <p className="min-w-0 truncate text-xs font-medium text-muted-foreground">
-            #{task.displayNumber}
-          </p>
-          <TaskStatusControl
-            task={task}
-            disabled={isSaving}
-            canUpdateStatus={canUpdateStatus}
-            onUpdateStatus={onUpdateStatus}
-          />
+      {canUpdateStatus ? (
+        <div className="pointer-events-none absolute left-1/2 top-1 -translate-x-1/2  px-2 py-0.5 opacity-0 shadow-sm transition-opacity group-hover:opacity-100">
+          <GripVertical className="size-3.5 rotate-90 text-muted-foreground" />
         </div>
+      ) : null}
+      <div className="flex min-w-0 items-start justify-between gap-3">
+        <p className="min-w-0 truncate text-xs font-medium text-muted-foreground">
+          #{task.displayNumber}
+        </p>
         <TaskAssignmentControl
           task={task}
           members={members}
@@ -490,6 +457,10 @@ export function ChannelTasksWorkspace({
 }) {
   const { t } = useT("translation");
   const [savingTaskId, setSavingTaskId] = React.useState<string | null>(null);
+  const [draggingTaskId, setDraggingTaskId] = React.useState<string | null>(null);
+  const [hoveredStatus, setHoveredStatus] = React.useState<ChannelTaskStatus | null>(
+    null,
+  );
 
   const updateAssignee = async (
     task: ChannelTask,
@@ -504,6 +475,28 @@ export function ChannelTasksWorkspace({
     } finally {
       setSavingTaskId(null);
     }
+  };
+
+  const columns = React.useMemo(() => buildChannelTaskColumns(tasks), [tasks]);
+  const listGroups = React.useMemo(() => buildChannelTaskListGroups(tasks), [tasks]);
+
+  const updateDraggedTaskStatus = async (
+    taskId: string,
+    status: ChannelTaskStatus,
+  ) => {
+    const task = tasks.find((item) => item.taskId === taskId);
+    if (!task || task.status === status) {
+      setDraggingTaskId(null);
+      setHoveredStatus(null);
+      return;
+    }
+
+    setDraggingTaskId(null);
+    setHoveredStatus(null);
+
+    try {
+      await onUpdateStatus(task, status);
+    } catch {}
   };
 
   return (
@@ -550,10 +543,36 @@ export function ChannelTasksWorkspace({
         {taskView === "board" ? (
           <div className="overflow-x-auto">
             <div className="grid min-w-[980px] grid-cols-4 gap-4">
-              {buildChannelTaskColumns(tasks).map((column) => (
+              {columns.map((column) => (
                 <section
                   key={column.status}
-                  className="flex min-h-[32rem] flex-col rounded-md border border-border bg-muted/10 p-3"
+                  onDragOver={(event) => {
+                    if (!draggingTaskId || !canUpdateStatus) {
+                      return;
+                    }
+                    event.preventDefault();
+                    if (hoveredStatus !== column.status) {
+                      setHoveredStatus(column.status);
+                    }
+                  }}
+                  onDragLeave={() => {
+                    if (hoveredStatus === column.status) {
+                      setHoveredStatus(null);
+                    }
+                  }}
+                  onDrop={(event) => {
+                    if (!draggingTaskId || !canUpdateStatus) {
+                      return;
+                    }
+                    event.preventDefault();
+                    void updateDraggedTaskStatus(draggingTaskId, column.status);
+                  }}
+                  className={cn(
+                    "flex min-h-[32rem] flex-col rounded-md border border-border bg-muted/10 p-3 transition-colors",
+                    draggingTaskId && hoveredStatus === column.status
+                      ? "border-primary/60 bg-primary/10"
+                      : "",
+                  )}
                 >
                   <div className="mb-3 flex items-center justify-between gap-3 px-1">
                     <span className="text-sm font-semibold text-foreground">
@@ -575,16 +594,30 @@ export function ChannelTasksWorkspace({
                           isSaving={savingTaskId === task.taskId}
                           canUpdateAssignee={canUpdateAssignee}
                           canUpdateStatus={canUpdateStatus}
+                          isDragging={draggingTaskId === task.taskId}
                           onOpenTask={onOpenTask}
+                          onDragStart={setDraggingTaskId}
+                          onDragEnd={() => {
+                            setDraggingTaskId(null);
+                            setHoveredStatus(null);
+                          }}
                           onUpdateAssignee={updateAssignee}
-                          onUpdateStatus={onUpdateStatus}
                         />
                       ))
                     ) : (
-                      <div className="flex min-h-32 items-center rounded-md border border-dashed border-border bg-background/70 px-4 py-10 text-sm text-muted-foreground">
-                        {t("conversationView.emptyTaskColumn", {
-                          status: t(`channelTasks.statuses.${column.status}`),
-                        })}
+                      <div
+                        className={cn(
+                          "flex min-h-32 items-center rounded-md border border-dashed border-border bg-background/70 px-4 py-10 text-sm text-muted-foreground transition-colors",
+                          draggingTaskId && hoveredStatus === column.status
+                            ? "border-primary/60 bg-primary/10 text-foreground"
+                            : "",
+                        )}
+                      >
+                        {draggingTaskId && hoveredStatus === column.status
+                          ? t("channelTasks.dropzone")
+                          : t("conversationView.emptyTaskColumn", {
+                              status: t(`channelTasks.statuses.${column.status}`),
+                            })}
                       </div>
                     )}
                   </div>
@@ -592,9 +625,9 @@ export function ChannelTasksWorkspace({
               ))}
             </div>
           </div>
-        ) : buildChannelTaskListGroups(tasks).length > 0 ? (
+        ) : listGroups.length > 0 ? (
           <div className="space-y-6">
-            {buildChannelTaskListGroups(tasks).map((group) => (
+            {listGroups.map((group) => (
               <section key={group.status} className="space-y-3">
                 <div className="flex items-center gap-3">
                   <span className="rounded-sm bg-primary/15 px-2 py-1 text-xs font-semibold uppercase text-foreground">
@@ -614,10 +647,12 @@ export function ChannelTasksWorkspace({
                       presets={presets}
                       isSaving={savingTaskId === task.taskId}
                       canUpdateAssignee={canUpdateAssignee}
-                      canUpdateStatus={canUpdateStatus}
+                      canUpdateStatus={false}
+                      isDragging={false}
                       onOpenTask={onOpenTask}
+                      onDragStart={() => {}}
+                      onDragEnd={() => {}}
                       onUpdateAssignee={updateAssignee}
-                      onUpdateStatus={onUpdateStatus}
                     />
                   ))}
                 </div>

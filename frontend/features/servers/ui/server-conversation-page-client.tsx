@@ -1731,14 +1731,14 @@ export function ServerConversationPageClient({
     if (drawer.type === "colleague" && drawer.selection) {
       return drawer.selection;
     }
-    if (serverAgents[0]) {
-      return { kind: "agent", id: serverAgents[0].id };
+    if (knownAgents[0]) {
+      return { kind: "agent", id: knownAgents[0].id };
     }
     if (serverMembers[0]) {
       return { kind: "human", id: serverMembers[0].id };
     }
     return null;
-  }, [drawer, serverAgents, serverMembers]);
+  }, [drawer, knownAgents, serverMembers]);
   const availableChannelAgents = React.useMemo(() => {
     const existingIds = new Set(channelAgents.map((agent) => agent.id));
     return serverAgents.filter((agent) => !existingIds.has(agent.id));
@@ -3240,7 +3240,7 @@ export function ServerConversationPageClient({
               </section>
             ) : colleaguesModeActive ? (
               <ColleaguesPanel
-                agents={serverAgents}
+                agents={knownAgents}
                 presets={presets}
                 members={serverMembers}
                 selection={colleagueSelection}
