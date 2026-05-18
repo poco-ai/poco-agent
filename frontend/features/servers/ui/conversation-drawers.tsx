@@ -428,7 +428,9 @@ export function AgentDrawer({
             </div>
             <div className="flex flex-wrap gap-2">
               {selectedRuntimeStatus ? (
-                <Badge variant="secondary">{t(selectedRuntimeStatus.labelKey)}</Badge>
+                <Badge variant="secondary">
+                  {t(selectedRuntimeStatus.labelKey)}
+                </Badge>
               ) : null}
               <Badge variant="outline">
                 {selectedRuntimeStatus?.rawRuntimeStatus ??

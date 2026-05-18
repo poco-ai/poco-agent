@@ -453,14 +453,18 @@ export function ChannelTasksWorkspace({
       assigneeAgentIdentityId: string | null;
     },
   ) => Promise<void>;
-  onUpdateStatus: (task: ChannelTask, status: ChannelTaskStatus) => Promise<void>;
+  onUpdateStatus: (
+    task: ChannelTask,
+    status: ChannelTaskStatus,
+  ) => Promise<void>;
 }) {
   const { t } = useT("translation");
   const [savingTaskId, setSavingTaskId] = React.useState<string | null>(null);
-  const [draggingTaskId, setDraggingTaskId] = React.useState<string | null>(null);
-  const [hoveredStatus, setHoveredStatus] = React.useState<ChannelTaskStatus | null>(
+  const [draggingTaskId, setDraggingTaskId] = React.useState<string | null>(
     null,
   );
+  const [hoveredStatus, setHoveredStatus] =
+    React.useState<ChannelTaskStatus | null>(null);
 
   const updateAssignee = async (
     task: ChannelTask,
@@ -478,7 +482,10 @@ export function ChannelTasksWorkspace({
   };
 
   const columns = React.useMemo(() => buildChannelTaskColumns(tasks), [tasks]);
-  const listGroups = React.useMemo(() => buildChannelTaskListGroups(tasks), [tasks]);
+  const listGroups = React.useMemo(
+    () => buildChannelTaskListGroups(tasks),
+    [tasks],
+  );
 
   const updateDraggedTaskStatus = async (
     taskId: string,
@@ -616,7 +623,9 @@ export function ChannelTasksWorkspace({
                         {draggingTaskId && hoveredStatus === column.status
                           ? t("channelTasks.dropzone")
                           : t("conversationView.emptyTaskColumn", {
-                              status: t(`channelTasks.statuses.${column.status}`),
+                              status: t(
+                                `channelTasks.statuses.${column.status}`,
+                              ),
                             })}
                       </div>
                     )}

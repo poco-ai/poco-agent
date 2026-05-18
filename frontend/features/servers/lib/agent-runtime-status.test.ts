@@ -4,7 +4,9 @@ import assert from "node:assert/strict";
 import { getAgentRuntimeStatus } from "./agent-runtime-status.ts";
 import type { ServerAgentItem } from "../model/types.ts";
 
-function createAgent(overrides: Partial<ServerAgentItem> = {}): ServerAgentItem {
+function createAgent(
+  overrides: Partial<ServerAgentItem> = {},
+): ServerAgentItem {
   return {
     id: "agent-1",
     serverId: "server-1",
@@ -44,7 +46,10 @@ test("maps idle runtime to the shared idle presentation", () => {
   const status = getAgentRuntimeStatus(createAgent());
 
   assert.equal(status.state, "idle");
-  assert.equal(status.labelKey, "conversationView.colleagues.runtimeStates.idle");
+  assert.equal(
+    status.labelKey,
+    "conversationView.colleagues.runtimeStates.idle",
+  );
   assert.equal(status.rawRuntimeStatus, "idle");
   assert.equal(status.hasActiveExecution, false);
 });

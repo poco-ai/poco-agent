@@ -28,7 +28,8 @@ export function getAgentRuntimeStatus(agent: ServerAgentItem): {
     .trim()
     .toLowerCase();
   const hasActiveExecution = Boolean(
-    agent.persistentState?.activeSessionId || agent.persistentState?.activeTaskId,
+    agent.persistentState?.activeSessionId ||
+    agent.persistentState?.activeTaskId,
   );
 
   if (agent.removedAt) {

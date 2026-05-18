@@ -305,15 +305,9 @@ class AgentAssignmentService:
 
         created = existing is None
         previous_preset_id = existing.preset_id if existing is not None else None
-        previous_trigger_mode = (
-            existing.trigger_mode if existing is not None else None
-        )
-        config_changed = (
-            existing is not None
-            and (
-                previous_preset_id != preset.id
-                or previous_trigger_mode != mode
-            )
+        previous_trigger_mode = existing.trigger_mode if existing is not None else None
+        config_changed = existing is not None and (
+            previous_preset_id != preset.id or previous_trigger_mode != mode
         )
         assignment = existing or AgentAssignment(
             workspace_id=issue.workspace_id,

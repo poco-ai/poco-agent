@@ -81,7 +81,10 @@ export function ServerAgentDetailDialog({
             <div className="flex flex-wrap gap-2">
               <Badge variant="secondary">{agent.lifecycleState}</Badge>
               <Badge variant="outline">{agent.visibility}</Badge>
-              <Badge variant="outline" className="inline-flex items-center gap-2">
+              <Badge
+                variant="outline"
+                className="inline-flex items-center gap-2"
+              >
                 <span
                   className={cn(
                     "size-2 rounded-full",
@@ -105,7 +108,8 @@ export function ServerAgentDetailDialog({
                   {t(runtimeStatus.labelKey)}
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  {runtimeStatus.rawRuntimeStatus ?? t("servers.agents.unknown")}
+                  {runtimeStatus.rawRuntimeStatus ??
+                    t("servers.agents.unknown")}
                 </p>
               </div>
               <div className="rounded-2xl border border-border/60 bg-background/80 p-4">
