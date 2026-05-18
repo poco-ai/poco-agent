@@ -33,7 +33,9 @@ class AgentRuntimeService:
         session = SessionRepository.get_by_id(db, session_id)
         if session is not None and session.status == "failed":
             return "failed"
-        latest_terminal_run = RunRepository.get_latest_terminal_by_session(db, session_id)
+        latest_terminal_run = RunRepository.get_latest_terminal_by_session(
+            db, session_id
+        )
         if latest_terminal_run is not None and latest_terminal_run.status == "failed":
             return "failed"
         return "idle"
