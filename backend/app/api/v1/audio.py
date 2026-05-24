@@ -2,13 +2,31 @@ from fastapi import APIRouter, Depends, File, Form, UploadFile
 from fastapi.responses import JSONResponse
 
 from app.core.deps import get_current_user_id
-from app.schemas.audio import AudioTranscriptionResponse
+from app.schemas.audio import (
+    AudioTranscriptionResponse,
+    AudioTranscriptionSupportResponse,
+)
 from app.schemas.response import Response, ResponseSchema
 from app.services.audio_transcription_service import AudioTranscriptionService
 
 router = APIRouter(prefix="/audio", tags=["audio"])
 
 audio_transcription_service = AudioTranscriptionService()
+
+
+@router.get(
+    "/transcriptions/support",
+    response_model=ResponseSchema[AudioTranscriptionSupportResponse],
+)
+async def get_audio_transcription_support(
+    user_id: str = Depends(get_current_user_id),
+) -> JSONResponse:
+    return Response.success(
+        data=AudioTranscriptionSupportResponse(
+            available=audio_transcription_service.is_available(),
+        ),
+        message="Audio transcription support resolved successfully",
+    )
 
 
 @router.post(

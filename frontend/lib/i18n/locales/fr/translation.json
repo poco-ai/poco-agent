@@ -227,9 +227,9 @@
     "unread": "Non lus",
     "noInbox": "Aucun élément dans la boîte de réception",
     "noSaved": "Aucun élément enregistré",
+    "composerActions": "Plus d’actions",
     "sharedArtifacts": {
       "title": "Shared files",
-      "description": "Published artifacts grouped by agent",
       "preview": "Preview",
       "empty": "No published files yet"
     },

@@ -227,9 +227,9 @@
     "unread": "Непрочитанные",
     "noInbox": "Во входящих пока ничего нет",
     "noSaved": "Сохранённых элементов пока нет",
+    "composerActions": "Другие действия",
     "sharedArtifacts": {
       "title": "Shared files",
-      "description": "Published artifacts grouped by agent",
       "preview": "Preview",
       "empty": "No published files yet"
     },

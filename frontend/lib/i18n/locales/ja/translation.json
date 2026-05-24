@@ -227,9 +227,9 @@
     "unread": "未読",
     "noInbox": "受信箱に項目はまだありません",
     "noSaved": "保存済み項目はまだありません",
+    "composerActions": "その他の操作",
     "sharedArtifacts": {
       "title": "Shared files",
-      "description": "Published artifacts grouped by agent",
       "preview": "Preview",
       "empty": "No published files yet"
     },
