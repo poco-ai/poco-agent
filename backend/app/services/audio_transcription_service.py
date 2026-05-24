@@ -48,6 +48,13 @@ class AudioTranscriptionService:
             return f"{normalized}/audio/transcriptions"
         return f"{normalized}/v1/audio/transcriptions"
 
+    def is_available(self) -> bool:
+        return bool(
+            (self.settings.openai_api_key or "").strip()
+            and (self.settings.openai_base_url or "").strip()
+            and self.settings.openai_audio_transcription_model.strip()
+        )
+
     @staticmethod
     def _normalize_language(language: str | None) -> str | None:
         value = (language or "").strip().lower()

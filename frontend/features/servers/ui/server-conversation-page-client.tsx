@@ -15,9 +15,11 @@ import {
   Loader2,
   Mic,
   MicOff,
+  Paperclip,
   Plus,
   Search,
   Settings2,
+  SquareCheckBig,
   Trash2,
   UserRound,
   Users,
@@ -37,6 +39,12 @@ import {
 } from "@/components/ui/alert-dialog";
 import { FileCard } from "@/components/shared/file-card";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
@@ -808,14 +816,14 @@ function ConversationContent({
               </div>
             </div>
           ) : null}
-          <Tooltip>
-            <TooltipTrigger asChild>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
               <button
                 type="button"
                 disabled={isSending || isUploading}
-                onClick={() => fileInputRef.current?.click()}
                 className="flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
-                aria-label={t("hero.uploadFile")}
+                aria-label={t("conversationView.composerActions")}
+                title={t("conversationView.composerActions")}
               >
                 {isUploading ? (
                   <Loader2 className="size-4 animate-spin" />
@@ -823,16 +831,42 @@ function ConversationContent({
                   <Plus className="size-4" />
                 )}
               </button>
-            </TooltipTrigger>
-            <TooltipContent side="top" sideOffset={8}>
-              {t("hero.uploadFile")}
-            </TooltipContent>
-          </Tooltip>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="start"
+              side="top"
+              sideOffset={8}
+              className="w-36"
+            >
+              <DropdownMenuItem
+                disabled={isSending || isUploading}
+                onSelect={() => fileInputRef.current?.click()}
+              >
+                {isUploading ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Paperclip className="size-4" />
+                )}
+                <span>{t("hero.uploadFile")}</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                disabled={isSending}
+                onSelect={() => onAsTaskChange(!asTask)}
+              >
+                <SquareCheckBig
+                  className={cn("size-4", asTask ? "text-primary" : "")}
+                />
+                <span className="flex-1">{t("conversationView.asTask")}</span>
+                {asTask ? <Check className="size-4 text-primary" /> : null}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <textarea
             ref={textareaRef}
             value={draft}
             onChange={(event) => onDraftChange(event.target.value)}
             onKeyDown={handleTextareaKeyDown}
+            onInput={() => syncTextareaHeight()}
             onPaste={(event) => void handlePaste(event)}
             onCompositionStart={() => {
               isComposingRef.current = true;
@@ -842,15 +876,16 @@ function ConversationContent({
                 isComposingRef.current = false;
               });
             }}
-            rows={4}
+            rows={1}
             placeholder={t("conversationView.messagePlaceholder", {
               name: channel?.name ?? "",
             })}
             disabled={isSending}
-            className="min-w-0 flex-1 resize-none overflow-y-auto bg-transparent py-1 text-sm leading-6 outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
+            className="min-w-0 flex-1 resize-none overflow-y-auto bg-transparent py-1 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 scrollbar-hide"
             style={{
               minHeight: "2rem",
               maxHeight: "10rem",
+              lineHeight: "1.5rem",
             }}
           />
           {voiceInput.isSupported ? (
@@ -917,17 +952,6 @@ function ConversationContent({
               <ArrowUp className="size-4" />
             )}
           </button>
-        </div>
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-          <label className="flex items-center gap-3 text-sm text-foreground">
-            <input
-              type="checkbox"
-              checked={asTask}
-              onChange={(event) => onAsTaskChange(event.target.checked)}
-              className="size-4 rounded-sm border-foreground"
-            />
-            {t("conversationView.asTask")}
-          </label>
         </div>
       </div>
     </section>

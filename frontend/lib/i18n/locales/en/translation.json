@@ -228,9 +228,9 @@
     "unread": "Unread",
     "noInbox": "No inbox items yet",
     "noSaved": "No saved items yet",
+    "composerActions": "More actions",
     "sharedArtifacts": {
       "title": "Shared files",
-      "description": "Published artifacts grouped by agent",
       "preview": "Preview",
       "empty": "No published files yet"
     },

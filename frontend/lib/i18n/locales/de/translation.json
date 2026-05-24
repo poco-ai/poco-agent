@@ -227,9 +227,9 @@
     "unread": "Ungelesen",
     "noInbox": "Noch keine Einträge im Posteingang",
     "noSaved": "Noch keine gespeicherten Einträge",
+    "composerActions": "Weitere Aktionen",
     "sharedArtifacts": {
       "title": "Shared files",
-      "description": "Published artifacts grouped by agent",
       "preview": "Preview",
       "empty": "No published files yet"
     },
