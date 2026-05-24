@@ -35,6 +35,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { FileCard } from "@/components/shared/file-card";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -53,7 +54,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import type { FileNode } from "@/features/chat/types";
+import type { FileNode, InputFile } from "@/features/chat/types";
 import { channelTasksApi } from "@/features/channel-tasks/api/channel-tasks-api";
 import { resolveChannelTaskView } from "@/features/channel-tasks/lib/channel-task-board";
 import type {
@@ -129,10 +130,12 @@ import { appendTranscribedText, useVoiceInput } from "@/features/voice";
 import { useLanguage } from "@/hooks/use-language";
 import { useT } from "@/lib/i18n/client";
 import { cn } from "@/lib/utils";
+import { playUploadSound } from "@/lib/utils/sound";
 
 const LAST_SELECTION_KEY = "poco-servers-last-selection-v1";
 const SAVED_MESSAGES_KEY = "poco-saved-messages-v1";
 const READ_MESSAGES_KEY = "poco-read-messages-v1";
+const MAX_FILE_SIZE = 100 * 1024 * 1024;
 
 type CachedServerConversationContext = {
   channels: ServerChannelItem[];
@@ -402,11 +405,15 @@ function ConversationContent({
   messages,
   savedMessageIds,
   draft,
+  attachments,
   asTask,
   isLoading,
+  isUploading,
   onDraftChange,
   onAsTaskChange,
   onSend,
+  onUploadFiles,
+  onRemoveAttachment,
   onOpenThread,
   onOpenSettings,
   onOpenMembers,
@@ -426,11 +433,15 @@ function ConversationContent({
   messages: ServerConversationMessage[];
   savedMessageIds: Set<string>;
   draft: string;
+  attachments: InputFile[];
   asTask: boolean;
   isLoading: boolean;
+  isUploading: boolean;
   onDraftChange: (value: string) => void;
   onAsTaskChange: (value: boolean) => void;
   onSend: () => void;
+  onUploadFiles: (files: File[]) => Promise<void>;
+  onRemoveAttachment: (index: number) => void;
   onOpenThread: (message: ServerConversationMessage) => void;
   onOpenSettings: () => void;
   onOpenMembers: () => void;
@@ -445,6 +456,7 @@ function ConversationContent({
 }) {
   const { t } = useT("translation");
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
   const isComposingRef = React.useRef(false);
   const Icon = channel?.conversationType === "direct_message" ? Lock : Hash;
   const scrollContainerRef = React.useRef<HTMLDivElement | null>(null);
@@ -622,10 +634,46 @@ function ConversationContent({
       !isComposingRef.current
     ) {
       event.preventDefault();
-      if (!isSending && !voiceInput.isBusy && draft.trim()) {
+      if (
+        !isSending &&
+        !isUploading &&
+        !voiceInput.isBusy &&
+        (draft.trim() || attachments.length > 0)
+      ) {
         onSend();
       }
     }
+  };
+
+  const handleFileSelect = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const input = event.currentTarget;
+    const files = Array.from(event.target.files ?? []);
+    if (files.length === 0) {
+      return;
+    }
+    try {
+      await onUploadFiles(files);
+    } finally {
+      input.value = "";
+    }
+  };
+
+  const handlePaste = async (
+    event: React.ClipboardEvent<HTMLTextAreaElement>,
+  ) => {
+    const items = event.clipboardData?.items;
+    if (!items) {
+      return;
+    }
+    const file = Array.from(items)
+      .find((item) => item.kind === "file")
+      ?.getAsFile();
+    if (!file) {
+      return;
+    }
+    await onUploadFiles([file]);
   };
 
   return (
@@ -701,6 +749,25 @@ function ConversationContent({
       </div>
 
       <div className="border-t border-border px-6 py-4">
+        <input
+          type="file"
+          multiple
+          ref={fileInputRef}
+          className="hidden"
+          onChange={(event) => void handleFileSelect(event)}
+        />
+        {attachments.length > 0 ? (
+          <div className="mb-2 flex min-w-0 flex-wrap gap-2 px-3">
+            {attachments.map((file, index) => (
+              <FileCard
+                key={`${file.source}-${index}`}
+                file={file}
+                onRemove={() => onRemoveAttachment(index)}
+                className="w-full max-w-48 bg-background"
+              />
+            ))}
+          </div>
+        ) : null}
         <div className="relative flex w-full min-w-0 items-end gap-2 rounded-lg border border-border bg-card px-3 py-2">
           {mentionTrigger && mentionCandidates.length > 0 ? (
             <div className="absolute bottom-full left-0 z-20 mb-2 w-full max-w-md rounded-md border border-border bg-popover p-2 shadow-[var(--shadow-lg)]">
@@ -741,11 +808,32 @@ function ConversationContent({
               </div>
             </div>
           ) : null}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                disabled={isSending || isUploading}
+                onClick={() => fileInputRef.current?.click()}
+                className="flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
+                aria-label={t("hero.uploadFile")}
+              >
+                {isUploading ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Plus className="size-4" />
+                )}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="top" sideOffset={8}>
+              {t("hero.uploadFile")}
+            </TooltipContent>
+          </Tooltip>
           <textarea
             ref={textareaRef}
             value={draft}
             onChange={(event) => onDraftChange(event.target.value)}
             onKeyDown={handleTextareaKeyDown}
+            onPaste={(event) => void handlePaste(event)}
             onCompositionStart={() => {
               isComposingRef.current = true;
             }}
@@ -773,7 +861,11 @@ function ConversationContent({
                   onClick={() => {
                     void voiceInput.toggleRecording();
                   }}
-                  disabled={isSending || voiceInput.status === "transcribing"}
+                  disabled={
+                    isSending ||
+                    isUploading ||
+                    voiceInput.status === "transcribing"
+                  }
                   className={cn(
                     "flex size-8 shrink-0 items-center justify-center rounded-md transition-colors disabled:cursor-not-allowed disabled:opacity-50",
                     voiceInput.status === "recording"
@@ -809,7 +901,12 @@ function ConversationContent({
           <button
             type="button"
             onClick={onSend}
-            disabled={isSending || voiceInput.isBusy || !draft.trim()}
+            disabled={
+              isSending ||
+              isUploading ||
+              voiceInput.isBusy ||
+              (!draft.trim() && attachments.length === 0)
+            }
             className="flex size-8 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground disabled:opacity-50"
             aria-label={t("conversationView.send")}
             title={t("conversationView.send")}
@@ -1685,10 +1782,14 @@ export function ServerConversationPageClient({
     [],
   );
   const [draft, setDraft] = React.useState("");
+  const [draftAttachments, setDraftAttachments] = React.useState<InputFile[]>(
+    [],
+  );
   const [threadDraft, setThreadDraft] = React.useState("");
   const [searchValue, setSearchValue] = React.useState("");
   const [isLoading, setIsLoading] = React.useState(!cachedServerContext);
   const [isSending, setIsSending] = React.useState(false);
+  const [isUploadingDraftFile, setIsUploadingDraftFile] = React.useState(false);
   const [asTask, setAsTask] = React.useState(false);
   const [threadAsTask, setThreadAsTask] = React.useState(false);
   const [savedMessageIds, setSavedMessageIds] = React.useState<Set<string>>(
@@ -2163,6 +2264,11 @@ export function ServerConversationPageClient({
   ]);
 
   React.useEffect(() => {
+    setDraftAttachments([]);
+    setIsUploadingDraftFile(false);
+  }, [activeChannelId]);
+
+  React.useEffect(() => {
     if (!selectedServerId || channels.length === 0) {
       return;
     }
@@ -2445,12 +2551,80 @@ export function ServerConversationPageClient({
     [channels, openChannel],
   );
 
+  const uploadDraftFiles = React.useCallback(
+    async (files: File[]) => {
+      if (!selectedServerId || !activeChannelId || files.length === 0) {
+        return;
+      }
+
+      const existingNames = new Set(
+        draftAttachments
+          .map((item) => (item.name || "").trim().toLowerCase())
+          .filter(Boolean),
+      );
+
+      setIsUploadingDraftFile(true);
+      try {
+        let uploadedAny = false;
+        for (const file of files) {
+          const normalizedName = file.name.trim().toLowerCase();
+          if (existingNames.has(normalizedName)) {
+            toast.error(
+              t("hero.toasts.duplicateFileName", {
+                name: file.name,
+              }),
+            );
+            continue;
+          }
+
+          if (file.size > MAX_FILE_SIZE) {
+            toast.error(t("hero.toasts.fileTooLarge"));
+            continue;
+          }
+
+          try {
+            const uploadedFile = await serversApi.uploadChannelArtifact(
+              selectedServerId,
+              activeChannelId,
+              file,
+            );
+            setDraftAttachments((current) => [...current, uploadedFile]);
+            existingNames.add(normalizedName);
+            uploadedAny = true;
+            toast.success(t("hero.toasts.uploadSuccess"));
+            playUploadSound();
+          } catch (error) {
+            console.error("[ServersWorkspace] channel upload failed", error);
+            toast.error(t("hero.toasts.uploadFailed"));
+          }
+        }
+
+        if (uploadedAny) {
+          setChannelArtifacts(
+            await serversApi.listChannelArtifacts(
+              selectedServerId,
+              activeChannelId,
+            ),
+          );
+        }
+      } finally {
+        setIsUploadingDraftFile(false);
+      }
+    },
+    [activeChannelId, draftAttachments, selectedServerId, t],
+  );
+
+  const removeDraftAttachment = React.useCallback((index: number) => {
+    setDraftAttachments((current) => current.filter((_, i) => i !== index));
+  }, []);
+
   const handleSend = async () => {
     if (!selectedServerId || !activeChannelId) {
       return;
     }
     const content = draft.trim();
-    if (!content) {
+    const attachments = [...draftAttachments];
+    if (!content && attachments.length === 0) {
       return;
     }
     setIsSending(true);
@@ -2461,23 +2635,29 @@ export function ServerConversationPageClient({
           activeChannelId,
           {
             text: content,
+            attachments,
             asTask: true,
           },
         );
         const title =
-          content.split("\n")[0]?.trim().slice(0, 80) || content.slice(0, 80);
+          content.split("\n")[0]?.trim().slice(0, 80) ||
+          attachments[0]?.name.slice(0, 80) ||
+          content.slice(0, 80);
         await channelTasksApi.createTask(selectedServerId, activeChannelId, {
           title,
-          description: content,
+          description:
+            content || attachments.map((item) => item.name).join("\n"),
           sourceMessageId: message.id,
         });
         toast.success(t("conversationView.toasts.taskCreated"));
       } else {
         await serversApi.sendMessage(selectedServerId, activeChannelId, {
           text: content,
+          attachments,
         });
       }
       setDraft("");
+      setDraftAttachments([]);
       setAsTask(false);
       const messages = await serversApi.listMessages(
         selectedServerId,
@@ -3381,11 +3561,15 @@ export function ServerConversationPageClient({
                 messages={currentMessages}
                 savedMessageIds={savedMessageIds}
                 draft={draft}
+                attachments={draftAttachments}
                 asTask={asTask}
                 isLoading={isLoading}
+                isUploading={isUploadingDraftFile}
                 onDraftChange={setDraft}
                 onAsTaskChange={setAsTask}
                 onSend={() => void handleSend()}
+                onUploadFiles={uploadDraftFiles}
+                onRemoveAttachment={removeDraftAttachment}
                 onOpenThread={(message) =>
                   setDrawer({
                     type: "thread",
