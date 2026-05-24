@@ -4,6 +4,7 @@ import * as React from "react";
 import {
   Archive,
   ArrowDown,
+  ArrowUp,
   Bot,
   Check,
   ChevronLeft,
@@ -11,6 +12,9 @@ import {
   Hash,
   Lock,
   LogOut,
+  Loader2,
+  Mic,
+  MicOff,
   Plus,
   Search,
   Settings2,
@@ -43,6 +47,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import type { FileNode } from "@/features/chat/types";
 import { channelTasksApi } from "@/features/channel-tasks/api/channel-tasks-api";
@@ -116,6 +125,7 @@ import type {
   WorkspaceMode,
 } from "@/features/servers/ui/server-workspace-types";
 import { useUserAccount } from "@/features/user/hooks/use-user-account";
+import { appendTranscribedText, useVoiceInput } from "@/features/voice";
 import { useLanguage } from "@/hooks/use-language";
 import { useT } from "@/lib/i18n/client";
 import { cn } from "@/lib/utils";
@@ -443,6 +453,8 @@ function ConversationContent({
   const mentionTrigger = React.useMemo(() => getMentionTrigger(draft), [draft]);
   const [showScrollButton, setShowScrollButton] = React.useState(false);
   const [isUserScrolling, setIsUserScrolling] = React.useState(false);
+  const draftRef = React.useRef(draft);
+  const lng = useLanguage();
   const mentionCandidates = React.useMemo<MentionCandidate[]>(() => {
     const humans = buildHumanMentionCandidates(members, currentUserId);
     const agentCandidates = agents.map(buildAgentMentionCandidate);
@@ -462,6 +474,40 @@ function ConversationContent({
   React.useEffect(() => {
     setMentionIndex(0);
   }, [mentionCandidates]);
+
+  React.useEffect(() => {
+    draftRef.current = draft;
+  }, [draft]);
+
+  const syncTextareaHeight = React.useCallback(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) {
+      return;
+    }
+    textarea.style.height = "auto";
+    textarea.style.height = `${Math.min(textarea.scrollHeight, 160)}px`;
+  }, []);
+
+  React.useEffect(() => {
+    syncTextareaHeight();
+  }, [draft, syncTextareaHeight]);
+
+  const handleVoiceTranscription = React.useCallback(
+    (text: string) => {
+      onDraftChange(appendTranscribedText(draftRef.current, text));
+      requestAnimationFrame(() => {
+        textareaRef.current?.focus();
+        syncTextareaHeight();
+      });
+    },
+    [onDraftChange, syncTextareaHeight],
+  );
+
+  const voiceInput = useVoiceInput({
+    t,
+    language: lng,
+    onTranscription: handleVoiceTranscription,
+  });
 
   const scrollToBottom = React.useCallback(
     (behavior: ScrollBehavior = "smooth") => {
@@ -576,7 +622,7 @@ function ConversationContent({
       !isComposingRef.current
     ) {
       event.preventDefault();
-      if (!isSending && draft.trim()) {
+      if (!isSending && !voiceInput.isBusy && draft.trim()) {
         onSend();
       }
     }
@@ -654,8 +700,8 @@ function ConversationContent({
         )}
       </div>
 
-      <div className="border-t border-border px-6 py-5">
-        <div className="relative">
+      <div className="border-t border-border px-6 py-4">
+        <div className="relative flex w-full min-w-0 items-end gap-2 rounded-lg border border-border bg-card px-3 py-2">
           {mentionTrigger && mentionCandidates.length > 0 ? (
             <div className="absolute bottom-full left-0 z-20 mb-2 w-full max-w-md rounded-md border border-border bg-popover p-2 shadow-[var(--shadow-lg)]">
               <div className="px-2 pb-2 text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
@@ -695,7 +741,7 @@ function ConversationContent({
               </div>
             </div>
           ) : null}
-          <Textarea
+          <textarea
             ref={textareaRef}
             value={draft}
             onChange={(event) => onDraftChange(event.target.value)}
@@ -712,29 +758,79 @@ function ConversationContent({
             placeholder={t("conversationView.messagePlaceholder", {
               name: channel?.name ?? "",
             })}
-            className="rounded-md border-border bg-background text-base shadow-none"
+            disabled={isSending}
+            className="min-w-0 flex-1 resize-none overflow-y-auto bg-transparent py-1 text-sm leading-6 outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
+            style={{
+              minHeight: "2rem",
+              maxHeight: "10rem",
+            }}
           />
+          {voiceInput.isSupported ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={() => {
+                    void voiceInput.toggleRecording();
+                  }}
+                  disabled={isSending || voiceInput.status === "transcribing"}
+                  className={cn(
+                    "flex size-8 shrink-0 items-center justify-center rounded-md transition-colors disabled:cursor-not-allowed disabled:opacity-50",
+                    voiceInput.status === "recording"
+                      ? "animate-pulse bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      : "text-muted-foreground hover:bg-accent",
+                  )}
+                  aria-label={
+                    voiceInput.status === "transcribing"
+                      ? t("hero.transcribingVoiceInput")
+                      : voiceInput.status === "recording"
+                        ? t("hero.stopVoiceInput")
+                        : t("hero.startVoiceInput")
+                  }
+                >
+                  {voiceInput.status === "transcribing" ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : voiceInput.status === "recording" ? (
+                    <MicOff className="size-4" />
+                  ) : (
+                    <Mic className="size-4" />
+                  )}
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top" sideOffset={8}>
+                {voiceInput.status === "transcribing"
+                  ? t("hero.transcribingVoiceInput")
+                  : voiceInput.status === "recording"
+                    ? t("hero.stopVoiceInput")
+                    : t("hero.startVoiceInput")}
+              </TooltipContent>
+            </Tooltip>
+          ) : null}
+          <button
+            type="button"
+            onClick={onSend}
+            disabled={isSending || voiceInput.isBusy || !draft.trim()}
+            className="flex size-8 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground disabled:opacity-50"
+            aria-label={t("conversationView.send")}
+            title={t("conversationView.send")}
+          >
+            {isSending ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <ArrowUp className="size-4" />
+            )}
+          </button>
         </div>
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-          <label className="flex items-center gap-3 text-base text-foreground">
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+          <label className="flex items-center gap-3 text-sm text-foreground">
             <input
               type="checkbox"
               checked={asTask}
               onChange={(event) => onAsTaskChange(event.target.checked)}
-              className="size-5 rounded-none border-foreground"
+              className="size-4 rounded-sm border-foreground"
             />
             {t("conversationView.asTask")}
           </label>
-          <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              size="sm"
-              onClick={onSend}
-              disabled={isSending || !draft.trim()}
-            >
-              {t("conversationView.send")}
-            </Button>
-          </div>
         </div>
       </div>
     </section>

@@ -204,7 +204,8 @@ function ChannelEventRow({
         </span>
         <span className="whitespace-nowrap">
           {" "}
-          · {formatTime(message.createdAt)}
+          · {formatRelativeDate(message.createdAt)}{" "}
+          {formatTime(message.createdAt)}
         </span>
       </div>
     </article>
