@@ -46,7 +46,10 @@ async function resolveServerSupport(): Promise<boolean> {
         return result.available;
       })
       .catch((error) => {
-        console.warn("[VoiceInput] Failed to resolve voice input support:", error);
+        console.warn(
+          "[VoiceInput] Failed to resolve voice input support:",
+          error,
+        );
         cachedServerSupport = false;
         return false;
       })
