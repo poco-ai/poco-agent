@@ -13,6 +13,8 @@ import {
 import { toast } from "sonner";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { FileCard } from "@/components/shared/file-card";
+import type { InputFile } from "@/features/chat/types";
 import {
   getUserAvatarUrl,
   getUserDisplayName,
@@ -100,6 +102,25 @@ export function getInitials(value: string): string {
 
 export function getMessageText(message: ServerConversationMessage): string {
   return getServerMessageText(message);
+}
+
+function isInputFile(value: unknown): value is InputFile {
+  return (
+    Boolean(value) &&
+    typeof value === "object" &&
+    typeof (value as { name?: unknown }).name === "string" &&
+    typeof (value as { source?: unknown }).source === "string"
+  );
+}
+
+function getMessageAttachments(
+  message: ServerConversationMessage,
+): InputFile[] {
+  const attachments = message.content.attachments;
+  if (!Array.isArray(attachments)) {
+    return [];
+  }
+  return attachments.filter(isInputFile);
 }
 
 export function getMessageAuthor(message: ServerConversationMessage): string {
@@ -301,7 +322,10 @@ function StandardMessageRow({
   const [reactionPickerOpen, setReactionPickerOpen] = React.useState(false);
   const agentMessageRef = React.useRef<HTMLDivElement>(null);
   const author = getMessageAuthor(message);
-  const text = getMessageText(message);
+  const attachments = getMessageAttachments(message);
+  const contentText =
+    typeof message.content.text === "string" ? message.content.text.trim() : "";
+  const text = attachments.length > 0 ? contentText : getMessageText(message);
   const executionMessage = isExecutionMessage(message) ? message : null;
   const drilldownSessionId = getMessageSessionId(message);
   const canOpenExecutionFromAvatar =
@@ -550,7 +574,7 @@ function StandardMessageRow({
               />
             </div>
           </button>
-        ) : (
+        ) : text || attachments.length === 0 ? (
           <div className="group/message min-w-0">
             <div
               ref={agentMessageRef}
@@ -593,7 +617,19 @@ function StandardMessageRow({
               </button>
             ) : null}
           </div>
-        )}
+        ) : null}
+        {attachments.length > 0 ? (
+          <div className="flex flex-wrap gap-2 pt-1">
+            {attachments.map((file, index) => (
+              <FileCard
+                key={`${file.source}-${index}`}
+                file={file}
+                showRemove={false}
+                className="w-full max-w-56 bg-background"
+              />
+            ))}
+          </div>
+        ) : null}
         {(message.reactions ?? []).length > 0 ? (
           <div className="flex flex-wrap gap-1.5 pt-1">
             {(message.reactions ?? []).map((reaction) => {

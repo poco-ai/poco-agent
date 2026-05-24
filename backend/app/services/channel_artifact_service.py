@@ -1,9 +1,13 @@
+import os
+import re
 import uuid
 from pathlib import PurePosixPath
 from typing import Any, cast
 
+from fastapi import UploadFile
 from sqlalchemy.orm import Session
 
+from app.core.settings import get_settings
 from app.core.errors.error_codes import ErrorCode
 from app.core.errors.exceptions import AppException
 from app.models.agent_session import AgentSession
@@ -20,6 +24,7 @@ from app.schemas.channel_artifact import (
     AgentChannelArtifactReadResponse,
     AgentChannelArtifactSearchResponse,
 )
+from app.schemas.input_file import InputFile
 from app.schemas.workspace import FileNode
 from app.services.server_channel_access import require_channel_member_access
 from app.services.storage_service import S3StorageService
@@ -32,6 +37,9 @@ from app.utils.workspace_manifest import (
 
 
 class ChannelArtifactService:
+    UPLOADS_FOLDER = "Uploads"
+    UPLOAD_SOURCE_KIND = "user_upload"
+    _CONTROL_CHARS = re.compile(r"[\x00-\x1f\x7f-\x9f]+")
     DEFAULT_READ_BYTES = 32 * 1024
     MAX_READ_BYTES = 64 * 1024
     TEXT_EXTENSIONS = {
@@ -71,6 +79,66 @@ class ChannelArtifactService:
             uuid.UUID(agent_identity_id_raw) if agent_identity_id_raw else None
         )
         return server_id, channel_id, agent_identity_id
+
+    @classmethod
+    def _normalize_upload_filename(cls, filename: str) -> str:
+        raw = (filename or "").strip().replace("\\", "/")
+        raw = raw.split("/")[-1].strip()
+        try:
+            raw = raw.encode("latin-1").decode("utf-8")
+        except (UnicodeEncodeError, UnicodeDecodeError):
+            pass
+        raw = cls._CONTROL_CHARS.sub("", raw).strip()
+        return raw or "upload.bin"
+
+    @staticmethod
+    def _get_upload_size(file: UploadFile) -> int | None:
+        try:
+            file.file.seek(0, os.SEEK_END)
+            size = file.file.tell()
+            file.file.seek(0)
+            return size
+        except Exception:
+            return None
+
+    @classmethod
+    def _upload_object_key(
+        cls,
+        *,
+        server_id: uuid.UUID,
+        channel_id: uuid.UUID,
+        artifact_id: uuid.UUID,
+    ) -> str:
+        return (
+            f"channel-artifacts/{server_id}/{channel_id}/"
+            f"{cls.UPLOADS_FOLDER}/{artifact_id}/file"
+        )
+
+    @classmethod
+    def _dedupe_upload_logical_path(
+        cls,
+        db: Session,
+        *,
+        channel_id: uuid.UUID,
+        filename: str,
+    ) -> str:
+        path = PurePosixPath(filename)
+        stem = path.stem or filename
+        suffix = path.suffix
+        index = 1
+        while True:
+            display_name = filename if index == 1 else f"{stem} ({index}){suffix}"
+            logical_path = f"/{cls.UPLOADS_FOLDER}/{display_name}"
+            if (
+                ChannelArtifactRepository.get_by_channel_and_path(
+                    db,
+                    channel_id=channel_id,
+                    logical_path=logical_path,
+                )
+                is None
+            ):
+                return logical_path
+            index += 1
 
     @staticmethod
     def _resolve_object_key(
@@ -237,6 +305,77 @@ class ChannelArtifactService:
         ChannelArtifactRepository.upsert_many(db, artifacts=artifacts)
         return len(artifacts)
 
+    def upload_channel_artifact(
+        self,
+        db: Session,
+        *,
+        current_user: Any,
+        server_id: uuid.UUID,
+        channel_id: uuid.UUID,
+        file: UploadFile,
+    ) -> InputFile:
+        require_channel_member_access(
+            db,
+            server_id=server_id,
+            channel_id=channel_id,
+            user_id=current_user.id,
+        )
+        settings = get_settings()
+        max_size_bytes = settings.max_upload_size_mb * 1024 * 1024
+        size = self._get_upload_size(file)
+        if size is not None and size > max_size_bytes:
+            raise AppException(
+                error_code=ErrorCode.BAD_REQUEST,
+                message=f"File too large. Max {settings.max_upload_size_mb}MB.",
+                details={"max_bytes": max_size_bytes, "actual_bytes": size},
+            )
+
+        artifact_id = uuid.uuid4()
+        filename = self._normalize_upload_filename(file.filename or "")
+        logical_path = self._dedupe_upload_logical_path(
+            db,
+            channel_id=channel_id,
+            filename=filename,
+        )
+        object_key = self._upload_object_key(
+            server_id=server_id,
+            channel_id=channel_id,
+            artifact_id=artifact_id,
+        )
+        self._storage.upload_fileobj(
+            fileobj=file.file,
+            key=object_key,
+            content_type=file.content_type,
+        )
+
+        artifact = ChannelArtifact(
+            id=artifact_id,
+            server_id=server_id,
+            channel_id=channel_id,
+            source_session_id=None,
+            agent_identity_id=None,
+            publisher_user_id=current_user.id,
+            source_kind=self.UPLOAD_SOURCE_KIND,
+            logical_path=logical_path,
+            display_name=PurePosixPath(logical_path).name,
+            object_key=object_key,
+            mime_type=file.content_type,
+            size_bytes=size,
+            is_previewable=True,
+        )
+        db.add(artifact)
+        db.commit()
+        db.refresh(artifact)
+        return InputFile(
+            id=str(artifact.id),
+            type="file",
+            name=artifact.display_name,
+            source=artifact.object_key,
+            size=artifact.size_bytes,
+            content_type=artifact.mime_type,
+            path=artifact.logical_path,
+        )
+
     def list_runtime_artifacts(
         self,
         db: Session,
@@ -388,7 +527,11 @@ class ChannelArtifactService:
 
         grouped_entries: dict[str, dict[str, Any]] = {}
         for artifact in artifacts:
-            if artifact.agent_identity_id is not None:
+            is_user_upload = artifact.source_kind == self.UPLOAD_SOURCE_KIND
+            if is_user_upload:
+                group_key = "uploads"
+                group_name = self.UPLOADS_FOLDER
+            elif artifact.agent_identity_id is not None:
                 group_key = f"agent:{artifact.agent_identity_id}"
                 agent = AgentIdentityRepository.get_by_id(
                     db, artifact.agent_identity_id
@@ -408,6 +551,10 @@ class ChannelArtifactService:
                 {"name": group_name, "files": [], "url_map": {}},
             )
             relative_path = artifact.logical_path.lstrip("/")
+            if is_user_upload:
+                uploads_prefix = f"{self.UPLOADS_FOLDER}/"
+                if relative_path.startswith(uploads_prefix):
+                    relative_path = relative_path[len(uploads_prefix) :]
             group["files"].append(
                 {
                     "path": relative_path,
@@ -416,7 +563,7 @@ class ChannelArtifactService:
                     "size": getattr(artifact, "size_bytes", None),
                 }
             )
-            group["url_map"][normalize_manifest_path(artifact.logical_path)] = (
+            group["url_map"][normalize_manifest_path(relative_path)] = (
                 self._storage.presign_get(
                     artifact.object_key,
                     response_content_disposition="inline",

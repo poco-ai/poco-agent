@@ -31,6 +31,11 @@ class ChannelArtifactRepository:
     ) -> list[ChannelArtifact]:
         persisted: list[ChannelArtifact] = []
         for artifact in artifacts:
+            if artifact.source_session_id is None:
+                session_db.add(artifact)
+                persisted.append(artifact)
+                continue
+
             existing = cls.get_by_session_and_path(
                 session_db,
                 source_session_id=artifact.source_session_id,

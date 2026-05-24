@@ -1,11 +1,12 @@
 import uuid
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, File, UploadFile
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from app.core.deps import get_current_user, get_db
 from app.models.user import User
+from app.schemas.input_file import InputFile
 from app.schemas.response import Response, ResponseSchema
 from app.schemas.workspace import FileNode
 from app.services.channel_artifact_service import ChannelArtifactService
@@ -34,4 +35,25 @@ async def list_channel_artifacts(
     return Response.success(
         data=result,
         message="Channel artifacts retrieved successfully",
+    )
+
+
+@router.post("/artifacts/upload", response_model=ResponseSchema[InputFile])
+async def upload_channel_artifact(
+    server_id: uuid.UUID,
+    channel_id: uuid.UUID,
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> JSONResponse:
+    result = service.upload_channel_artifact(
+        db,
+        current_user=current_user,
+        server_id=server_id,
+        channel_id=channel_id,
+        file=file,
+    )
+    return Response.success(
+        data=result,
+        message="Channel artifact uploaded successfully",
     )

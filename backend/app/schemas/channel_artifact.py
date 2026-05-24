@@ -8,7 +8,7 @@ class ChannelArtifactResponse(BaseModel):
     artifact_id: UUID = Field(validation_alias="id")
     server_id: UUID
     channel_id: UUID
-    source_session_id: UUID
+    source_session_id: UUID | None = None
     agent_identity_id: UUID | None = None
     publisher_user_id: str | None = None
     source_kind: str
@@ -29,7 +29,7 @@ class AgentChannelArtifactMetadata(BaseModel):
     logical_path: str
     display_name: str
     source_kind: str
-    source_session_id: UUID
+    source_session_id: UUID | None = None
     agent_identity_id: UUID | None = None
     publisher_user_id: str | None = None
     mime_type: str | None = None

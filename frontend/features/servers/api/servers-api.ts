@@ -1,5 +1,5 @@
 import { apiClient, API_ENDPOINTS } from "@/services/api-client";
-import type { FileNode } from "@/features/chat/types";
+import type { FileNode, InputFile } from "@/features/chat/types";
 import type {
   ServerAgentItem,
   ServerChannelItem,
@@ -421,6 +421,19 @@ export const serversApi = {
     );
   },
 
+  uploadChannelArtifact: async (
+    serverId: string,
+    channelId: string,
+    file: File,
+  ): Promise<InputFile> => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return apiClient.post<InputFile>(
+      `/servers/${serverId}/channels/${channelId}/artifacts/upload`,
+      formData,
+    );
+  },
+
   listAgentStateFiles: async (
     serverId: string,
     agentId: string,
@@ -552,18 +565,26 @@ export const serversApi = {
     channelId: string,
     input: {
       text: string;
+      attachments?: InputFile[];
       threadRootMessageId?: string | null;
       asTask?: boolean;
     },
   ): Promise<ServerConversationMessage> => {
+    const attachments = input.attachments ?? [];
+    const attachmentPreview = attachments
+      .map((item) => item.name.trim())
+      .filter(Boolean)
+      .join(", ");
+    const textPreview = input.text || attachmentPreview;
     const message = await apiClient.post<ServerConversationMessageResponse>(
       `/servers/${serverId}/channels/${channelId}/messages`,
       {
         message_type: "user",
-        text_preview: input.text,
+        text_preview: textPreview,
         thread_root_message_id: input.threadRootMessageId ?? null,
         content: {
           text: input.text,
+          attachments,
           ...(input.asTask ? { as_task: true } : {}),
         },
       },
