@@ -621,8 +621,9 @@ class AgentExecutor:
                 "- Artifact logical_path values are controlled identifiers, not "
                 "/workspace filesystem paths.",
                 "- When you need shared files, first use list_channel_artifacts "
-                "or search_channel_artifacts, then read_channel_artifact by "
-                "artifact_id or logical_path.",
+                "or search_channel_artifacts, then read_channel_artifact by artifact_id. "
+                "Use logical_path only when you pass the exact logical_path returned by "
+                "the artifact tools; display_name is not a stable read identifier.",
                 "- Do not guess that a published artifact exists under "
                 "/workspace, /agent_state, or a local mount path.",
                 "- These artifact tools are scoped to the current server and "
@@ -702,7 +703,7 @@ class AgentExecutor:
             "- target_agent_identity_id: your stable agent identity in this server.",
             "- target_agent_handle is your channel handle in this run.",
             "- reference_message_ids: messages selected or implied as context for this trigger.",
-            "- reference_artifact_ids: published channel artifacts selected as context; list or read artifacts before relying on their content.",
+            "- reference_artifact_ids: published channel artifacts selected as context; pass these artifact_id values to read_channel_artifact before relying on their content.",
             "- reference_task_ids: channel tasks selected as context.",
             "- handoff_dedupe_key: an internal loop/deduplication key; do not show it to users unless explicitly asked.",
             "",
@@ -749,6 +750,7 @@ class AgentExecutor:
                 "- Other named people or agents in the user request may refer to channel members or channel agents. Use list_channel_agents when you need to resolve who they are or what handles are available.",
                 "- Use read_channel_messages with trigger_message_id, thread_root_message_id, reference_message_ids, anchor_message_id plus direction before/after, no selector, or read_all=true when you need channel history beyond the visible prompt.",
                 "- Use list_channel_artifacts, search_channel_artifacts, and read_channel_artifact when you need shared files.",
+                "- For referenced artifacts, use the reference_artifact_ids above as read_channel_artifact artifact_id values.",
                 "- Do not assume recent channel conversation or artifact content is fully inlined in this prompt.",
             ]
         )

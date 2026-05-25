@@ -56,6 +56,14 @@ sequenceDiagram
 - `create_channel_task`、`claim_channel_task`、`update_channel_task_status`、`comment_on_channel_task` 用于操作团队可见的 channel task，不替代 agent 私有执行 todo。
 - `add_channel_message_reaction`、`remove_channel_message_reaction` 用于添加或移除当前 agent 的轻量消息反馈。Reaction 不触发 agent run，也不改变消息正文。
 
+## 从 # 引用到 Artifact 读取
+
+`#design.md` 只是输入框里的可读 token，不是读取协议。用户从 `#` picker 选择共享文件时，消息会保存一个 `artifact/reference` entity，它的 `target_id` 是稳定的 `artifact_id`。Backend 校验该 artifact 属于当前 channel 后，才把这个 id 写入 `AgentTriggerEnvelope.references.artifact_ids`。
+
+Agent 运行时应优先调用 `read_channel_artifact(artifact_id=...)`。`display_name` 只服务展示、搜索和历史 fallback，不能当读取 id；`logical_path` 只有在来自 artifact API 或工具返回的完整值时，才可以作为备选读取参数。这样即使频道里存在同名文件，或展示名后来变化，Agent 仍然读取用户实际选择的对象。
+
+如果 artifact 不存在、参数非法或权限不足，中间层必须保留 Backend 的业务错误语义，而不是统一包装成 500。Agent 看到这类错误时应修正选择器、重新 search/list，或说明引用对象不可用，而不是要求用户重新上传文件。
+
 ## 消息读取策略
 
 消息读取遵循渐进式披露。Agent 先从 trigger message 出发，只在需要时扩大上下文范围。

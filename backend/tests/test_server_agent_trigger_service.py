@@ -165,6 +165,224 @@ class ServerAgentTriggerServiceTests(unittest.TestCase):
         self.assertEqual(results, [])
         self.task_service.enqueue_task.assert_not_called()
 
+    def test_structured_agent_entity_ignores_extra_regex_mentions(self) -> None:
+        other_agent_id = uuid.uuid4()
+        message = SimpleNamespace(
+            id=uuid.uuid4(),
+            channel_id=self.channel_id,
+            author_user_id="user-1",
+            text_preview="@api-specialist and @other-agent",
+            content={
+                "text": "@api-specialist and @other-agent",
+                "entities": [
+                    {
+                        "kind": "agent",
+                        "action": "trigger",
+                        "target_id": str(self.agent_id),
+                    },
+                    {
+                        "kind": "artifact",
+                        "action": "reference",
+                        "target_id": str(uuid.uuid4()),
+                    },
+                ],
+            },
+            thread_root_message_id=None,
+        )
+        channel = SimpleNamespace(
+            id=self.channel_id,
+            server_id=self.server_id,
+            conversation_type="channel",
+            direct_agent_identity_id=None,
+            name="backend",
+        )
+        agent = SimpleNamespace(
+            id=self.agent_id,
+            server_id=self.server_id,
+            preset_id=8,
+            handle="api-specialist",
+            display_name="API Specialist",
+            lifecycle_state="active",
+            removed_at=None,
+            created_by="owner-user",
+            persistent_state=SimpleNamespace(active_session_id=None),
+        )
+        membership = SimpleNamespace(agent_identity_id=self.agent_id, status="active")
+        self.context_service.extract_trigger_body.return_value = (
+            "@api-specialist and @other-agent"
+        )
+        self.context_service.build_trigger_envelope.return_value = AgentTriggerEnvelope(
+            trigger_type="channel_mention",
+            server_id=self.server_id,
+            channel_id=self.channel_id,
+            trigger_message_id=message.id,
+            thread_root_message_id=message.id,
+            target_agent_identity_id=self.agent_id,
+            target_agent_handle="api-specialist",
+            source_actor={"actor_type": "user", "user_id": "user-1"},
+            handoff={
+                "dedupe_key": f"channel-trigger:{message.id}:{self.agent_id}",
+            },
+        )
+        self.task_service.enqueue_task.return_value = TaskEnqueueResponse(
+            session_id=uuid.uuid4(),
+            accepted_type="run",
+            run_id=uuid.uuid4(),
+            status="queued",
+            queued_query_count=0,
+        )
+
+        def get_agent(_db, agent_id):
+            if agent_id == self.agent_id:
+                return agent
+            if agent_id == other_agent_id:
+                return SimpleNamespace(
+                    id=other_agent_id,
+                    handle="other-agent",
+                    lifecycle_state="active",
+                    removed_at=None,
+                )
+            return None
+
+        with (
+            patch(
+                "app.services.server_agent_trigger_service."
+                "ServerChannelAgentMemberRepository.get_by_channel_and_agent",
+                return_value=membership,
+            ) as get_membership,
+            patch(
+                "app.services.server_agent_trigger_service.AgentIdentityRepository.get_by_id",
+                side_effect=get_agent,
+            ),
+        ):
+            results = self.service.trigger_for_channel_message(
+                self.db,
+                current_user=self.current_user,
+                server_id=self.server_id,
+                channel=channel,
+                message=message,
+            )
+
+        self.assertEqual(len(results), 1)
+        get_membership.assert_called_once_with(self.db, self.channel_id, self.agent_id)
+        _, _, request = self.task_service.enqueue_task.call_args.args
+        self.assertEqual(request.config.agent_identity_id, self.agent_id)
+        self.assertEqual(request.config.trigger_type, "channel_mention")
+
+    def test_structured_references_are_passed_to_trigger_envelope(self) -> None:
+        artifact_id = uuid.uuid4()
+        task_id = uuid.uuid4()
+        referenced_message_id = uuid.uuid4()
+        message = SimpleNamespace(
+            id=uuid.uuid4(),
+            channel_id=self.channel_id,
+            author_user_id="user-1",
+            text_preview="@api-specialist check refs",
+            content={
+                "text": "@api-specialist check refs",
+                "entities": [
+                    {
+                        "kind": "agent",
+                        "action": "trigger",
+                        "target_id": str(self.agent_id),
+                    },
+                    {
+                        "kind": "artifact",
+                        "action": "reference",
+                        "target_id": str(artifact_id),
+                    },
+                    {
+                        "kind": "task",
+                        "action": "reference",
+                        "target_id": str(task_id),
+                    },
+                    {
+                        "kind": "thread",
+                        "action": "reference",
+                        "target_id": str(referenced_message_id),
+                    },
+                    {
+                        "kind": "user",
+                        "action": "mention",
+                        "target_id": "user-2",
+                    },
+                    {
+                        "kind": "artifact",
+                        "action": "reference",
+                        "target_id": str(artifact_id),
+                    },
+                ],
+            },
+            thread_root_message_id=None,
+        )
+        channel = SimpleNamespace(
+            id=self.channel_id,
+            server_id=self.server_id,
+            conversation_type="channel",
+            direct_agent_identity_id=None,
+            name="backend",
+        )
+        agent = SimpleNamespace(
+            id=self.agent_id,
+            server_id=self.server_id,
+            preset_id=8,
+            handle="api-specialist",
+            display_name="API Specialist",
+            lifecycle_state="active",
+            removed_at=None,
+            created_by="owner-user",
+            persistent_state=SimpleNamespace(active_session_id=None),
+        )
+        membership = SimpleNamespace(agent_identity_id=self.agent_id, status="active")
+        self.context_service.extract_trigger_body.return_value = (
+            "@api-specialist check refs"
+        )
+        self.context_service.build_trigger_envelope.return_value = AgentTriggerEnvelope(
+            trigger_type="channel_mention",
+            server_id=self.server_id,
+            channel_id=self.channel_id,
+            trigger_message_id=message.id,
+            thread_root_message_id=message.id,
+            target_agent_identity_id=self.agent_id,
+            target_agent_handle="api-specialist",
+            source_actor={"actor_type": "user", "user_id": "user-1"},
+            handoff={
+                "dedupe_key": f"channel-trigger:{message.id}:{self.agent_id}",
+            },
+        )
+        self.task_service.enqueue_task.return_value = TaskEnqueueResponse(
+            session_id=uuid.uuid4(),
+            accepted_type="run",
+            run_id=uuid.uuid4(),
+            status="queued",
+            queued_query_count=0,
+        )
+
+        with (
+            patch(
+                "app.services.server_agent_trigger_service."
+                "ServerChannelAgentMemberRepository.get_by_channel_and_agent",
+                return_value=membership,
+            ),
+            patch(
+                "app.services.server_agent_trigger_service.AgentIdentityRepository.get_by_id",
+                return_value=agent,
+            ),
+        ):
+            self.service.trigger_for_channel_message(
+                self.db,
+                current_user=self.current_user,
+                server_id=self.server_id,
+                channel=channel,
+                message=message,
+            )
+
+        kwargs = self.context_service.build_trigger_envelope.call_args.kwargs
+        references = kwargs["references"]
+        self.assertEqual(references.message_ids, [message.id, referenced_message_id])
+        self.assertEqual(references.artifact_ids, [artifact_id])
+        self.assertEqual(references.task_ids, [task_id])
+
     def test_agent_dm_message_triggers_direct_agent_without_mention(self) -> None:
         message = SimpleNamespace(
             id=uuid.uuid4(),

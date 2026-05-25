@@ -4,6 +4,7 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 from app.models.user import User
+from app.schemas.agent_trigger import TriggerReferences
 from app.services.channel_shared_context_service import ChannelSharedContextService
 
 
@@ -53,6 +54,39 @@ class ChannelSharedContextServiceTests(unittest.TestCase):
             payload["handoff"]["dedupe_key"],
             f"channel-trigger:{self.message_id}:{agent_id}",
         )
+
+    def test_build_trigger_envelope_uses_explicit_references(self) -> None:
+        message = SimpleNamespace(
+            id=self.message_id,
+            channel_id=self.channel_id,
+            author_user_id="user-1",
+            text_preview="Please review @api-specialist #design.md",
+            content={"text": "Please review @api-specialist #design.md"},
+            thread_root_message_id=None,
+        )
+        agent_id = uuid.uuid4()
+        artifact_id = uuid.uuid4()
+        task_id = uuid.uuid4()
+        references = TriggerReferences(
+            message_ids=[self.message_id],
+            artifact_ids=[artifact_id],
+            task_ids=[task_id],
+        )
+
+        envelope = self.service.build_trigger_envelope(
+            server_id=self.server_id,
+            channel_id=self.channel_id,
+            message=message,
+            current_user=self.current_user,
+            target_agent_identity_id=agent_id,
+            target_agent_handle="api-specialist",
+            trigger_type="channel_mention",
+            references=references,
+        )
+
+        self.assertEqual(envelope.references.message_ids, [self.message_id])
+        self.assertEqual(envelope.references.artifact_ids, [artifact_id])
+        self.assertEqual(envelope.references.task_ids, [task_id])
 
     def test_extract_trigger_body_prefers_full_content_over_preview(self) -> None:
         full_text = ("Complete @jimi summary " + ("details " * 120)).strip()

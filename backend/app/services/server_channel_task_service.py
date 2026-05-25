@@ -26,6 +26,7 @@ from app.repositories.user_repository import UserRepository
 from app.schemas.server_channel_task import (
     TASK_STATUS_VALUES,
     ChannelTaskActorSummary,
+    ServerChannelTaskCandidateResponse,
     ServerChannelTaskClaimRequest,
     ServerChannelTaskCreateRequest,
     ServerChannelTaskResponse,
@@ -53,6 +54,15 @@ class ServerChannelTaskService:
     ) -> ServerChannelTaskResponse:
         response = ServerChannelTaskResponse.model_validate(task)
         response.creator = self._user_summary(db, task.creator_user_id)
+        response.assignee = self._assignee_summary(db, task)
+        return response
+
+    def _build_task_candidate_response(
+        self,
+        db: Session,
+        task: ServerChannelTask,
+    ) -> ServerChannelTaskCandidateResponse:
+        response = ServerChannelTaskCandidateResponse.model_validate(task)
         response.assignee = self._assignee_summary(db, task)
         return response
 
@@ -671,6 +681,33 @@ class ServerChannelTaskService:
         channel = self._require_channel_access(db, current_user, server_id, channel_id)
         tasks = ServerChannelTaskRepository.list_by_channel(db, channel.id)
         return [self._build_task_response(db, item) for item in tasks]
+
+    def list_task_candidates(
+        self,
+        db: Session,
+        current_user: User,
+        server_id: uuid.UUID,
+        channel_id: uuid.UUID,
+        *,
+        query: str | None = None,
+        limit: int = 20,
+    ) -> list[ServerChannelTaskCandidateResponse]:
+        channel = self._require_channel_access(db, current_user, server_id, channel_id)
+        safe_limit = max(1, min(int(limit), 50))
+        normalized_query = (query or "").strip().lower()
+        tasks = ServerChannelTaskRepository.list_by_channel(db, channel.id)
+        if normalized_query:
+            task_number_query = normalized_query.removeprefix("#task-")
+            task_number_query = task_number_query.removeprefix("task-")
+            tasks = [
+                task
+                for task in tasks
+                if normalized_query in task.title.lower()
+                or task_number_query == str(task.display_number)
+            ]
+        return [
+            self._build_task_candidate_response(db, item) for item in tasks[:safe_limit]
+        ]
 
     def get_task(
         self,

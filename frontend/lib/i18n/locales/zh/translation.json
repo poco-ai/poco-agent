@@ -228,9 +228,9 @@
     "unread": "未读",
     "noInbox": "收件箱暂无内容",
     "noSaved": "暂无已保存内容",
+    "composerActions": "更多操作",
     "sharedArtifacts": {
       "title": "共享文件",
-      "description": "按 Agent 分组展示的公开成果",
       "preview": "预览",
       "empty": "还没有公开材料"
     },
@@ -267,7 +267,12 @@
     "mentionCandidates": "提及",
     "mentionKinds": {
       "agent": "Agent",
-      "human": "成员"
+      "human": "成员",
+      "user": "成员",
+      "artifact": "文件",
+      "task": "任务",
+      "message": "消息",
+      "thread": "话题"
     },
     "createChannel": {
       "title": "创建频道",

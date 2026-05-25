@@ -5,7 +5,10 @@ import { toast } from "sonner";
 
 import { ApiError } from "@/lib/errors";
 
-import { transcribeAudio } from "@/features/voice/api/voice-api";
+import {
+  getAudioTranscriptionSupport,
+  transcribeAudio,
+} from "@/features/voice/api/voice-api";
 
 export type VoiceInputStatus = "idle" | "recording" | "transcribing";
 
@@ -27,6 +30,36 @@ const RECORDING_FORMAT_CANDIDATES: RecordingFormat[] = [
   { mimeType: "audio/ogg;codecs=opus", extension: "ogg" },
   { mimeType: "audio/ogg", extension: "ogg" },
 ];
+
+let cachedServerSupport: boolean | null = null;
+let serverSupportRequest: Promise<boolean> | null = null;
+
+async function resolveServerSupport(): Promise<boolean> {
+  if (cachedServerSupport !== null) {
+    return cachedServerSupport;
+  }
+
+  if (!serverSupportRequest) {
+    serverSupportRequest = getAudioTranscriptionSupport()
+      .then((result) => {
+        cachedServerSupport = result.available;
+        return result.available;
+      })
+      .catch((error) => {
+        console.warn(
+          "[VoiceInput] Failed to resolve voice input support:",
+          error,
+        );
+        cachedServerSupport = false;
+        return false;
+      })
+      .finally(() => {
+        serverSupportRequest = null;
+      });
+  }
+
+  return serverSupportRequest;
+}
 
 function isVoiceInputSupported(): boolean {
   if (typeof window === "undefined") {
@@ -78,7 +111,10 @@ export function useVoiceInput({
   language,
 }: UseVoiceInputOptions) {
   const [status, setStatus] = React.useState<VoiceInputStatus>("idle");
-  const isSupported = isVoiceInputSupported();
+  const [serverSupport, setServerSupport] = React.useState(
+    cachedServerSupport ?? false,
+  );
+  const isSupported = isVoiceInputSupported() && serverSupport;
 
   const mediaRecorderRef = React.useRef<MediaRecorder | null>(null);
   const mediaStreamRef = React.useRef<MediaStream | null>(null);
@@ -91,6 +127,24 @@ export function useVoiceInput({
   React.useEffect(() => {
     onTranscriptionRef.current = onTranscription;
   }, [onTranscription]);
+
+  React.useEffect(() => {
+    if (!isVoiceInputSupported()) {
+      return;
+    }
+
+    let active = true;
+
+    void resolveServerSupport().then((available) => {
+      if (active) {
+        setServerSupport(available);
+      }
+    });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const updateStatus = React.useCallback((nextStatus: VoiceInputStatus) => {
     if (isMountedRef.current) {

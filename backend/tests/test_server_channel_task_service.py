@@ -137,6 +137,58 @@ class ServerChannelTaskServiceTests(unittest.TestCase):
         self.assertIn("preset", context.exception.message.lower())
         preset_repo.get_visible_by_id.assert_called_once_with(self.db, 7, self.user.id)
 
+    def test_list_task_candidates_filters_by_title_or_display_number(self) -> None:
+        service = ServerChannelTaskService()
+        task = ServerChannelTask(
+            id=uuid.uuid4(),
+            server_id=self.server_id,
+            channel_id=self.channel.id,
+            title="Review structured mentions",
+            display_number=42,
+            description=None,
+            status="todo",
+            position=0,
+            priority="medium",
+            due_date=None,
+            creator_user_id="user-1",
+            updated_by="user-1",
+        )
+        other_task = ServerChannelTask(
+            id=uuid.uuid4(),
+            server_id=self.server_id,
+            channel_id=self.channel.id,
+            title="Unrelated cleanup",
+            display_number=43,
+            description=None,
+            status="done",
+            position=1,
+            priority="low",
+            due_date=None,
+            creator_user_id="user-1",
+            updated_by="user-1",
+        )
+
+        with (
+            patch.object(service, "_require_channel_access", return_value=self.channel),
+            patch(
+                "app.services.server_channel_task_service."
+                "ServerChannelTaskRepository.list_by_channel",
+                return_value=[other_task, task],
+            ),
+        ):
+            result = service.list_task_candidates(
+                self.db,
+                self.user,
+                self.server_id,
+                self.channel.id,
+                query="#task-42",
+            )
+
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0].task_id, task.id)
+        self.assertEqual(result[0].display_number, 42)
+        self.assertEqual(result[0].title, "Review structured mentions")
+
     def test_create_task_root_message_is_event_without_author(self) -> None:
         service = ServerChannelTaskService()
         task = ServerChannelTask(

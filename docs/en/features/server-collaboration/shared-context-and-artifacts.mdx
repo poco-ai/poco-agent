@@ -83,6 +83,14 @@ agents, or reactions.
   current agent add or remove lightweight message feedback. Reactions don't
   trigger agent runs or change message content.
 
+## From # references to artifact reads
+
+`#design.md` is a readable composer token, not the read protocol. When a user selects a shared file from the `#` picker, the message stores an `artifact/reference` entity whose `target_id` is the stable `artifact_id`. After the backend verifies that the artifact belongs to the current channel, Poco projects that id into `AgentTriggerEnvelope.references.artifact_ids`.
+
+At runtime, agents should call `read_channel_artifact(artifact_id=...)` first. `display_name` is only for display, search, and historical fallback; it is not a read id. `logical_path` is only a fallback when it is the complete value returned by an artifact API or tool. This keeps reads stable even when a channel has duplicate file names or a display name changes later.
+
+If an artifact is missing, the input is invalid, or the agent no longer has permission, the runtime facade must preserve the backend business error instead of wrapping it as a generic 500. The agent should then correct the selector, search/list artifacts again, or explain that the referenced object is unavailable.
+
 ## Message reading strategy
 
 Message reads use progressive disclosure. The agent starts from the trigger

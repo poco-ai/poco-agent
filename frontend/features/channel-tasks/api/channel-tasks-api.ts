@@ -4,6 +4,7 @@ import type {
   ChannelTaskActivityMessage,
   ChannelTask,
   ChannelTaskActorSummary,
+  ChannelTaskCandidate,
   ChannelTaskCreateInput,
   ChannelTaskMessageContext,
   ChannelTaskStatusUpdateInput,
@@ -44,6 +45,14 @@ interface ChannelTaskActorSummaryResponse {
   label: string;
   avatar_url?: string | null;
   visual_key?: string | null;
+}
+
+interface ChannelTaskCandidateResponse {
+  task_id: string;
+  display_number: number;
+  title: string;
+  status: ChannelTaskStatus;
+  assignee?: ChannelTaskActorSummaryResponse | null;
 }
 
 function mapActorSummary(
@@ -87,6 +96,18 @@ function mapTask(task: ChannelTaskResponse): ChannelTask {
     threadRootMessageId: task.thread_root_message_id,
     createdAt: task.created_at,
     updatedAt: task.updated_at,
+  };
+}
+
+function mapTaskCandidate(
+  task: ChannelTaskCandidateResponse,
+): ChannelTaskCandidate {
+  return {
+    taskId: task.task_id,
+    displayNumber: task.display_number,
+    title: task.title,
+    status: task.status,
+    assignee: mapActorSummary(task.assignee),
   };
 }
 
@@ -137,6 +158,25 @@ export const channelTasksApi = {
       API_ENDPOINTS.serverChannelTasks(serverId, channelId),
     );
     return tasks.map(mapTask);
+  },
+
+  listTaskCandidates: async (
+    serverId: string,
+    channelId: string,
+    input: { q?: string; limit?: number } = {},
+  ): Promise<ChannelTaskCandidate[]> => {
+    const search = new URLSearchParams();
+    if (input.q?.trim()) {
+      search.set("q", input.q.trim());
+    }
+    if (input.limit) {
+      search.set("limit", String(input.limit));
+    }
+    const suffix = search.toString() ? `?${search.toString()}` : "";
+    const tasks = await apiClient.get<ChannelTaskCandidateResponse[]>(
+      `${API_ENDPOINTS.serverChannelTasks(serverId, channelId)}/candidates${suffix}`,
+    );
+    return tasks.map(mapTaskCandidate);
   },
 
   createTask: async (

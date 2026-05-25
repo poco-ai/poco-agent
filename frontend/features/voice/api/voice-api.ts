@@ -4,6 +4,10 @@ export interface AudioTranscriptionResult {
   text: string;
 }
 
+interface AudioTranscriptionSupportResult {
+  available: boolean;
+}
+
 interface TranscribeAudioOptions {
   language?: string;
   signal?: AbortSignal;
@@ -28,5 +32,11 @@ export async function transcribeAudio(
       signal: options.signal,
       timeoutMs: 180_000,
     },
+  );
+}
+
+export async function getAudioTranscriptionSupport(): Promise<AudioTranscriptionSupportResult> {
+  return apiClient.get<AudioTranscriptionSupportResult>(
+    API_ENDPOINTS.audioTranscriptionSupport,
   );
 }

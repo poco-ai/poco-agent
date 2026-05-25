@@ -95,9 +95,6 @@ export function SharedArtifactsDrawer({
             <p className="text-xl font-semibold text-foreground">
               {t("conversationView.sharedArtifacts.title")}
             </p>
-            <p className="truncate text-sm text-muted-foreground">
-              {t("conversationView.sharedArtifacts.description")}
-            </p>
           </div>
         </div>
         <Button type="button" variant="outline" size="sm" onClick={onClose}>

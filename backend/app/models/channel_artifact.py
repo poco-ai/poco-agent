@@ -38,9 +38,9 @@ class ChannelArtifact(Base, TimestampMixin):
         nullable=False,
         index=True,
     )
-    source_session_id: Mapped[uuid.UUID] = mapped_column(
+    source_session_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("agent_sessions.id", ondelete="CASCADE"),
-        nullable=False,
+        nullable=True,
         index=True,
     )
     agent_identity_id: Mapped[uuid.UUID | None] = mapped_column(

@@ -4,6 +4,7 @@ import * as React from "react";
 import {
   Archive,
   ArrowDown,
+  ArrowUp,
   Bot,
   Check,
   ChevronLeft,
@@ -11,9 +12,14 @@ import {
   Hash,
   Lock,
   LogOut,
+  Loader2,
+  Mic,
+  MicOff,
+  Paperclip,
   Plus,
   Search,
   Settings2,
+  SquareCheckBig,
   Trash2,
   UserRound,
   Users,
@@ -31,7 +37,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { FileCard } from "@/components/shared/file-card";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
@@ -43,8 +56,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import type { FileNode } from "@/features/chat/types";
+import type { FileNode, InputFile } from "@/features/chat/types";
 import { channelTasksApi } from "@/features/channel-tasks/api/channel-tasks-api";
 import { resolveChannelTaskView } from "@/features/channel-tasks/lib/channel-task-board";
 import type {
@@ -58,6 +76,7 @@ import type {
   ServerAgentItem,
   ServerChannelItem,
   ServerChannelMemberItem,
+  ChannelMessageEntity,
   ServerConversationMessage,
   ServerItem,
   ServerMemberItem,
@@ -66,16 +85,20 @@ import type {
 import { useServerMembership } from "@/features/servers/hooks/use-server-membership";
 import {
   buildAgentMentionCandidate,
+  buildArtifactComposerCandidate,
   buildHumanMentionCandidates,
+  buildParticipantComposerCandidate,
+  buildTaskComposerCandidate,
+  filterStaleMessageEntities,
+  getComposerCandidateSearchText,
+  getComposerTrigger,
   getAvailableChannelHumanMembers,
-  getMentionInsertText,
-  getMentionSearchText,
   getUserDisplayName,
   hasInboxSignal,
+  insertComposerCandidate,
   sortChannelsForSidebar,
   sortMessagesChronologically,
-  type MentionCandidate,
-  getMentionTrigger,
+  type ComposerCandidate,
 } from "@/features/servers/lib/server-conversation-view";
 import { getMessageSessionId } from "@/features/servers/lib/server-conversation-messages";
 import {
@@ -116,13 +139,16 @@ import type {
   WorkspaceMode,
 } from "@/features/servers/ui/server-workspace-types";
 import { useUserAccount } from "@/features/user/hooks/use-user-account";
+import { appendTranscribedText, useVoiceInput } from "@/features/voice";
 import { useLanguage } from "@/hooks/use-language";
 import { useT } from "@/lib/i18n/client";
 import { cn } from "@/lib/utils";
+import { playUploadSound } from "@/lib/utils/sound";
 
 const LAST_SELECTION_KEY = "poco-servers-last-selection-v1";
 const SAVED_MESSAGES_KEY = "poco-saved-messages-v1";
 const READ_MESSAGES_KEY = "poco-read-messages-v1";
+const MAX_FILE_SIZE = 100 * 1024 * 1024;
 
 type CachedServerConversationContext = {
   channels: ServerChannelItem[];
@@ -392,11 +418,17 @@ function ConversationContent({
   messages,
   savedMessageIds,
   draft,
+  draftEntities,
+  attachments,
   asTask,
   isLoading,
+  isUploading,
   onDraftChange,
+  onDraftEntitiesChange,
   onAsTaskChange,
   onSend,
+  onUploadFiles,
+  onRemoveAttachment,
   onOpenThread,
   onOpenSettings,
   onOpenMembers,
@@ -416,11 +448,17 @@ function ConversationContent({
   messages: ServerConversationMessage[];
   savedMessageIds: Set<string>;
   draft: string;
+  draftEntities: ChannelMessageEntity[];
+  attachments: InputFile[];
   asTask: boolean;
   isLoading: boolean;
+  isUploading: boolean;
   onDraftChange: (value: string) => void;
+  onDraftEntitiesChange: (value: ChannelMessageEntity[]) => void;
   onAsTaskChange: (value: boolean) => void;
   onSend: () => void;
+  onUploadFiles: (files: File[]) => Promise<void>;
+  onRemoveAttachment: (index: number) => void;
   onOpenThread: (message: ServerConversationMessage) => void;
   onOpenSettings: () => void;
   onOpenMembers: () => void;
@@ -435,33 +473,132 @@ function ConversationContent({
 }) {
   const { t } = useT("translation");
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
   const isComposingRef = React.useRef(false);
   const Icon = channel?.conversationType === "direct_message" ? Lock : Hash;
   const scrollContainerRef = React.useRef<HTMLDivElement | null>(null);
   const hasInitializedScrollRef = React.useRef(false);
   const lastMessageCountRef = React.useRef(messages.length);
-  const mentionTrigger = React.useMemo(() => getMentionTrigger(draft), [draft]);
+  const composerTrigger = React.useMemo(
+    () => getComposerTrigger(draft),
+    [draft],
+  );
   const [showScrollButton, setShowScrollButton] = React.useState(false);
   const [isUserScrolling, setIsUserScrolling] = React.useState(false);
-  const mentionCandidates = React.useMemo<MentionCandidate[]>(() => {
+  const draftRef = React.useRef(draft);
+  const lng = useLanguage();
+  const [contextCandidates, setContextCandidates] = React.useState<
+    ComposerCandidate[]
+  >([]);
+  const participantCandidates = React.useMemo<ComposerCandidate[]>(() => {
     const humans = buildHumanMentionCandidates(members, currentUserId);
     const agentCandidates = agents.map(buildAgentMentionCandidate);
-    const candidates = [...agentCandidates, ...humans];
-    if (!mentionTrigger) {
-      return [];
-    }
-    return candidates
+    return [...agentCandidates, ...humans]
+      .map(buildParticipantComposerCandidate)
       .filter((candidate) =>
-        getMentionSearchText(candidate).includes(mentionTrigger.query),
-      )
-      .slice(0, 8);
-  }, [agents, currentUserId, mentionTrigger, members]);
+        composerTrigger?.prefix === "@"
+          ? getComposerCandidateSearchText(candidate).includes(
+              composerTrigger.query,
+            )
+          : true,
+      );
+  }, [agents, composerTrigger, currentUserId, members]);
 
-  const mentionActive = mentionTrigger !== null && mentionCandidates.length > 0;
+  React.useEffect(() => {
+    if (!channel || composerTrigger?.prefix !== "#") {
+      setContextCandidates([]);
+      return;
+    }
+    let cancelled = false;
+    const timeoutId = window.setTimeout(() => {
+      void Promise.all([
+        serversApi.listChannelArtifactCandidates(channel.serverId, channel.id, {
+          q: composerTrigger.query,
+          limit: 6,
+        }),
+        channelTasksApi.listTaskCandidates(channel.serverId, channel.id, {
+          q: composerTrigger.query,
+          limit: 6,
+        }),
+      ])
+        .then(([artifacts, taskCandidates]) => {
+          if (cancelled) {
+            return;
+          }
+          setContextCandidates(
+            [
+              ...artifacts.map(buildArtifactComposerCandidate),
+              ...taskCandidates.map(buildTaskComposerCandidate),
+            ]
+              .filter((candidate) =>
+                getComposerCandidateSearchText(candidate).includes(
+                  composerTrigger.query,
+                ),
+              )
+              .slice(0, 8),
+          );
+        })
+        .catch((error) => {
+          if (!cancelled) {
+            console.error(
+              "[ConversationContent] load context candidates failed",
+              error,
+            );
+            setContextCandidates([]);
+          }
+        });
+    }, 150);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeoutId);
+    };
+  }, [channel, composerTrigger]);
+
+  const composerCandidates =
+    composerTrigger?.prefix === "@"
+      ? participantCandidates.slice(0, 8)
+      : contextCandidates;
+
+  const composerActive =
+    composerTrigger !== null && composerCandidates.length > 0;
   const [mentionIndex, setMentionIndex] = React.useState(0);
   React.useEffect(() => {
     setMentionIndex(0);
-  }, [mentionCandidates]);
+  }, [composerCandidates]);
+
+  React.useEffect(() => {
+    draftRef.current = draft;
+  }, [draft]);
+
+  const syncTextareaHeight = React.useCallback(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) {
+      return;
+    }
+    textarea.style.height = "auto";
+    textarea.style.height = `${Math.min(textarea.scrollHeight, 160)}px`;
+  }, []);
+
+  React.useEffect(() => {
+    syncTextareaHeight();
+  }, [draft, syncTextareaHeight]);
+
+  const handleVoiceTranscription = React.useCallback(
+    (text: string) => {
+      onDraftChange(appendTranscribedText(draftRef.current, text));
+      requestAnimationFrame(() => {
+        textareaRef.current?.focus();
+        syncTextareaHeight();
+      });
+    },
+    [onDraftChange, syncTextareaHeight],
+  );
+
+  const voiceInput = useVoiceInput({
+    t,
+    language: lng,
+    onTranscription: handleVoiceTranscription,
+  });
 
   const scrollToBottom = React.useCallback(
     (behavior: ScrollBehavior = "smooth") => {
@@ -538,13 +675,17 @@ function ConversationContent({
     }
   }, [isUserScrolling, messages.length, scrollToBottom]);
 
-  const insertMention = (candidate: MentionCandidate) => {
-    if (!mentionTrigger) {
+  const insertCandidate = (candidate: ComposerCandidate) => {
+    if (!composerTrigger) {
       return;
     }
-    const mention = getMentionInsertText(candidate);
-    onDraftChange(
-      `${draft.slice(0, mentionTrigger.start)}${mention}${draft.slice(mentionTrigger.start + mentionTrigger.query.length + 1)}`,
+    const inserted = insertComposerCandidate(draft, composerTrigger, candidate);
+    onDraftChange(inserted.text);
+    onDraftEntitiesChange(
+      filterStaleMessageEntities(inserted.text, [
+        ...draftEntities,
+        inserted.entity,
+      ]),
     );
     textareaRef.current?.focus();
   };
@@ -552,34 +693,77 @@ function ConversationContent({
   const handleTextareaKeyDown = (
     event: React.KeyboardEvent<HTMLTextAreaElement>,
   ) => {
-    if (mentionActive && event.key === "ArrowDown") {
+    const isComposing = event.nativeEvent.isComposing || isComposingRef.current;
+    const hasComposerTrigger = composerTrigger !== null;
+    const selectedCandidate = composerCandidates[mentionIndex];
+
+    if (composerActive && event.key === "ArrowDown") {
       event.preventDefault();
-      setMentionIndex((i) => (i + 1) % mentionCandidates.length);
+      setMentionIndex((i) => (i + 1) % composerCandidates.length);
       return;
     }
-    if (mentionActive && event.key === "ArrowUp") {
+    if (composerActive && event.key === "ArrowUp") {
       event.preventDefault();
       setMentionIndex(
-        (i) => (i - 1 + mentionCandidates.length) % mentionCandidates.length,
+        (i) => (i - 1 + composerCandidates.length) % composerCandidates.length,
       );
       return;
     }
-    if (mentionActive && event.key === "Enter") {
-      event.preventDefault();
-      insertMention(mentionCandidates[mentionIndex]);
-      return;
-    }
+
     if (
-      event.key === "Enter" &&
-      !event.shiftKey &&
-      !event.nativeEvent.isComposing &&
-      !isComposingRef.current
+      hasComposerTrigger &&
+      !isComposing &&
+      (event.key === "Enter" || event.key === "Tab")
     ) {
       event.preventDefault();
-      if (!isSending && draft.trim()) {
+      if (selectedCandidate) {
+        insertCandidate(selectedCandidate);
+      }
+      return;
+    }
+
+    if (event.key === "Enter" && !event.shiftKey && !isComposing) {
+      event.preventDefault();
+      if (
+        !isSending &&
+        !isUploading &&
+        !voiceInput.isBusy &&
+        (draft.trim() || attachments.length > 0)
+      ) {
         onSend();
       }
     }
+  };
+
+  const handleFileSelect = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const input = event.currentTarget;
+    const files = Array.from(event.target.files ?? []);
+    if (files.length === 0) {
+      return;
+    }
+    try {
+      await onUploadFiles(files);
+    } finally {
+      input.value = "";
+    }
+  };
+
+  const handlePaste = async (
+    event: React.ClipboardEvent<HTMLTextAreaElement>,
+  ) => {
+    const items = event.clipboardData?.items;
+    if (!items) {
+      return;
+    }
+    const file = Array.from(items)
+      .find((item) => item.kind === "file")
+      ?.getAsFile();
+    if (!file) {
+      return;
+    }
+    await onUploadFiles([file]);
   };
 
   return (
@@ -625,6 +809,7 @@ function ConversationContent({
                   key={message.id}
                   message={message}
                   agents={agents}
+                  members={members}
                   presets={presets}
                   defaultExpanded={index === messages.length - 1}
                   onOpenThread={() => onOpenThread(message)}
@@ -654,22 +839,47 @@ function ConversationContent({
         )}
       </div>
 
-      <div className="border-t border-border px-6 py-5">
-        <div className="relative">
-          {mentionTrigger && mentionCandidates.length > 0 ? (
+      <div className="border-t border-border px-6 py-4">
+        <input
+          type="file"
+          multiple
+          ref={fileInputRef}
+          className="hidden"
+          onChange={(event) => void handleFileSelect(event)}
+        />
+        {attachments.length > 0 ? (
+          <div className="mb-2 flex min-w-0 flex-wrap gap-2 px-3">
+            {attachments.map((file, index) => (
+              <FileCard
+                key={`${file.source}-${index}`}
+                file={file}
+                onRemove={() => onRemoveAttachment(index)}
+                className="w-full max-w-48 bg-background"
+              />
+            ))}
+          </div>
+        ) : null}
+        <div className="relative flex w-full min-w-0 items-end gap-2 rounded-lg border border-border bg-card px-3 py-2">
+          {composerActive ? (
             <div className="absolute bottom-full left-0 z-20 mb-2 w-full max-w-md rounded-md border border-border bg-popover p-2 shadow-[var(--shadow-lg)]">
               <div className="px-2 pb-2 text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
                 {t("conversationView.mentionCandidates")}
               </div>
               <div className="space-y-1">
-                {mentionCandidates.map((candidate, index) => {
+                {composerCandidates.map((candidate, index) => {
                   const CandidateIcon =
-                    candidate.kind === "agent" ? Bot : UserRound;
+                    candidate.kind === "agent"
+                      ? Bot
+                      : candidate.kind === "user"
+                        ? UserRound
+                        : candidate.kind === "task"
+                          ? SquareCheckBig
+                          : Files;
                   return (
                     <button
                       key={`${candidate.kind}-${candidate.id}`}
                       type="button"
-                      onClick={() => insertMention(candidate)}
+                      onClick={() => insertCandidate(candidate)}
                       className={cn(
                         "flex w-full items-center gap-3 rounded-md px-3 py-2 text-left transition-colors",
                         index === mentionIndex
@@ -685,7 +895,7 @@ function ConversationContent({
                           {candidate.label}
                         </span>
                         <span className="block truncate text-xs text-muted-foreground">
-                          @{candidate.handle} /{" "}
+                          {candidate.metaLabel || candidate.insertedText} /{" "}
                           {t(`conversationView.mentionKinds.${candidate.kind}`)}
                         </span>
                       </span>
@@ -695,11 +905,64 @@ function ConversationContent({
               </div>
             </div>
           ) : null}
-          <Textarea
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                disabled={isSending || isUploading}
+                className="flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
+                aria-label={t("conversationView.composerActions")}
+                title={t("conversationView.composerActions")}
+              >
+                {isUploading ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Plus className="size-4" />
+                )}
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="start"
+              side="top"
+              sideOffset={8}
+              className="w-36"
+            >
+              <DropdownMenuItem
+                disabled={isSending || isUploading}
+                onSelect={() => fileInputRef.current?.click()}
+              >
+                {isUploading ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Paperclip className="size-4" />
+                )}
+                <span>{t("hero.uploadFile")}</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                disabled={isSending}
+                onSelect={() => onAsTaskChange(!asTask)}
+              >
+                <SquareCheckBig
+                  className={cn("size-4", asTask ? "text-primary" : "")}
+                />
+                <span className="flex-1">{t("conversationView.asTask")}</span>
+                {asTask ? <Check className="size-4 text-primary" /> : null}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <textarea
             ref={textareaRef}
             value={draft}
-            onChange={(event) => onDraftChange(event.target.value)}
+            onChange={(event) => {
+              const nextDraft = event.target.value;
+              onDraftChange(nextDraft);
+              onDraftEntitiesChange(
+                filterStaleMessageEntities(nextDraft, draftEntities),
+              );
+            }}
             onKeyDown={handleTextareaKeyDown}
+            onInput={() => syncTextareaHeight()}
+            onPaste={(event) => void handlePaste(event)}
             onCompositionStart={() => {
               isComposingRef.current = true;
             }}
@@ -708,33 +971,82 @@ function ConversationContent({
                 isComposingRef.current = false;
               });
             }}
-            rows={4}
+            rows={1}
             placeholder={t("conversationView.messagePlaceholder", {
               name: channel?.name ?? "",
             })}
-            className="rounded-md border-border bg-background text-base shadow-none"
+            disabled={isSending}
+            className="min-w-0 flex-1 resize-none overflow-y-auto bg-transparent py-1 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 scrollbar-hide"
+            style={{
+              minHeight: "2rem",
+              maxHeight: "10rem",
+              lineHeight: "1.5rem",
+            }}
           />
-        </div>
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-          <label className="flex items-center gap-3 text-base text-foreground">
-            <input
-              type="checkbox"
-              checked={asTask}
-              onChange={(event) => onAsTaskChange(event.target.checked)}
-              className="size-5 rounded-none border-foreground"
-            />
-            {t("conversationView.asTask")}
-          </label>
-          <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              size="sm"
-              onClick={onSend}
-              disabled={isSending || !draft.trim()}
-            >
-              {t("conversationView.send")}
-            </Button>
-          </div>
+          {voiceInput.isSupported ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={() => {
+                    void voiceInput.toggleRecording();
+                  }}
+                  disabled={
+                    isSending ||
+                    isUploading ||
+                    voiceInput.status === "transcribing"
+                  }
+                  className={cn(
+                    "flex size-8 shrink-0 items-center justify-center rounded-md transition-colors disabled:cursor-not-allowed disabled:opacity-50",
+                    voiceInput.status === "recording"
+                      ? "animate-pulse bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      : "text-muted-foreground hover:bg-accent",
+                  )}
+                  aria-label={
+                    voiceInput.status === "transcribing"
+                      ? t("hero.transcribingVoiceInput")
+                      : voiceInput.status === "recording"
+                        ? t("hero.stopVoiceInput")
+                        : t("hero.startVoiceInput")
+                  }
+                >
+                  {voiceInput.status === "transcribing" ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : voiceInput.status === "recording" ? (
+                    <MicOff className="size-4" />
+                  ) : (
+                    <Mic className="size-4" />
+                  )}
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top" sideOffset={8}>
+                {voiceInput.status === "transcribing"
+                  ? t("hero.transcribingVoiceInput")
+                  : voiceInput.status === "recording"
+                    ? t("hero.stopVoiceInput")
+                    : t("hero.startVoiceInput")}
+              </TooltipContent>
+            </Tooltip>
+          ) : null}
+          <button
+            type="button"
+            onClick={onSend}
+            disabled={
+              isSending ||
+              isUploading ||
+              voiceInput.isBusy ||
+              (!draft.trim() && attachments.length === 0)
+            }
+            className="flex size-8 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground disabled:opacity-50"
+            aria-label={t("conversationView.send")}
+            title={t("conversationView.send")}
+          >
+            {isSending ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <ArrowUp className="size-4" />
+            )}
+          </button>
         </div>
       </div>
     </section>
@@ -1589,10 +1901,20 @@ export function ServerConversationPageClient({
     [],
   );
   const [draft, setDraft] = React.useState("");
+  const [draftEntities, setDraftEntities] = React.useState<
+    ChannelMessageEntity[]
+  >([]);
+  const [draftAttachments, setDraftAttachments] = React.useState<InputFile[]>(
+    [],
+  );
   const [threadDraft, setThreadDraft] = React.useState("");
+  const [threadDraftEntities, setThreadDraftEntities] = React.useState<
+    ChannelMessageEntity[]
+  >([]);
   const [searchValue, setSearchValue] = React.useState("");
   const [isLoading, setIsLoading] = React.useState(!cachedServerContext);
   const [isSending, setIsSending] = React.useState(false);
+  const [isUploadingDraftFile, setIsUploadingDraftFile] = React.useState(false);
   const [asTask, setAsTask] = React.useState(false);
   const [threadAsTask, setThreadAsTask] = React.useState(false);
   const [savedMessageIds, setSavedMessageIds] = React.useState<Set<string>>(
@@ -2067,6 +2389,11 @@ export function ServerConversationPageClient({
   ]);
 
   React.useEffect(() => {
+    setDraftAttachments([]);
+    setIsUploadingDraftFile(false);
+  }, [activeChannelId]);
+
+  React.useEffect(() => {
     if (!selectedServerId || channels.length === 0) {
       return;
     }
@@ -2349,12 +2676,81 @@ export function ServerConversationPageClient({
     [channels, openChannel],
   );
 
+  const uploadDraftFiles = React.useCallback(
+    async (files: File[]) => {
+      if (!selectedServerId || !activeChannelId || files.length === 0) {
+        return;
+      }
+
+      const existingNames = new Set(
+        draftAttachments
+          .map((item) => (item.name || "").trim().toLowerCase())
+          .filter(Boolean),
+      );
+
+      setIsUploadingDraftFile(true);
+      try {
+        let uploadedAny = false;
+        for (const file of files) {
+          const normalizedName = file.name.trim().toLowerCase();
+          if (existingNames.has(normalizedName)) {
+            toast.error(
+              t("hero.toasts.duplicateFileName", {
+                name: file.name,
+              }),
+            );
+            continue;
+          }
+
+          if (file.size > MAX_FILE_SIZE) {
+            toast.error(t("hero.toasts.fileTooLarge"));
+            continue;
+          }
+
+          try {
+            const uploadedFile = await serversApi.uploadChannelArtifact(
+              selectedServerId,
+              activeChannelId,
+              file,
+            );
+            setDraftAttachments((current) => [...current, uploadedFile]);
+            existingNames.add(normalizedName);
+            uploadedAny = true;
+            toast.success(t("hero.toasts.uploadSuccess"));
+            playUploadSound();
+          } catch (error) {
+            console.error("[ServersWorkspace] channel upload failed", error);
+            toast.error(t("hero.toasts.uploadFailed"));
+          }
+        }
+
+        if (uploadedAny) {
+          setChannelArtifacts(
+            await serversApi.listChannelArtifacts(
+              selectedServerId,
+              activeChannelId,
+            ),
+          );
+        }
+      } finally {
+        setIsUploadingDraftFile(false);
+      }
+    },
+    [activeChannelId, draftAttachments, selectedServerId, t],
+  );
+
+  const removeDraftAttachment = React.useCallback((index: number) => {
+    setDraftAttachments((current) => current.filter((_, i) => i !== index));
+  }, []);
+
   const handleSend = async () => {
     if (!selectedServerId || !activeChannelId) {
       return;
     }
     const content = draft.trim();
-    if (!content) {
+    const attachments = [...draftAttachments];
+    const entities = filterStaleMessageEntities(content, draftEntities);
+    if (!content && attachments.length === 0) {
       return;
     }
     setIsSending(true);
@@ -2365,23 +2761,32 @@ export function ServerConversationPageClient({
           activeChannelId,
           {
             text: content,
+            attachments,
+            entities: entities.length > 0 ? entities : undefined,
             asTask: true,
           },
         );
         const title =
-          content.split("\n")[0]?.trim().slice(0, 80) || content.slice(0, 80);
+          content.split("\n")[0]?.trim().slice(0, 80) ||
+          attachments[0]?.name.slice(0, 80) ||
+          content.slice(0, 80);
         await channelTasksApi.createTask(selectedServerId, activeChannelId, {
           title,
-          description: content,
+          description:
+            content || attachments.map((item) => item.name).join("\n"),
           sourceMessageId: message.id,
         });
         toast.success(t("conversationView.toasts.taskCreated"));
       } else {
         await serversApi.sendMessage(selectedServerId, activeChannelId, {
           text: content,
+          attachments,
+          entities: entities.length > 0 ? entities : undefined,
         });
       }
       setDraft("");
+      setDraftEntities([]);
+      setDraftAttachments([]);
       setAsTask(false);
       const messages = await serversApi.listMessages(
         selectedServerId,
@@ -2411,6 +2816,10 @@ export function ServerConversationPageClient({
     setIsSending(true);
     try {
       const trimmedDraft = threadDraft.trim();
+      const entities = filterStaleMessageEntities(
+        trimmedDraft,
+        threadDraftEntities,
+      );
       if (threadAsTask) {
         const explicitMentions = getExplicitMentionHandles(trimmedDraft);
         const replyText =
@@ -2422,6 +2831,7 @@ export function ServerConversationPageClient({
           drawer.channelId,
           {
             text: replyText,
+            entities: entities.length > 0 ? entities : undefined,
             threadRootMessageId: drawer.rootMessageId,
             asTask: true,
           },
@@ -2435,6 +2845,7 @@ export function ServerConversationPageClient({
           sourceMessageId: message.id,
         });
         setThreadDraft("");
+        setThreadDraftEntities([]);
         setThreadAsTask(false);
         setTasks(
           await channelTasksApi.listTasks(selectedServerId, drawer.channelId),
@@ -2456,9 +2867,11 @@ export function ServerConversationPageClient({
             : trimmedDraft;
         await serversApi.sendMessage(selectedServerId, drawer.channelId, {
           text: replyText,
+          entities: entities.length > 0 ? entities : undefined,
           threadRootMessageId: drawer.rootMessageId,
         });
         setThreadDraft("");
+        setThreadDraftEntities([]);
         const [messages, thread] = await Promise.all([
           serversApi.listMessages(selectedServerId, drawer.channelId),
           serversApi.getThread(
@@ -3285,11 +3698,17 @@ export function ServerConversationPageClient({
                 messages={currentMessages}
                 savedMessageIds={savedMessageIds}
                 draft={draft}
+                draftEntities={draftEntities}
+                attachments={draftAttachments}
                 asTask={asTask}
                 isLoading={isLoading}
+                isUploading={isUploadingDraftFile}
                 onDraftChange={setDraft}
+                onDraftEntitiesChange={setDraftEntities}
                 onAsTaskChange={setAsTask}
                 onSend={() => void handleSend()}
+                onUploadFiles={uploadDraftFiles}
+                onRemoveAttachment={removeDraftAttachment}
                 onOpenThread={(message) =>
                   setDrawer({
                     type: "thread",
@@ -3334,14 +3753,18 @@ export function ServerConversationPageClient({
                 {drawer.type === "thread" ? (
                   <ThreadDrawer
                     thread={threadMessages}
+                    serverId={selectedServerId}
+                    channelId={drawer.channelId}
                     agents={channelAgents}
                     presets={presets}
                     members={channelMembers}
                     currentUserId={profile?.id}
                     draft={threadDraft}
+                    draftEntities={threadDraftEntities}
                     suggestedMentionHandle={threadMentionHandle}
                     asTask={threadAsTask}
                     onDraftChange={setThreadDraft}
+                    onDraftEntitiesChange={setThreadDraftEntities}
                     onAsTaskChange={setThreadAsTask}
                     onSend={() => void handleReply()}
                     onClose={() => setDrawer({ type: "none" })}

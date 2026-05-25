@@ -1,4 +1,8 @@
 import type {
+  ChannelArtifactCandidate,
+  ChannelMessageEntity,
+  ChannelMessageEntityAction,
+  ChannelMessageEntityKind,
   ServerAgentItem,
   ServerChannelItem,
   ServerChannelMemberItem,
@@ -15,12 +19,26 @@ export interface MentionCandidate {
   description?: string | null;
 }
 
-function normalizeMentionSearch(value: string): string {
-  return value.trim().toLocaleLowerCase();
+export interface ComposerTrigger {
+  prefix: "@" | "#";
+  start: number;
+  query: string;
 }
 
-function hasWhitespace(value: string): boolean {
-  return /\s/u.test(value);
+export interface ComposerCandidate {
+  id: string;
+  label: string;
+  kind: ChannelMessageEntityKind;
+  action: ChannelMessageEntityAction;
+  targetId: string;
+  insertedText: string;
+  metaLabel?: string | null;
+  description?: string | null;
+  metadata?: Record<string, unknown>;
+}
+
+function normalizeMentionSearch(value: string): string {
+  return value.trim().toLocaleLowerCase();
 }
 
 export function getUserDisplayName(
@@ -89,13 +107,26 @@ export function sortChannelsForSidebar(
 export function getMentionTrigger(
   value: string,
 ): { start: number; query: string } | null {
-  const match = value.match(/(?:^|\s)@([^\s@]*)$/u);
-  if (!match || match.index === undefined) {
+  const trigger = getComposerTrigger(value);
+  if (!trigger || trigger.prefix !== "@") {
     return null;
   }
   return {
-    start: match.index + match[0].lastIndexOf("@"),
-    query: normalizeMentionSearch(match[1]),
+    start: trigger.start,
+    query: trigger.query,
+  };
+}
+
+export function getComposerTrigger(value: string): ComposerTrigger | null {
+  const match = value.match(/(?:^|\s)([@#])([^\s@#]*)$/u);
+  if (!match || match.index === undefined) {
+    return null;
+  }
+  const prefix = match[1] === "#" ? "#" : "@";
+  return {
+    prefix,
+    start: match.index + match[0].lastIndexOf(prefix),
+    query: normalizeMentionSearch(match[2]),
   };
 }
 
@@ -116,13 +147,107 @@ export function getMentionSearchText(candidate: MentionCandidate): string {
 }
 
 export function getMentionInsertText(candidate: MentionCandidate): string {
-  if (candidate.kind === "agent") {
-    const label = candidate.label.trim();
-    if (label && !hasWhitespace(label)) {
-      return `@${label} `;
-    }
-  }
   return `@${candidate.handle} `;
+}
+
+export function buildParticipantComposerCandidate(
+  candidate: MentionCandidate,
+): ComposerCandidate {
+  const insertedText = getMentionInsertText(candidate).trimEnd();
+  return {
+    id: `${candidate.kind}-${candidate.id}`,
+    label: candidate.label,
+    kind: candidate.kind === "agent" ? "agent" : "user",
+    action: candidate.kind === "agent" ? "trigger" : "mention",
+    targetId: candidate.id,
+    insertedText,
+    metaLabel: `@${candidate.handle}`,
+    description: candidate.description,
+    metadata: { handle: candidate.handle },
+  };
+}
+
+export function buildArtifactComposerCandidate(
+  artifact: ChannelArtifactCandidate,
+): ComposerCandidate {
+  return {
+    id: `artifact-${artifact.artifactId}`,
+    label: artifact.displayName,
+    kind: "artifact",
+    action: "reference",
+    targetId: artifact.artifactId,
+    insertedText: `#${artifact.displayName}`,
+    metaLabel: artifact.logicalPath,
+    metadata: {
+      logical_path: artifact.logicalPath,
+      mime_type: artifact.mimeType,
+      size_bytes: artifact.sizeBytes,
+      source_kind: artifact.sourceKind,
+    },
+  };
+}
+
+export function buildTaskComposerCandidate(task: {
+  taskId: string;
+  displayNumber: number;
+  title: string;
+  status: string;
+}): ComposerCandidate {
+  return {
+    id: `task-${task.taskId}`,
+    label: task.title,
+    kind: "task",
+    action: "reference",
+    targetId: task.taskId,
+    insertedText: `#task-${task.displayNumber}`,
+    metaLabel: `#task-${task.displayNumber} / ${task.status.replaceAll("_", " ")}`,
+    metadata: {
+      display_number: task.displayNumber,
+      title: task.title,
+      status: task.status,
+    },
+  };
+}
+
+export function getComposerCandidateSearchText(
+  candidate: ComposerCandidate,
+): string {
+  return normalizeMentionSearch(
+    `${candidate.label} ${candidate.insertedText} ${candidate.metaLabel ?? ""}`,
+  );
+}
+
+export function insertComposerCandidate(
+  draft: string,
+  trigger: ComposerTrigger,
+  candidate: ComposerCandidate,
+): { text: string; entity: ChannelMessageEntity } {
+  const insertText = `${candidate.insertedText} `;
+  const replaceEnd = trigger.start + trigger.query.length + 1;
+  const text = `${draft.slice(0, trigger.start)}${insertText}${draft.slice(replaceEnd)}`;
+  return {
+    text,
+    entity: {
+      id: `${candidate.id}-${Date.now()}`,
+      kind: candidate.kind,
+      action: candidate.action,
+      targetId: candidate.targetId,
+      displayText: candidate.label,
+      insertedText: candidate.insertedText,
+      range: {
+        start: trigger.start,
+        end: trigger.start + candidate.insertedText.length,
+      },
+      metadata: candidate.metadata,
+    },
+  };
+}
+
+export function filterStaleMessageEntities(
+  text: string,
+  entities: ChannelMessageEntity[],
+): ChannelMessageEntity[] {
+  return entities.filter((entity) => text.includes(entity.insertedText));
 }
 
 export function buildHumanMentionCandidates(

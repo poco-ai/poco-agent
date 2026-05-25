@@ -13,6 +13,7 @@ from app.repositories.server_channel_agent_member_repository import (
 )
 from app.repositories.session_queue_item_repository import SessionQueueItemRepository
 from app.models.server_channel_message import ServerChannelMessage
+from app.schemas.agent_trigger import TriggerReferences
 from app.schemas.session import TaskConfig
 from app.schemas.task import TaskEnqueueRequest, TaskEnqueueResponse
 from app.services.channel_shared_context_service import ChannelSharedContextService
@@ -42,6 +43,57 @@ class ServerAgentTriggerService:
         if isinstance(content, dict) and content.get("as_task") is True:
             return getattr(message, "id", None)
         return None
+
+    @staticmethod
+    def _message_entities(message) -> list[dict] | None:
+        content = getattr(message, "content", None)
+        if not isinstance(content, dict) or "entities" not in content:
+            return None
+        entities = content.get("entities")
+        if isinstance(entities, list):
+            return [item for item in entities if isinstance(item, dict)]
+        return []
+
+    @staticmethod
+    def _entity_target_uuid(entity: dict) -> uuid.UUID | None:
+        target_id = entity.get("target_id") or entity.get("targetId")
+        if target_id is None:
+            return None
+        try:
+            return uuid.UUID(str(target_id))
+        except ValueError:
+            return None
+
+    @staticmethod
+    def _append_unique(values: list[uuid.UUID], value: uuid.UUID | None) -> None:
+        if value is not None and value not in values:
+            values.append(value)
+
+    def _collect_trigger_references(self, message) -> TriggerReferences:
+        message_id = getattr(message, "id")
+        message_ids: list[uuid.UUID] = [message_id]
+        artifact_ids: list[uuid.UUID] = []
+        task_ids: list[uuid.UUID] = []
+        entities = self._message_entities(message) or []
+
+        for entity in entities:
+            target_id = self._entity_target_uuid(entity)
+            kind = entity.get("kind")
+            action = entity.get("action")
+            if action != "reference":
+                continue
+            if kind == "artifact":
+                self._append_unique(artifact_ids, target_id)
+            elif kind == "task":
+                self._append_unique(task_ids, target_id)
+            elif kind in {"message", "thread"}:
+                self._append_unique(message_ids, target_id)
+
+        return TriggerReferences(
+            message_ids=message_ids,
+            artifact_ids=artifact_ids,
+            task_ids=task_ids,
+        )
 
     def _create_execution_placeholder(
         self,
@@ -145,6 +197,36 @@ class ServerAgentTriggerService:
             )
             return [agent] if agent is not None else []
 
+        entities = self._message_entities(message)
+        if entities is not None:
+            matched = []
+            seen_agent_ids: set[uuid.UUID] = set()
+            for entity in entities:
+                if entity.get("kind") != "agent" or entity.get("action") != "trigger":
+                    continue
+                agent_identity_id = self._entity_target_uuid(entity)
+                if agent_identity_id is None or agent_identity_id in seen_agent_ids:
+                    continue
+                membership = (
+                    ServerChannelAgentMemberRepository.get_by_channel_and_agent(
+                        db,
+                        channel.id,
+                        agent_identity_id,
+                    )
+                )
+                agent = AgentIdentityRepository.get_by_id(db, agent_identity_id)
+                if (
+                    membership is None
+                    or membership.status != "active"
+                    or agent is None
+                    or agent.lifecycle_state != "active"
+                    or agent.removed_at is not None
+                ):
+                    continue
+                seen_agent_ids.add(agent_identity_id)
+                matched.append(agent)
+            return matched
+
         message_text = ""
         content = getattr(message, "content", None)
         if isinstance(content, dict):
@@ -217,6 +299,7 @@ class ServerAgentTriggerService:
                 target_agent_identity_id=agent.id,
                 target_agent_handle=agent.handle,
                 trigger_type=trigger_type,
+                references=self._collect_trigger_references(message),
             )
             active_session_id = None
             if getattr(agent, "persistent_state", None) is not None:

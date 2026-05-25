@@ -1,6 +1,8 @@
 import { apiClient, API_ENDPOINTS } from "@/services/api-client";
-import type { FileNode } from "@/features/chat/types";
+import type { FileNode, InputFile } from "@/features/chat/types";
 import type {
+  ChannelArtifactCandidate,
+  ChannelMessageEntity,
   ServerAgentItem,
   ServerChannelItem,
   ServerSystemChannelType,
@@ -163,6 +165,29 @@ interface ServerConversationMessageReactionGroupResponse {
   actors?: ServerConversationMessageReactionActorResponse[];
 }
 
+interface ChannelArtifactPublisherSummaryResponse {
+  actor_type: "user" | "agent";
+  user_id?: string | null;
+  agent_identity_id?: string | null;
+  agent_handle?: string | null;
+  label: string;
+  avatar_url?: string | null;
+  visual_key?: string | null;
+}
+
+interface ChannelArtifactCandidateResponse {
+  artifact_id: string;
+  display_name: string;
+  logical_path: string;
+  mime_type?: string | null;
+  size_bytes?: number | null;
+  source_kind: string;
+  published_by_user_id?: string | null;
+  published_by_agent_identity_id?: string | null;
+  publisher?: ChannelArtifactPublisherSummaryResponse | null;
+  created_at?: string | null;
+}
+
 interface ServerConversationThreadResponse {
   root: ServerConversationMessageResponse;
   replies: ServerConversationMessageResponse[];
@@ -264,6 +289,33 @@ function mapAgent(agent: ServerAgentResponse): ServerAgentItem {
       : null,
     createdAt: agent.created_at,
     updatedAt: agent.updated_at,
+  };
+}
+
+function mapChannelArtifactCandidate(
+  artifact: ChannelArtifactCandidateResponse,
+): ChannelArtifactCandidate {
+  return {
+    artifactId: artifact.artifact_id,
+    displayName: artifact.display_name,
+    logicalPath: artifact.logical_path,
+    mimeType: artifact.mime_type,
+    sizeBytes: artifact.size_bytes,
+    sourceKind: artifact.source_kind,
+    publishedByUserId: artifact.published_by_user_id,
+    publishedByAgentIdentityId: artifact.published_by_agent_identity_id,
+    publisher: artifact.publisher
+      ? {
+          actorType: artifact.publisher.actor_type,
+          userId: artifact.publisher.user_id,
+          agentIdentityId: artifact.publisher.agent_identity_id,
+          agentHandle: artifact.publisher.agent_handle,
+          label: artifact.publisher.label,
+          avatarUrl: artifact.publisher.avatar_url,
+          visualKey: artifact.publisher.visual_key,
+        }
+      : null,
+    createdAt: artifact.created_at,
   };
 }
 
@@ -421,6 +473,38 @@ export const serversApi = {
     );
   },
 
+  listChannelArtifactCandidates: async (
+    serverId: string,
+    channelId: string,
+    input: { q?: string; limit?: number } = {},
+  ): Promise<ChannelArtifactCandidate[]> => {
+    const search = new URLSearchParams();
+    if (input.q?.trim()) {
+      search.set("q", input.q.trim());
+    }
+    if (input.limit) {
+      search.set("limit", String(input.limit));
+    }
+    const suffix = search.toString() ? `?${search.toString()}` : "";
+    const artifacts = await apiClient.get<ChannelArtifactCandidateResponse[]>(
+      `/servers/${serverId}/channels/${channelId}/artifacts/candidates${suffix}`,
+    );
+    return artifacts.map(mapChannelArtifactCandidate);
+  },
+
+  uploadChannelArtifact: async (
+    serverId: string,
+    channelId: string,
+    file: File,
+  ): Promise<InputFile> => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return apiClient.post<InputFile>(
+      `/servers/${serverId}/channels/${channelId}/artifacts/upload`,
+      formData,
+    );
+  },
+
   listAgentStateFiles: async (
     serverId: string,
     agentId: string,
@@ -552,18 +636,28 @@ export const serversApi = {
     channelId: string,
     input: {
       text: string;
+      attachments?: InputFile[];
+      entities?: ChannelMessageEntity[];
       threadRootMessageId?: string | null;
       asTask?: boolean;
     },
   ): Promise<ServerConversationMessage> => {
+    const attachments = input.attachments ?? [];
+    const attachmentPreview = attachments
+      .map((item) => item.name.trim())
+      .filter(Boolean)
+      .join(", ");
+    const textPreview = input.text || attachmentPreview;
     const message = await apiClient.post<ServerConversationMessageResponse>(
       `/servers/${serverId}/channels/${channelId}/messages`,
       {
         message_type: "user",
-        text_preview: input.text,
+        text_preview: textPreview,
         thread_root_message_id: input.threadRootMessageId ?? null,
         content: {
           text: input.text,
+          attachments,
+          ...(input.entities ? { entities: input.entities } : {}),
           ...(input.asTask ? { as_task: true } : {}),
         },
       },

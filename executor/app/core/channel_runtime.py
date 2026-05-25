@@ -35,11 +35,12 @@ class ChannelRuntimeClient:
                 json={"session_id": self.session_id, **payload},
                 headers=self._trace_headers(),
             )
-            response.raise_for_status()
 
         body = response.json()
         if not isinstance(body, dict):
             raise RuntimeError("Invalid channel runtime response")
+        if response.is_error:
+            raise RuntimeError(str(body.get("message") or response.reason_phrase))
         if body.get("code") != 0:
             raise RuntimeError(str(body.get("message") or "Channel runtime error"))
         return body.get("data")

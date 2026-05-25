@@ -128,6 +128,51 @@ export interface ServerConversationMessage {
   updatedAt: string;
 }
 
+export type ChannelMessageEntityKind =
+  | "agent"
+  | "user"
+  | "artifact"
+  | "task"
+  | "message"
+  | "thread";
+
+export type ChannelMessageEntityAction = "trigger" | "mention" | "reference";
+
+export interface ChannelMessageEntity {
+  id: string;
+  kind: ChannelMessageEntityKind;
+  action: ChannelMessageEntityAction;
+  targetId: string;
+  displayText: string;
+  insertedText: string;
+  range?: {
+    start: number;
+    end: number;
+  };
+  metadata?: Record<string, unknown>;
+}
+
+export interface ChannelArtifactCandidate {
+  artifactId: string;
+  displayName: string;
+  logicalPath: string;
+  mimeType?: string | null;
+  sizeBytes?: number | null;
+  sourceKind: string;
+  publishedByUserId?: string | null;
+  publishedByAgentIdentityId?: string | null;
+  publisher?: {
+    actorType: "user" | "agent";
+    userId?: string | null;
+    agentIdentityId?: string | null;
+    agentHandle?: string | null;
+    label: string;
+    avatarUrl?: string | null;
+    visualKey?: string | null;
+  } | null;
+  createdAt?: string | null;
+}
+
 export interface ServerChannelEventContent {
   eventType: string;
   actorType?: "user" | "agent" | string | null;
