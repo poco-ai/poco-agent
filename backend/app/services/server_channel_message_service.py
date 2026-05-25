@@ -1,6 +1,8 @@
 import logging
 import uuid
+from typing import Any
 
+from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
 from app.core.errors.error_codes import ErrorCode
@@ -9,10 +11,17 @@ from app.models.server_channel import ServerChannel
 from app.models.server_channel_message import ServerChannelMessage
 from app.models.user import User
 from app.repositories.agent_identity_repository import AgentIdentityRepository
+from app.repositories.channel_artifact_repository import ChannelArtifactRepository
 from app.repositories.server_channel_message_repository import (
     ServerChannelMessageRepository,
 )
+from app.repositories.server_channel_repository import ServerChannelMemberRepository
+from app.repositories.server_channel_agent_member_repository import (
+    ServerChannelAgentMemberRepository,
+)
+from app.repositories.server_channel_task_repository import ServerChannelTaskRepository
 from app.schemas.server_channel_message import (
+    ServerChannelMessageEntity,
     ServerChannelMessageCreateRequest,
     ServerChannelMessageContextResponse,
     ServerChannelMessageResponse,
@@ -120,6 +129,209 @@ class ServerChannelMessageService:
             user_id=current_user.id,
         )
 
+    @staticmethod
+    def _clean_entity_id(raw_id: str) -> str:
+        value = raw_id.strip()
+        return value or str(uuid.uuid4())
+
+    @staticmethod
+    def _entity_target_uuid(entity: ServerChannelMessageEntity) -> uuid.UUID:
+        try:
+            return uuid.UUID(entity.target_id)
+        except ValueError as exc:
+            raise AppException(
+                error_code=ErrorCode.BAD_REQUEST,
+                message=f"{entity.kind} entity target_id must be a UUID",
+            ) from exc
+
+    @staticmethod
+    def _canonical_entity_payload(
+        entity: ServerChannelMessageEntity,
+        *,
+        display_text: str,
+        inserted_text: str,
+        metadata: dict[str, Any],
+    ) -> dict[str, Any]:
+        target_id = str(entity.target_id).strip()
+        return entity.model_copy(
+            update={
+                "id": ServerChannelMessageService._clean_entity_id(entity.id),
+                "target_id": target_id,
+                "display_text": display_text,
+                "inserted_text": inserted_text,
+                "metadata": metadata,
+            }
+        ).model_dump(mode="json")
+
+    def _canonicalize_message_entity(
+        self,
+        db: Session,
+        *,
+        channel: ServerChannel,
+        entity: ServerChannelMessageEntity,
+    ) -> dict[str, Any]:
+        if entity.kind == "agent" and entity.action == "trigger":
+            target_id = self._entity_target_uuid(entity)
+            membership = ServerChannelAgentMemberRepository.get_by_channel_and_agent(
+                db,
+                channel.id,
+                target_id,
+            )
+            agent = AgentIdentityRepository.get_by_id(db, target_id)
+            if (
+                membership is None
+                or membership.status != "active"
+                or agent is None
+                or agent.server_id != channel.server_id
+                or agent.lifecycle_state != "active"
+                or agent.removed_at is not None
+            ):
+                raise AppException(
+                    error_code=ErrorCode.BAD_REQUEST,
+                    message="Agent mention target is invalid for this channel",
+                )
+            return self._canonical_entity_payload(
+                entity,
+                display_text=agent.display_name,
+                inserted_text=f"@{agent.handle}",
+                metadata={
+                    "handle": agent.handle,
+                    "display_name": agent.display_name,
+                    "visual_key": agent.visual_key,
+                    "description": agent.description,
+                },
+            )
+
+        if entity.kind == "user" and entity.action == "mention":
+            membership = ServerChannelMemberRepository.get_by_channel_and_user(
+                db,
+                channel.id,
+                str(entity.target_id),
+            )
+            if membership is None or membership.status != "active":
+                raise AppException(
+                    error_code=ErrorCode.BAD_REQUEST,
+                    message="User mention target is invalid for this channel",
+                )
+            return self._canonical_entity_payload(
+                entity,
+                display_text=membership.user_id,
+                inserted_text=entity.inserted_text,
+                metadata={"user_id": membership.user_id},
+            )
+
+        if entity.kind == "artifact" and entity.action == "reference":
+            target_id = self._entity_target_uuid(entity)
+            artifact = ChannelArtifactRepository.get_by_channel_and_id(
+                db,
+                channel_id=channel.id,
+                artifact_id=target_id,
+            )
+            if artifact is None:
+                raise AppException(
+                    error_code=ErrorCode.BAD_REQUEST,
+                    message="Artifact reference target is invalid for this channel",
+                )
+            return self._canonical_entity_payload(
+                entity,
+                display_text=artifact.display_name,
+                inserted_text=entity.inserted_text or f"#{artifact.display_name}",
+                metadata={
+                    "display_name": artifact.display_name,
+                    "logical_path": artifact.logical_path,
+                    "mime_type": artifact.mime_type,
+                    "size_bytes": artifact.size_bytes,
+                    "source_kind": artifact.source_kind,
+                },
+            )
+
+        if entity.kind == "task" and entity.action == "reference":
+            target_id = self._entity_target_uuid(entity)
+            task = ServerChannelTaskRepository.get_by_id(db, target_id)
+            if task is None or task.channel_id != channel.id:
+                raise AppException(
+                    error_code=ErrorCode.BAD_REQUEST,
+                    message="Task reference target is invalid for this channel",
+                )
+            return self._canonical_entity_payload(
+                entity,
+                display_text=task.title,
+                inserted_text=entity.inserted_text or f"#task-{task.display_number}",
+                metadata={
+                    "display_number": task.display_number,
+                    "title": task.title,
+                    "status": task.status,
+                },
+            )
+
+        if entity.kind in {"message", "thread"} and entity.action == "reference":
+            target_id = self._entity_target_uuid(entity)
+            message = ServerChannelMessageRepository.get_by_id(db, target_id)
+            if message is None or message.channel_id != channel.id:
+                raise AppException(
+                    error_code=ErrorCode.BAD_REQUEST,
+                    message="Message reference target is invalid for this channel",
+                )
+            if entity.kind == "thread" and message.thread_root_message_id is not None:
+                raise AppException(
+                    error_code=ErrorCode.BAD_REQUEST,
+                    message="Thread reference target must be a thread root message",
+                )
+            preview = (message.text_preview or "").strip() or "Message"
+            return self._canonical_entity_payload(
+                entity,
+                display_text=preview,
+                inserted_text=entity.inserted_text,
+                metadata={
+                    "message_type": message.message_type,
+                    "thread_root_message_id": str(message.thread_root_message_id)
+                    if message.thread_root_message_id
+                    else None,
+                },
+            )
+
+        raise AppException(
+            error_code=ErrorCode.BAD_REQUEST,
+            message=f"Unsupported message entity combination: {entity.kind}/{entity.action}",
+        )
+
+    def _canonicalize_message_content(
+        self,
+        db: Session,
+        *,
+        channel: ServerChannel,
+        content: dict[str, Any],
+    ) -> dict[str, Any]:
+        if "entities" not in content:
+            return content
+        raw_entities = content.get("entities")
+        if raw_entities is None:
+            return {**content, "entities": []}
+        if not isinstance(raw_entities, list):
+            raise AppException(
+                error_code=ErrorCode.BAD_REQUEST,
+                message="Message content entities must be an array",
+            )
+
+        canonical_entities: list[dict[str, Any]] = []
+        for raw_entity in raw_entities:
+            try:
+                entity = ServerChannelMessageEntity.model_validate(raw_entity)
+            except ValidationError as exc:
+                raise AppException(
+                    error_code=ErrorCode.BAD_REQUEST,
+                    message="Message content entity is invalid",
+                    details=exc.errors(),
+                ) from exc
+            canonical_entities.append(
+                self._canonicalize_message_entity(
+                    db,
+                    channel=channel,
+                    entity=entity,
+                )
+            )
+        return {**content, "entities": canonical_entities}
+
     def send_message(
         self,
         db: Session,
@@ -143,13 +355,18 @@ class ServerChannelMessageService:
                     message="Thread root message is invalid",
                 )
 
+        content = self._canonicalize_message_content(
+            db,
+            channel=channel,
+            content=request.content,
+        )
         message = ServerChannelMessageRepository.create(
             db,
             ServerChannelMessage(
                 channel_id=channel.id,
                 author_user_id=author_user_id,
                 message_type=request.message_type,
-                content=request.content,
+                content=content,
                 text_preview=request.text_preview,
                 thread_root_message_id=thread_root_message_id,
             ),

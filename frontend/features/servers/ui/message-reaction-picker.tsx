@@ -50,7 +50,7 @@ export function MessageReactionPicker({
   return (
     <div
       ref={panelRef}
-      className="absolute right-0 top-full z-40 mt-2 grid w-max grid-cols-[repeat(6,2rem)] gap-1 rounded-md border border-border bg-popover p-2 shadow-[var(--shadow-lg)]"
+      className="absolute right-0 top-full z-40 mt-2 grid w-max grid-cols-[repeat(6,2rem)] gap-1 rounded-md border border-secondary bg-background p-2 shadow-[var(--shadow-lg)]"
       role="menu"
       aria-label={t("conversationView.reactions.pickerLabel")}
     >
@@ -66,7 +66,7 @@ export function MessageReactionPicker({
           title={t("conversationView.reactions.addEmoji", { emoji })}
           className={cn(
             "flex size-8 items-center justify-center rounded-md text-base transition-colors",
-            "hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            "hover:bg-secondary focus-visible:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
           )}
           role="menuitem"
         >

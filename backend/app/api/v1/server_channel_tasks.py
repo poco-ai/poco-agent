@@ -8,6 +8,7 @@ from app.core.deps import get_current_user, get_db
 from app.models.user import User
 from app.schemas.response import Response, ResponseSchema
 from app.schemas.server_channel_task import (
+    ServerChannelTaskCandidateResponse,
     ServerChannelTaskClaimRequest,
     ServerChannelTaskCreateRequest,
     ServerChannelTaskResponse,
@@ -48,6 +49,32 @@ async def create_server_channel_task(
     result = service.create_task(db, current_user, server_id, channel_id, request)
     return Response.success(
         data=result, message="Server channel task created successfully"
+    )
+
+
+@router.get(
+    "/candidates",
+    response_model=ResponseSchema[list[ServerChannelTaskCandidateResponse]],
+)
+async def list_server_channel_task_candidates(
+    server_id: uuid.UUID,
+    channel_id: uuid.UUID,
+    q: str | None = None,
+    limit: int = 20,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> JSONResponse:
+    result = service.list_task_candidates(
+        db,
+        current_user,
+        server_id,
+        channel_id,
+        query=q,
+        limit=limit,
+    )
+    return Response.success(
+        data=result,
+        message="Server channel task candidates retrieved successfully",
     )
 
 

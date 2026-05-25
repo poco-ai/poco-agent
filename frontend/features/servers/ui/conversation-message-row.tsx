@@ -3,10 +3,12 @@
 import * as React from "react";
 import {
   Bookmark,
+  CalendarDays,
   ChevronDown,
   ChevronUp,
   Copy,
   MessageSquare,
+  Shield,
   SmilePlus,
   SquareCheckBig,
 } from "lucide-react";
@@ -20,15 +22,23 @@ import {
   getUserDisplayName,
 } from "@/features/servers/lib/server-conversation-view";
 import { getServerMessageText } from "@/features/servers/lib/server-message-text";
+import { getAgentRuntimeStatus } from "@/features/servers/lib/agent-runtime-status";
 import type { Preset } from "@/features/capabilities/presets/lib/preset-types";
 import type {
   ServerAgentItem,
+  ServerChannelMemberItem,
   ServerConversationMessage,
   ServerConversationMessageReactionActor,
   ServerExecutionMessageContent,
+  ServerUserPublicProfile,
 } from "@/features/servers/model/types";
 import { useT } from "@/lib/i18n/client";
 import { cn } from "@/lib/utils";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
 import {
   getChannelEventContent,
   getChannelEventLabelKey,
@@ -45,6 +55,7 @@ const MAX_REACTION_ACTOR_NAME_LENGTH = 18;
 type MessageRowProps = {
   message: ServerConversationMessage;
   agents?: ServerAgentItem[];
+  members?: ServerChannelMemberItem[];
   presets?: Preset[];
   channelLabel?: string;
   isSaved?: boolean;
@@ -104,6 +115,14 @@ export function getMessageText(message: ServerConversationMessage): string {
   return getServerMessageText(message);
 }
 
+function formatSummaryDate(value: string, locale?: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+  return new Intl.DateTimeFormat(locale, { dateStyle: "medium" }).format(date);
+}
+
 function isInputFile(value: unknown): value is InputFile {
   return (
     Boolean(value) &&
@@ -153,10 +172,66 @@ function getEventActorLabel(value: unknown): string {
   return typeof label === "string" ? label.trim() : "";
 }
 
+type HumanSummaryOverride = {
+  label: string;
+  userId: string | null;
+  user: ServerUserPublicProfile | null;
+};
+
+function normalizeSummaryLookup(value: string | null | undefined): string {
+  return value?.trim().toLowerCase() ?? "";
+}
+
+function findChannelEventAgent(
+  agents: ServerAgentItem[],
+  identityId: string | null | undefined,
+  handle: string | null | undefined,
+  label: string,
+): ServerAgentItem | null {
+  const normalizedHandle = normalizeSummaryLookup(handle);
+  const normalizedLabel = normalizeSummaryLookup(label);
+  return (
+    agents.find((agent) => {
+      return (
+        (identityId && agent.id === identityId) ||
+        (normalizedHandle &&
+          normalizeSummaryLookup(agent.handle) === normalizedHandle) ||
+        (normalizedLabel &&
+          normalizeSummaryLookup(agent.displayName) === normalizedLabel)
+      );
+    }) ?? null
+  );
+}
+
+function findChannelEventMember(
+  members: ServerChannelMemberItem[],
+  userId: string | null | undefined,
+  label: string,
+): ServerChannelMemberItem | null {
+  const normalizedLabel = normalizeSummaryLookup(label);
+  return (
+    members.find((member) => {
+      const memberLabel = getUserDisplayName(member.user, member.userId);
+      return (
+        (userId && member.userId === userId) ||
+        (normalizedLabel &&
+          (normalizeSummaryLookup(member.userId) === normalizedLabel ||
+            normalizeSummaryLookup(memberLabel) === normalizedLabel))
+      );
+    }) ?? null
+  );
+}
+
 function ChannelEventRow({
   message,
+  agents = [],
+  members = [],
+  presets = [],
   compact,
-}: Pick<MessageRowProps, "message" | "compact">) {
+}: Pick<
+  MessageRowProps,
+  "message" | "agents" | "members" | "presets" | "compact"
+>) {
   const { t } = useT("translation");
   const event = getChannelEventContent(message);
   if (!event) {
@@ -196,6 +271,36 @@ function ChannelEventRow({
   });
   const fallbackName =
     event.eventType === "channel.agent_joined" ? target : actor;
+  const summaryUsesTarget = event.eventType === "channel.agent_joined";
+  const summaryAgent = findChannelEventAgent(
+    agents,
+    summaryUsesTarget
+      ? event.targetAgentIdentityId
+      : event.actorAgentIdentityId,
+    summaryUsesTarget ? event.targetAgentHandle : event.actorAgentHandle,
+    fallbackName,
+  );
+  const summaryMember = summaryAgent
+    ? null
+    : findChannelEventMember(
+        members,
+        summaryUsesTarget ? event.targetUserId : event.actorUserId,
+        fallbackName,
+      );
+  const summaryUserId =
+    summaryMember?.userId ??
+    (summaryUsesTarget ? event.targetUserId : event.actorUserId) ??
+    null;
+  const summaryHuman =
+    summaryAgent || (!summaryMember && !summaryUserId)
+      ? null
+      : {
+          label: summaryMember
+            ? getUserDisplayName(summaryMember.user, summaryMember.userId)
+            : fallbackName,
+          userId: summaryUserId,
+          user: summaryMember?.user ?? null,
+        };
   const isJoinEvent =
     event.eventType === "channel.member_joined" ||
     event.eventType === "channel.agent_joined";
@@ -216,9 +321,23 @@ function ChannelEventRow({
       </span>
       <div className="min-w-0 flex-1 truncate leading-6">
         <span className="truncate">
-          <span className="font-medium text-muted-foreground underline decoration-muted-foreground/50 underline-offset-4">
-            {fallbackName}
-          </span>
+          {summaryAgent || summaryHuman ? (
+            <AvatarSummaryTrigger
+              message={message}
+              matchingAgent={summaryAgent}
+              member={summaryMember}
+              presets={presets}
+              humanSummary={summaryHuman}
+            >
+              <span className="font-medium text-muted-foreground underline decoration-muted-foreground/50 underline-offset-4">
+                {fallbackName}
+              </span>
+            </AvatarSummaryTrigger>
+          ) : (
+            <span className="font-medium text-muted-foreground underline decoration-muted-foreground/50 underline-offset-4">
+              {fallbackName}
+            </span>
+          )}
           {label.startsWith(fallbackName)
             ? label.slice(fallbackName.length)
             : ` ${label}`}
@@ -253,6 +372,151 @@ function truncateReactionActorName(value: string): string {
     return trimmed;
   }
   return `${trimmed.slice(0, MAX_REACTION_ACTOR_NAME_LENGTH - 3)}...`;
+}
+
+function AvatarSummaryCard({
+  message,
+  matchingAgent,
+  member,
+  presets,
+  humanSummary,
+}: {
+  message: ServerConversationMessage;
+  matchingAgent: ServerAgentItem | null;
+  member: ServerChannelMemberItem | null;
+  presets: Preset[];
+  humanSummary?: HumanSummaryOverride | null;
+}) {
+  const { t, i18n } = useT("translation");
+
+  if (matchingAgent) {
+    const runtimeStatus = getAgentRuntimeStatus(matchingAgent);
+    const description = matchingAgent.description?.trim();
+    return (
+      <div className="w-60 overflow-hidden text-foreground">
+        <div className="flex items-center gap-3 px-3 py-2.5">
+          <ServerAgentAvatar
+            agent={matchingAgent}
+            presets={presets}
+            className="size-11 shrink-0"
+            fallbackClassName="text-sm"
+          />
+          <div className="min-w-0 flex-1">
+            <div className="flex min-w-0 items-center gap-1.5">
+              <p className="truncate text-sm font-semibold">
+                {matchingAgent.displayName}
+              </p>
+              <span className="size-1.5 shrink-0 rounded-full bg-muted-foreground" />
+              <span className="shrink-0 text-[11px] leading-none text-muted-foreground">
+                {t(runtimeStatus.labelKey)}
+              </span>
+            </div>
+            <p className="mt-0.5 truncate text-xs text-muted-foreground">
+              @{matchingAgent.handle}
+            </p>
+          </div>
+        </div>
+        <div className="border-t border-border/80 px-3 py-2">
+          <p className="line-clamp-2 text-xs leading-5 text-muted-foreground">
+            {description ||
+              t("conversationView.colleagues.agentEmptyDescription")}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const author = humanSummary?.label ?? getMessageAuthor(message);
+  const avatarUrl = getUserAvatarUrl(humanSummary?.user ?? message.authorUser);
+  const authorUserId = humanSummary?.userId ?? message.authorUserId;
+  const secondaryLabel =
+    authorUserId?.trim() && authorUserId !== author ? authorUserId : null;
+  const roleLabel = member?.role ?? null;
+  const joinedLabel = member?.joinedAt
+    ? formatSummaryDate(member.joinedAt, i18n.resolvedLanguage ?? i18n.language)
+    : null;
+
+  return (
+    <div className="w-60 overflow-hidden text-foreground">
+      <div className="flex items-center gap-3 px-3 py-2.5">
+        <Avatar className="size-11 shrink-0 rounded-md border border-border">
+          {avatarUrl ? <AvatarImage src={avatarUrl} alt={author} /> : null}
+          <AvatarFallback className="rounded-md bg-muted text-sm font-semibold text-foreground">
+            {getInitials(author)}
+          </AvatarFallback>
+        </Avatar>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold">{author}</p>
+          {secondaryLabel ? (
+            <p className="mt-0.5 truncate text-xs text-muted-foreground">
+              {secondaryLabel}
+            </p>
+          ) : null}
+        </div>
+      </div>
+      <div className="border-t border-border/80 px-3 py-2 text-xs leading-5 text-muted-foreground">
+        {roleLabel || joinedLabel ? (
+          <div className="flex min-w-0 items-center gap-3">
+            {roleLabel ? (
+              <p className="flex min-w-0 items-center gap-1.5">
+                <Shield className="size-3.5 shrink-0" aria-hidden="true" />
+                <span className="truncate">{roleLabel}</span>
+              </p>
+            ) : null}
+            {joinedLabel ? (
+              <p className="ml-auto flex min-w-0 shrink-0 items-center gap-1.5 text-right">
+                <CalendarDays
+                  className="size-3.5 shrink-0"
+                  aria-hidden="true"
+                />
+                <span className="truncate">{joinedLabel}</span>
+              </p>
+            ) : null}
+          </div>
+        ) : (
+          <p className="truncate">
+            {t("conversationView.colleagues.emptyValue")}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function AvatarSummaryTrigger({
+  children,
+  message,
+  matchingAgent,
+  member,
+  presets,
+  humanSummary,
+}: {
+  children: React.ReactNode;
+  message: ServerConversationMessage;
+  matchingAgent: ServerAgentItem | null;
+  member: ServerChannelMemberItem | null;
+  presets: Preset[];
+  humanSummary?: HumanSummaryOverride | null;
+}) {
+  return (
+    <HoverCard openDelay={120} closeDelay={80}>
+      <HoverCardTrigger asChild>{children}</HoverCardTrigger>
+      <HoverCardContent
+        side="top"
+        align="center"
+        sideOffset={10}
+        className="w-auto overflow-hidden rounded-md border border-border/60 bg-background p-0 shadow-[var(--shadow-md)]"
+      >
+        <AvatarSummaryCard
+          message={message}
+          matchingAgent={matchingAgent}
+          member={member}
+          presets={presets}
+          humanSummary={humanSummary}
+        />
+      </HoverCardContent>
+    </HoverCard>
+  );
 }
 
 export function isExecutionMessage(
@@ -305,6 +569,7 @@ function getExecutionStatusLabelKey(status: string | null | undefined): string {
 function StandardMessageRow({
   message,
   agents = [],
+  members = [],
   presets = [],
   channelLabel,
   isSaved = false,
@@ -331,6 +596,11 @@ function StandardMessageRow({
   const canOpenExecutionFromAvatar =
     Boolean(onOpenExecution) && isExecutionDrilldownMessage(message);
   const avatarUrl = getUserAvatarUrl(message.authorUser);
+  const matchingMember =
+    message.authorUserId != null
+      ? (members.find((member) => member.userId === message.authorUserId) ??
+        null)
+      : null;
   const matchingAgent =
     message.messageType === "system"
       ? (message.authorAgent ??
@@ -408,45 +678,59 @@ function StandardMessageRow({
       )}
     >
       {matchingAgent ? (
-        <button
-          type="button"
-          onClick={() => {
-            if (
-              canOpenExecutionFromAvatar &&
-              drilldownSessionId &&
-              onOpenExecution
-            ) {
-              onOpenExecution(drilldownSessionId);
-              return;
-            }
-            if (matchingAgent && onOpenAgentProfile) {
-              onOpenAgentProfile(matchingAgent.id);
-            }
-          }}
-          disabled={!canOpenExecutionFromAvatar && !onOpenAgentProfile}
-          className={cn(
-            "shrink-0 self-start",
-            canOpenExecutionFromAvatar || onOpenAgentProfile
-              ? "cursor-pointer"
-              : "cursor-default",
-          )}
-          aria-label={author}
-          title={author}
+        <AvatarSummaryTrigger
+          message={message}
+          matchingAgent={matchingAgent}
+          member={null}
+          presets={presets}
         >
-          <ServerAgentAvatar
-            agent={matchingAgent}
-            presets={presets}
-            className="size-11 shrink-0"
-            fallbackClassName="text-sm"
-          />
-        </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (
+                canOpenExecutionFromAvatar &&
+                drilldownSessionId &&
+                onOpenExecution
+              ) {
+                onOpenExecution(drilldownSessionId);
+                return;
+              }
+              if (matchingAgent && onOpenAgentProfile) {
+                onOpenAgentProfile(matchingAgent.id);
+              }
+            }}
+            className={cn(
+              "shrink-0 self-start",
+              canOpenExecutionFromAvatar || onOpenAgentProfile
+                ? "cursor-pointer"
+                : "cursor-default",
+            )}
+            aria-label={author}
+          >
+            <ServerAgentAvatar
+              agent={matchingAgent}
+              presets={presets}
+              className="size-11 shrink-0"
+              fallbackClassName="text-sm"
+            />
+          </button>
+        </AvatarSummaryTrigger>
       ) : (
-        <Avatar className="size-11 shrink-0 self-start rounded-md border border-border">
-          {avatarUrl ? <AvatarImage src={avatarUrl} alt={author} /> : null}
-          <AvatarFallback className="rounded-md bg-muted text-sm font-semibold text-foreground">
-            {getInitials(author)}
-          </AvatarFallback>
-        </Avatar>
+        <AvatarSummaryTrigger
+          message={message}
+          matchingAgent={null}
+          member={matchingMember}
+          presets={presets}
+        >
+          <div className="shrink-0 self-start">
+            <Avatar className="size-11 rounded-md border border-border">
+              {avatarUrl ? <AvatarImage src={avatarUrl} alt={author} /> : null}
+              <AvatarFallback className="rounded-md bg-muted text-sm font-semibold text-foreground">
+                {getInitials(author)}
+              </AvatarFallback>
+            </Avatar>
+          </div>
+        </AvatarSummaryTrigger>
       )}
       <div className="relative min-w-0 flex-1 space-y-1.5">
         <div className="flex items-start justify-between gap-3 text-sm">
@@ -571,6 +855,7 @@ function StandardMessageRow({
             <div className="mt-2 max-h-[4.5rem] cursor-text select-text overflow-hidden text-sm leading-6 text-muted-foreground">
               <ServerMessageContent
                 content={text || t("conversationView.execution.emptySummary")}
+                messageContent={message.content}
               />
             </div>
           </button>
@@ -588,6 +873,7 @@ function StandardMessageRow({
             >
               <ServerMessageContent
                 content={text || t("conversationView.emptyMessage")}
+                messageContent={message.content}
               />
               {canCollapseMessage && shouldCollapse && !isExpanded ? (
                 <div className="pointer-events-none absolute inset-x-0 bottom-0 flex h-10 items-end bg-gradient-to-t from-background via-background/90 to-transparent">
@@ -709,7 +995,15 @@ function StandardMessageRow({
 
 export function MessageRow(props: MessageRowProps) {
   if (props.message.messageType === "event") {
-    return <ChannelEventRow message={props.message} compact={props.compact} />;
+    return (
+      <ChannelEventRow
+        message={props.message}
+        agents={props.agents}
+        members={props.members}
+        presets={props.presets}
+        compact={props.compact}
+      />
+    );
   }
   return <StandardMessageRow {...props} />;
 }

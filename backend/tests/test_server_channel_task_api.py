@@ -8,7 +8,10 @@ from fastapi.testclient import TestClient
 from app.core.deps import get_current_user, get_db
 from app.main import create_app
 from app.models.user import User
-from app.schemas.server_channel_task import ServerChannelTaskResponse
+from app.schemas.server_channel_task import (
+    ServerChannelTaskCandidateResponse,
+    ServerChannelTaskResponse,
+)
 
 
 def build_task_response(
@@ -91,6 +94,35 @@ class ServerChannelTaskApiTests(unittest.TestCase):
         self.assertEqual(body["code"], 0)
         self.assertEqual(body["data"][0]["task_id"], str(task.task_id))
         list_tasks.assert_called_once()
+
+    @patch("app.api.v1.server_channel_tasks.service.list_task_candidates")
+    def test_list_server_channel_task_candidates_returns_collection(
+        self,
+        list_task_candidates,
+    ) -> None:
+        server_id = uuid.uuid4()
+        channel_id = uuid.uuid4()
+        task_id = uuid.uuid4()
+        list_task_candidates.return_value = [
+            ServerChannelTaskCandidateResponse(
+                task_id=task_id,
+                display_number=42,
+                title="Review structured mentions",
+                status="todo",
+            )
+        ]
+
+        response = self.client.get(
+            f"/api/v1/servers/{server_id}/channels/{channel_id}/tasks/candidates",
+            params={"q": "mentions", "limit": 10},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["code"], 0)
+        self.assertEqual(body["data"][0]["task_id"], str(task_id))
+        self.assertEqual(body["data"][0]["display_number"], 42)
+        list_task_candidates.assert_called_once()
 
     @patch("app.api.v1.server_channel_tasks.service.claim_task")
     def test_claim_server_channel_task_returns_task_payload(self, claim_task) -> None:

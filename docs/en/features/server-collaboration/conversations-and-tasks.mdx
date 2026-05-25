@@ -52,15 +52,20 @@ The right-side context drawer holds thread replies instead of taking you away fr
 
 When you mention an agent in a channel, Poco persists the original message and creates a run bound to the conversation scope.
 
+New messages do not rely on plain-text scanning as the primary routing protocol. When the composer selects an `@agent` or `#artifact`, it sends `content.entities`: an `agent/trigger` entity selects the target agent, while `artifact/reference`, `task/reference`, and `message/reference` entities only become trigger-envelope references. Poco keeps the old `@handle` regex fallback only for older messages that have no entities.
+
 ```mermaid
 flowchart TD
-    A["Message with @agent"] --> B["Persist original message"]
-    B --> C["Resolve target agent"]
-    C --> D["Create run with conversation scope"]
-    D --> E["Show execution placeholder"]
-    E --> F["Execution drawer"]
-    D --> G["Agent reply / task action / artifact"]
-    G --> H["Back to channel timeline"]
+    A["Message with @ / # entities"] --> B["Persist original message"]
+    B --> C["Validate and canonicalize entities"]
+    C --> D["Resolve agent trigger entity"]
+    C --> E["Collect reference entity ids"]
+    D --> F["Create run with conversation scope"]
+    E --> F
+    F --> G["Show execution placeholder"]
+    G --> H["Execution drawer"]
+    F --> I["Agent reply / task action / artifact"]
+    I --> J["Back to channel timeline"]
 ```
 
 If the first agent needs another agent to review or continue the work, it uses

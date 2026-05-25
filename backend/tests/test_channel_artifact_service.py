@@ -120,7 +120,9 @@ class ChannelArtifactServiceTests(unittest.TestCase):
                 display_name="rate-limit-plan.md",
                 mime_type="text/markdown",
                 object_key="objects/plan.md",
+                source_kind="workspace_export",
                 source_session_id=self.session_id,
+                size_bytes=120,
             )
         ]
 
@@ -143,7 +145,7 @@ class ChannelArtifactServiceTests(unittest.TestCase):
                 return_value="https://example.com/rate-limit-plan.md",
             ),
             patch(
-                "app.services.channel_artifact_service.require_server_member",
+                "app.services.channel_artifact_service.require_channel_member_access",
                 return_value=object(),
             ),
         ):
@@ -166,6 +168,63 @@ class ChannelArtifactServiceTests(unittest.TestCase):
             plan_children[0].url,
             "https://example.com/rate-limit-plan.md",
         )
+
+    def test_list_channel_artifact_candidates_returns_flat_matches(self) -> None:
+        artifact_id = uuid.uuid4()
+        artifact = SimpleNamespace(
+            id=artifact_id,
+            channel_id=self.channel_id,
+            agent_identity_id=None,
+            publisher_user_id="user-1",
+            logical_path="/Uploads/design.md",
+            display_name="design.md",
+            mime_type="text/markdown",
+            source_kind="user_upload",
+            source_session_id=None,
+            size_bytes=128,
+            is_previewable=True,
+            created_at=None,
+        )
+
+        with (
+            patch(
+                "app.services.channel_artifact_service.require_channel_member_access",
+                return_value=object(),
+            ),
+            patch(
+                "app.services.channel_artifact_service."
+                "ChannelArtifactRepository.search_by_channel",
+                return_value=[artifact],
+            ) as search_by_channel,
+            patch(
+                "app.services.channel_artifact_service.UserRepository.get_by_id",
+                return_value=SimpleNamespace(
+                    id="user-1",
+                    display_name="Alice",
+                    primary_email="alice@example.com",
+                    avatar_url="https://example.com/alice.png",
+                ),
+            ),
+        ):
+            result = self.service.list_channel_artifact_candidates(
+                self.db,
+                current_user=SimpleNamespace(id="user-1"),
+                server_id=self.server_id,
+                channel_id=self.channel_id,
+                query="design",
+            )
+
+        search_by_channel.assert_called_once_with(
+            self.db,
+            channel_id=self.channel_id,
+            query="design",
+            limit=20,
+        )
+        self.assertEqual(result[0].artifact_id, artifact_id)
+        self.assertEqual(result[0].display_name, "design.md")
+        self.assertEqual(result[0].logical_path, "/Uploads/design.md")
+        assert result[0].publisher is not None
+        self.assertEqual(result[0].publisher.label, "Alice")
 
     def test_read_runtime_artifact_returns_truncated_text(self) -> None:
         artifact_id = uuid.uuid4()

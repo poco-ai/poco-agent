@@ -267,7 +267,12 @@
     "mentionCandidates": "提及",
     "mentionKinds": {
       "agent": "Agent",
-      "human": "成员"
+      "human": "成员",
+      "user": "成员",
+      "artifact": "文件",
+      "task": "任务",
+      "message": "消息",
+      "thread": "话题"
     },
     "createChannel": {
       "title": "创建频道",

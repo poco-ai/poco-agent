@@ -1,6 +1,8 @@
 import unittest
 from unittest.mock import AsyncMock, patch
 
+import httpx
+
 from app.core.channel_runtime import (
     CHANNEL_RUNTIME_MCP_SERVER_KEY,
     ChannelRuntimeClient,
@@ -46,6 +48,46 @@ class ChannelRuntimeToolContractTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(text.startswith("list_channel_agents_error\n"))
         self.assertIn('"error": "backend unavailable"', text)
         self.assertIn('"code": "runtime_error"', text)
+
+    async def test_client_uses_backend_error_message_for_failed_response(
+        self,
+    ) -> None:
+        class FakeAsyncClient:
+            def __init__(self, *args, **kwargs) -> None:
+                pass
+
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, exc_type, exc, tb) -> None:
+                pass
+
+            async def post(self, *args, **kwargs) -> httpx.Response:
+                request = httpx.Request(
+                    "POST",
+                    "http://manager/api/v1/agent-channel-artifacts/read",
+                )
+                return httpx.Response(
+                    404,
+                    json={
+                        "code": 40400,
+                        "message": "Channel artifact not found",
+                        "data": None,
+                    },
+                    request=request,
+                )
+
+        client = ChannelRuntimeClient("http://manager", "session-1")
+
+        with patch("app.core.channel_runtime.httpx.AsyncClient", FakeAsyncClient):
+            with self.assertRaises(RuntimeError) as ctx:
+                await client.read_artifact(
+                    artifact_id=None,
+                    logical_path="Harness 工程核心指南.md",
+                    max_bytes=None,
+                )
+
+        self.assertEqual(str(ctx.exception), "Channel artifact not found")
 
     async def test_client_reads_channel_messages_through_runtime_proxy(self) -> None:
         client = ChannelRuntimeClient("http://manager", "session-1")
