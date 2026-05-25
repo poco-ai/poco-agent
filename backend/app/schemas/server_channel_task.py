@@ -138,3 +138,13 @@ class ServerChannelTaskResponse(BaseModel):
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
+
+class ServerChannelTaskCandidateResponse(BaseModel):
+    task_id: UUID = Field(validation_alias=AliasChoices("id", "task_id"))
+    display_number: int
+    title: str
+    status: TaskStatus
+    assignee: ChannelTaskActorSummary | None = None
+
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)

@@ -18,11 +18,14 @@ from app.repositories.server_channel_agent_member_repository import (
     ServerChannelAgentMemberRepository,
 )
 from app.repositories.session_repository import SessionRepository
+from app.repositories.user_repository import UserRepository
 from app.schemas.channel_artifact import (
     AgentChannelArtifactListResponse,
     AgentChannelArtifactMetadata,
     AgentChannelArtifactReadResponse,
     AgentChannelArtifactSearchResponse,
+    ChannelArtifactCandidateResponse,
+    ChannelArtifactPublisherSummary,
 )
 from app.schemas.input_file import InputFile
 from app.schemas.workspace import FileNode
@@ -200,6 +203,52 @@ class ChannelArtifactService:
             content_kind=cls._content_kind(artifact),
             created_at=getattr(artifact, "created_at", None),
             updated_at=getattr(artifact, "updated_at", None),
+        )
+
+    @staticmethod
+    def _publisher_summary(
+        db: Session,
+        artifact: ChannelArtifact,
+    ) -> ChannelArtifactPublisherSummary | None:
+        if artifact.agent_identity_id is not None:
+            agent = AgentIdentityRepository.get_by_id(db, artifact.agent_identity_id)
+            if agent is None:
+                return ChannelArtifactPublisherSummary(
+                    actor_type="agent",
+                    agent_identity_id=artifact.agent_identity_id,
+                    label=str(artifact.agent_identity_id),
+                )
+            return ChannelArtifactPublisherSummary(
+                actor_type="agent",
+                agent_identity_id=agent.id,
+                agent_handle=agent.handle,
+                label=agent.display_name or agent.handle or str(agent.id),
+                visual_key=agent.visual_key,
+            )
+        if artifact.publisher_user_id is not None:
+            user = UserRepository.get_by_id(db, artifact.publisher_user_id)
+            if user is None:
+                return ChannelArtifactPublisherSummary(
+                    actor_type="user",
+                    user_id=artifact.publisher_user_id,
+                    label=artifact.publisher_user_id,
+                )
+            return ChannelArtifactPublisherSummary(
+                actor_type="user",
+                user_id=user.id,
+                label=user.display_name or user.primary_email or user.id,
+                avatar_url=user.avatar_url,
+            )
+        return None
+
+    def _candidate(
+        self,
+        db: Session,
+        artifact: ChannelArtifact,
+    ) -> ChannelArtifactCandidateResponse:
+        response = ChannelArtifactCandidateResponse.model_validate(artifact)
+        return response.model_copy(
+            update={"publisher": self._publisher_summary(db, artifact)}
         )
 
     @staticmethod
@@ -593,3 +642,35 @@ class ChannelArtifactService:
                 )
             )
         return roots
+
+    def list_channel_artifact_candidates(
+        self,
+        db: Session,
+        *,
+        current_user: Any,
+        server_id: uuid.UUID,
+        channel_id: uuid.UUID,
+        query: str | None = None,
+        limit: int = 20,
+    ) -> list[ChannelArtifactCandidateResponse]:
+        require_channel_member_access(
+            db,
+            server_id=server_id,
+            channel_id=channel_id,
+            user_id=current_user.id,
+        )
+        safe_limit = max(1, min(int(limit), 50))
+        normalized_query = (query or "").strip()
+        if normalized_query:
+            artifacts = ChannelArtifactRepository.search_by_channel(
+                db,
+                channel_id=channel_id,
+                query=normalized_query,
+                limit=safe_limit,
+            )
+        else:
+            artifacts = ChannelArtifactRepository.list_by_channel(
+                db,
+                channel_id=channel_id,
+            )[:safe_limit]
+        return [self._candidate(db, artifact) for artifact in artifacts]

@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.core.deps import get_current_user, get_db
 from app.models.user import User
+from app.schemas.channel_artifact import ChannelArtifactCandidateResponse
 from app.schemas.input_file import InputFile
 from app.schemas.response import Response, ResponseSchema
 from app.schemas.workspace import FileNode
@@ -35,6 +36,32 @@ async def list_channel_artifacts(
     return Response.success(
         data=result,
         message="Channel artifacts retrieved successfully",
+    )
+
+
+@router.get(
+    "/artifacts/candidates",
+    response_model=ResponseSchema[list[ChannelArtifactCandidateResponse]],
+)
+async def list_channel_artifact_candidates(
+    server_id: uuid.UUID,
+    channel_id: uuid.UUID,
+    q: str | None = None,
+    limit: int = 20,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> JSONResponse:
+    result = service.list_channel_artifact_candidates(
+        db,
+        current_user=current_user,
+        server_id=server_id,
+        channel_id=channel_id,
+        query=q,
+        limit=limit,
+    )
+    return Response.success(
+        data=result,
+        message="Channel artifact candidates retrieved successfully",
     )
 
 
