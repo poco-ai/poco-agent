@@ -132,7 +132,10 @@ export function ThreadDrawer({
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   const isComposingRef = React.useRef(false);
 
-  const composerTrigger = React.useMemo(() => getComposerTrigger(draft), [draft]);
+  const composerTrigger = React.useMemo(
+    () => getComposerTrigger(draft),
+    [draft],
+  );
   const [contextCandidates, setContextCandidates] = React.useState<
     ComposerCandidate[]
   >([]);
@@ -184,7 +187,10 @@ export function ThreadDrawer({
         })
         .catch((error) => {
           if (!cancelled) {
-            console.error("[ThreadDrawer] load context candidates failed", error);
+            console.error(
+              "[ThreadDrawer] load context candidates failed",
+              error,
+            );
             setContextCandidates([]);
           }
         });
@@ -221,6 +227,10 @@ export function ThreadDrawer({
   };
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    const isComposing = event.nativeEvent.isComposing || isComposingRef.current;
+    const hasComposerTrigger = composerTrigger !== null;
+    const selectedCandidate = composerCandidates[mentionIndex];
+
     if (composerActive && event.key === "ArrowDown") {
       event.preventDefault();
       setMentionIndex((i) => (i + 1) % composerCandidates.length);
@@ -233,17 +243,18 @@ export function ThreadDrawer({
       );
       return;
     }
-    if (composerActive && event.key === "Enter") {
+    if (
+      hasComposerTrigger &&
+      !isComposing &&
+      (event.key === "Enter" || event.key === "Tab")
+    ) {
       event.preventDefault();
-      insertCandidate(composerCandidates[mentionIndex]);
+      if (selectedCandidate) {
+        insertCandidate(selectedCandidate);
+      }
       return;
     }
-    if (
-      event.key === "Enter" &&
-      !event.shiftKey &&
-      !event.nativeEvent.isComposing &&
-      !isComposingRef.current
-    ) {
+    if (event.key === "Enter" && !event.shiftKey && !isComposing) {
       event.preventDefault();
       if (!isSending && draft.trim()) {
         onSend();

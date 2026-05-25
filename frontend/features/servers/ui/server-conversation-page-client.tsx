@@ -479,7 +479,10 @@ function ConversationContent({
   const scrollContainerRef = React.useRef<HTMLDivElement | null>(null);
   const hasInitializedScrollRef = React.useRef(false);
   const lastMessageCountRef = React.useRef(messages.length);
-  const composerTrigger = React.useMemo(() => getComposerTrigger(draft), [draft]);
+  const composerTrigger = React.useMemo(
+    () => getComposerTrigger(draft),
+    [draft],
+  );
   const [showScrollButton, setShowScrollButton] = React.useState(false);
   const [isUserScrolling, setIsUserScrolling] = React.useState(false);
   const draftRef = React.useRef(draft);
@@ -537,7 +540,10 @@ function ConversationContent({
         })
         .catch((error) => {
           if (!cancelled) {
-            console.error("[ConversationContent] load context candidates failed", error);
+            console.error(
+              "[ConversationContent] load context candidates failed",
+              error,
+            );
             setContextCandidates([]);
           }
         });
@@ -687,6 +693,10 @@ function ConversationContent({
   const handleTextareaKeyDown = (
     event: React.KeyboardEvent<HTMLTextAreaElement>,
   ) => {
+    const isComposing = event.nativeEvent.isComposing || isComposingRef.current;
+    const hasComposerTrigger = composerTrigger !== null;
+    const selectedCandidate = composerCandidates[mentionIndex];
+
     if (composerActive && event.key === "ArrowDown") {
       event.preventDefault();
       setMentionIndex((i) => (i + 1) % composerCandidates.length);
@@ -699,17 +709,20 @@ function ConversationContent({
       );
       return;
     }
-    if (composerActive && event.key === "Enter") {
+
+    if (
+      hasComposerTrigger &&
+      !isComposing &&
+      (event.key === "Enter" || event.key === "Tab")
+    ) {
       event.preventDefault();
-      insertCandidate(composerCandidates[mentionIndex]);
+      if (selectedCandidate) {
+        insertCandidate(selectedCandidate);
+      }
       return;
     }
-    if (
-      event.key === "Enter" &&
-      !event.shiftKey &&
-      !event.nativeEvent.isComposing &&
-      !isComposingRef.current
-    ) {
+
+    if (event.key === "Enter" && !event.shiftKey && !isComposing) {
       event.preventDefault();
       if (
         !isSending &&
