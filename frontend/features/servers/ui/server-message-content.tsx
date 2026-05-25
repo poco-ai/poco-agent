@@ -14,6 +14,7 @@ import type {
   ChannelMessageEntityAction,
   ChannelMessageEntityKind,
 } from "@/features/servers/model/types";
+import { getFileIcon } from "@/lib/utils/file/get-file-icon";
 import { cn } from "@/lib/utils";
 
 type LinkProps = {
@@ -176,14 +177,11 @@ function parseMessageEntities(
 }
 
 function getEntityChipClassName(entity: ChannelMessageEntity): string {
-  if (entity.kind === "agent") {
-    return "border-primary/30 bg-primary/10 text-foreground";
-  }
-  if (entity.kind === "user") {
-    return "border-border bg-secondary text-secondary-foreground";
+  if (entity.kind === "agent" || entity.kind === "user") {
+    return "border-emerald-500/30 bg-emerald-500/10 text-foreground";
   }
   if (entity.kind === "artifact") {
-    return "border-emerald-500/30 bg-emerald-500/10 text-foreground";
+    return "border-amber-900/30 bg-amber-900/10 text-foreground";
   }
   if (entity.kind === "task") {
     return "border-amber-500/30 bg-amber-500/10 text-foreground";
@@ -196,6 +194,25 @@ function entityTitle(entity: ChannelMessageEntity): string {
   return typeof target === "string" && target.trim()
     ? target
     : entity.displayText;
+}
+
+function getArtifactIconName(entity: ChannelMessageEntity): string {
+  const displayName = entity.metadata?.display_name;
+  if (typeof displayName === "string" && displayName.trim()) {
+    return displayName;
+  }
+  const logicalPath = entity.metadata?.logical_path;
+  if (typeof logicalPath === "string" && logicalPath.trim()) {
+    return logicalPath;
+  }
+  return entity.displayText || entity.insertedText;
+}
+
+function getEntityLabel(entity: ChannelMessageEntity): string {
+  if (entity.kind === "artifact") {
+    return entity.insertedText.replace(/^#/, "");
+  }
+  return entity.insertedText;
 }
 
 function renderEntityText(
@@ -228,6 +245,10 @@ function renderEntityText(
       );
     }
     const end = item.start + item.entity.insertedText.length;
+    const ArtifactIcon =
+      item.entity.kind === "artifact"
+        ? getFileIcon(getArtifactIconName(item.entity))
+        : null;
     nodes.push(
       <span
         key={`${item.entity.id}-${item.start}`}
@@ -237,7 +258,10 @@ function renderEntityText(
           getEntityChipClassName(item.entity),
         )}
       >
-        {item.entity.insertedText}
+        {ArtifactIcon ? (
+          <ArtifactIcon className="mr-1 size-3.5 shrink-0" aria-hidden="true" />
+        ) : null}
+        {getEntityLabel(item.entity)}
       </span>,
     );
     cursor = end;
