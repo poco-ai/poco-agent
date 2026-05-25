@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Any, Literal
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
@@ -11,6 +11,37 @@ from app.schemas.agent_identity import AgentIdentityResponse
 from app.schemas.user_profile import UserPublicProfileResponse
 
 ServerChannelMessageType = Literal["user", "system", "task", "event"]
+ServerChannelMessageEntityKind = Literal[
+    "agent",
+    "user",
+    "artifact",
+    "task",
+    "message",
+    "thread",
+]
+ServerChannelMessageEntityAction = Literal["trigger", "mention", "reference"]
+
+
+class ServerChannelMessageEntityRange(BaseModel):
+    start: int = Field(ge=0)
+    end: int = Field(ge=0)
+
+
+class ServerChannelMessageEntity(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid4()))
+    kind: ServerChannelMessageEntityKind
+    action: ServerChannelMessageEntityAction
+    target_id: str = Field(validation_alias=AliasChoices("target_id", "targetId"))
+    display_text: str = Field(
+        validation_alias=AliasChoices("display_text", "displayText")
+    )
+    inserted_text: str = Field(
+        validation_alias=AliasChoices("inserted_text", "insertedText")
+    )
+    range: ServerChannelMessageEntityRange | None = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+    model_config = ConfigDict(populate_by_name=True)
 
 
 class ServerChannelMessageCreateRequest(BaseModel):

@@ -14,7 +14,7 @@ from app.repositories.server_channel_message_repository import (
     ServerChannelMessageRepository,
 )
 from app.repositories.user_repository import UserRepository
-from app.schemas.agent_trigger import AgentTriggerEnvelope, TriggerType
+from app.schemas.agent_trigger import AgentTriggerEnvelope, TriggerReferences, TriggerType
 from app.services.storage_service import S3StorageService
 
 
@@ -116,6 +116,7 @@ class ChannelSharedContextService:
         target_agent_identity_id: uuid.UUID,
         target_agent_handle: str,
         trigger_type: TriggerType,
+        references: TriggerReferences | None = None,
     ) -> AgentTriggerEnvelope:
         message_id = getattr(message, "id")
         thread_root_message_id = (
@@ -144,7 +145,7 @@ class ChannelSharedContextService:
                 "user_id": user_id,
                 "display_name": display_name,
             },
-            references={"message_ids": [message_id]},
+            references=references or {"message_ids": [message_id]},
             handoff={
                 "dedupe_key": f"channel-trigger:{message_id}:{target_agent_identity_id}",
             },
