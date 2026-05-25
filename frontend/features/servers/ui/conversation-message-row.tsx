@@ -120,9 +120,7 @@ function formatSummaryDate(value: string, locale?: string): string {
   if (Number.isNaN(date.getTime())) {
     return value;
   }
-  return new Intl.DateTimeFormat(locale, { dateStyle: "medium" }).format(
-    date,
-  );
+  return new Intl.DateTimeFormat(locale, { dateStyle: "medium" }).format(date);
 }
 
 function isInputFile(value: unknown): value is InputFile {
@@ -432,15 +430,10 @@ function AvatarSummaryCard({
   const avatarUrl = getUserAvatarUrl(humanSummary?.user ?? message.authorUser);
   const authorUserId = humanSummary?.userId ?? message.authorUserId;
   const secondaryLabel =
-    authorUserId?.trim() && authorUserId !== author
-      ? authorUserId
-      : null;
+    authorUserId?.trim() && authorUserId !== author ? authorUserId : null;
   const roleLabel = member?.role ?? null;
   const joinedLabel = member?.joinedAt
-    ? formatSummaryDate(
-        member.joinedAt,
-        i18n.resolvedLanguage ?? i18n.language,
-      )
+    ? formatSummaryDate(member.joinedAt, i18n.resolvedLanguage ?? i18n.language)
     : null;
 
   return (
@@ -472,7 +465,10 @@ function AvatarSummaryCard({
             ) : null}
             {joinedLabel ? (
               <p className="ml-auto flex min-w-0 shrink-0 items-center gap-1.5 text-right">
-                <CalendarDays className="size-3.5 shrink-0" aria-hidden="true" />
+                <CalendarDays
+                  className="size-3.5 shrink-0"
+                  aria-hidden="true"
+                />
                 <span className="truncate">{joinedLabel}</span>
               </p>
             ) : null}
@@ -602,7 +598,8 @@ function StandardMessageRow({
   const avatarUrl = getUserAvatarUrl(message.authorUser);
   const matchingMember =
     message.authorUserId != null
-      ? members.find((member) => member.userId === message.authorUserId) ?? null
+      ? (members.find((member) => member.userId === message.authorUserId) ??
+        null)
       : null;
   const matchingAgent =
     message.messageType === "system"
@@ -858,6 +855,7 @@ function StandardMessageRow({
             <div className="mt-2 max-h-[4.5rem] cursor-text select-text overflow-hidden text-sm leading-6 text-muted-foreground">
               <ServerMessageContent
                 content={text || t("conversationView.execution.emptySummary")}
+                messageContent={message.content}
               />
             </div>
           </button>
@@ -875,6 +873,7 @@ function StandardMessageRow({
             >
               <ServerMessageContent
                 content={text || t("conversationView.emptyMessage")}
+                messageContent={message.content}
               />
               {canCollapseMessage && shouldCollapse && !isExpanded ? (
                 <div className="pointer-events-none absolute inset-x-0 bottom-0 flex h-10 items-end bg-gradient-to-t from-background via-background/90 to-transparent">
