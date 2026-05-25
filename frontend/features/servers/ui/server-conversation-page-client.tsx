@@ -76,6 +76,7 @@ import type {
   ServerAgentItem,
   ServerChannelItem,
   ServerChannelMemberItem,
+  ChannelMessageEntity,
   ServerConversationMessage,
   ServerItem,
   ServerMemberItem,
@@ -84,16 +85,20 @@ import type {
 import { useServerMembership } from "@/features/servers/hooks/use-server-membership";
 import {
   buildAgentMentionCandidate,
+  buildArtifactComposerCandidate,
   buildHumanMentionCandidates,
+  buildParticipantComposerCandidate,
+  buildTaskComposerCandidate,
+  filterStaleMessageEntities,
+  getComposerCandidateSearchText,
+  getComposerTrigger,
   getAvailableChannelHumanMembers,
-  getMentionInsertText,
-  getMentionSearchText,
   getUserDisplayName,
   hasInboxSignal,
+  insertComposerCandidate,
   sortChannelsForSidebar,
   sortMessagesChronologically,
-  type MentionCandidate,
-  getMentionTrigger,
+  type ComposerCandidate,
 } from "@/features/servers/lib/server-conversation-view";
 import { getMessageSessionId } from "@/features/servers/lib/server-conversation-messages";
 import {
@@ -413,11 +418,13 @@ function ConversationContent({
   messages,
   savedMessageIds,
   draft,
+  draftEntities,
   attachments,
   asTask,
   isLoading,
   isUploading,
   onDraftChange,
+  onDraftEntitiesChange,
   onAsTaskChange,
   onSend,
   onUploadFiles,
@@ -441,11 +448,13 @@ function ConversationContent({
   messages: ServerConversationMessage[];
   savedMessageIds: Set<string>;
   draft: string;
+  draftEntities: ChannelMessageEntity[];
   attachments: InputFile[];
   asTask: boolean;
   isLoading: boolean;
   isUploading: boolean;
   onDraftChange: (value: string) => void;
+  onDraftEntitiesChange: (value: ChannelMessageEntity[]) => void;
   onAsTaskChange: (value: boolean) => void;
   onSend: () => void;
   onUploadFiles: (files: File[]) => Promise<void>;
@@ -470,30 +479,86 @@ function ConversationContent({
   const scrollContainerRef = React.useRef<HTMLDivElement | null>(null);
   const hasInitializedScrollRef = React.useRef(false);
   const lastMessageCountRef = React.useRef(messages.length);
-  const mentionTrigger = React.useMemo(() => getMentionTrigger(draft), [draft]);
+  const composerTrigger = React.useMemo(() => getComposerTrigger(draft), [draft]);
   const [showScrollButton, setShowScrollButton] = React.useState(false);
   const [isUserScrolling, setIsUserScrolling] = React.useState(false);
   const draftRef = React.useRef(draft);
   const lng = useLanguage();
-  const mentionCandidates = React.useMemo<MentionCandidate[]>(() => {
+  const [contextCandidates, setContextCandidates] = React.useState<
+    ComposerCandidate[]
+  >([]);
+  const participantCandidates = React.useMemo<ComposerCandidate[]>(() => {
     const humans = buildHumanMentionCandidates(members, currentUserId);
     const agentCandidates = agents.map(buildAgentMentionCandidate);
-    const candidates = [...agentCandidates, ...humans];
-    if (!mentionTrigger) {
-      return [];
-    }
-    return candidates
+    return [...agentCandidates, ...humans]
+      .map(buildParticipantComposerCandidate)
       .filter((candidate) =>
-        getMentionSearchText(candidate).includes(mentionTrigger.query),
-      )
-      .slice(0, 8);
-  }, [agents, currentUserId, mentionTrigger, members]);
+        composerTrigger?.prefix === "@"
+          ? getComposerCandidateSearchText(candidate).includes(
+              composerTrigger.query,
+            )
+          : true,
+      );
+  }, [agents, composerTrigger, currentUserId, members]);
 
-  const mentionActive = mentionTrigger !== null && mentionCandidates.length > 0;
+  React.useEffect(() => {
+    if (!channel || composerTrigger?.prefix !== "#") {
+      setContextCandidates([]);
+      return;
+    }
+    let cancelled = false;
+    const timeoutId = window.setTimeout(() => {
+      void Promise.all([
+        serversApi.listChannelArtifactCandidates(channel.serverId, channel.id, {
+          q: composerTrigger.query,
+          limit: 6,
+        }),
+        channelTasksApi.listTaskCandidates(channel.serverId, channel.id, {
+          q: composerTrigger.query,
+          limit: 6,
+        }),
+      ])
+        .then(([artifacts, taskCandidates]) => {
+          if (cancelled) {
+            return;
+          }
+          setContextCandidates(
+            [
+              ...artifacts.map(buildArtifactComposerCandidate),
+              ...taskCandidates.map(buildTaskComposerCandidate),
+            ]
+              .filter((candidate) =>
+                getComposerCandidateSearchText(candidate).includes(
+                  composerTrigger.query,
+                ),
+              )
+              .slice(0, 8),
+          );
+        })
+        .catch((error) => {
+          if (!cancelled) {
+            console.error("[ConversationContent] load context candidates failed", error);
+            setContextCandidates([]);
+          }
+        });
+    }, 150);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeoutId);
+    };
+  }, [channel, composerTrigger]);
+
+  const composerCandidates =
+    composerTrigger?.prefix === "@"
+      ? participantCandidates.slice(0, 8)
+      : contextCandidates;
+
+  const composerActive =
+    composerTrigger !== null && composerCandidates.length > 0;
   const [mentionIndex, setMentionIndex] = React.useState(0);
   React.useEffect(() => {
     setMentionIndex(0);
-  }, [mentionCandidates]);
+  }, [composerCandidates]);
 
   React.useEffect(() => {
     draftRef.current = draft;
@@ -604,13 +669,17 @@ function ConversationContent({
     }
   }, [isUserScrolling, messages.length, scrollToBottom]);
 
-  const insertMention = (candidate: MentionCandidate) => {
-    if (!mentionTrigger) {
+  const insertCandidate = (candidate: ComposerCandidate) => {
+    if (!composerTrigger) {
       return;
     }
-    const mention = getMentionInsertText(candidate);
-    onDraftChange(
-      `${draft.slice(0, mentionTrigger.start)}${mention}${draft.slice(mentionTrigger.start + mentionTrigger.query.length + 1)}`,
+    const inserted = insertComposerCandidate(draft, composerTrigger, candidate);
+    onDraftChange(inserted.text);
+    onDraftEntitiesChange(
+      filterStaleMessageEntities(inserted.text, [
+        ...draftEntities,
+        inserted.entity,
+      ]),
     );
     textareaRef.current?.focus();
   };
@@ -618,21 +687,21 @@ function ConversationContent({
   const handleTextareaKeyDown = (
     event: React.KeyboardEvent<HTMLTextAreaElement>,
   ) => {
-    if (mentionActive && event.key === "ArrowDown") {
+    if (composerActive && event.key === "ArrowDown") {
       event.preventDefault();
-      setMentionIndex((i) => (i + 1) % mentionCandidates.length);
+      setMentionIndex((i) => (i + 1) % composerCandidates.length);
       return;
     }
-    if (mentionActive && event.key === "ArrowUp") {
+    if (composerActive && event.key === "ArrowUp") {
       event.preventDefault();
       setMentionIndex(
-        (i) => (i - 1 + mentionCandidates.length) % mentionCandidates.length,
+        (i) => (i - 1 + composerCandidates.length) % composerCandidates.length,
       );
       return;
     }
-    if (mentionActive && event.key === "Enter") {
+    if (composerActive && event.key === "Enter") {
       event.preventDefault();
-      insertMention(mentionCandidates[mentionIndex]);
+      insertCandidate(composerCandidates[mentionIndex]);
       return;
     }
     if (
@@ -778,20 +847,26 @@ function ConversationContent({
           </div>
         ) : null}
         <div className="relative flex w-full min-w-0 items-end gap-2 rounded-lg border border-border bg-card px-3 py-2">
-          {mentionTrigger && mentionCandidates.length > 0 ? (
+          {composerActive ? (
             <div className="absolute bottom-full left-0 z-20 mb-2 w-full max-w-md rounded-md border border-border bg-popover p-2 shadow-[var(--shadow-lg)]">
               <div className="px-2 pb-2 text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
                 {t("conversationView.mentionCandidates")}
               </div>
               <div className="space-y-1">
-                {mentionCandidates.map((candidate, index) => {
+                {composerCandidates.map((candidate, index) => {
                   const CandidateIcon =
-                    candidate.kind === "agent" ? Bot : UserRound;
+                    candidate.kind === "agent"
+                      ? Bot
+                      : candidate.kind === "user"
+                        ? UserRound
+                        : candidate.kind === "task"
+                          ? SquareCheckBig
+                          : Files;
                   return (
                     <button
                       key={`${candidate.kind}-${candidate.id}`}
                       type="button"
-                      onClick={() => insertMention(candidate)}
+                      onClick={() => insertCandidate(candidate)}
                       className={cn(
                         "flex w-full items-center gap-3 rounded-md px-3 py-2 text-left transition-colors",
                         index === mentionIndex
@@ -807,7 +882,7 @@ function ConversationContent({
                           {candidate.label}
                         </span>
                         <span className="block truncate text-xs text-muted-foreground">
-                          @{candidate.handle} /{" "}
+                          {candidate.metaLabel || candidate.insertedText} /{" "}
                           {t(`conversationView.mentionKinds.${candidate.kind}`)}
                         </span>
                       </span>
@@ -865,7 +940,13 @@ function ConversationContent({
           <textarea
             ref={textareaRef}
             value={draft}
-            onChange={(event) => onDraftChange(event.target.value)}
+            onChange={(event) => {
+              const nextDraft = event.target.value;
+              onDraftChange(nextDraft);
+              onDraftEntitiesChange(
+                filterStaleMessageEntities(nextDraft, draftEntities),
+              );
+            }}
             onKeyDown={handleTextareaKeyDown}
             onInput={() => syncTextareaHeight()}
             onPaste={(event) => void handlePaste(event)}
@@ -1807,10 +1888,16 @@ export function ServerConversationPageClient({
     [],
   );
   const [draft, setDraft] = React.useState("");
+  const [draftEntities, setDraftEntities] = React.useState<
+    ChannelMessageEntity[]
+  >([]);
   const [draftAttachments, setDraftAttachments] = React.useState<InputFile[]>(
     [],
   );
   const [threadDraft, setThreadDraft] = React.useState("");
+  const [threadDraftEntities, setThreadDraftEntities] = React.useState<
+    ChannelMessageEntity[]
+  >([]);
   const [searchValue, setSearchValue] = React.useState("");
   const [isLoading, setIsLoading] = React.useState(!cachedServerContext);
   const [isSending, setIsSending] = React.useState(false);
@@ -2649,6 +2736,7 @@ export function ServerConversationPageClient({
     }
     const content = draft.trim();
     const attachments = [...draftAttachments];
+    const entities = filterStaleMessageEntities(content, draftEntities);
     if (!content && attachments.length === 0) {
       return;
     }
@@ -2661,6 +2749,7 @@ export function ServerConversationPageClient({
           {
             text: content,
             attachments,
+            entities: entities.length > 0 ? entities : undefined,
             asTask: true,
           },
         );
@@ -2679,9 +2768,11 @@ export function ServerConversationPageClient({
         await serversApi.sendMessage(selectedServerId, activeChannelId, {
           text: content,
           attachments,
+          entities: entities.length > 0 ? entities : undefined,
         });
       }
       setDraft("");
+      setDraftEntities([]);
       setDraftAttachments([]);
       setAsTask(false);
       const messages = await serversApi.listMessages(
@@ -2712,6 +2803,10 @@ export function ServerConversationPageClient({
     setIsSending(true);
     try {
       const trimmedDraft = threadDraft.trim();
+      const entities = filterStaleMessageEntities(
+        trimmedDraft,
+        threadDraftEntities,
+      );
       if (threadAsTask) {
         const explicitMentions = getExplicitMentionHandles(trimmedDraft);
         const replyText =
@@ -2723,6 +2818,7 @@ export function ServerConversationPageClient({
           drawer.channelId,
           {
             text: replyText,
+            entities: entities.length > 0 ? entities : undefined,
             threadRootMessageId: drawer.rootMessageId,
             asTask: true,
           },
@@ -2736,6 +2832,7 @@ export function ServerConversationPageClient({
           sourceMessageId: message.id,
         });
         setThreadDraft("");
+        setThreadDraftEntities([]);
         setThreadAsTask(false);
         setTasks(
           await channelTasksApi.listTasks(selectedServerId, drawer.channelId),
@@ -2757,9 +2854,11 @@ export function ServerConversationPageClient({
             : trimmedDraft;
         await serversApi.sendMessage(selectedServerId, drawer.channelId, {
           text: replyText,
+          entities: entities.length > 0 ? entities : undefined,
           threadRootMessageId: drawer.rootMessageId,
         });
         setThreadDraft("");
+        setThreadDraftEntities([]);
         const [messages, thread] = await Promise.all([
           serversApi.listMessages(selectedServerId, drawer.channelId),
           serversApi.getThread(
@@ -3586,11 +3685,13 @@ export function ServerConversationPageClient({
                 messages={currentMessages}
                 savedMessageIds={savedMessageIds}
                 draft={draft}
+                draftEntities={draftEntities}
                 attachments={draftAttachments}
                 asTask={asTask}
                 isLoading={isLoading}
                 isUploading={isUploadingDraftFile}
                 onDraftChange={setDraft}
+                onDraftEntitiesChange={setDraftEntities}
                 onAsTaskChange={setAsTask}
                 onSend={() => void handleSend()}
                 onUploadFiles={uploadDraftFiles}
@@ -3639,14 +3740,18 @@ export function ServerConversationPageClient({
                 {drawer.type === "thread" ? (
                   <ThreadDrawer
                     thread={threadMessages}
+                    serverId={selectedServerId}
+                    channelId={drawer.channelId}
                     agents={channelAgents}
                     presets={presets}
                     members={channelMembers}
                     currentUserId={profile?.id}
                     draft={threadDraft}
+                    draftEntities={threadDraftEntities}
                     suggestedMentionHandle={threadMentionHandle}
                     asTask={threadAsTask}
                     onDraftChange={setThreadDraft}
+                    onDraftEntitiesChange={setThreadDraftEntities}
                     onAsTaskChange={setThreadAsTask}
                     onSend={() => void handleReply()}
                     onClose={() => setDrawer({ type: "none" })}

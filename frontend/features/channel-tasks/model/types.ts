@@ -37,6 +37,14 @@ export interface ChannelTask {
   updatedAt: string;
 }
 
+export interface ChannelTaskCandidate {
+  taskId: string;
+  displayNumber: number;
+  title: string;
+  status: ChannelTaskStatus;
+  assignee?: ChannelTaskActorSummary | null;
+}
+
 export interface ChannelTaskCreateInput {
   title: string;
   description?: string | null;

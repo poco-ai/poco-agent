@@ -4,10 +4,12 @@ import React from "react";
 import {
   ArrowLeft,
   Bot,
+  Files,
   Info,
   Loader2,
   MessageSquare,
   Pause,
+  SquareCheckBig,
   UserRound,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -26,17 +28,23 @@ import type {
 import { channelTasksApi } from "@/features/channel-tasks/api/channel-tasks-api";
 import { TaskHistoryProvider } from "@/features/projects/contexts/task-history-context";
 import type {
+  ChannelMessageEntity,
   ServerAgentItem,
   ServerChannelMemberItem,
   ServerConversationMessage,
 } from "@/features/servers/model/types";
+import { serversApi } from "@/features/servers";
 import {
   buildAgentMentionCandidate,
+  buildArtifactComposerCandidate,
   buildHumanMentionCandidates,
-  getMentionInsertText,
-  getMentionSearchText,
-  getMentionTrigger,
-  type MentionCandidate,
+  buildParticipantComposerCandidate,
+  buildTaskComposerCandidate,
+  filterStaleMessageEntities,
+  getComposerCandidateSearchText,
+  getComposerTrigger,
+  insertComposerCandidate,
+  type ComposerCandidate,
 } from "@/features/servers/lib/server-conversation-view";
 import { useT } from "@/lib/i18n/client";
 import { cn } from "@/lib/utils";
@@ -78,14 +86,18 @@ function toConversationMessage(
 
 export function ThreadDrawer({
   thread,
+  serverId,
+  channelId,
   agents,
   presets,
   members,
   currentUserId,
   draft,
+  draftEntities,
   suggestedMentionHandle,
   asTask,
   onDraftChange,
+  onDraftEntitiesChange,
   onAsTaskChange,
   onSend,
   onClose,
@@ -94,14 +106,18 @@ export function ThreadDrawer({
   isSending,
 }: {
   thread: ServerConversationMessage[];
+  serverId: string | null;
+  channelId: string;
   agents: ServerAgentItem[];
   presets: Preset[];
   members: ServerChannelMemberItem[];
   currentUserId?: string | null;
   draft: string;
+  draftEntities: ChannelMessageEntity[];
   suggestedMentionHandle?: string | null;
   asTask: boolean;
   onDraftChange: (value: string) => void;
+  onDraftEntitiesChange: (value: ChannelMessageEntity[]) => void;
   onAsTaskChange: (value: boolean) => void;
   onSend: () => void;
   onClose: () => void;
@@ -116,49 +132,110 @@ export function ThreadDrawer({
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   const isComposingRef = React.useRef(false);
 
-  const mentionTrigger = React.useMemo(() => getMentionTrigger(draft), [draft]);
-  const mentionCandidates = React.useMemo<MentionCandidate[]>(() => {
-    if (!mentionTrigger) return [];
+  const composerTrigger = React.useMemo(() => getComposerTrigger(draft), [draft]);
+  const [contextCandidates, setContextCandidates] = React.useState<
+    ComposerCandidate[]
+  >([]);
+  const participantCandidates = React.useMemo<ComposerCandidate[]>(() => {
     const humans = buildHumanMentionCandidates(members, currentUserId);
     const agentCandidates = agents.map(buildAgentMentionCandidate);
     return [...agentCandidates, ...humans]
+      .map(buildParticipantComposerCandidate)
       .filter((candidate) =>
-        getMentionSearchText(candidate).includes(mentionTrigger.query),
-      )
-      .slice(0, 8);
-  }, [agents, currentUserId, mentionTrigger, members]);
+        composerTrigger?.prefix === "@"
+          ? getComposerCandidateSearchText(candidate).includes(
+              composerTrigger.query,
+            )
+          : true,
+      );
+  }, [agents, composerTrigger, currentUserId, members]);
 
-  const mentionActive = mentionTrigger !== null && mentionCandidates.length > 0;
+  React.useEffect(() => {
+    if (!serverId || composerTrigger?.prefix !== "#") {
+      setContextCandidates([]);
+      return;
+    }
+    let cancelled = false;
+    const timeoutId = window.setTimeout(() => {
+      void Promise.all([
+        serversApi.listChannelArtifactCandidates(serverId, channelId, {
+          q: composerTrigger.query,
+          limit: 6,
+        }),
+        channelTasksApi.listTaskCandidates(serverId, channelId, {
+          q: composerTrigger.query,
+          limit: 6,
+        }),
+      ])
+        .then(([artifacts, taskCandidates]) => {
+          if (cancelled) return;
+          setContextCandidates(
+            [
+              ...artifacts.map(buildArtifactComposerCandidate),
+              ...taskCandidates.map(buildTaskComposerCandidate),
+            ]
+              .filter((candidate) =>
+                getComposerCandidateSearchText(candidate).includes(
+                  composerTrigger.query,
+                ),
+              )
+              .slice(0, 8),
+          );
+        })
+        .catch((error) => {
+          if (!cancelled) {
+            console.error("[ThreadDrawer] load context candidates failed", error);
+            setContextCandidates([]);
+          }
+        });
+    }, 150);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeoutId);
+    };
+  }, [channelId, composerTrigger, serverId]);
+
+  const composerCandidates =
+    composerTrigger?.prefix === "@"
+      ? participantCandidates.slice(0, 8)
+      : contextCandidates;
+
+  const composerActive =
+    composerTrigger !== null && composerCandidates.length > 0;
   const [mentionIndex, setMentionIndex] = React.useState(0);
   React.useEffect(() => {
     setMentionIndex(0);
-  }, [mentionCandidates]);
+  }, [composerCandidates]);
 
-  const insertMention = (candidate: MentionCandidate) => {
-    if (!mentionTrigger) return;
-    const mention = getMentionInsertText(candidate);
-    onDraftChange(
-      `${draft.slice(0, mentionTrigger.start)}${mention}${draft.slice(mentionTrigger.start + mentionTrigger.query.length + 1)}`,
+  const insertCandidate = (candidate: ComposerCandidate) => {
+    if (!composerTrigger) return;
+    const inserted = insertComposerCandidate(draft, composerTrigger, candidate);
+    onDraftChange(inserted.text);
+    onDraftEntitiesChange(
+      filterStaleMessageEntities(inserted.text, [
+        ...draftEntities,
+        inserted.entity,
+      ]),
     );
     textareaRef.current?.focus();
   };
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (mentionActive && event.key === "ArrowDown") {
+    if (composerActive && event.key === "ArrowDown") {
       event.preventDefault();
-      setMentionIndex((i) => (i + 1) % mentionCandidates.length);
+      setMentionIndex((i) => (i + 1) % composerCandidates.length);
       return;
     }
-    if (mentionActive && event.key === "ArrowUp") {
+    if (composerActive && event.key === "ArrowUp") {
       event.preventDefault();
       setMentionIndex(
-        (i) => (i - 1 + mentionCandidates.length) % mentionCandidates.length,
+        (i) => (i - 1 + composerCandidates.length) % composerCandidates.length,
       );
       return;
     }
-    if (mentionActive && event.key === "Enter") {
+    if (composerActive && event.key === "Enter") {
       event.preventDefault();
-      insertMention(mentionCandidates[mentionIndex]);
+      insertCandidate(composerCandidates[mentionIndex]);
       return;
     }
     if (
@@ -225,20 +302,26 @@ export function ThreadDrawer({
           </div>
         ) : null}
         <div className="relative">
-          {mentionActive ? (
+          {composerActive ? (
             <div className="absolute bottom-full left-0 z-20 mb-2 w-full max-w-md rounded-md border border-border bg-popover p-2 shadow-[var(--shadow-lg)]">
               <div className="px-2 pb-2 text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
                 {t("conversationView.mentionCandidates")}
               </div>
               <div className="space-y-1">
-                {mentionCandidates.map((candidate, index) => {
+                {composerCandidates.map((candidate, index) => {
                   const CandidateIcon =
-                    candidate.kind === "agent" ? Bot : UserRound;
+                    candidate.kind === "agent"
+                      ? Bot
+                      : candidate.kind === "user"
+                        ? UserRound
+                        : candidate.kind === "task"
+                          ? SquareCheckBig
+                          : Files;
                   return (
                     <button
                       key={`${candidate.kind}-${candidate.id}`}
                       type="button"
-                      onClick={() => insertMention(candidate)}
+                      onClick={() => insertCandidate(candidate)}
                       className={cn(
                         "flex w-full items-center gap-3 rounded-md px-3 py-2 text-left transition-colors",
                         index === mentionIndex
@@ -254,7 +337,7 @@ export function ThreadDrawer({
                           {candidate.label}
                         </span>
                         <span className="block truncate text-xs text-muted-foreground">
-                          @{candidate.handle} /{" "}
+                          {candidate.metaLabel || candidate.insertedText} /{" "}
                           {t(`conversationView.mentionKinds.${candidate.kind}`)}
                         </span>
                       </span>
@@ -267,7 +350,13 @@ export function ThreadDrawer({
           <Textarea
             ref={textareaRef}
             value={draft}
-            onChange={(event) => onDraftChange(event.target.value)}
+            onChange={(event) => {
+              const nextDraft = event.target.value;
+              onDraftChange(nextDraft);
+              onDraftEntitiesChange(
+                filterStaleMessageEntities(nextDraft, draftEntities),
+              );
+            }}
             onKeyDown={handleKeyDown}
             onCompositionStart={() => {
               isComposingRef.current = true;

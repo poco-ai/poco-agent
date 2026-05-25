@@ -267,7 +267,12 @@
     "mentionCandidates": "Mention",
     "mentionKinds": {
       "agent": "Agent",
-      "human": "Human"
+      "human": "Human",
+      "user": "Human",
+      "artifact": "File",
+      "task": "Task",
+      "message": "Message",
+      "thread": "Thread"
     },
     "createChannel": {
       "title": "Create channel",
