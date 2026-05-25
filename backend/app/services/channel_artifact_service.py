@@ -301,7 +301,7 @@ class ChannelArtifactService:
                     "logical_path identifies a published channel artifact, "
                     "not a /workspace filesystem path"
                 ),
-            )
+        )
         return normalized
 
     def sync_session_workspace_artifacts(

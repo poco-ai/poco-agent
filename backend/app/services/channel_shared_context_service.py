@@ -14,7 +14,11 @@ from app.repositories.server_channel_message_repository import (
     ServerChannelMessageRepository,
 )
 from app.repositories.user_repository import UserRepository
-from app.schemas.agent_trigger import AgentTriggerEnvelope, TriggerReferences, TriggerType
+from app.schemas.agent_trigger import (
+    AgentTriggerEnvelope,
+    TriggerReferences,
+    TriggerType,
+)
 from app.services.storage_service import S3StorageService
 
 
@@ -308,8 +312,9 @@ class ChannelSharedContextService:
                 "- Published artifact logical_path values are not /workspace paths.",
                 "- Use list_channel_artifacts or search_channel_artifacts before "
                 "reading shared files.",
-                "- Use read_channel_artifact with artifact_id or logical_path "
-                "when you need more content.",
+                "- Prefer read_channel_artifact with artifact_id. Use logical_path "
+                "only when passing the exact logical_path returned by artifact tools; "
+                "display_name is not a stable read identifier.",
                 "- Do not assume access to private agent state, raw local mount "
                 "paths, or unpublished session workspace files.",
                 "",
