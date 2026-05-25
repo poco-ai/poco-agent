@@ -99,7 +99,9 @@ function mapTask(task: ChannelTaskResponse): ChannelTask {
   };
 }
 
-function mapTaskCandidate(task: ChannelTaskCandidateResponse): ChannelTaskCandidate {
+function mapTaskCandidate(
+  task: ChannelTaskCandidateResponse,
+): ChannelTaskCandidate {
   return {
     taskId: task.task_id,
     displayNumber: task.display_number,

@@ -706,8 +706,7 @@ class ServerChannelTaskService:
                 or task_number_query == str(task.display_number)
             ]
         return [
-            self._build_task_candidate_response(db, item)
-            for item in tasks[:safe_limit]
+            self._build_task_candidate_response(db, item) for item in tasks[:safe_limit]
         ]
 
     def get_task(

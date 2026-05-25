@@ -72,7 +72,9 @@ class ServerChannelArtifactApiTests(unittest.TestCase):
         )
         list_channel_artifact_nodes.assert_called_once()
 
-    @patch("app.api.v1.server_channel_artifacts.service.list_channel_artifact_candidates")
+    @patch(
+        "app.api.v1.server_channel_artifacts.service.list_channel_artifact_candidates"
+    )
     def test_list_channel_artifact_candidates_returns_flat_payload(
         self,
         list_channel_artifact_candidates,
@@ -82,7 +84,7 @@ class ServerChannelArtifactApiTests(unittest.TestCase):
         artifact_id = uuid.uuid4()
         list_channel_artifact_candidates.return_value = [
             ChannelArtifactCandidateResponse(
-                artifact_id=artifact_id,
+                id=artifact_id,
                 display_name="design.md",
                 logical_path="/Uploads/design.md",
                 mime_type="text/markdown",
