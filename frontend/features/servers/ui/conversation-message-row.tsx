@@ -30,6 +30,7 @@ import type {
   ServerConversationMessage,
   ServerConversationMessageReactionActor,
   ServerExecutionMessageContent,
+  ServerUserPublicProfile,
 } from "@/features/servers/model/types";
 import { useT } from "@/lib/i18n/client";
 import { cn } from "@/lib/utils";
@@ -173,10 +174,66 @@ function getEventActorLabel(value: unknown): string {
   return typeof label === "string" ? label.trim() : "";
 }
 
+type HumanSummaryOverride = {
+  label: string;
+  userId: string | null;
+  user: ServerUserPublicProfile | null;
+};
+
+function normalizeSummaryLookup(value: string | null | undefined): string {
+  return value?.trim().toLowerCase() ?? "";
+}
+
+function findChannelEventAgent(
+  agents: ServerAgentItem[],
+  identityId: string | null | undefined,
+  handle: string | null | undefined,
+  label: string,
+): ServerAgentItem | null {
+  const normalizedHandle = normalizeSummaryLookup(handle);
+  const normalizedLabel = normalizeSummaryLookup(label);
+  return (
+    agents.find((agent) => {
+      return (
+        (identityId && agent.id === identityId) ||
+        (normalizedHandle &&
+          normalizeSummaryLookup(agent.handle) === normalizedHandle) ||
+        (normalizedLabel &&
+          normalizeSummaryLookup(agent.displayName) === normalizedLabel)
+      );
+    }) ?? null
+  );
+}
+
+function findChannelEventMember(
+  members: ServerChannelMemberItem[],
+  userId: string | null | undefined,
+  label: string,
+): ServerChannelMemberItem | null {
+  const normalizedLabel = normalizeSummaryLookup(label);
+  return (
+    members.find((member) => {
+      const memberLabel = getUserDisplayName(member.user, member.userId);
+      return (
+        (userId && member.userId === userId) ||
+        (normalizedLabel &&
+          (normalizeSummaryLookup(member.userId) === normalizedLabel ||
+            normalizeSummaryLookup(memberLabel) === normalizedLabel))
+      );
+    }) ?? null
+  );
+}
+
 function ChannelEventRow({
   message,
+  agents = [],
+  members = [],
+  presets = [],
   compact,
-}: Pick<MessageRowProps, "message" | "compact">) {
+}: Pick<
+  MessageRowProps,
+  "message" | "agents" | "members" | "presets" | "compact"
+>) {
   const { t } = useT("translation");
   const event = getChannelEventContent(message);
   if (!event) {
@@ -216,6 +273,36 @@ function ChannelEventRow({
   });
   const fallbackName =
     event.eventType === "channel.agent_joined" ? target : actor;
+  const summaryUsesTarget = event.eventType === "channel.agent_joined";
+  const summaryAgent = findChannelEventAgent(
+    agents,
+    summaryUsesTarget
+      ? event.targetAgentIdentityId
+      : event.actorAgentIdentityId,
+    summaryUsesTarget ? event.targetAgentHandle : event.actorAgentHandle,
+    fallbackName,
+  );
+  const summaryMember = summaryAgent
+    ? null
+    : findChannelEventMember(
+        members,
+        summaryUsesTarget ? event.targetUserId : event.actorUserId,
+        fallbackName,
+      );
+  const summaryUserId =
+    summaryMember?.userId ??
+    (summaryUsesTarget ? event.targetUserId : event.actorUserId) ??
+    null;
+  const summaryHuman =
+    summaryAgent || (!summaryMember && !summaryUserId)
+      ? null
+      : {
+          label: summaryMember
+            ? getUserDisplayName(summaryMember.user, summaryMember.userId)
+            : fallbackName,
+          userId: summaryUserId,
+          user: summaryMember?.user ?? null,
+        };
   const isJoinEvent =
     event.eventType === "channel.member_joined" ||
     event.eventType === "channel.agent_joined";
@@ -236,9 +323,23 @@ function ChannelEventRow({
       </span>
       <div className="min-w-0 flex-1 truncate leading-6">
         <span className="truncate">
-          <span className="font-medium text-muted-foreground underline decoration-muted-foreground/50 underline-offset-4">
-            {fallbackName}
-          </span>
+          {summaryAgent || summaryHuman ? (
+            <AvatarSummaryTrigger
+              message={message}
+              matchingAgent={summaryAgent}
+              member={summaryMember}
+              presets={presets}
+              humanSummary={summaryHuman}
+            >
+              <span className="font-medium text-muted-foreground underline decoration-muted-foreground/50 underline-offset-4">
+                {fallbackName}
+              </span>
+            </AvatarSummaryTrigger>
+          ) : (
+            <span className="font-medium text-muted-foreground underline decoration-muted-foreground/50 underline-offset-4">
+              {fallbackName}
+            </span>
+          )}
           {label.startsWith(fallbackName)
             ? label.slice(fallbackName.length)
             : ` ${label}`}
@@ -280,11 +381,13 @@ function AvatarSummaryCard({
   matchingAgent,
   member,
   presets,
+  humanSummary,
 }: {
   message: ServerConversationMessage;
   matchingAgent: ServerAgentItem | null;
   member: ServerChannelMemberItem | null;
   presets: Preset[];
+  humanSummary?: HumanSummaryOverride | null;
 }) {
   const { t, i18n } = useT("translation");
 
@@ -325,11 +428,12 @@ function AvatarSummaryCard({
     );
   }
 
-  const author = getMessageAuthor(message);
-  const avatarUrl = getUserAvatarUrl(message.authorUser);
+  const author = humanSummary?.label ?? getMessageAuthor(message);
+  const avatarUrl = getUserAvatarUrl(humanSummary?.user ?? message.authorUser);
+  const authorUserId = humanSummary?.userId ?? message.authorUserId;
   const secondaryLabel =
-    message.authorUserId?.trim() && message.authorUserId !== author
-      ? message.authorUserId
+    authorUserId?.trim() && authorUserId !== author
+      ? authorUserId
       : null;
   const roleLabel = member?.role ?? null;
   const joinedLabel = member?.joinedAt
@@ -389,12 +493,14 @@ function AvatarSummaryTrigger({
   matchingAgent,
   member,
   presets,
+  humanSummary,
 }: {
   children: React.ReactNode;
   message: ServerConversationMessage;
   matchingAgent: ServerAgentItem | null;
   member: ServerChannelMemberItem | null;
   presets: Preset[];
+  humanSummary?: HumanSummaryOverride | null;
 }) {
   return (
     <HoverCard openDelay={120} closeDelay={80}>
@@ -410,6 +516,7 @@ function AvatarSummaryTrigger({
           matchingAgent={matchingAgent}
           member={member}
           presets={presets}
+          humanSummary={humanSummary}
         />
       </HoverCardContent>
     </HoverCard>
@@ -889,7 +996,15 @@ function StandardMessageRow({
 
 export function MessageRow(props: MessageRowProps) {
   if (props.message.messageType === "event") {
-    return <ChannelEventRow message={props.message} compact={props.compact} />;
+    return (
+      <ChannelEventRow
+        message={props.message}
+        agents={props.agents}
+        members={props.members}
+        presets={props.presets}
+        compact={props.compact}
+      />
+    );
   }
   return <StandardMessageRow {...props} />;
 }
