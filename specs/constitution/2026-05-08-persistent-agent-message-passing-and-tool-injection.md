@@ -128,6 +128,20 @@ Poco 应明确区分三类状态：
 - `agent_collaboration`：上游 agent 通过 collaboration tool 显式触发
 - `scheduled_channel_task`：未来由频道任务或定时任务触发，当前只预留语义
 
+#### Message entities 与触发信封
+
+2026-05-25 的结构化 mention 决策把频道消息中的 `@` / `#` 选择结果落为 `server_channel_messages.content.entities`。这些 message entities 是 trigger envelope 的上游语义来源：它们记录用户在可见消息中选择了哪个 agent、artifact、task、message 或 thread；后端校验后再把其中的稳定 id 投影到 `AgentTriggerEnvelope`。
+
+投影关系必须保持清晰：
+
+- `agent/trigger` entity 决定 `target_agent_identity_id` 和 `target_agent_handle`。
+- `artifact/reference` entity 进入 `references.artifact_ids`。
+- `task/reference` entity 进入 `references.task_ids`。
+- `message/reference` 和 `thread/reference` entity 进入 `references.message_ids`。
+- `user/mention` entity 不进入 trigger envelope，只服务渲染、资料卡和未来通知。
+
+这意味着触发信封不应该从 `@handle`、`#filename`、display name 或 logical path 反推运行时对象。文本 token 是用户可读表现；envelope 中的 id 才是 agent run 跨越到 backend 事实源的稳定索引。旧消息没有 entities 时可以继续走 `@handle` 兼容路径，但新消息必须以 entity -> envelope 的投影为主。
+
 ### Agent Session 中的两层消息显示
 
 agent session 的用户输入渲染应拆成：
@@ -329,3 +343,4 @@ flowchart TD
 | 2026-05-08 | 补充单一 `ChannelRuntimeClient` / `__poco_channel_runtime` 注入约束 | 避免新增频道 tool 继续分散到多个 MCP server |
 | 2026-05-10 | 补充 `read_channel_messages` timeline 翻页与显式全量读取契约 | 防止消息读取 tool 语义漂移成只能读取 thread |
 | 2026-05-10 | 补充 `list_channel_tasks` / `read_channel_task` 读工具 | 让 agent 能先理解当前频道任务状态再执行任务写操作 |
+| 2026-05-25 | 补充 message entities 到 trigger envelope 的投影关系 | 对齐结构化 `@` / `#` 设计，明确 id 传递是触发信封的一部分 |
