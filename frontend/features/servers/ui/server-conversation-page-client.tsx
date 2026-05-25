@@ -727,6 +727,7 @@ function ConversationContent({
                   key={message.id}
                   message={message}
                   agents={agents}
+                  members={members}
                   presets={presets}
                   defaultExpanded={index === messages.length - 1}
                   onOpenThread={() => onOpenThread(message)}

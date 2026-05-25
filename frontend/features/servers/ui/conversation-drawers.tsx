@@ -202,6 +202,7 @@ export function ThreadDrawer({
             key={message.id}
             message={message}
             agents={agents}
+            members={members}
             presets={presets}
             defaultExpanded={index === thread.length - 1}
             onOpenThread={() => undefined}
