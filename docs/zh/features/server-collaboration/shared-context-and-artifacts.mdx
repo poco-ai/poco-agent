@@ -1,85 +1,85 @@
 ---
 title: 共享上下文与公共成果树
-description: 让频道成员和 agent 复用同一批公开材料，同时保留私有状态与本地挂载边界。
+description: 让频道成员和 agent 围绕同一批公开材料持续协作，而不是共享整个工作目录。
 ---
 
-Poco 不把整个频道变成共享可写磁盘，而是把“共享成果”单独抽象为 published artifacts。这样你既能在 channel 中复用材料，又不会把 agent 私有状态、session workspace 和 local mount 混在一起。
+Poco 不会把一个频道直接当作共享文件夹来使用。它会把真正值得保留和复用的结果沉淀为公共成果，供后续成员和 agent 持续引用。私有状态、临时输出和宿主机目录仍然保持各自边界，不会混入同一层协作空间。
 
 ## 共享材料的边界
 
-公开成果、私有状态、本地挂载和临时工作区必须分开。Shared files 抽屉只展示已经发布的 artifacts，不展示 agent 的私有状态目录，也不直接暴露宿主机挂载目录。
+在 Poco 中，公开成果、私有状态、本地目录和临时工作区属于不同层次的内容。
 
 ```mermaid
 flowchart TD
-    A["Session workspace output"] --> B["Export / collector"]
-    B --> C["Published artifacts"]
-    C --> D["Shared files tree"]
-    D --> E["Human preview"]
-    D --> F["Agent list/search/read tools"]
-    G["Agent private state"] -. "not auto-published" .-> X["Not shared by default"]
-    H["Local mount"] -. "permission boundary" .-> X
-    I["Temporary runtime files"] -. "session scoped" .-> X
+    A["Task output"] --> B["Published artifact"]
+    B --> C["Shared files"]
+    C --> D["Human review"]
+    C --> E["Agent reuse"]
+    F["Agent private state"] -. "not shared" .-> X["Private boundary"]
+    G["Local directory mount"] -. "explicit host permission" .-> X
+    H["Temporary workspace files"] -. "run-scoped" .-> X
 ```
 
-这个边界让 Poco 可以共享协作成果，同时保留安全和权限语义。Agent 想读取公共成果时，需要通过 channel-scoped tools，而不是直接读取另一个 agent 的文件系统。
+频道中共享的是成果，而不是某个 agent 的完整工作目录。私有笔记、长期状态和宿主机目录不会自动进入共享文件体系。用户看到的应当是一棵可以持续复用的成果树，而不是底层文件结构本身。
 
-## Artifact 如何被发布
+## 共享成果如何沉淀
 
-一次 run 产出文件后，collector 会判断哪些文件属于协作成果，并把它们登记到 channel artifact 索引。每个 artifact 保留来源 agent、来源 run、logical path、mime type 和可预览信息。
+一次任务结束后，并不是所有文件都需要进入协作空间。只有那些会被后续讨论继续引用、并且确实具备复用价值的内容，才会沉淀为共享成果。
 
 ```mermaid
 sequenceDiagram
-    participant Executor as Executor
-    participant Collector as Export / collector
-    participant Backend as Backend
-    participant Channel as Channel shared files
+    participant Task as 任务执行
+    participant Result as 执行结果
+    participant Shared as Shared files
+    participant Team as 团队协作
 
-    Executor->>Collector: 输出 workspace 文件
-    Collector->>Collector: 选择可共享成果
-    Collector->>Backend: 注册 artifact metadata
-    Backend->>Channel: 更新 shared files tree
-    Channel-->>Backend: 人类或 agent 请求读取
-    Backend-->>Channel: 返回授权后的 artifact 内容
+    Task->>Result: 生成文档、页面、图像或图形
+    Result->>Shared: 发布为可复用成果
+    Shared->>Team: 被后续讨论、任务和 agent 继续引用
 ```
 
-## Agent 如何读取共享上下文
+最终留下来的，是经过整理、可以继续使用的公共材料，而不是大量临时文件。对 agent 也是一样：既然已有成果已经足够支撑下一步工作，就不必反复从头生成相同内容。
 
-持久化 agent 不依赖一次性大 prompt 获取所有频道材料。Poco 会注入 channel-scoped runtime tools，让它按需读取线程消息、共享文件、任务状态和 reaction。
+## 共享文件如何在协作中被使用
 
-这些工具都绑定当前 server、channel、session 和 agent identity。Agent 不直接传入这些身份字段，Poco 会从当前 run 解析 scope，再访问后端事实源。
+同一份共享文件，有时用于阅读理解，有时则需要继续处理。Poco 将这两类使用方式明确区分。
 
-- `read_channel_messages` 用于读取频道消息。它可以按 `message_ids` 精确读取，按 `thread_root_message_id` 读取 thread，用 `anchor_message_id + direction` 从某条消息向前或向后翻阅频道 timeline，无 selector 时读取最近一页顶层频道消息，也可以用 `read_all: true` 显式读取当前频道全部消息。
-- `list_channel_artifacts`、`search_channel_artifacts`、`read_channel_artifact` 用于发现和读取 published artifacts。它们不会读取 `/workspace`、`/agent_state`、local mount 路径或未发布的 session 文件。
-- `list_channel_agents` 用于列出当前频道 active agents。
-- `request_agent_collaboration` 用于显式请求另一个 active channel agent 协作。Agent 回复里的 `@handle` 只是可见文本，不会自动触发另一个 agent。
-- `list_channel_tasks`、`read_channel_task` 用于在修改任务前了解团队可见的 channel task。
-- `create_channel_task`、`claim_channel_task`、`update_channel_task_status`、`comment_on_channel_task` 用于操作团队可见的 channel task，不替代 agent 私有执行 todo。
-- `add_channel_message_reaction`、`remove_channel_message_reaction` 用于添加或移除当前 agent 的轻量消息反馈。Reaction 不触发 agent run，也不改变消息正文。
+### 直接理解内容
 
-## 从 # 引用到 Artifact 读取
+常见场景包括：
+- 阅读说明文档
+- 审阅 PDF 简历或报告
+- 总结、比较、提建议
+- 从已有材料中提取重点
 
-`#design.md` 只是输入框里的可读 token，不是读取协议。用户从 `#` picker 选择共享文件时，消息会保存一个 `artifact/reference` entity，它的 `target_id` 是稳定的 `artifact_id`。Backend 校验该 artifact 属于当前 channel 后，才把这个 id 写入 `AgentTriggerEnvelope.references.artifact_ids`。
+这类场景的重点在于基于内容继续理解、分析和回应，而不是先把整份文件转成处理对象。
 
-Agent 运行时应优先调用 `read_channel_artifact(artifact_id=...)`。`display_name` 只服务展示、搜索和历史 fallback，不能当读取 id；`logical_path` 只有在来自 artifact API 或工具返回的完整值时，才可以作为备选读取参数。这样即使频道里存在同名文件，或展示名后来变化，Agent 仍然读取用户实际选择的对象。
+### 基于原文件继续处理
 
-如果 artifact 不存在、参数非法或权限不足，中间层必须保留 Backend 的业务错误语义，而不是统一包装成 500。Agent 看到这类错误时应修正选择器、重新 search/list，或说明引用对象不可用，而不是要求用户重新上传文件。
+常见场景包括：
+- 文档转换
+- 版式调整
+- 抽图、拆页、重排
+- 其他依赖原始文件格式的工作
 
-## 消息读取策略
+这类场景的重点不只是理解内容，而是继续处理文件本身。
 
-消息读取遵循渐进式披露。Agent 先从 trigger message 出发，只在需要时扩大上下文范围。
+将这两条路径区分开之后，阅读型任务可以保持轻量，而需要依赖原文件的任务也能够保留完整处理能力。
 
-- 已知具体消息时，使用 `message_ids`。
-- 需要 reply thread 上下文时，使用 `thread_root_message_id`。
-- 需要查看某条消息附近的频道历史时，使用 `anchor_message_id` 搭配 `direction: "before"` 或 `direction: "after"`。
-- 需要发现最近频道上下文时，不传 selector，读取最近一页顶层频道消息。
-- 只有在确实需要当前频道完整消息集时，才使用 `read_all: true`。这个模式可以返回顶层消息和 thread replies。
+## 从引用到持续协作
 
-当前 anchor 翻页按顶层频道 timeline 工作，不会把 thread replies 合并进同一条线性 timeline。
+在频道中引用共享文件，不只是为了减少重复粘贴，更重要的是让后续讨论始终围绕同一份材料展开。
 
-## 取舍
+用户可以明确告诉 agent 应该参考哪一份文件，而不必重复粘贴内容。即使频道中存在多份相似材料，后续任务推进、回复和新产物也仍然围绕用户选中的那一份继续展开。对于长讨论、多轮协作和多 agent 配合而言，这种稳定性比一次性塞入大量提示词更有价值。
 
-| 方案                               | 问题                                               | Poco 的选择 |
-| ---------------------------------- | -------------------------------------------------- | ----------- |
-| 频道共享可写文件系统               | 权限扩散、并发写冲突、私有状态泄露、本地目录暴露。 | 不采用。    |
-| 只共享聊天消息                     | Agent 无法稳定复用共同成果。                       | 不采用。    |
-| Published artifacts + 只读读取协议 | 可共享、可授权、可审计，不混淆底层文件边界。       | 采用。      |
+## 为什么 Poco 这样设计
+
+Poco 选择“共享成果树”，而不是“共享可写目录”，原因很直接：前者更适合真实协作。
+
+| 方案 | 用户会遇到的问题 | Poco 的选择 |
+| --- | --- | --- |
+| 共享整个目录 | 容易混入临时文件、私有内容和无关结果，协作对象不清晰 | 不采用 |
+| 只共享聊天消息 | 文件成果难以稳定复用，后续工作需要重复上传或重复生成 | 不采用 |
+| 共享成果树 | 公开材料明确、可复用、可持续协作 | 采用 |
+
+对用户来说，这种设计最直接的价值在于三点：公共材料边界更清楚，后续协作不容易丢失上下文，阅读材料与处理文件也能够分别走更合适的路径。

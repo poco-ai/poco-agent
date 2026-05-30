@@ -1,34 +1,37 @@
 ---
 title: Artifacts View
-description: Preview rich task outputs such as HTML, PDF, Markdown, images, video, and diagrams.
+description: Preview rich outputs such as HTML, PDF, Markdown, images, video, and diagrams, then turn the right results into reusable collaboration material.
 ---
 
-Poco provides a dedicated interface for rendered outputs.
+Poco provides a dedicated artifacts view for task results. It is more than an attachment list. It is where a generated result starts to become something the rest of the team can keep using.
 
-## Artifact pipeline
+## What the artifacts view does
 
-After an agent generates files in the sandbox, Poco registers shareable outputs as artifacts. Users can preview them in the artifact view or reuse them as shared files in server collaboration.
+Many agent tasks end with something richer than a text reply. The artifacts view exists so those results can be reviewed, reused, and carried forward.
 
 ```mermaid
-flowchart TD
-    A["Executor workspace"] --> B["Generated files"]
-    B --> C["Artifact collector"]
-    C --> D["Artifact metadata"]
-    D --> E["Preview router"]
-    E --> F["Markdown viewer"]
-    E --> G["HTML preview"]
-    E --> H["PDF viewer"]
-    E --> I["Image / video viewer"]
-    E --> J["Diagram viewers"]
-    D --> K["Shared files"]
+flowchart LR
+    A["Task result"] --> B["Artifacts view"]
+    B --> C["Preview and review"]
+    B --> D["Reuse in collaboration"]
 ```
 
-## Supported output examples
+Users do two things here: decide whether the result is good enough, and decide whether it should live on in later collaboration.
+
+## Supported content types
 
 - HTML
 - PDF
 - Markdown
 - Images and video
-- Xmind, Excalidraw, and Drawio artifacts
+- Xmind, Excalidraw, Drawio, and other diagram outputs
 
-This makes generated results easier to consume without leaving the product.
+## Why this needs a dedicated interface
+
+For many workflows, the real result is not a sentence. It is a document, a page, an image, or a diagram. A dedicated artifacts view keeps those outputs usable inside the product instead of sending users elsewhere just to inspect them.
+
+More importantly, it gives an execution result a chance to stick around. Users can review quality, layout, and readability first; if the result is worth keeping, the team can continue from it instead of starting over.
+
+## Relationship to shared files
+
+When a result is worth reusing in the channel, it stops being only a one-time execution output and becomes part of the shared files layer. Later discussion, task progress, and follow-up agent work can all continue from the same material.
