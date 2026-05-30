@@ -22,6 +22,8 @@ class AgentExecutorChannelArtifactTests(unittest.TestCase):
         self.assertIn("list_channel_artifacts", prompt)
         self.assertIn("search_channel_artifacts", prompt)
         self.assertIn("read_channel_artifact", prompt)
+        self.assertIn("read_channel_artifact_text", prompt)
+        self.assertIn("stage_channel_artifact_to_workspace", prompt)
         self.assertIn("not /workspace filesystem paths", prompt)
 
     def test_compose_prompt_omits_artifact_contract_without_channel_scope(self) -> None:

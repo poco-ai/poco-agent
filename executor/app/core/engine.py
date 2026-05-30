@@ -96,20 +96,23 @@ class AgentExecutor:
         self.hooks = HookManager(hooks)
         self.user_input_client = user_input_client
         self.memory_client = memory_client
+        self.workspace = WorkspaceManager(
+            mount_path=os.environ.get("WORKSPACE_PATH", "/workspace")
+        )
         self.memory_mcp_server = (
             create_memory_mcp_server(memory_client) if memory_client else None
         )
         self.channel_runtime_client = channel_runtime_client
         self.channel_runtime_mcp_server = (
-            create_channel_runtime_mcp_server(channel_runtime_client)
+            create_channel_runtime_mcp_server(
+                channel_runtime_client,
+                workspace_root=str(self.workspace.root_path),
+            )
             if channel_runtime_client
             else None
         )
         self._request_id = request_id
         self._trace_id = trace_id
-        self.workspace = WorkspaceManager(
-            mount_path=os.environ.get("WORKSPACE_PATH", "/workspace")
-        )
 
     def _build_tool_permission_handler(self, permission_mode: str):
         executor = self
@@ -624,6 +627,10 @@ class AgentExecutor:
                 "or search_channel_artifacts, then read_channel_artifact by artifact_id. "
                 "Use logical_path only when you pass the exact logical_path returned by "
                 "the artifact tools; display_name is not a stable read identifier.",
+                "- Use read_channel_artifact_text when you need extracted text from "
+                "supported binary documents such as PDFs without staging the original file.",
+                "- Use stage_channel_artifact_to_workspace when you need the original "
+                "artifact written into /workspace/inputs for local processing.",
                 "- Do not guess that a published artifact exists under "
                 "/workspace, /agent_state, or a local mount path.",
                 "- These artifact tools are scoped to the current server and "
