@@ -2683,39 +2683,21 @@ export function ServerConversationPageClient({
         return;
       }
 
-      const existingNames = new Set(
-        draftAttachments
-          .map((item) => (item.name || "").trim().toLowerCase())
-          .filter(Boolean),
-      );
-
       setIsUploadingDraftFile(true);
       try {
         let uploadedAny = false;
         for (const file of files) {
-          const normalizedName = file.name.trim().toLowerCase();
-          if (existingNames.has(normalizedName)) {
-            toast.error(
-              t("hero.toasts.duplicateFileName", {
-                name: file.name,
-              }),
-            );
-            continue;
-          }
-
           if (file.size > MAX_FILE_SIZE) {
             toast.error(t("hero.toasts.fileTooLarge"));
             continue;
           }
 
           try {
-            const uploadedFile = await serversApi.uploadChannelArtifact(
+            await serversApi.uploadChannelArtifact(
               selectedServerId,
               activeChannelId,
               file,
             );
-            setDraftAttachments((current) => [...current, uploadedFile]);
-            existingNames.add(normalizedName);
             uploadedAny = true;
             toast.success(t("hero.toasts.uploadSuccess"));
             playUploadSound();
@@ -2740,7 +2722,7 @@ export function ServerConversationPageClient({
         setIsUploadingDraftFile(false);
       }
     },
-    [activeChannelId, draftAttachments, selectedServerId, t],
+    [activeChannelId, selectedServerId, t],
   );
 
   const removeDraftAttachment = React.useCallback((index: number) => {
