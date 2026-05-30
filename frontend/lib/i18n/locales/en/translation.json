@@ -185,6 +185,40 @@
       "statusFailed": "Failed to update task status"
     }
   },
+  "runtime": {
+    "states": {
+      "running": "Running",
+      "warmIdle": "Warm idle",
+      "sleeping": "Sleeping",
+      "manuallyStopped": "Stopped",
+      "stale": "Stale",
+      "removed": "Removed",
+      "failed": "Failed",
+      "unknown": "Status unavailable"
+    },
+    "labels": {
+      "pinned": "Pinned"
+    },
+    "fields": {
+      "durationHours": "Pin duration (hours)"
+    },
+    "actions": {
+      "pin": "Pin",
+      "pinned": "Pinned",
+      "unpin": "Unpin",
+      "updatePin": "Update pin"
+    },
+    "descriptions": {
+      "pinAgent": "Keep this agent warm so the idle controller will not stop it during the selected window.",
+      "pinAgentHint": "Use whole hours. Pinned runtimes stay warm until the lease expires or you unpin them."
+    },
+    "toasts": {
+      "pinUpdated": "Runtime pin updated",
+      "pinUpdateFailed": "Failed to update runtime pin",
+      "unpinned": "Runtime unpinned",
+      "unpinFailed": "Failed to unpin runtime"
+    }
+  },
   "conversationView": {
     "title": "Chat",
     "search": "Search",
@@ -634,6 +668,7 @@
       "assignmentStatus": "Assignment status",
       "updatedAt": "Updated",
       "session": "Execution session",
+      "runtime": "Persistent runtime",
       "container": "Sandbox container",
       "lastTriggeredAt": "Last triggered",
       "lastCompletedAt": "Last completed"

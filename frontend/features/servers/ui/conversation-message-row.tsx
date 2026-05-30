@@ -18,6 +18,7 @@ import { toast } from "sonner";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { FileCard } from "@/components/shared/file-card";
+import { PersistentRuntimeBadge } from "@/components/shared/persistent-runtime-badge";
 import type { InputFile } from "@/features/chat/types";
 import {
   getUserAvatarUrl,
@@ -493,14 +494,16 @@ function AvatarSummaryCard({
             fallbackClassName="text-sm"
           />
           <div className="min-w-0 flex-1">
-            <div className="flex min-w-0 items-center gap-1.5">
+            <div className="flex min-w-0 items-center gap-2">
               <p className="truncate text-sm font-semibold">
                 {matchingAgent.displayName}
               </p>
-              <span className="size-1.5 shrink-0 rounded-full bg-muted-foreground" />
-              <span className="shrink-0 text-[11px] leading-none text-muted-foreground">
-                {t(runtimeStatus.labelKey)}
-              </span>
+              <PersistentRuntimeBadge
+                status={runtimeStatus}
+                label={t(runtimeStatus.labelKey)}
+                pinnedLabel={t("runtime.labels.pinned")}
+                className="shrink-0 px-2 py-0.5"
+              />
             </div>
             <p className="mt-0.5 truncate text-xs text-muted-foreground">
               @{matchingAgent.handle}

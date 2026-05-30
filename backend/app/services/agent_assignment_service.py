@@ -210,9 +210,7 @@ class AgentAssignmentService:
                 preset_id=assignment.preset_id,
                 container_mode=container_mode,
                 persistent_runtime_key=(
-                    PersistentRuntimeService.build_assignment_runtime_key(
-                        assignment.id
-                    )
+                    PersistentRuntimeService.build_assignment_runtime_key(assignment.id)
                     if container_mode == "persistent"
                     else None
                 ),
@@ -384,9 +382,11 @@ class AgentAssignmentService:
                         runtime.keepalive_until = None
                         runtime.lifecycle_state = "sleeping"
                     else:
-                        runtime = self._persistent_runtime_service.ensure_assignment_runtime(
-                            db,
-                            assignment=assignment,
+                        runtime = (
+                            self._persistent_runtime_service.ensure_assignment_runtime(
+                                db,
+                                assignment=assignment,
+                            )
                         )
                         self._persistent_runtime_service.mark_removed(
                             db,

@@ -185,6 +185,40 @@
       "statusFailed": "更新任务状态失败"
     }
   },
+  "runtime": {
+    "states": {
+      "running": "运行中",
+      "warmIdle": "热空闲",
+      "sleeping": "休眠中",
+      "manuallyStopped": "已停止",
+      "stale": "状态漂移",
+      "removed": "已移除",
+      "failed": "失败",
+      "unknown": "状态未知"
+    },
+    "labels": {
+      "pinned": "已 Pin"
+    },
+    "fields": {
+      "durationHours": "Pin 时长（小时）"
+    },
+    "actions": {
+      "pin": "Pin",
+      "pinned": "已 Pin",
+      "unpin": "取消 Pin",
+      "updatePin": "更新 Pin"
+    },
+    "descriptions": {
+      "pinAgent": "在所选时间窗口内保持这个 agent 热启动，避免 idle controller 自动停掉它。",
+      "pinAgentHint": "按整小时输入。被 Pin 的 runtime 会一直保温，直到租约到期或你手动取消。"
+    },
+    "toasts": {
+      "pinUpdated": "已更新 runtime Pin",
+      "pinUpdateFailed": "更新 runtime Pin 失败",
+      "unpinned": "已取消 runtime Pin",
+      "unpinFailed": "取消 runtime Pin 失败"
+    }
+  },
   "conversationView": {
     "title": "聊天",
     "search": "搜索",
@@ -634,6 +668,7 @@
       "assignmentStatus": "分配状态",
       "updatedAt": "更新时间",
       "session": "执行会话",
+      "runtime": "持久 runtime",
       "container": "Sandbox 容器",
       "lastTriggeredAt": "最近触发时间",
       "lastCompletedAt": "最近完成时间"

@@ -8,7 +8,7 @@
 | **预期改动范围** | backend persistent runtime registry / executor_manager idle controller / server agent & persistent assignment lifecycle / frontend runtime status & controls / targeted tests |
 | **改动类型** | feature / architecture-evolution |
 | **优先级** | P1 |
-| **状态** | in_progress |
+| **状态** | completed |
 | **关联 issue** | n/a |
 
 ## 实施阶段
@@ -17,8 +17,8 @@
 - [x] Phase 1: 建立 backend persistent runtime registry
 - [x] Phase 2: 将 runtime activity、keepalive 与执行链路打通
 - [x] Phase 3: 为 executor_manager 增加 idle controller 与 restart 路径
-- [ ] Phase 4: 对外暴露 runtime summary、手动保活与睡眠动作
-- [ ] Phase 5: 验证、灰度、回写 spec
+- [x] Phase 4: 对外暴露 runtime summary、手动保活与睡眠动作
+- [x] Phase 5: 验证、灰度、回写 spec
 
 ---
 

@@ -70,7 +70,9 @@ class PersistentRuntimeRepository:
     ) -> list[PersistentRuntime]:
         query = session_db.query(PersistentRuntime)
         if lifecycle_states:
-            query = query.filter(PersistentRuntime.lifecycle_state.in_(lifecycle_states))
+            query = query.filter(
+                PersistentRuntime.lifecycle_state.in_(lifecycle_states)
+            )
         query = query.order_by(PersistentRuntime.updated_at.asc())
         if limit is not None:
             query = query.limit(limit)

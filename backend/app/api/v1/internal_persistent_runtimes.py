@@ -1,5 +1,3 @@
-import uuid
-
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session

@@ -3393,6 +3393,65 @@ export function ServerConversationPageClient({
     }
   };
 
+  const handlePinAgentRuntime = async (
+    agentId: string,
+    durationHours: number,
+  ) => {
+    if (!selectedServerId) {
+      return;
+    }
+    try {
+      await serversApi.pinAgentRuntime(
+        selectedServerId,
+        agentId,
+        durationHours,
+      );
+      await refreshMembership(selectedServerId);
+      if (activeChannelId) {
+        const nextAgents = await serversApi.listChannelAgents(
+          selectedServerId,
+          activeChannelId,
+        );
+        setChannelAgents(nextAgents);
+        setChannelAgentsByChannelId((current) => ({
+          ...current,
+          [activeChannelId]: nextAgents,
+        }));
+      }
+      toast.success(t("runtime.toasts.pinUpdated"));
+    } catch (error) {
+      console.error("[ServersWorkspace] pin agent runtime failed", error);
+      toast.error(t("runtime.toasts.pinUpdateFailed"));
+      throw error;
+    }
+  };
+
+  const handleUnpinAgentRuntime = async (agentId: string) => {
+    if (!selectedServerId) {
+      return;
+    }
+    try {
+      await serversApi.unpinAgentRuntime(selectedServerId, agentId);
+      await refreshMembership(selectedServerId);
+      if (activeChannelId) {
+        const nextAgents = await serversApi.listChannelAgents(
+          selectedServerId,
+          activeChannelId,
+        );
+        setChannelAgents(nextAgents);
+        setChannelAgentsByChannelId((current) => ({
+          ...current,
+          [activeChannelId]: nextAgents,
+        }));
+      }
+      toast.success(t("runtime.toasts.unpinned"));
+    } catch (error) {
+      console.error("[ServersWorkspace] unpin agent runtime failed", error);
+      toast.error(t("runtime.toasts.unpinFailed"));
+      throw error;
+    }
+  };
+
   const handleRemoveServerAgent = async (agentId: string) => {
     if (!selectedServerId) {
       return;
@@ -3865,6 +3924,12 @@ export function ServerConversationPageClient({
                       void handleRestartAgent(agentId)
                     }
                     onStopAgent={(agentId) => void handleStopAgent(agentId)}
+                    onPinAgentRuntime={(agentId, durationHours) =>
+                      handlePinAgentRuntime(agentId, durationHours)
+                    }
+                    onUnpinAgentRuntime={(agentId) =>
+                      handleUnpinAgentRuntime(agentId)
+                    }
                     onUpdateAgentDescription={updateAgentDescription}
                     onRemoveAgentFromServer={(agentId) =>
                       void handleRemoveServerAgent(agentId)

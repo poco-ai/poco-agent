@@ -4,15 +4,13 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Hash, Plus, UserRound } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { PersistentRuntimeBadge } from "@/components/shared/persistent-runtime-badge";
 import type { Preset } from "@/features/capabilities/presets/lib/preset-types";
 import {
   getUserAvatarUrl,
   getUserDisplayName,
 } from "@/features/servers/lib/server-conversation-view";
-import {
-  getAgentRuntimeDotClassName,
-  getAgentRuntimeStatus,
-} from "@/features/servers/lib/agent-runtime-status";
+import { getAgentRuntimeStatus } from "@/features/servers/lib/agent-runtime-status";
 import type {
   ServerAgentItem,
   ServerMemberItem,
@@ -109,15 +107,13 @@ export function ColleaguesPanel({
                           activeChannelIdByAgentId[agent.id] ?? null;
                         return (
                           <>
-                            <span
-                              className={cn(
-                                "size-1.5 rounded-full",
-                                getAgentRuntimeDotClassName(runtimeStatus.tone),
-                              )}
+                            <PersistentRuntimeBadge
+                              status={runtimeStatus}
+                              label={t(runtimeStatus.labelKey)}
+                              pinnedLabel={t("runtime.labels.pinned")}
+                              className="px-2 py-0.5"
                             />
-                            <span>{t(runtimeStatus.labelKey)}</span>
-                            {runtimeStatus.labelKey ===
-                              "conversationView.colleagues.runtimeStates.active" &&
+                            {runtimeStatus.state === "running" &&
                             activeChannelId &&
                             onOpenActiveChannel ? (
                               <span

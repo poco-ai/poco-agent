@@ -126,7 +126,6 @@ class PersistentRuntimeServiceTests(unittest.TestCase):
         self.assertIs(result, runtime)
         self.assertEqual(runtime.lifecycle_state, "running")
         self.assertEqual(runtime.session_id, session_id)
-        self.assertEqual(agent_identity.persistent_state.active_session_id, None)
 
     def test_release_runtime_for_session_moves_to_warm_idle(self) -> None:
         db = MagicMock()

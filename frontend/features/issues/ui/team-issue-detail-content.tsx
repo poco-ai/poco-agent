@@ -38,6 +38,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { PersistentRuntimeBadge } from "@/components/shared/persistent-runtime-badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -77,6 +78,7 @@ import { projectsService } from "@/features/projects/api/projects-api";
 import type { ProjectItem } from "@/features/projects/types";
 import { useLanguage } from "@/hooks/use-language";
 import { useT } from "@/lib/i18n/client";
+import { getPersistentRuntimeStatus } from "@/lib/persistent-runtime-status";
 
 const dateTimeFormatter = new Intl.DateTimeFormat(undefined, {
   dateStyle: "medium",
@@ -427,6 +429,12 @@ export function TeamIssueDetailContent({
 
   const assignment = issue?.agent_assignment;
   const executionMeta = getAssignmentExecutionMeta(assignment);
+  const assignmentRuntimeStatus = getPersistentRuntimeStatus({
+    runtimeLifecycleState: assignment?.runtime_summary?.lifecycle_state,
+    keepaliveUntil: assignment?.runtime_summary?.keepalive_until,
+    fallbackRuntimeStatus: assignment?.container_id ? "busy" : null,
+    hasActiveExecution: Boolean(assignment?.session_id),
+  });
   const selectedPreset =
     form.selectedPresetId !== "none"
       ? (presets.find(
@@ -1037,12 +1045,23 @@ export function TeamIssueDetailContent({
                         <div className="flex w-full flex-col gap-4">
                           <DetailFieldHeader
                             icon={<FolderOpen className="size-3.5" />}
-                            label={t("issues.fields.container")}
+                            label={t("issues.fields.runtime")}
                           />
-                          <div className="flex w-full items-center justify-end text-sm font-medium text-foreground">
-                            <span className="max-w-[12rem] truncate">
-                              {assignment?.container_id ?? t("issues.none")}
-                            </span>
+                          <div className="flex w-full flex-col items-end gap-1 text-sm font-medium text-foreground">
+                            {assignment ? (
+                              <PersistentRuntimeBadge
+                                status={assignmentRuntimeStatus}
+                                label={t(assignmentRuntimeStatus.labelKey)}
+                                pinnedLabel={t("runtime.labels.pinned")}
+                              />
+                            ) : (
+                              <span>{t("issues.none")}</span>
+                            )}
+                            {assignment?.runtime_summary?.container_id ? (
+                              <span className="max-w-[12rem] truncate text-xs text-muted-foreground">
+                                {assignment.runtime_summary.container_id}
+                              </span>
+                            ) : null}
                           </div>
                         </div>
                       </div>

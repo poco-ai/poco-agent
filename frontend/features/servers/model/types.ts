@@ -1,3 +1,5 @@
+import type { PersistentRuntimeSummary } from "@/types/persistent-runtime";
+
 export type ServerKind = "personal" | "shared";
 export type ServerChannelVisibility = "public" | "private";
 export type ServerConversationType = "channel" | "direct_message";
@@ -41,6 +43,7 @@ export interface ServerAgentItem {
   removedAt?: string | null;
   removedBy?: string | null;
   persistentState?: ServerAgentPersistentState | null;
+  runtimeSummary?: PersistentRuntimeSummary | null;
   createdAt: string;
   updatedAt: string;
 }
