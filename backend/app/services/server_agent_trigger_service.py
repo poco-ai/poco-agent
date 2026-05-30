@@ -17,6 +17,7 @@ from app.schemas.agent_trigger import TriggerReferences
 from app.schemas.session import TaskConfig
 from app.schemas.task import TaskEnqueueRequest, TaskEnqueueResponse
 from app.services.channel_shared_context_service import ChannelSharedContextService
+from app.services.persistent_runtime_service import PersistentRuntimeService
 from app.services.task_service import TaskService
 
 
@@ -28,10 +29,14 @@ class ServerAgentTriggerService:
         *,
         task_service: TaskService | None = None,
         shared_context_service: ChannelSharedContextService | None = None,
+        persistent_runtime_service: PersistentRuntimeService | None = None,
     ) -> None:
         self._task_service = task_service or TaskService()
         self._shared_context_service = (
             shared_context_service or ChannelSharedContextService()
+        )
+        self._persistent_runtime_service = (
+            persistent_runtime_service or PersistentRuntimeService()
         )
 
     def _effective_thread_root_message_id(self, message) -> uuid.UUID | None:
@@ -301,13 +306,11 @@ class ServerAgentTriggerService:
                 trigger_type=trigger_type,
                 references=self._collect_trigger_references(message),
             )
-            active_session_id = None
-            if getattr(agent, "persistent_state", None) is not None:
-                active_session_id = getattr(
-                    agent.persistent_state,
-                    "active_session_id",
-                    None,
-                )
+            runtime = self._persistent_runtime_service.ensure_server_agent_runtime(
+                db,
+                agent_identity=agent,
+            )
+            active_session_id = runtime.session_id
 
             request = TaskEnqueueRequest(
                 prompt=trigger_body,
@@ -318,6 +321,7 @@ class ServerAgentTriggerService:
                 config=TaskConfig(
                     preset_id=agent.preset_id,
                     container_mode="persistent",
+                    persistent_runtime_key=runtime.runtime_key,
                     filesystem_mode="sandbox",
                     agent_identity_id=agent.id,
                     agent_runtime_mode="persistent",

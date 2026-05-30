@@ -62,6 +62,7 @@ class TaskConfig(BaseModel):
     user_id: str = ""
     container_mode: Literal["ephemeral", "persistent"] = "ephemeral"
     container_id: str | None = None
+    persistent_runtime_key: str | None = None
     agent_identity_id: UUID | None = None
     channel_task_id: UUID | None = None
     agent_runtime_mode: Literal["persistent", "temporary"] | None = None

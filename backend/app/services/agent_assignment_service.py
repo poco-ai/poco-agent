@@ -27,6 +27,7 @@ from app.schemas.agent_assignment import (
 from app.schemas.session import TaskConfig
 from app.schemas.task import TaskEnqueueRequest
 from app.services.executor_manager_client import ExecutorManagerClient
+from app.services.persistent_runtime_service import PersistentRuntimeService
 from app.services.prompt_builder import PromptBuilder
 from app.services.session_service import SessionService
 from app.services.task_service import TaskService
@@ -41,6 +42,7 @@ class AgentAssignmentService:
         session_service: SessionService | None = None,
         prompt_builder: PromptBuilder | None = None,
         executor_manager_client: ExecutorManagerClient | None = None,
+        persistent_runtime_service: PersistentRuntimeService | None = None,
     ) -> None:
         self._task_service = task_service or TaskService()
         self._session_service = session_service or SessionService()
@@ -48,11 +50,31 @@ class AgentAssignmentService:
         self._executor_manager_client = (
             executor_manager_client or ExecutorManagerClient()
         )
+        self._persistent_runtime_service = (
+            persistent_runtime_service or PersistentRuntimeService()
+        )
         self._audit_rules = get_settings().audit_rules
 
-    @staticmethod
-    def _to_response(assignment: AgentAssignment) -> AgentAssignmentResponse:
-        return AgentAssignmentResponse.model_validate(assignment)
+    def _to_response(
+        self,
+        db: Session,
+        assignment: AgentAssignment,
+    ) -> AgentAssignmentResponse:
+        response = AgentAssignmentResponse.model_validate(assignment)
+        if assignment.trigger_mode != "persistent_sandbox":
+            return response
+        runtime = self._persistent_runtime_service.ensure_assignment_runtime(
+            db,
+            assignment=assignment,
+        )
+        return response.model_copy(
+            update={
+                "runtime_summary": self._persistent_runtime_service.get_runtime(
+                    db,
+                    runtime.runtime_key,
+                )
+            }
+        )
 
     def _log_activity(
         self,
@@ -94,10 +116,6 @@ class AgentAssignmentService:
                 message=f"Invalid cron expression: {value}",
             )
         return value
-
-    @staticmethod
-    def _build_container_id(session_id: uuid.UUID) -> str:
-        return f"exec-{str(session_id)[:8]}"
 
     def _resolve_preset_for_user(self, db: Session, user_id: str, preset_id: int):
         preset = PresetRepository.get_visible_by_id(db, preset_id, user_id)
@@ -191,6 +209,13 @@ class AgentAssignmentService:
             config=TaskConfig(
                 preset_id=assignment.preset_id,
                 container_mode=container_mode,
+                persistent_runtime_key=(
+                    PersistentRuntimeService.build_assignment_runtime_key(
+                        assignment.id
+                    )
+                    if container_mode == "persistent"
+                    else None
+                ),
                 filesystem_mode="sandbox",
             ),
         )
@@ -200,12 +225,12 @@ class AgentAssignmentService:
         assignment.status = "pending"
         assignment.last_triggered_at = datetime.now(timezone.utc)
         assignment.last_completed_at = None
-        assignment.container_id = (
-            self._build_container_id(result.session_id)
-            if container_mode == "persistent"
-            else None
-        )
         issue.status = "in_progress"
+        if container_mode == "persistent":
+            self._persistent_runtime_service.ensure_assignment_runtime(
+                db,
+                assignment=assignment,
+            )
         db.flush()
 
         self._log_activity(
@@ -226,7 +251,7 @@ class AgentAssignmentService:
         db.refresh(assignment)
         db.refresh(issue)
         return AgentAssignmentActionResponse(
-            assignment=self._to_response(assignment),
+            assignment=self._to_response(db, assignment),
             issue_status=issue.status,
         )
 
@@ -288,6 +313,16 @@ class AgentAssignmentService:
                 assignment=existing,
                 metadata={"issue_id": str(issue.id), "preset_id": existing.preset_id},
             )
+            if existing.trigger_mode == "persistent_sandbox":
+                runtime = self._persistent_runtime_service.ensure_assignment_runtime(
+                    db,
+                    assignment=existing,
+                )
+                self._persistent_runtime_service.mark_removed(
+                    db,
+                    runtime_key=runtime.runtime_key,
+                    stop_reason="assignment_unset",
+                )
             return existing
 
         preset = self._resolve_preset_for_user(db, current_user.id, preset_id)
@@ -336,6 +371,28 @@ class AgentAssignmentService:
                 assignment.container_id = None
                 assignment.last_triggered_at = None
                 assignment.last_completed_at = None
+                if previous_trigger_mode == "persistent_sandbox":
+                    if mode == "persistent_sandbox":
+                        runtime = (
+                            self._persistent_runtime_service.ensure_assignment_runtime(
+                                db,
+                                assignment=assignment,
+                            )
+                        )
+                        runtime.session_id = None
+                        runtime.container_id = None
+                        runtime.keepalive_until = None
+                        runtime.lifecycle_state = "sleeping"
+                    else:
+                        runtime = self._persistent_runtime_service.ensure_assignment_runtime(
+                            db,
+                            assignment=assignment,
+                        )
+                        self._persistent_runtime_service.mark_removed(
+                            db,
+                            runtime_key=runtime.runtime_key,
+                            stop_reason="assignment_mode_changed",
+                        )
 
         issue.assignee_user_id = None
         issue.assignee_preset_id = preset.id
@@ -355,6 +412,11 @@ class AgentAssignmentService:
                     "preset_id": assignment.preset_id,
                     "trigger_mode": assignment.trigger_mode,
                 },
+            )
+        if mode == "persistent_sandbox":
+            self._persistent_runtime_service.ensure_assignment_runtime(
+                db,
+                assignment=assignment,
             )
 
         if auto_trigger and mode == "persistent_sandbox":
@@ -389,7 +451,7 @@ class AgentAssignmentService:
             )
         require_workspace_member(db, issue.workspace_id, current_user.id)
         assignment = AgentAssignmentRepository.get_by_issue_id(db, issue_id)
-        return self._to_response(assignment) if assignment is not None else None
+        return self._to_response(db, assignment) if assignment is not None else None
 
     def trigger_assignment(
         self,
@@ -469,6 +531,16 @@ class AgentAssignmentService:
         )
         assignment.status = "cancelled"
         assignment.container_id = None
+        if assignment.trigger_mode == "persistent_sandbox":
+            runtime = self._persistent_runtime_service.ensure_assignment_runtime(
+                db,
+                assignment=assignment,
+            )
+            self._persistent_runtime_service.mark_removed(
+                db,
+                runtime_key=runtime.runtime_key,
+                stop_reason="assignment_cancelled",
+            )
         issue.status = "todo"
         issue.assignee_preset_id = None
         self._log_activity(
@@ -482,7 +554,7 @@ class AgentAssignmentService:
         db.refresh(assignment)
         db.refresh(issue)
         return AgentAssignmentActionResponse(
-            assignment=self._to_response(assignment),
+            assignment=self._to_response(db, assignment),
             issue_status=issue.status,
         )
 
@@ -506,7 +578,7 @@ class AgentAssignmentService:
             )
         if not assignment.container_id:
             return AgentAssignmentActionResponse(
-                assignment=self._to_response(assignment),
+                assignment=self._to_response(db, assignment),
                 issue_status=issue.status,
             )
         try:
@@ -517,6 +589,15 @@ class AgentAssignmentService:
                 message=f"Failed to release sandbox container: {exc}",
             ) from exc
         assignment.container_id = None
+        runtime = self._persistent_runtime_service.ensure_assignment_runtime(
+            db,
+            assignment=assignment,
+        )
+        self._persistent_runtime_service.mark_sleeping(
+            db,
+            runtime_key=runtime.runtime_key,
+            stop_reason="assignment_released",
+        )
         self._log_activity(
             db,
             action="agent_assignment.released",
@@ -527,7 +608,7 @@ class AgentAssignmentService:
         db.commit()
         db.refresh(assignment)
         return AgentAssignmentActionResponse(
-            assignment=self._to_response(assignment),
+            assignment=self._to_response(db, assignment),
             issue_status=issue.status,
         )
 

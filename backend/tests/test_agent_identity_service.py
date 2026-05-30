@@ -1,6 +1,7 @@
 import unittest
 import uuid
 from datetime import UTC, datetime
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 from app.core.errors.error_codes import ErrorCode
@@ -50,7 +51,23 @@ class AgentIdentityServiceTests(unittest.TestCase):
         )
 
     def test_create_agent_creates_identity_and_persistent_state(self) -> None:
-        service = AgentIdentityService()
+        persistent_runtime_service = MagicMock()
+        runtime_stub = SimpleNamespace(
+            runtime_key="server_agent:test",
+            lifecycle_state="sleeping",
+            session_id=None,
+            container_id=None,
+            keepalive_until=None,
+            last_stopped_at=None,
+            last_stop_reason=None,
+        )
+        persistent_runtime_service.ensure_server_agent_runtime.return_value = (
+            runtime_stub
+        )
+        persistent_runtime_service.get_runtime.return_value = None
+        service = AgentIdentityService(
+            persistent_runtime_service=persistent_runtime_service
+        )
         preset = MagicMock(id=7, visual_key="preset-visual-02")
 
         with (
@@ -119,7 +136,7 @@ class AgentIdentityServiceTests(unittest.TestCase):
         self.db.commit.assert_called_once()
 
     def test_create_agent_rejects_duplicate_display_name(self) -> None:
-        service = AgentIdentityService()
+        service = AgentIdentityService(persistent_runtime_service=MagicMock())
         preset = MagicMock(id=7, visual_key="preset-visual-02")
         existing_agent = AgentIdentity(
             id=uuid.uuid4(),
@@ -174,7 +191,7 @@ class AgentIdentityServiceTests(unittest.TestCase):
         self.db.commit.assert_not_called()
 
     def test_add_agent_to_channel_creates_membership(self) -> None:
-        service = AgentIdentityService()
+        service = AgentIdentityService(persistent_runtime_service=MagicMock())
         agent_identity = AgentIdentity(
             id=uuid.uuid4(),
             server_id=self.server.id,
@@ -249,7 +266,7 @@ class AgentIdentityServiceTests(unittest.TestCase):
         self.db.commit.assert_called_once()
 
     def test_add_agent_to_channel_requires_server_admin(self) -> None:
-        service = AgentIdentityService()
+        service = AgentIdentityService(persistent_runtime_service=MagicMock())
         agent_identity_id = uuid.uuid4()
 
         with (
@@ -282,7 +299,14 @@ class AgentIdentityServiceTests(unittest.TestCase):
     def test_restart_agent_cancels_current_execution_without_canceling_queue(
         self,
     ) -> None:
-        service = AgentIdentityService()
+        persistent_runtime_service = MagicMock()
+        persistent_runtime_service.ensure_server_agent_runtime.return_value = (
+            SimpleNamespace(runtime_key="server_agent:test")
+        )
+        persistent_runtime_service.get_runtime.return_value = None
+        service = AgentIdentityService(
+            persistent_runtime_service=persistent_runtime_service
+        )
         session_id = uuid.uuid4()
         agent_identity = AgentIdentity(
             id=uuid.uuid4(),
@@ -314,6 +338,13 @@ class AgentIdentityServiceTests(unittest.TestCase):
             active_task_id=uuid.uuid4(),
             created_at=datetime.now(UTC),
             updated_at=datetime.now(UTC),
+        )
+        persistent_runtime_service._sync_legacy_owner_state.side_effect = (
+            lambda _db, _runtime, channel_task_id: (
+                setattr(agent_identity.persistent_state, "runtime_status", "idle"),
+                setattr(agent_identity.persistent_state, "active_session_id", None),
+                setattr(agent_identity.persistent_state, "active_task_id", None),
+            )
         )
 
         with (
@@ -354,7 +385,13 @@ class AgentIdentityServiceTests(unittest.TestCase):
     def test_remove_agent_from_server_soft_removes_identity_and_memberships(
         self,
     ) -> None:
-        service = AgentIdentityService()
+        persistent_runtime_service = MagicMock()
+        persistent_runtime_service.ensure_server_agent_runtime.return_value = (
+            SimpleNamespace(runtime_key="server_agent:test")
+        )
+        service = AgentIdentityService(
+            persistent_runtime_service=persistent_runtime_service
+        )
         session_id = uuid.uuid4()
         agent_identity = AgentIdentity(
             id=uuid.uuid4(),

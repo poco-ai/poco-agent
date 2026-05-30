@@ -87,6 +87,26 @@ async def lifespan(app: FastAPI):
         )
         logger.info("Agent assignment dispatch service initialized")
 
+    if settings.persistent_runtime_idle_controller_enabled:
+        from app.services.runtime_idle_service import RuntimeIdleService
+
+        interval = max(
+            10, int(settings.persistent_runtime_idle_controller_interval_seconds)
+        )
+        logger.info(
+            "Initializing persistent runtime idle controller...",
+            extra={"interval_seconds": interval},
+        )
+        runtime_idle_service = RuntimeIdleService()
+        scheduler.add_job(
+            runtime_idle_service.scan_once,
+            trigger="interval",
+            seconds=interval,
+            id="persistent-runtime-idle-controller",
+            replace_existing=True,
+        )
+        logger.info("Persistent runtime idle controller initialized")
+
     yield
 
     if pull_service:

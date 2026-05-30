@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 import time
 from pathlib import Path
@@ -32,6 +34,7 @@ class ContainerPool:
 
         self.containers: dict[str, "Container"] = {}
         self.session_to_container: dict[str, str] = {}
+        self.runtime_to_container: dict[str, str] = {}
 
     async def get_or_create_container(
         self,
@@ -68,12 +71,36 @@ class ContainerPool:
             "local_mount" if mount_resolution.resolved_mounts else "sandbox"
         )
         mount_fingerprint = mount_resolution.mount_fingerprint
+        persistent_runtime_key = self._extract_persistent_runtime_key(
+            task_config=task_config,
+            container_mode=container_mode,
+        )
+        resolved_runtime_container_id = self._resolve_persistent_runtime_container_id(
+            task_config
+        )
         resolved_container_id = self._resolve_agent_container_id(
             task_config=task_config,
             container_mode=container_mode,
         )
+        if resolved_runtime_container_id:
+            resolved_container_id = resolved_runtime_container_id
         if resolved_container_id:
             container_id = resolved_container_id
+        if (
+            persistent_runtime_key
+            and not container_id
+            and persistent_runtime_key in self.runtime_to_container
+        ):
+            container_id = self.runtime_to_container[persistent_runtime_key]
+        if persistent_runtime_key and not container_id:
+            existing_container = self.find_container_by_runtime_key(
+                persistent_runtime_key
+            )
+            if existing_container is not None:
+                labels = getattr(existing_container, "labels", None) or {}
+                label_container_id = str(labels.get("container_id") or "").strip()
+                if label_container_id:
+                    container_id = label_container_id
         published_host = (
             self.settings.executor_published_host or ""
         ).strip() or "localhost"
@@ -198,6 +225,7 @@ class ContainerPool:
             "agent_runtime_mode": (
                 str(task_config.get("agent_runtime_mode")) if task_config else ""
             ),
+            "persistent_runtime_key": persistent_runtime_key or "",
         }
 
         step_started = time.perf_counter()
@@ -262,6 +290,8 @@ class ContainerPool:
 
         self.containers[container_id] = container
         self.session_to_container[session_id] = container_id
+        if persistent_runtime_key:
+            self.runtime_to_container[persistent_runtime_key] = container_id
 
         self._wait_for_container_ready(container)
 
@@ -351,6 +381,68 @@ class ContainerPool:
         ):
             return f"agent-{agent_identity_id[:8]}"
         return None
+
+    @staticmethod
+    def _extract_persistent_runtime_key(
+        *,
+        task_config: dict | None,
+        container_mode: str,
+    ) -> str | None:
+        if container_mode != "persistent" or not isinstance(task_config, dict):
+            return None
+        runtime_key = str(task_config.get("persistent_runtime_key") or "").strip()
+        return runtime_key or None
+
+    def _resolve_persistent_runtime_container_id(
+        self,
+        task_config: dict | None,
+    ) -> str | None:
+        if not isinstance(task_config, dict):
+            return None
+        runtime_key = str(task_config.get("persistent_runtime_key") or "").strip()
+        if not runtime_key:
+            return None
+        owner_type, _, owner_id = runtime_key.partition(":")
+        owner_id = owner_id.strip()
+        if not owner_id:
+            return None
+        if owner_type == "server_agent":
+            return f"agent-{owner_id[:8]}"
+        if owner_type == "agent_assignment":
+            return f"assignment-{owner_id[:8]}"
+        return f"runtime-{owner_id[:8]}"
+
+    def find_container_by_runtime_key(
+        self,
+        runtime_key: str,
+    ) -> "Container" | None:
+        tracked_container_id = self.runtime_to_container.get(runtime_key)
+        if tracked_container_id and tracked_container_id in self.containers:
+            return self.containers[tracked_container_id]
+
+        for container_id, container in self.containers.items():
+            labels = getattr(container, "labels", None) or {}
+            if str(labels.get("persistent_runtime_key") or "").strip() == runtime_key:
+                self.runtime_to_container[runtime_key] = container_id
+                return container
+
+        try:
+            found = self.docker_client.containers.list(
+                all=True,
+                filters={"label": f"persistent_runtime_key={runtime_key}"},
+            )
+        except Exception:
+            return None
+        if not found:
+            return None
+
+        container = found[0]
+        labels = getattr(container, "labels", None) or {}
+        container_id = str(labels.get("container_id") or "").strip()
+        if container_id:
+            self.containers[container_id] = container
+            self.runtime_to_container[runtime_key] = container_id
+        return container
 
     def _resolve_agent_state_mount(
         self,
@@ -689,8 +781,22 @@ class ContainerPool:
             self.session_to_container.pop(sid, None)
 
         container = self.containers.pop(cid, None)
+        if container is None:
+            try:
+                found = self.docker_client.containers.list(
+                    all=True,
+                    filters={"label": f"container_id={cid}"},
+                )
+                container = found[0] if found else None
+            except Exception:
+                container = None
         if not container:
             return
+
+        labels = getattr(container, "labels", None) or {}
+        runtime_key = str(labels.get("persistent_runtime_key") or "").strip()
+        if runtime_key:
+            self.runtime_to_container.pop(runtime_key, None)
 
         try:
             self._log_mount_release(container, reason="delete_container")
@@ -781,6 +887,7 @@ class ContainerPool:
         for container in containers_to_stop:
             labels = getattr(container, "labels", None) or {}
             logical_id = labels.get("container_id")
+            runtime_key = str(labels.get("persistent_runtime_key") or "").strip()
             try:
                 self._log_mount_release(
                     container,
@@ -824,6 +931,8 @@ class ContainerPool:
                 ]
                 for sid in bound_sessions:
                     self.session_to_container.pop(sid, None)
+            if runtime_key:
+                self.runtime_to_container.pop(runtime_key, None)
 
         if stop_errors:
             return TaskCancelResult(
@@ -840,6 +949,33 @@ class ContainerPool:
             matched_container_count=len(containers_to_stop),
             stopped_container_count=stopped_count,
         )
+
+    async def sleep_runtime(self, runtime_key: str) -> tuple[str, str | None]:
+        container = self.find_container_by_runtime_key(runtime_key)
+        if container is None:
+            return "not_found", None
+
+        labels = getattr(container, "labels", None) or {}
+        logical_id = str(labels.get("container_id") or "").strip() or None
+        try:
+            self._log_mount_release(container, reason="sleep_runtime")
+            container.stop(timeout=10)
+        except docker.errors.NotFound:
+            pass
+        except Exception:
+            return "failed", logical_id
+
+        if logical_id:
+            self.containers.pop(logical_id, None)
+            bound_sessions = [
+                session_id
+                for session_id, cid in self.session_to_container.items()
+                if cid == logical_id
+            ]
+            for session_id in bound_sessions:
+                self.session_to_container.pop(session_id, None)
+        self.runtime_to_container.pop(runtime_key, None)
+        return "stopped", logical_id
 
     @staticmethod
     def _log_mount_release(

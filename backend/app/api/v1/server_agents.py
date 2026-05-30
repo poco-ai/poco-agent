@@ -10,6 +10,7 @@ from app.models.user import User
 from app.schemas.agent_identity import (
     AgentIdentityCreateRequest,
     AgentIdentityResponse,
+    AgentRuntimePinRequest,
     AgentIdentityUpdateRequest,
     ChannelAgentMemberCreateRequest,
     ChannelAgentMemberResponse,
@@ -106,6 +107,52 @@ async def stop_server_agent(
 ) -> JSONResponse:
     result = service.stop_agent(db, current_user, server_id, agent_identity_id)
     return Response.success(data=result, message="Server agent stopped successfully")
+
+
+@router.post(
+    "/{agent_identity_id}/pin",
+    response_model=ResponseSchema[AgentIdentityResponse],
+)
+async def pin_server_agent_runtime(
+    server_id: uuid.UUID,
+    agent_identity_id: uuid.UUID,
+    request: AgentRuntimePinRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> JSONResponse:
+    result = service.pin_agent_runtime(
+        db,
+        current_user,
+        server_id,
+        agent_identity_id,
+        request,
+    )
+    return Response.success(
+        data=result,
+        message="Server agent runtime pinned successfully",
+    )
+
+
+@router.delete(
+    "/{agent_identity_id}/pin",
+    response_model=ResponseSchema[AgentIdentityResponse],
+)
+async def unpin_server_agent_runtime(
+    server_id: uuid.UUID,
+    agent_identity_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> JSONResponse:
+    result = service.unpin_agent_runtime(
+        db,
+        current_user,
+        server_id,
+        agent_identity_id,
+    )
+    return Response.success(
+        data=result,
+        message="Server agent runtime unpinned successfully",
+    )
 
 
 @router.delete("/{agent_identity_id}", response_model=ResponseSchema[dict])

@@ -64,6 +64,15 @@ class Settings(BaseSettings):
     agent_assignments_dispatch_batch_size: int = Field(
         default=50, alias="AGENT_ASSIGNMENTS_DISPATCH_BATCH_SIZE"
     )
+    persistent_runtime_idle_controller_enabled: bool = Field(
+        default=True, alias="PERSISTENT_RUNTIME_IDLE_CONTROLLER_ENABLED"
+    )
+    persistent_runtime_idle_controller_interval_seconds: int = Field(
+        default=60, alias="PERSISTENT_RUNTIME_IDLE_CONTROLLER_INTERVAL_SECONDS"
+    )
+    persistent_runtime_idle_scan_batch_size: int = Field(
+        default=200, alias="PERSISTENT_RUNTIME_IDLE_SCAN_BATCH_SIZE"
+    )
 
     # Queue-based scheduling (AgentRun.schedule_mode)
     task_pull_immediate_enabled: bool = Field(

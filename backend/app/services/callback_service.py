@@ -26,9 +26,9 @@ from app.schemas.callback import (
 from app.services.run_lifecycle_service import RunLifecycleService
 from app.services.im import ImEventService
 from app.services.agent_assignment_service import AgentAssignmentService
-from app.services.agent_runtime_service import AgentRuntimeService
 from app.services.channel_artifact_service import ChannelArtifactService
 from app.services.pending_skill_creation_service import PendingSkillCreationService
+from app.services.persistent_runtime_service import PersistentRuntimeService
 from app.services.session_queue_service import SessionQueueService
 from app.services.session_service import SessionService
 from app.utils.usage import normalize_usage_payload
@@ -50,7 +50,7 @@ class CallbackService:
         self._session_service = SessionService()
         self._im_events = ImEventService()
         self._assignment_service = AgentAssignmentService()
-        self._agent_runtime_service = AgentRuntimeService()
+        self._persistent_runtime_service = PersistentRuntimeService()
         self._channel_artifact_service = ChannelArtifactService()
 
     def _parse_run_id(self, raw_run_id: str | None) -> uuid.UUID | None:
@@ -1021,7 +1021,7 @@ class CallbackService:
         normalized = (callback_status or "").strip().lower()
         if normalized not in {"completed", "failed", "cancelled", "canceled"}:
             return
-        self._agent_runtime_service.release_runtime_for_session(
+        self._persistent_runtime_service.release_runtime_for_session(
             db,
             session_id=db_session.id,
             callback_status=normalized,
