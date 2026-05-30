@@ -5,6 +5,7 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 from fastapi import UploadFile
+from starlette.datastructures import Headers
 
 from app.core.errors.exceptions import AppException
 from app.models.agent_session import AgentSession
@@ -236,7 +237,7 @@ class ChannelArtifactServiceTests(unittest.TestCase):
         file = UploadFile(
             filename="design.md",
             file=BytesIO(b"# Design\n"),
-            headers={"content-type": "text/markdown"},
+            headers=Headers({"content-type": "text/markdown"}),
         )
         channel = SimpleNamespace(id=self.channel_id, name="Product")
 

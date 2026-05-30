@@ -101,7 +101,10 @@ export function getChannelEventContent(
     artifactDisplayName: readString(message.content, "artifact_display_name"),
     artifactLogicalPath: readString(message.content, "artifact_logical_path"),
     artifactMimeType: readString(message.content, "artifact_mime_type"),
-    artifactSizeBytes: readNumberOrString(message.content, "artifact_size_bytes"),
+    artifactSizeBytes: readNumberOrString(
+      message.content,
+      "artifact_size_bytes",
+    ),
     fromAssignee: message.content.from_assignee,
     toAssignee: message.content.to_assignee,
     assignee: message.content.assignee,

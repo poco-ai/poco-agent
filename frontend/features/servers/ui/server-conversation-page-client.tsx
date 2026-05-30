@@ -2748,7 +2748,10 @@ export function ServerConversationPageClient({
         }));
         toast.success(t("fileSidebar.deleteSuccess"));
       } catch (error) {
-        console.error("[ServersWorkspace] channel artifact delete failed", error);
+        console.error(
+          "[ServersWorkspace] channel artifact delete failed",
+          error,
+        );
         toast.error(t("fileSidebar.deleteFailed"));
       }
     },
@@ -3016,7 +3019,9 @@ export function ServerConversationPageClient({
         targetAgentIdentityId: agentId,
       });
       setChannels((current) => {
-        const nextById = new Map(current.map((channel) => [channel.id, channel]));
+        const nextById = new Map(
+          current.map((channel) => [channel.id, channel]),
+        );
         nextById.set(dm.id, dm);
         return Array.from(nextById.values());
       });

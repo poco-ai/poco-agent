@@ -318,7 +318,10 @@ function ChannelEventRow({
         ? null
         : {
             label: participantMember
-              ? getUserDisplayName(participantMember.user, participantMember.userId)
+              ? getUserDisplayName(
+                  participantMember.user,
+                  participantMember.userId,
+                )
               : participantLabel,
             userId: participantUserId,
             user: participantMember?.user ?? null,
