@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.core.errors.error_codes import ErrorCode
 from app.core.errors.exceptions import AppException
+from app.models.agent_identity import AgentIdentity
 from app.models.server_channel import ServerChannel
 from app.models.server_channel_agent_member import ServerChannelAgentMember
 from app.models.server_channel_member import ServerChannelMember
@@ -93,10 +94,53 @@ class ServerChannelService:
         return slug
 
     @staticmethod
-    def _build_channel_response(channel: ServerChannel) -> ServerChannelResponse:
+    def _agent_direct_message_name(agent_identity: AgentIdentity) -> str:
+        return f"@{agent_identity.handle}"
+
+    @classmethod
+    def _build_channel_response(
+        cls,
+        channel: ServerChannel,
+        *,
+        direct_agents: dict[uuid.UUID, AgentIdentity] | None = None,
+    ) -> ServerChannelResponse:
+        response_updates: dict[str, object] = {
+            "is_system_channel": channel.system_channel_type is not None,
+        }
+        if (
+            channel.conversation_type == "direct_message"
+            and channel.direct_agent_identity_id is not None
+        ):
+            agent_identity = (direct_agents or {}).get(channel.direct_agent_identity_id)
+            if agent_identity is not None:
+                response_updates["name"] = cls._agent_direct_message_name(
+                    agent_identity,
+                )
         return ServerChannelResponse.model_validate(channel).model_copy(
-            update={"is_system_channel": channel.system_channel_type is not None}
+            update=response_updates,
         )
+
+    @classmethod
+    def _build_channel_responses(
+        cls,
+        db: Session,
+        channels: list[ServerChannel],
+    ) -> list[ServerChannelResponse]:
+        direct_agent_ids: set[uuid.UUID] = set()
+        for channel in channels:
+            if (
+                channel.conversation_type == "direct_message"
+                and channel.direct_agent_identity_id is not None
+            ):
+                direct_agent_ids.add(channel.direct_agent_identity_id)
+        direct_agents = {
+            agent.id: agent
+            for agent in AgentIdentityRepository.list_by_ids(db, direct_agent_ids)
+        }
+        return [
+            cls._build_channel_response(item, direct_agents=direct_agents)
+            for item in channels
+        ]
 
     @staticmethod
     def _user_label(user: User) -> str:
@@ -132,7 +176,7 @@ class ServerChannelService:
             server_id,
             current_user.id,
         )
-        return [self._build_channel_response(item) for item in channels]
+        return self._build_channel_responses(db, channels)
 
     def create_channel(
         self,
@@ -575,6 +619,7 @@ class ServerChannelService:
 
         direct_user_id = request.target_user_id
         direct_agent_identity_id = request.target_agent_identity_id
+        agent_identity: AgentIdentity | None = None
 
         if direct_user_id:
             membership = ServerMemberRepository.get_by_server_and_user(
@@ -610,15 +655,27 @@ class ServerChannelService:
             direct_agent_identity_id=direct_agent_identity_id,
         )
         if existing is not None:
-            return self._build_channel_response(existing)
+            direct_agents = (
+                {agent_identity.id: agent_identity}
+                if agent_identity is not None
+                else None
+            )
+            return self._build_channel_response(existing, direct_agents=direct_agents)
 
-        slug_seed = direct_user_id or str(direct_agent_identity_id)
-        slug = self._unique_slug(db, server.id, self._slugify(f"dm-{slug_seed}"))
-        name = (
-            f"DM {direct_user_id}"
-            if direct_user_id
-            else f"DM {str(direct_agent_identity_id)[:8]}"
-        )
+        if agent_identity is not None:
+            slug = self._unique_slug(
+                db,
+                server.id,
+                self._slugify(f"dm-{agent_identity.handle}"),
+            )
+            name = self._agent_direct_message_name(agent_identity)
+        else:
+            slug = self._unique_slug(
+                db,
+                server.id,
+                self._slugify(f"dm-{direct_user_id}"),
+            )
+            name = f"DM {direct_user_id}"
         channel = ServerChannelRepository.create(
             db,
             ServerChannel(

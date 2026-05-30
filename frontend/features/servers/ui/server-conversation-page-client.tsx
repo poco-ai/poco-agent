@@ -2650,6 +2650,7 @@ export function ServerConversationPageClient({
       if (!selectedServerId) {
         return;
       }
+      setMode("conversation");
       setIsMobileDetailVisible(true);
       saveLastSelection({
         mode: channel.conversationType === "direct_message" ? "dm" : "channel",
@@ -2998,6 +2999,11 @@ export function ServerConversationPageClient({
     try {
       const dm = await serversApi.createDirectMessage(selectedServerId, {
         targetAgentIdentityId: agentId,
+      });
+      setChannels((current) => {
+        const nextById = new Map(current.map((channel) => [channel.id, channel]));
+        nextById.set(dm.id, dm);
+        return Array.from(nextById.values());
       });
       openChannel(dm);
     } catch (error) {
