@@ -107,6 +107,25 @@ class ServerChannelArtifactApiTests(unittest.TestCase):
         self.assertEqual(body["data"][0]["logical_path"], "/Uploads/design.md")
         list_channel_artifact_candidates.assert_called_once()
 
+    @patch("app.api.v1.server_channel_artifacts.service.delete_channel_artifact")
+    def test_delete_channel_artifact_returns_deleted_id(
+        self,
+        delete_channel_artifact,
+    ) -> None:
+        server_id = uuid.uuid4()
+        channel_id = uuid.uuid4()
+        artifact_id = uuid.uuid4()
+
+        response = self.client.delete(
+            f"/api/v1/servers/{server_id}/channels/{channel_id}/artifacts/{artifact_id}",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["code"], 0)
+        self.assertEqual(body["data"]["id"], str(artifact_id))
+        delete_channel_artifact.assert_called_once()
+
 
 if __name__ == "__main__":
     unittest.main()

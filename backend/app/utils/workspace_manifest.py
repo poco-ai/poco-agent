@@ -82,6 +82,8 @@ def _build_tree_from_files(files: list[dict[str, Any]]) -> list[dict[str, Any]]:
                     "name": part,
                     "path": normalized,
                     "mimeType": item.get("mimeType") or item.get("mime_type"),
+                    "artifact_id": item.get("artifact_id") or item.get("artifactId"),
+                    "source_kind": item.get("source_kind") or item.get("sourceKind"),
                     "oss_status": item.get("status") or item.get("oss_status"),
                     "oss_meta": _build_oss_meta(item),
                 }
@@ -141,6 +143,8 @@ def _tree_to_nodes(tree: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
                     "type": "file",
                     "path": payload.get("path") or f"/{name}",
                     "mimeType": payload.get("mimeType"),
+                    "artifact_id": payload.get("artifact_id"),
+                    "source_kind": payload.get("source_kind"),
                     "oss_status": payload.get("oss_status"),
                     "oss_meta": payload.get("oss_meta"),
                 }

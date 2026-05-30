@@ -35,6 +35,7 @@ from app.services.server_channel_event_service import (
     create_channel_event_message,
 )
 from app.services.server_channel_access import require_channel_member_access
+from app.services.server_member_service import require_server_member
 from app.services.storage_service import S3StorageService
 from app.utils.workspace import build_workspace_file_nodes
 from app.utils.workspace_manifest import (
@@ -463,6 +464,78 @@ class ChannelArtifactService:
             path=artifact.logical_path,
         )
 
+    def delete_channel_artifact(
+        self,
+        db: Session,
+        *,
+        current_user: Any,
+        server_id: uuid.UUID,
+        channel_id: uuid.UUID,
+        artifact_id: uuid.UUID,
+    ) -> None:
+        channel = require_channel_member_access(
+            db,
+            server_id=server_id,
+            channel_id=channel_id,
+            user_id=current_user.id,
+        )
+        membership = require_server_member(db, server_id, current_user.id)
+        artifact = ChannelArtifactRepository.get_by_channel_and_id(
+            db,
+            channel_id=channel_id,
+            artifact_id=artifact_id,
+        )
+        if artifact is None or artifact.server_id != server_id:
+            raise AppException(
+                error_code=ErrorCode.NOT_FOUND,
+                message=f"Channel artifact not found: {artifact_id}",
+            )
+        if artifact.source_kind != self.UPLOAD_SOURCE_KIND:
+            raise AppException(
+                error_code=ErrorCode.BAD_REQUEST,
+                message="Only user-uploaded channel artifacts can be deleted",
+            )
+        is_admin = getattr(membership, "role", None) in {"owner", "admin"}
+        if artifact.publisher_user_id != current_user.id and not is_admin:
+            raise AppException(
+                error_code=ErrorCode.FORBIDDEN,
+                message="Only the uploader or server admins can delete this file",
+            )
+
+        display_name = artifact.display_name
+        logical_path = artifact.logical_path
+        mime_type = artifact.mime_type
+        size_bytes = artifact.size_bytes
+        object_key = artifact.object_key
+        source_kind = artifact.source_kind
+
+        self._storage.delete_object(key=object_key)
+        ChannelArtifactRepository.delete(db, artifact)
+        create_channel_event_message(
+            db,
+            channel_id=channel_id,
+            event_type="artifact.deleted",
+            actor=ChannelEventActor(
+                actor_type="user",
+                actor_user_id=current_user.id,
+                actor_label=self._user_label(current_user),
+            ),
+            target=ChannelEventTarget(target_label=display_name),
+            content={
+                "artifact_id": str(artifact_id),
+                "artifact_display_name": display_name,
+                "artifact_logical_path": logical_path,
+                "artifact_mime_type": mime_type,
+                "artifact_size_bytes": size_bytes,
+                "source_kind": source_kind,
+            },
+            text_preview=(
+                f"{self._user_label(current_user)} deleted "
+                f"{display_name} from {channel.name}"
+            ),
+        )
+        db.commit()
+
     def list_runtime_artifacts(
         self,
         db: Session,
@@ -647,6 +720,8 @@ class ChannelArtifactService:
                     "path": relative_path,
                     "key": artifact.object_key,
                     "mimeType": artifact.mime_type,
+                    "artifact_id": str(artifact.id),
+                    "source_kind": artifact.source_kind,
                     "size": getattr(artifact, "size_bytes", None),
                 }
             )

@@ -2725,6 +2725,36 @@ export function ServerConversationPageClient({
     [activeChannelId, selectedServerId, t],
   );
 
+  const deleteSharedArtifact = React.useCallback(
+    async (file: FileNode) => {
+      if (!selectedServerId || !activeChannelId || !file.artifact_id) {
+        return;
+      }
+
+      try {
+        await serversApi.deleteChannelArtifact(
+          selectedServerId,
+          activeChannelId,
+          file.artifact_id,
+        );
+        const [nextArtifacts, nextMessages] = await Promise.all([
+          serversApi.listChannelArtifacts(selectedServerId, activeChannelId),
+          serversApi.listMessages(selectedServerId, activeChannelId),
+        ]);
+        setChannelArtifacts(nextArtifacts);
+        setMessagesByChannel((current) => ({
+          ...current,
+          [activeChannelId]: nextMessages,
+        }));
+        toast.success(t("fileSidebar.deleteSuccess"));
+      } catch (error) {
+        console.error("[ServersWorkspace] channel artifact delete failed", error);
+        toast.error(t("fileSidebar.deleteFailed"));
+      }
+    },
+    [activeChannelId, selectedServerId, t],
+  );
+
   const removeDraftAttachment = React.useCallback((index: number) => {
     setDraftAttachments((current) => current.filter((_, i) => i !== index));
   }, []);
@@ -3791,6 +3821,7 @@ export function ServerConversationPageClient({
                     files={channelArtifacts}
                     isLoading={isLoading}
                     onClose={() => setDrawer({ type: "none" })}
+                    onDeleteFile={deleteSharedArtifact}
                     fileListLayoutClassName="xl:grid-cols-[minmax(0,1fr)_minmax(10rem,12rem)]"
                   />
                 ) : drawer.type === "colleague" ? (

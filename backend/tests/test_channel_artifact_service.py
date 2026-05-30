@@ -6,6 +6,7 @@ from unittest.mock import MagicMock, patch
 
 from fastapi import UploadFile
 
+from app.core.errors.exceptions import AppException
 from app.models.agent_session import AgentSession
 from app.services.channel_artifact_service import ChannelArtifactService
 
@@ -171,6 +172,8 @@ class ChannelArtifactServiceTests(unittest.TestCase):
             plan_children[0].url,
             "https://example.com/rate-limit-plan.md",
         )
+        self.assertEqual(plan_children[0].artifact_id, str(artifacts[0].id))
+        self.assertEqual(plan_children[0].source_kind, "workspace_export")
 
     def test_list_channel_artifact_candidates_returns_flat_matches(self) -> None:
         artifact_id = uuid.uuid4()
@@ -278,6 +281,103 @@ class ChannelArtifactServiceTests(unittest.TestCase):
             create_event.call_args.kwargs["content"]["artifact_logical_path"],
             "/Uploads/design.md",
         )
+
+    def test_delete_channel_artifact_removes_user_upload(self) -> None:
+        artifact_id = uuid.uuid4()
+        artifact = SimpleNamespace(
+            id=artifact_id,
+            server_id=self.server_id,
+            channel_id=self.channel_id,
+            publisher_user_id="user-1",
+            logical_path="/Uploads/design.md",
+            display_name="design.md",
+            mime_type="text/markdown",
+            object_key="channel-artifacts/server/channel/Uploads/artifact/file",
+            source_kind="user_upload",
+            size_bytes=12,
+        )
+
+        with (
+            patch(
+                "app.services.channel_artifact_service.require_channel_member_access",
+                return_value=SimpleNamespace(id=self.channel_id, name="Product"),
+            ),
+            patch(
+                "app.services.channel_artifact_service.require_server_member",
+                return_value=SimpleNamespace(role="member"),
+            ),
+            patch(
+                "app.services.channel_artifact_service."
+                "ChannelArtifactRepository.get_by_channel_and_id",
+                return_value=artifact,
+            ),
+            patch(
+                "app.services.channel_artifact_service.ChannelArtifactRepository.delete"
+            ) as delete_artifact,
+            patch.object(self.service._storage, "delete_object") as delete_object,
+            patch(
+                "app.services.channel_artifact_service.create_channel_event_message"
+            ) as create_event,
+        ):
+            self.service.delete_channel_artifact(
+                self.db,
+                current_user=SimpleNamespace(
+                    id="user-1",
+                    display_name="Alice",
+                    primary_email="alice@example.com",
+                ),
+                server_id=self.server_id,
+                channel_id=self.channel_id,
+                artifact_id=artifact_id,
+            )
+
+        delete_object.assert_called_once_with(key=artifact.object_key)
+        delete_artifact.assert_called_once_with(self.db, artifact)
+        create_event.assert_called_once()
+        self.assertEqual(
+            create_event.call_args.kwargs["event_type"],
+            "artifact.deleted",
+        )
+        self.db.commit.assert_called_once()
+
+    def test_delete_channel_artifact_rejects_workspace_export(self) -> None:
+        artifact_id = uuid.uuid4()
+        artifact = SimpleNamespace(
+            id=artifact_id,
+            server_id=self.server_id,
+            channel_id=self.channel_id,
+            publisher_user_id="user-1",
+            logical_path="/plans/design.md",
+            display_name="design.md",
+            mime_type="text/markdown",
+            object_key="workspaces/user-1/session/files/plans/design.md",
+            source_kind="workspace_export",
+            size_bytes=12,
+        )
+
+        with (
+            patch(
+                "app.services.channel_artifact_service.require_channel_member_access",
+                return_value=SimpleNamespace(id=self.channel_id, name="Product"),
+            ),
+            patch(
+                "app.services.channel_artifact_service.require_server_member",
+                return_value=SimpleNamespace(role="member"),
+            ),
+            patch(
+                "app.services.channel_artifact_service."
+                "ChannelArtifactRepository.get_by_channel_and_id",
+                return_value=artifact,
+            ),
+            self.assertRaises(AppException),
+        ):
+            self.service.delete_channel_artifact(
+                self.db,
+                current_user=SimpleNamespace(id="user-1"),
+                server_id=self.server_id,
+                channel_id=self.channel_id,
+                artifact_id=artifact_id,
+            )
 
     def test_read_runtime_artifact_returns_truncated_text(self) -> None:
         artifact_id = uuid.uuid4()

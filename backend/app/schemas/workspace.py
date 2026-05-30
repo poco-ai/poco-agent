@@ -17,6 +17,8 @@ class FileNode(BaseModel):
     children: list["FileNode"] | None = None
     url: str | None = None
     mimeType: str | None = None
+    artifact_id: str | None = None
+    source_kind: str | None = None
     oss_status: str | None = None
     oss_meta: dict[str, Any] | None = None
     source: FileSource = "workspace"

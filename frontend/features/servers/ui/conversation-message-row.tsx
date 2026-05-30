@@ -7,6 +7,7 @@ import {
   ChevronDown,
   ChevronUp,
   Copy,
+  FileX,
   FileUp,
   MessageSquare,
   Shield,
@@ -345,7 +346,8 @@ function ChannelEventRow({
   const isJoinEvent =
     event.eventType === "channel.member_joined" ||
     event.eventType === "channel.agent_joined";
-  const isArtifactEvent = event.eventType === "artifact.uploaded";
+  const isArtifactUploadEvent = event.eventType === "artifact.uploaded";
+  const isArtifactDeleteEvent = event.eventType === "artifact.deleted";
   const participantClassName =
     "font-medium text-muted-foreground underline decoration-muted-foreground/50 underline-offset-4";
   const renderParticipant = (
@@ -418,8 +420,10 @@ function ChannelEventRow({
       <span className="flex size-7 shrink-0 items-center justify-center text-base">
         {isJoinEvent ? (
           <span aria-hidden="true">👋</span>
-        ) : isArtifactEvent ? (
+        ) : isArtifactUploadEvent ? (
           <FileUp className="size-4" aria-hidden="true" />
+        ) : isArtifactDeleteEvent ? (
+          <FileX className="size-4" aria-hidden="true" />
         ) : (
           <SquareCheckBig className="size-4" aria-hidden="true" />
         )}

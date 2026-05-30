@@ -13,6 +13,7 @@ import {
   Download,
   PackagePlus,
   Settings,
+  Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { FileNode } from "@/features/chat/types";
@@ -37,6 +38,7 @@ interface FileSidebarProps {
   embedded?: boolean;
   onPackageSkill?: (node: FileNode) => void;
   onDownloadNode?: (node: FileNode) => void;
+  onDeleteNode?: (node: FileNode) => void;
 }
 
 function collectSkillFolderPaths(nodes: FileNode[]): Set<string> {
@@ -116,6 +118,7 @@ function FileTreeItem({
   level = 0,
   onPackageSkill,
   onDownloadNode,
+  onDeleteNode,
   canDownloadFolder,
   skillFolderPaths,
 }: {
@@ -125,6 +128,7 @@ function FileTreeItem({
   level?: number;
   onPackageSkill?: (node: FileNode) => void;
   onDownloadNode?: (node: FileNode) => void;
+  onDeleteNode?: (node: FileNode) => void;
   canDownloadFolder: boolean;
   skillFolderPaths: ReadonlySet<string>;
 }) {
@@ -144,7 +148,12 @@ function FileTreeItem({
     skillFolderPaths.has(node.path) &&
     Boolean(onPackageSkill) &&
     !node.path.startsWith("__");
-  const hasActions = canDownloadNode || canPackageAsSkill;
+  const canDeleteNode =
+    node.type === "file" &&
+    node.source_kind === "user_upload" &&
+    Boolean(node.artifact_id) &&
+    Boolean(onDeleteNode);
+  const hasActions = canDownloadNode || canPackageAsSkill || canDeleteNode;
 
   // Check if this node or any of its children is the selected one
   const containsSelected = React.useMemo(() => {
@@ -313,6 +322,18 @@ function FileTreeItem({
                   {t("fileSidebar.packageAsSkill")}
                 </DropdownMenuItem>
               ) : null}
+              {canDeleteNode ? (
+                <DropdownMenuItem
+                  className="hover:text-destructive focus:text-destructive"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onDeleteNode?.(node);
+                  }}
+                >
+                  <Trash2 className="mr-2 size-4 text-current" />
+                  {t("fileSidebar.delete")}
+                </DropdownMenuItem>
+              ) : null}
             </DropdownMenuContent>
           </DropdownMenu>
         ) : null}
@@ -328,6 +349,7 @@ function FileTreeItem({
               level={level + 1}
               onPackageSkill={onPackageSkill}
               onDownloadNode={onDownloadNode}
+              onDeleteNode={onDeleteNode}
               canDownloadFolder={canDownloadFolder}
               skillFolderPaths={skillFolderPaths}
             />
@@ -347,6 +369,7 @@ export function FileSidebar({
   embedded = false,
   onPackageSkill,
   onDownloadNode,
+  onDeleteNode,
 }: FileSidebarProps) {
   const { t } = useT("translation");
   const canDownloadArchive = Boolean(sessionId || runId) && files.length > 0;
@@ -429,6 +452,7 @@ export function FileSidebar({
                 selectedId={selectedFile?.id}
                 onPackageSkill={onPackageSkill}
                 onDownloadNode={onDownloadNode}
+                onDeleteNode={onDeleteNode}
                 canDownloadFolder={canDownloadFolder}
                 skillFolderPaths={skillFolderPaths}
               />

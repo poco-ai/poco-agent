@@ -117,4 +117,8 @@ test("getChannelEventLabelKey falls back for unknown event types", () => {
     getChannelEventLabelKey("artifact.uploaded"),
     "conversationView.events.artifactUploaded",
   );
+  assert.equal(
+    getChannelEventLabelKey("artifact.deleted"),
+    "conversationView.events.artifactDeleted",
+  );
 });
