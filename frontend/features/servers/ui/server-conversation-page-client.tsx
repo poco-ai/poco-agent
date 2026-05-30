@@ -2726,12 +2726,15 @@ export function ServerConversationPageClient({
         }
 
         if (uploadedAny) {
-          setChannelArtifacts(
-            await serversApi.listChannelArtifacts(
-              selectedServerId,
-              activeChannelId,
-            ),
-          );
+          const [nextArtifacts, nextMessages] = await Promise.all([
+            serversApi.listChannelArtifacts(selectedServerId, activeChannelId),
+            serversApi.listMessages(selectedServerId, activeChannelId),
+          ]);
+          setChannelArtifacts(nextArtifacts);
+          setMessagesByChannel((current) => ({
+            ...current,
+            [activeChannelId]: nextMessages,
+          }));
         }
       } finally {
         setIsUploadingDraftFile(false);

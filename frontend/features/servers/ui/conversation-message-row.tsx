@@ -7,6 +7,7 @@ import {
   ChevronDown,
   ChevronUp,
   Copy,
+  FileUp,
   MessageSquare,
   Shield,
   SmilePlus,
@@ -252,13 +253,32 @@ function ChannelEventRow({
   const fromAssignee = getEventActorLabel(event.fromAssignee);
   const toAssignee = getEventActorLabel(event.toAssignee);
   const task = taskNumber ? `#${taskNumber}: ${taskTitle}` : taskTitle;
-  const labelKey =
-    event.eventType === "task.created" && assignee
-      ? "conversationView.events.taskCreatedAssigned"
-      : getChannelEventLabelKey(event.eventType);
+  const artifact =
+    event.artifactDisplayName?.trim() ||
+    event.artifactLogicalPath?.trim() ||
+    event.targetLabel?.trim() ||
+    "";
+  const labelKey = (() => {
+    if (event.eventType === "task.created" && assignee) {
+      return "conversationView.events.taskCreatedAssigned";
+    }
+    if (event.eventType === "channel.member_joined") {
+      if (event.joinReason === "admin_added") {
+        return "conversationView.events.channelMemberInvited";
+      }
+      if (event.joinReason === "server_invite") {
+        return "conversationView.events.channelMemberJoinedByInvite";
+      }
+    }
+    if (event.eventType === "channel.agent_joined") {
+      return "conversationView.events.channelAgentInvited";
+    }
+    return getChannelEventLabelKey(event.eventType);
+  })();
   const label = t(labelKey, {
     actor,
     target,
+    artifact,
     task,
     taskTitle,
     taskNumber,
@@ -269,9 +289,10 @@ function ChannelEventRow({
     fromStatus: event.fromStatus ?? "",
     toStatus: event.toStatus ?? event.status ?? "",
   });
-  const fallbackName =
-    event.eventType === "channel.agent_joined" ? target : actor;
-  const summaryUsesTarget = event.eventType === "channel.agent_joined";
+  const summaryUsesTarget =
+    event.eventType === "channel.member_joined" &&
+    event.joinReason !== "admin_added";
+  const fallbackName = summaryUsesTarget ? target : actor;
   const summaryAgent = findChannelEventAgent(
     agents,
     summaryUsesTarget
@@ -304,6 +325,7 @@ function ChannelEventRow({
   const isJoinEvent =
     event.eventType === "channel.member_joined" ||
     event.eventType === "channel.agent_joined";
+  const isArtifactEvent = event.eventType === "artifact.uploaded";
 
   return (
     <article
@@ -315,6 +337,8 @@ function ChannelEventRow({
       <span className="flex size-7 shrink-0 items-center justify-center text-base">
         {isJoinEvent ? (
           <span aria-hidden="true">👋</span>
+        ) : isArtifactEvent ? (
+          <FileUp className="size-4" aria-hidden="true" />
         ) : (
           <SquareCheckBig className="size-4" aria-hidden="true" />
         )}

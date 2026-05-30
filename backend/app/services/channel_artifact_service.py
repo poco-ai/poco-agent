@@ -29,6 +29,11 @@ from app.schemas.channel_artifact import (
 )
 from app.schemas.input_file import InputFile
 from app.schemas.workspace import FileNode
+from app.services.server_channel_event_service import (
+    ChannelEventActor,
+    ChannelEventTarget,
+    create_channel_event_message,
+)
 from app.services.server_channel_access import require_channel_member_access
 from app.services.storage_service import S3StorageService
 from app.utils.workspace import build_workspace_file_nodes
@@ -63,6 +68,16 @@ class ChannelArtifactService:
 
     def __init__(self) -> None:
         self._storage = S3StorageService()
+
+    @staticmethod
+    def _user_label(user: Any) -> str:
+        display_name = str(getattr(user, "display_name", "") or "").strip()
+        if display_name:
+            return display_name
+        primary_email = str(getattr(user, "primary_email", "") or "").strip()
+        if primary_email:
+            return primary_email
+        return str(getattr(user, "id", "") or "User")
 
     @staticmethod
     def _parse_scope_ids(
@@ -363,7 +378,7 @@ class ChannelArtifactService:
         channel_id: uuid.UUID,
         file: UploadFile,
     ) -> InputFile:
-        require_channel_member_access(
+        channel = require_channel_member_access(
             db,
             server_id=server_id,
             channel_id=channel_id,
@@ -413,6 +428,29 @@ class ChannelArtifactService:
             is_previewable=True,
         )
         db.add(artifact)
+        create_channel_event_message(
+            db,
+            channel_id=channel_id,
+            event_type="artifact.uploaded",
+            actor=ChannelEventActor(
+                actor_type="user",
+                actor_user_id=current_user.id,
+                actor_label=self._user_label(current_user),
+            ),
+            target=ChannelEventTarget(target_label=artifact.display_name),
+            content={
+                "artifact_id": str(artifact.id),
+                "artifact_display_name": artifact.display_name,
+                "artifact_logical_path": artifact.logical_path,
+                "artifact_mime_type": artifact.mime_type,
+                "artifact_size_bytes": artifact.size_bytes,
+                "source_kind": artifact.source_kind,
+            },
+            text_preview=(
+                f"{self._user_label(current_user)} uploaded "
+                f"{artifact.display_name} to {channel.name}"
+            ),
+        )
         db.commit()
         db.refresh(artifact)
         return InputFile(

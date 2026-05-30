@@ -1,7 +1,10 @@
 import unittest
 import uuid
+from io import BytesIO
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
+
+from fastapi import UploadFile
 
 from app.models.agent_session import AgentSession
 from app.services.channel_artifact_service import ChannelArtifactService
@@ -225,6 +228,56 @@ class ChannelArtifactServiceTests(unittest.TestCase):
         self.assertEqual(result[0].logical_path, "/Uploads/design.md")
         assert result[0].publisher is not None
         self.assertEqual(result[0].publisher.label, "Alice")
+
+    def test_upload_channel_artifact_emits_channel_event(self) -> None:
+        file = UploadFile(
+            filename="design.md",
+            file=BytesIO(b"# Design\n"),
+            headers={"content-type": "text/markdown"},
+        )
+        channel = SimpleNamespace(id=self.channel_id, name="Product")
+
+        with (
+            patch(
+                "app.services.channel_artifact_service.require_channel_member_access",
+                return_value=channel,
+            ),
+            patch(
+                "app.services.channel_artifact_service."
+                "ChannelArtifactRepository.get_by_channel_and_path",
+                return_value=None,
+            ),
+            patch.object(self.service._storage, "upload_fileobj"),
+            patch(
+                "app.services.channel_artifact_service.create_channel_event_message"
+            ) as create_event,
+        ):
+            result = self.service.upload_channel_artifact(
+                self.db,
+                current_user=SimpleNamespace(
+                    id="user-1",
+                    display_name="Alice",
+                    primary_email="alice@example.com",
+                ),
+                server_id=self.server_id,
+                channel_id=self.channel_id,
+                file=file,
+            )
+
+        self.assertEqual(result.name, "design.md")
+        create_event.assert_called_once()
+        self.assertEqual(
+            create_event.call_args.kwargs["event_type"],
+            "artifact.uploaded",
+        )
+        self.assertEqual(
+            create_event.call_args.kwargs["content"]["artifact_display_name"],
+            "design.md",
+        )
+        self.assertEqual(
+            create_event.call_args.kwargs["content"]["artifact_logical_path"],
+            "/Uploads/design.md",
+        )
 
     def test_read_runtime_artifact_returns_truncated_text(self) -> None:
         artifact_id = uuid.uuid4()
