@@ -1,6 +1,8 @@
+import mimetypes
 import os
 import re
 import uuid
+from io import BytesIO
 from pathlib import PurePosixPath
 from typing import Any, cast
 
@@ -20,10 +22,12 @@ from app.repositories.server_channel_agent_member_repository import (
 from app.repositories.session_repository import SessionRepository
 from app.repositories.user_repository import UserRepository
 from app.schemas.channel_artifact import (
+    AgentChannelArtifactDownloadResponse,
     AgentChannelArtifactListResponse,
     AgentChannelArtifactMetadata,
     AgentChannelArtifactReadResponse,
     AgentChannelArtifactSearchResponse,
+    AgentChannelArtifactTextResponse,
     ChannelArtifactCandidateResponse,
     ChannelArtifactPublisherSummary,
 )
@@ -51,6 +55,8 @@ class ChannelArtifactService:
     _CONTROL_CHARS = re.compile(r"[\x00-\x1f\x7f-\x9f]+")
     DEFAULT_READ_BYTES = 32 * 1024
     MAX_READ_BYTES = 64 * 1024
+    DEFAULT_TEXT_CHARS = 12_000
+    MAX_TEXT_CHARS = 50_000
     TEXT_EXTENSIONS = {
         ".md",
         ".txt",
@@ -66,6 +72,7 @@ class ChannelArtifactService:
         ".sql",
         ".csv",
     }
+    PDF_EXTENSIONS = {".pdf"}
 
     def __init__(self) -> None:
         self._storage = S3StorageService()
@@ -202,6 +209,18 @@ class ChannelArtifactService:
     @classmethod
     def _content_kind(cls, artifact: ChannelArtifact) -> str:
         return "text" if cls._is_text_artifact(artifact) else "binary"
+
+    @classmethod
+    def _is_pdf_artifact(cls, artifact: ChannelArtifact) -> bool:
+        mime_type = artifact.mime_type or ""
+        if mime_type == "application/pdf":
+            return True
+        suffix = PurePosixPath(artifact.logical_path).suffix.lower()
+        return suffix in cls.PDF_EXTENSIONS
+
+    @classmethod
+    def _supports_text_extraction(cls, artifact: ChannelArtifact) -> bool:
+        return cls._is_text_artifact(artifact) or cls._is_pdf_artifact(artifact)
 
     @classmethod
     def _metadata(cls, artifact: ChannelArtifact) -> AgentChannelArtifactMetadata:
@@ -548,15 +567,14 @@ class ChannelArtifactService:
             artifacts=[self._metadata(artifact) for artifact in artifacts]
         )
 
-    def read_runtime_artifact(
+    def _resolve_runtime_artifact(
         self,
         db: Session,
         *,
         session_id: uuid.UUID,
         artifact_id: uuid.UUID | None = None,
         logical_path: str | None = None,
-        max_bytes: int | None = None,
-    ) -> AgentChannelArtifactReadResponse:
+    ) -> ChannelArtifact:
         _, channel_id, _ = self._resolve_runtime_scope(db, session_id=session_id)
         artifact: ChannelArtifact | None = None
         if artifact_id is not None:
@@ -583,7 +601,57 @@ class ChannelArtifactService:
                 error_code=ErrorCode.NOT_FOUND,
                 message="Channel artifact not found",
             )
+        return artifact
 
+    def _extract_pdf_text_from_bytes(self, content: bytes) -> str:
+        try:
+            from pypdf import PdfReader
+        except ImportError as exc:
+            raise AppException(
+                error_code=ErrorCode.EXTERNAL_SERVICE_ERROR,
+                message="PDF text extraction dependency is not installed",
+            ) from exc
+
+        try:
+            reader = PdfReader(BytesIO(content))
+            parts = [(page.extract_text() or "").strip() for page in reader.pages]
+        except Exception as exc:
+            raise AppException(
+                error_code=ErrorCode.EXTERNAL_SERVICE_ERROR,
+                message="Failed to extract text from PDF artifact",
+                details={"error": str(exc)},
+            ) from exc
+
+        return "\n\n".join(part for part in parts if part).strip()
+
+    @staticmethod
+    def _slice_text_content(
+        content: str,
+        *,
+        start_char: int,
+        max_chars: int,
+    ) -> tuple[str, int, int, int | None]:
+        total_chars = len(content)
+        safe_start = min(start_char, total_chars)
+        end_char = min(safe_start + max_chars, total_chars)
+        next_start_char = end_char if end_char < total_chars else None
+        return content[safe_start:end_char], safe_start, end_char, next_start_char
+
+    def read_runtime_artifact(
+        self,
+        db: Session,
+        *,
+        session_id: uuid.UUID,
+        artifact_id: uuid.UUID | None = None,
+        logical_path: str | None = None,
+        max_bytes: int | None = None,
+    ) -> AgentChannelArtifactReadResponse:
+        artifact = self._resolve_runtime_artifact(
+            db,
+            session_id=session_id,
+            artifact_id=artifact_id,
+            logical_path=logical_path,
+        )
         metadata = self._metadata(artifact)
         if not self._is_text_artifact(artifact):
             return AgentChannelArtifactReadResponse(
@@ -614,6 +682,80 @@ class ChannelArtifactService:
             artifact=metadata,
             content=content,
             truncated=truncated,
+        )
+
+    def read_runtime_artifact_text(
+        self,
+        db: Session,
+        *,
+        session_id: uuid.UUID,
+        artifact_id: uuid.UUID | None = None,
+        logical_path: str | None = None,
+        start_char: int = 0,
+        max_chars: int = DEFAULT_TEXT_CHARS,
+    ) -> AgentChannelArtifactTextResponse:
+        artifact = self._resolve_runtime_artifact(
+            db,
+            session_id=session_id,
+            artifact_id=artifact_id,
+            logical_path=logical_path,
+        )
+        if not self._supports_text_extraction(artifact):
+            raise AppException(
+                error_code=ErrorCode.BAD_REQUEST,
+                message="Artifact does not support text extraction",
+            )
+
+        safe_max_chars = min(max_chars, self.MAX_TEXT_CHARS)
+        extraction_kind = "text"
+        if self._is_text_artifact(artifact):
+            content = self._storage.get_text(artifact.object_key)
+        else:
+            extraction_kind = "pdf_text"
+            content = self._extract_pdf_text_from_bytes(
+                self._storage.get_bytes(artifact.object_key)
+            )
+
+        chunk, safe_start, end_char, next_start_char = self._slice_text_content(
+            content,
+            start_char=start_char,
+            max_chars=safe_max_chars,
+        )
+        return AgentChannelArtifactTextResponse(
+            artifact=self._metadata(artifact),
+            content=chunk,
+            start_char=safe_start,
+            end_char=end_char,
+            next_start_char=next_start_char,
+            total_chars=len(content),
+            has_more=next_start_char is not None,
+            extraction_kind=cast(Any, extraction_kind),
+        )
+
+    def download_runtime_artifact(
+        self,
+        db: Session,
+        *,
+        session_id: uuid.UUID,
+        artifact_id: uuid.UUID | None = None,
+        logical_path: str | None = None,
+    ) -> AgentChannelArtifactDownloadResponse:
+        artifact = self._resolve_runtime_artifact(
+            db,
+            session_id=session_id,
+            artifact_id=artifact_id,
+            logical_path=logical_path,
+        )
+        media_type = (
+            artifact.mime_type
+            or mimetypes.guess_type(artifact.display_name)[0]
+            or "application/octet-stream"
+        )
+        return AgentChannelArtifactDownloadResponse(
+            artifact=self._metadata(artifact),
+            filename=artifact.display_name,
+            media_type=media_type,
+            content=self._storage.get_bytes(artifact.object_key),
         )
 
     def search_runtime_artifacts(

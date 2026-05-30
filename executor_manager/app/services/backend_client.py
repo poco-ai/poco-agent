@@ -1,4 +1,5 @@
 import asyncio
+from dataclasses import dataclass
 from typing import Any
 
 import httpx
@@ -12,6 +13,13 @@ from app.core.observability.request_context import (
     get_request_id,
     get_trace_id,
 )
+
+
+@dataclass
+class BinaryProxyResponse:
+    content: bytes
+    media_type: str
+    headers: dict[str, str]
 
 
 class BackendClient:
@@ -678,6 +686,24 @@ class BackendClient:
             response.raise_for_status()
             return response.json().get("data")
 
+    async def read_agent_channel_artifact_text(
+        self,
+        session_id: str,
+        payload: dict[str, Any],
+    ) -> Any:
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"{self.base_url}/api/v1/internal/channel-artifacts/text",
+                params={"session_id": session_id},
+                json=payload,
+                headers={
+                    "X-Internal-Token": self.settings.internal_api_token,
+                    **self._trace_headers(),
+                },
+            )
+            response.raise_for_status()
+            return response.json().get("data")
+
     async def search_agent_channel_artifacts(
         self,
         session_id: str,
@@ -695,6 +721,39 @@ class BackendClient:
             )
             response.raise_for_status()
             return response.json().get("data")
+
+    async def download_agent_channel_artifact(
+        self,
+        session_id: str,
+        payload: dict[str, Any],
+    ) -> "BinaryProxyResponse":
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"{self.base_url}/api/v1/internal/channel-artifacts/download",
+                params={"session_id": session_id},
+                json=payload,
+                headers={
+                    "X-Internal-Token": self.settings.internal_api_token,
+                    **self._trace_headers(),
+                },
+            )
+            response.raise_for_status()
+            forwarded_headers = {
+                key: value
+                for key, value in response.headers.items()
+                if key.lower().startswith("x-artifact-")
+            }
+            if "content-disposition" in response.headers:
+                forwarded_headers["content-disposition"] = response.headers[
+                    "content-disposition"
+                ]
+            return BinaryProxyResponse(
+                content=response.content,
+                media_type=response.headers.get(
+                    "content-type", "application/octet-stream"
+                ),
+                headers=forwarded_headers,
+            )
 
     async def update_agent_channel_task_status(
         self,

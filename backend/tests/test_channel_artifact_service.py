@@ -591,6 +591,115 @@ class ChannelArtifactServiceTests(unittest.TestCase):
         self.assertEqual(len(result.artifacts), 1)
         self.assertEqual(result.artifacts[0].logical_path, "/plans/rate-limit-plan.md")
 
+    def test_read_runtime_artifact_text_extracts_pdf_content_with_offsets(self) -> None:
+        artifact = SimpleNamespace(
+            id=uuid.uuid4(),
+            channel_id=self.channel_id,
+            agent_identity_id=None,
+            publisher_user_id="user-1",
+            logical_path="/Uploads/resume.pdf",
+            display_name="resume.pdf",
+            mime_type="application/pdf",
+            object_key="objects/resume.pdf",
+            source_kind="user_upload",
+            source_session_id=None,
+            size_bytes=4096,
+            is_previewable=True,
+        )
+
+        with (
+            patch(
+                "app.services.channel_artifact_service.SessionRepository.get_by_id",
+                return_value=self.session,
+            ),
+            patch(
+                "app.services.channel_artifact_service."
+                "ServerChannelAgentMemberRepository.get_by_channel_and_agent",
+                return_value=SimpleNamespace(),
+            ),
+            patch(
+                "app.services.channel_artifact_service."
+                "ChannelArtifactRepository.get_by_channel_and_path",
+                return_value=artifact,
+            ),
+            patch.object(
+                self.service._storage,
+                "get_bytes",
+                return_value=b"%PDF-1.7",
+                create=True,
+            ),
+            patch.object(
+                self.service,
+                "_extract_pdf_text_from_bytes",
+                return_value="Alpha Beta Gamma",
+            ),
+        ):
+            result = self.service.read_runtime_artifact_text(
+                self.db,
+                session_id=self.session_id,
+                logical_path="/Uploads/resume.pdf",
+                start_char=6,
+                max_chars=4,
+            )
+
+        self.assertEqual(result.artifact.display_name, "resume.pdf")
+        self.assertEqual(result.content, "Beta")
+        self.assertEqual(result.start_char, 6)
+        self.assertEqual(result.end_char, 10)
+        self.assertEqual(result.next_start_char, 10)
+        self.assertEqual(result.total_chars, 16)
+        self.assertTrue(result.has_more)
+        self.assertEqual(result.extraction_kind, "pdf_text")
+
+    def test_download_runtime_artifact_returns_binary_payload(self) -> None:
+        artifact = SimpleNamespace(
+            id=uuid.uuid4(),
+            channel_id=self.channel_id,
+            agent_identity_id=None,
+            publisher_user_id="user-1",
+            logical_path="/Uploads/resume.pdf",
+            display_name="resume.pdf",
+            mime_type="application/pdf",
+            object_key="objects/resume.pdf",
+            source_kind="user_upload",
+            source_session_id=None,
+            size_bytes=9,
+            is_previewable=True,
+        )
+
+        with (
+            patch(
+                "app.services.channel_artifact_service.SessionRepository.get_by_id",
+                return_value=self.session,
+            ),
+            patch(
+                "app.services.channel_artifact_service."
+                "ServerChannelAgentMemberRepository.get_by_channel_and_agent",
+                return_value=SimpleNamespace(),
+            ),
+            patch(
+                "app.services.channel_artifact_service."
+                "ChannelArtifactRepository.get_by_channel_and_id",
+                return_value=artifact,
+            ),
+            patch.object(
+                self.service._storage,
+                "get_bytes",
+                return_value=b"%PDF-1.7",
+                create=True,
+            ),
+        ):
+            result = self.service.download_runtime_artifact(
+                self.db,
+                session_id=self.session_id,
+                artifact_id=artifact.id,
+            )
+
+        self.assertEqual(result.artifact.display_name, "resume.pdf")
+        self.assertEqual(result.filename, "resume.pdf")
+        self.assertEqual(result.media_type, "application/pdf")
+        self.assertEqual(result.content, b"%PDF-1.7")
+
 
 if __name__ == "__main__":
     unittest.main()
