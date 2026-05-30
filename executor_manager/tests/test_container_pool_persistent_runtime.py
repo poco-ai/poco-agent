@@ -23,6 +23,7 @@ class ContainerPoolPersistentRuntimeTests(unittest.TestCase):
             }
         )
 
+        self.assertIsNotNone(agent_runtime_id)
         self.assertTrue(agent_runtime_id.startswith("agent-"))
         self.assertEqual(assignment_runtime_id, f"assignment-{str(assignment_id)[:8]}")
 

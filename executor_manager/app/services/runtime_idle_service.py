@@ -1,12 +1,18 @@
 from datetime import datetime, timezone
 import logging
-from typing import Any
+from typing import Protocol
 
-from app.core.settings import Settings, get_settings
+from app.core.settings import get_settings
 from app.services.backend_client import BackendClient
 from app.services.container_pool import ContainerPool
 
 logger = logging.getLogger(__name__)
+
+
+class RuntimeIdleSettings(Protocol):
+    persistent_runtime_idle_controller_enabled: bool
+    persistent_runtime_idle_scan_batch_size: int
+    worker_id: str
 
 
 def _parse_datetime(raw_value: object) -> datetime | None:
@@ -26,7 +32,7 @@ class RuntimeIdleService:
     def __init__(
         self,
         *,
-        settings: Settings | None = None,
+        settings: RuntimeIdleSettings | None = None,
         backend_client: BackendClient | None = None,
         container_pool: ContainerPool | None = None,
     ) -> None:
@@ -40,7 +46,9 @@ class RuntimeIdleService:
 
         runtimes = await self.backend_client.list_controller_persistent_runtimes(
             lifecycle_states=["running", "warm_idle", "stale"],
-            limit=getattr(self.settings, "persistent_runtime_idle_scan_batch_size", 200),
+            limit=getattr(
+                self.settings, "persistent_runtime_idle_scan_batch_size", 200
+            ),
         )
         now = datetime.now(timezone.utc)
 

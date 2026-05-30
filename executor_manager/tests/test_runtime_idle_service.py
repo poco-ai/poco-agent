@@ -1,10 +1,15 @@
 import asyncio
 import unittest
 import uuid
-from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 from app.services.runtime_idle_service import RuntimeIdleService
+
+
+class StubSettings:
+    persistent_runtime_idle_controller_enabled = True
+    persistent_runtime_idle_scan_batch_size = 200
+    worker_id = "worker-1"
 
 
 class RuntimeIdleServiceTests(unittest.TestCase):
@@ -33,10 +38,7 @@ class RuntimeIdleServiceTests(unittest.TestCase):
         )
 
         service = RuntimeIdleService(
-            settings=SimpleNamespace(
-                persistent_runtime_idle_controller_enabled=True,
-                worker_id="worker-1",
-            ),
+            settings=StubSettings(),
             backend_client=backend_client,
             container_pool=container_pool,
         )
@@ -68,10 +70,7 @@ class RuntimeIdleServiceTests(unittest.TestCase):
         container_pool.find_container_by_runtime_key.return_value = None
 
         service = RuntimeIdleService(
-            settings=SimpleNamespace(
-                persistent_runtime_idle_controller_enabled=True,
-                worker_id="worker-1",
-            ),
+            settings=StubSettings(),
             backend_client=backend_client,
             container_pool=container_pool,
         )
