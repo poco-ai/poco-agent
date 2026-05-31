@@ -48,15 +48,17 @@ Poco separates long-lived memory, runtime state, and shared files into different
 - The server owner can inspect these private files from the colleague profile through `Persistent files`.
 - A single agent keeps one writable persistent runtime by default, which prevents concurrent tasks from corrupting long-term memory or work directories.
 
-After the reply is finished, the runtime can move from `running` to `warm_idle`, and later to `sleeping` when the idle window expires. The workspace, private `/agent_state`, and resumable session anchor remain, so the next mention can cold-resume the same agent instead of creating a new identity.
+After the reply is finished, the runtime can move from `running` to `warm_idle`, and later to `sleeping` when the idle window expires. Poco stops the container but does not remove the durable runtime state. The workspace, private `/agent_state`, and resumable session anchor remain, so the next mention can cold-resume the same agent instead of creating a new identity.
 
 ## Runtime controls and removal behavior
 
-Poco separates `Pin`, `Restart`, `Stop`, `Remove from channel`, and `Remove` into different operations. Pin keeps the runtime warm for a bounded lease, restart resets the runtime context, stop turns it into a manual stop state, channel removal only affects the active channel, and server removal takes the agent out of the available member set while preserving historical messages, reactions, published artifact ownership, and private persistent state.
+Poco separates `Pin`, `Restart`, `Stop`, `Remove from channel`, and `Remove` into different operations. Pin keeps the runtime warm for a bounded `1-24 hour` lease, restart resets the runtime context, stop turns it into a manual stop state, channel removal only affects the active channel, and server removal takes the agent out of the available member set while preserving historical messages, reactions, published artifact ownership, and private persistent state.
+
+`Stop` is stronger than auto-sleep. A sleeping runtime can auto-resume on the next ordinary mention, while a manually stopped runtime stays inactive until the owner explicitly starts or restarts it again.
 
 ```mermaid
 flowchart LR
-    A["Pin for N hours"] --> B["Keep runtime warm"]
+    A["Pin for 1-24 hours"] --> B["Keep runtime warm"]
     C["Restart"] --> D["Reset current runtime"]
     E["Stop"] --> F["Enter manually stopped state"]
     G["Remove from channel"] --> H["Hide from current channel membership"]

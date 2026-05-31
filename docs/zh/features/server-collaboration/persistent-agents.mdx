@@ -50,15 +50,17 @@ sequenceDiagram
 - `notes/` 保存长期协作笔记。
 - `state/` 保存运行所需的结构化状态。
 
-一次回复结束后，runtime 会先进入 `warm_idle`，在空闲窗口到期后再进入 `sleeping`。Workspace、私有 `/agent_state` 和可恢复 session 锚点都会保留，因此下一次 mention 可以恢复同一个 agent，而不是重新创建陌生身份。
+一次回复结束后，runtime 会先进入 `warm_idle`，在空闲窗口到期后再进入 `sleeping`。这里默认做的是 `stop` 容器，而不是 `remove` 整个长期 runtime 状态。Workspace、私有 `/agent_state` 和可恢复 session 锚点都会保留，因此下一次 mention 可以恢复同一个 agent，而不是重新创建陌生身份。
 
 ## 运行控制和移除语义
 
-Poco 把 `Pin`、`Restart`、`Stop`、`Remove from channel` 和 `Remove` 区分成不同操作。Pin 用于在有限租约内保持 runtime 热启动，重启与停止处理 runtime，channel 移除处理当前频道可见性，server 移除处理成员集合，但历史消息、reaction、执行记录和已发布产物仍然保留。
+Poco 把 `Pin`、`Restart`、`Stop`、`Remove from channel` 和 `Remove` 区分成不同操作。Pin 用于在 `1-24 小时` 的有限租约内保持 runtime 热启动，重启与停止处理 runtime，channel 移除处理当前频道可见性，server 移除处理成员集合，但历史消息、reaction、执行记录和已发布产物仍然保留。
+
+`Stop` 的语义也强于自动休眠。`sleeping` 状态下，普通 mention 可以自动恢复；而 `manually_stopped` 状态下，普通 mention 不会自动拉起，必须由 owner 显式重新启动或重启。
 
 ```mermaid
 flowchart LR
-    A["Pin N 小时"] --> B["保持 runtime 热启动"]
+    A["Pin 1-24 小时"] --> B["保持 runtime 热启动"]
     C["Restart"] --> D["重置当前 runtime 上下文"]
     E["Stop"] --> F["进入 manually stopped 状态"]
     G["Remove from channel"] --> H["从当前频道成员中移除"]
