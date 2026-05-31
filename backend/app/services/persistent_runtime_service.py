@@ -69,6 +69,94 @@ class PersistentRuntimeService:
             self.get_by_runtime_key(db, runtime_key)
         )
 
+    def build_server_agent_runtime_summary(
+        self,
+        db: Session,
+        *,
+        agent_identity: AgentIdentity,
+    ) -> PersistentRuntimeResponse:
+        runtime_key = self.build_server_agent_runtime_key(agent_identity.id)
+        existing = PersistentRuntimeRepository.get_by_runtime_key(db, runtime_key)
+        if existing is not None:
+            return PersistentRuntimeResponse.model_validate(existing)
+
+        persistent_state = agent_identity.persistent_state
+        active_session_id = (
+            persistent_state.active_session_id if persistent_state is not None else None
+        )
+        runtime_status = (
+            (persistent_state.runtime_status or "").strip().lower()
+            if persistent_state is not None
+            else ""
+        )
+        lifecycle_state = "running" if runtime_status == "busy" else "sleeping"
+
+        return PersistentRuntimeResponse(
+            persistent_runtime_id=uuid.uuid4(),
+            runtime_key=runtime_key,
+            owner_type="server_agent",
+            owner_id=agent_identity.id,
+            agent_identity_id=agent_identity.id,
+            assignment_id=None,
+            session_id=active_session_id,
+            container_id=None,
+            lifecycle_state=lifecycle_state,
+            auto_resume=True,
+            idle_timeout_seconds=self.DEFAULT_SERVER_AGENT_IDLE_TIMEOUT_SECONDS,
+            warm_retention_seconds=self.DEFAULT_SERVER_AGENT_WARM_RETENTION_SECONDS,
+            keepalive_until=None,
+            last_activity_at=(
+                persistent_state.last_synced_at if persistent_state is not None else None
+            ),
+            last_started_at=None,
+            last_stopped_at=None,
+            last_stop_reason=None,
+            worker_id=None,
+            browser_enabled=False,
+            filesystem_fingerprint=None,
+            metadata_json=None,
+            created_at=agent_identity.created_at,
+            updated_at=agent_identity.updated_at,
+        )
+
+    def build_assignment_runtime_summary(
+        self,
+        db: Session,
+        *,
+        assignment: AgentAssignment,
+    ) -> PersistentRuntimeResponse:
+        runtime_key = self.build_assignment_runtime_key(assignment.id)
+        existing = PersistentRuntimeRepository.get_by_runtime_key(db, runtime_key)
+        if existing is not None:
+            return PersistentRuntimeResponse.model_validate(existing)
+
+        lifecycle_state = "running" if assignment.session_id else "sleeping"
+        return PersistentRuntimeResponse(
+            persistent_runtime_id=uuid.uuid4(),
+            runtime_key=runtime_key,
+            owner_type="agent_assignment",
+            owner_id=assignment.id,
+            agent_identity_id=assignment.agent_identity_id,
+            assignment_id=assignment.id,
+            session_id=assignment.session_id,
+            container_id=assignment.container_id,
+            lifecycle_state=lifecycle_state,
+            auto_resume=True,
+            idle_timeout_seconds=self.DEFAULT_ASSIGNMENT_IDLE_TIMEOUT_SECONDS,
+            warm_retention_seconds=self.DEFAULT_ASSIGNMENT_WARM_RETENTION_SECONDS,
+            keepalive_until=None,
+            last_activity_at=assignment.last_triggered_at,
+            last_started_at=assignment.last_triggered_at,
+            last_stopped_at=None,
+            last_stop_reason=None,
+            worker_id=None,
+            browser_enabled=False,
+            filesystem_fingerprint=None,
+            metadata_json=None,
+            created_at=assignment.created_at,
+            updated_at=assignment.updated_at,
+        )
+
     def list_controller_runtimes(
         self,
         db: Session,
@@ -129,6 +217,7 @@ class PersistentRuntimeService:
                 browser_enabled=False,
             ),
         )
+        db.flush()
         self._sync_legacy_owner_state(
             db,
             runtime,
@@ -167,6 +256,7 @@ class PersistentRuntimeService:
                 browser_enabled=False,
             ),
         )
+        db.flush()
         self._sync_legacy_owner_state(db, runtime, channel_task_id=None)
         return runtime
 

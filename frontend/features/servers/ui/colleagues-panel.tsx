@@ -99,50 +99,47 @@ export function ColleaguesPanel({
                     <span className="block truncate text-sm font-medium text-foreground">
                       {agent.displayName}
                     </span>
-                    <span className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
-                      <span>@{agent.handle}</span>
-                      {(() => {
-                        const runtimeStatus = getAgentRuntimeStatus(agent);
-                        const activeChannelId =
-                          activeChannelIdByAgentId[agent.id] ?? null;
-                        return (
-                          <>
-                            <PersistentRuntimeBadge
-                              status={runtimeStatus}
-                              label={t(runtimeStatus.labelKey)}
-                              pinnedLabel={t("runtime.labels.pinned")}
-                              className="px-2 py-0.5"
-                            />
-                            {runtimeStatus.state === "running" &&
-                            activeChannelId &&
-                            onOpenActiveChannel ? (
-                              <span
-                                role="button"
-                                tabIndex={0}
-                                onClick={(event) => {
+                    {(() => {
+                      const runtimeStatus = getAgentRuntimeStatus(agent);
+                      const activeChannelId =
+                        activeChannelIdByAgentId[agent.id] ?? null;
+                      return (
+                        <span className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+                          <PersistentRuntimeBadge
+                            status={runtimeStatus}
+                            label={t(runtimeStatus.labelKey)}
+                            iconOnly
+                          />
+                          <span>@{agent.handle}</span>
+                          {runtimeStatus.state === "running" &&
+                          activeChannelId &&
+                          onOpenActiveChannel ? (
+                            <span
+                              role="button"
+                              tabIndex={0}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                onOpenActiveChannel(activeChannelId);
+                              }}
+                              onKeyDown={(event) => {
+                                if (
+                                  event.key === "Enter" ||
+                                  event.key === " "
+                                ) {
+                                  event.preventDefault();
                                   event.stopPropagation();
                                   onOpenActiveChannel(activeChannelId);
-                                }}
-                                onKeyDown={(event) => {
-                                  if (
-                                    event.key === "Enter" ||
-                                    event.key === " "
-                                  ) {
-                                    event.preventDefault();
-                                    event.stopPropagation();
-                                    onOpenActiveChannel(activeChannelId);
-                                  }
-                                }}
-                                className="inline-flex items-center rounded-md px-1.5 py-0.5 text-foreground transition-colors hover:bg-muted/60"
-                                title={t("conversationView.backToContext")}
-                              >
-                                <Hash className="size-3.5" />
-                              </span>
-                            ) : null}
-                          </>
-                        );
-                      })()}
-                    </span>
+                                }
+                              }}
+                              className="inline-flex items-center rounded-md px-1.5 py-0.5 text-foreground transition-colors hover:bg-muted/60"
+                              title={t("conversationView.backToContext")}
+                            >
+                              <Hash className="size-3.5" />
+                            </span>
+                          ) : null}
+                        </span>
+                      );
+                    })()}
                   </span>
                 </button>
               ))

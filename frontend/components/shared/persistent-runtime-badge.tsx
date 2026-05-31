@@ -59,17 +59,50 @@ function getToneClassName(tone: PersistentRuntimeStatusPresentation["tone"]): st
   }
 }
 
+function getIconOnlyToneClassName(
+  tone: PersistentRuntimeStatusPresentation["tone"],
+): string {
+  switch (tone) {
+    case "success":
+      return "bg-emerald-500/16 text-emerald-300";
+    case "warning":
+      return "bg-amber-500/18 text-amber-300";
+    case "danger":
+      return "bg-rose-500/18 text-rose-300";
+    default:
+      return "bg-muted text-muted-foreground";
+  }
+}
+
 export function PersistentRuntimeBadge({
   status,
   label,
   pinnedLabel,
+  iconOnly = false,
   className,
 }: {
   status: PersistentRuntimeStatusPresentation;
   label: string;
   pinnedLabel?: string;
+  iconOnly?: boolean;
   className?: string;
 }) {
+  if (iconOnly) {
+    return (
+      <span
+        title={label}
+        aria-label={label}
+        className={cn(
+          "inline-flex size-5 items-center justify-center rounded-full",
+          getIconOnlyToneClassName(status.tone),
+          className,
+        )}
+      >
+        <RuntimeStatusIcon iconKey={status.iconKey} className="size-3" />
+      </span>
+    );
+  }
+
   return (
     <span
       className={cn(

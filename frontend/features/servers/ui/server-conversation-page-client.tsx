@@ -106,6 +106,7 @@ import {
   canManageServerOperations,
   isServerRole,
 } from "@/features/servers/lib/server-member-permissions";
+import { getExplicitColleagueSelection } from "@/features/servers/lib/colleague-selection";
 import {
   toggleMessageReaction,
   updateMessageById,
@@ -1946,8 +1947,6 @@ export function ServerConversationPageClient({
   const [createChannelOpen, setCreateChannelOpen] = React.useState(false);
   const [leaveChannelOpen, setLeaveChannelOpen] = React.useState(false);
   const [agentPresetOpen, setAgentPresetOpen] = React.useState(false);
-  const [colleagueDetailClosed, setColleagueDetailClosed] =
-    React.useState(false);
   const [isArchivingChannel, setIsArchivingChannel] = React.useState(false);
   const [isLeavingChannel, setIsLeavingChannel] = React.useState(false);
 
@@ -2050,17 +2049,15 @@ export function ServerConversationPageClient({
   const showMobileBack = !isDesktop && isMobileDetailVisible;
   const showMobileChannelActions = showMobileBack && mode === "conversation";
   const colleagueSelection = React.useMemo<ColleagueSelection | null>(() => {
-    if (drawer.type === "colleague" && drawer.selection) {
-      return drawer.selection;
-    }
-    if (knownAgents[0]) {
-      return { kind: "agent", id: knownAgents[0].id };
-    }
-    if (serverMembers[0]) {
-      return { kind: "human", id: serverMembers[0].id };
-    }
-    return null;
-  }, [drawer, knownAgents, serverMembers]);
+    return getExplicitColleagueSelection(drawer);
+  }, [drawer]);
+  const colleagueDirectoryAgents = React.useMemo(
+    () =>
+      serverAgents.filter(
+        (agent) => !agent.removedAt && agent.lifecycleState !== "removed",
+      ),
+    [serverAgents],
+  );
   const availableChannelAgents = React.useMemo(() => {
     const existingIds = new Set(channelAgents.map((agent) => agent.id));
     return serverAgents.filter((agent) => !existingIds.has(agent.id));
@@ -2405,38 +2402,10 @@ export function ServerConversationPageClient({
   }, [channelAgentsByChannelId, channels, messagesByChannel, selectedServerId]);
 
   React.useEffect(() => {
-    if (mode === "colleagues") {
-      setColleagueDetailClosed(false);
-    }
     setDrawer((current) =>
       isDrawerCompatibleWithMode(current, mode) ? current : { type: "none" },
     );
   }, [mode]);
-
-  React.useEffect(() => {
-    if (mode !== "colleagues") {
-      return;
-    }
-    if (colleagueDetailClosed) {
-      return;
-    }
-    if (drawer.type === "colleague" && drawer.selection) {
-      return;
-    }
-    const firstAgent = serverAgents[0];
-    const firstMember = serverMembers[0];
-    if (firstAgent) {
-      setDrawer({
-        type: "colleague",
-        selection: { kind: "agent", id: firstAgent.id },
-      });
-    } else if (firstMember) {
-      setDrawer({
-        type: "colleague",
-        selection: { kind: "human", id: firstMember.id },
-      });
-    }
-  }, [colleagueDetailClosed, drawer, mode, serverAgents, serverMembers]);
 
   React.useEffect(() => {
     const lastSelection = loadLastSelection();
@@ -2590,9 +2559,6 @@ export function ServerConversationPageClient({
   const openMode = (nextMode: WorkspaceMode) => {
     setMode(nextMode);
     setIsMobileDetailVisible(true);
-    if (nextMode === "colleagues") {
-      setColleagueDetailClosed(false);
-    }
     if (nextMode === "conversation" || !selectedServerId) {
       return;
     }
@@ -3738,7 +3704,7 @@ export function ServerConversationPageClient({
               </section>
             ) : colleaguesModeActive ? (
               <ColleaguesPanel
-                agents={knownAgents}
+                agents={colleagueDirectoryAgents}
                 presets={presets}
                 members={serverMembers}
                 selection={colleagueSelection}
@@ -3746,7 +3712,6 @@ export function ServerConversationPageClient({
                 canCreateAgent={canManageServerOps}
                 canInviteMembers={canManageServerOps}
                 onSelect={(selection) => {
-                  setColleagueDetailClosed(false);
                   setDrawer({ type: "colleague", selection });
                 }}
                 onOpenActiveChannel={openChannelById}
@@ -3813,7 +3778,6 @@ export function ServerConversationPageClient({
                   setDrawer({ type: "execution", sessionId })
                 }
                 onOpenAgentProfile={(agentId) => {
-                  setColleagueDetailClosed(false);
                   setDrawer({
                     type: "colleague",
                     selection: { kind: "agent", id: agentId },
@@ -3891,7 +3855,9 @@ export function ServerConversationPageClient({
                 ) : drawer.type === "colleague" ? (
                   <ColleagueDetail
                     selection={colleagueSelection}
-                    agents={knownAgents}
+                    agents={
+                      colleaguesModeActive ? colleagueDirectoryAgents : knownAgents
+                    }
                     presets={presets}
                     members={serverMembers}
                     serverId={selectedServerId}
@@ -3908,7 +3874,6 @@ export function ServerConversationPageClient({
                     activeChannelIdByAgentId={activeChannelIdByAgentId}
                     channelNamesByAgentId={channelNamesByAgentId}
                     onClose={() => {
-                      setColleagueDetailClosed(true);
                       setDrawer({ type: "none" });
                     }}
                     onOpenDm={handleOpenDm}

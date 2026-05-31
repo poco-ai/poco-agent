@@ -483,6 +483,63 @@ class AgentIdentityServiceTests(unittest.TestCase):
         self.assertEqual(membership.status, "removed")
         self.db.commit.assert_called_once()
 
+    def test_list_agents_does_not_create_runtime_rows_on_read(self) -> None:
+        agent_identity = AgentIdentity(
+            id=uuid.uuid4(),
+            server_id=self.server.id,
+            preset_id=7,
+            handle="backend-specialist",
+            display_name="Backend Specialist",
+            description=None,
+            visual_key="preset-visual-02",
+            visibility="server",
+            lifecycle_state="active",
+            created_by="user-1",
+            updated_by="user-1",
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
+        )
+        agent_identity.persistent_state = AgentPersistentState(
+            id=uuid.uuid4(),
+            agent_identity_id=agent_identity.id,
+            state_root_path="agents/state",
+            profile_path="agents/state/profile.json",
+            memory_path="agents/state/MEMORY.md",
+            notes_dir_path="agents/state/notes",
+            state_dir_path="agents/state/state",
+            artifacts_dir_path="agents/state/artifacts",
+            state_version=1,
+            runtime_status="idle",
+            active_session_id=None,
+            active_task_id=None,
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
+        )
+        persistent_runtime_service = MagicMock()
+        persistent_runtime_service.build_server_agent_runtime_summary.return_value = (
+            None
+        )
+        service = AgentIdentityService(
+            persistent_runtime_service=persistent_runtime_service
+        )
+
+        with (
+            patch(
+                "app.services.agent_identity_service.require_server_member",
+                return_value=MagicMock(role="member"),
+            ),
+            patch(
+                "app.services.agent_identity_service.AgentIdentityRepository.list_by_server",
+                return_value=[agent_identity],
+            ),
+        ):
+            result = service.list_agents(self.db, self.user, self.server.id)
+
+        self.assertEqual(len(result), 1)
+        persistent_runtime_service.ensure_server_agent_runtime.assert_not_called()
+        persistent_runtime_service.build_server_agent_runtime_summary.assert_called_once()
+        self.db.commit.assert_not_called()
+
 
 if __name__ == "__main__":
     unittest.main()

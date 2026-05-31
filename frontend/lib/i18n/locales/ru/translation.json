@@ -185,6 +185,40 @@
       "contextFailed": "Failed to load channel context"
     }
   },
+  "runtime": {
+    "states": {
+      "running": "Выполняется",
+      "warmIdle": "Тёплый простой",
+      "sleeping": "Спит",
+      "manuallyStopped": "Остановлен",
+      "stale": "Рассинхронизирован",
+      "removed": "Удалён",
+      "failed": "Сбой",
+      "unknown": "Статус недоступен"
+    },
+    "labels": {
+      "pinned": "Закреплён"
+    },
+    "fields": {
+      "durationHours": "Длительность pin (часы)"
+    },
+    "actions": {
+      "pin": "Закрепить",
+      "pinned": "Закреплён",
+      "unpin": "Снять pin",
+      "updatePin": "Обновить pin"
+    },
+    "descriptions": {
+      "pinAgent": "Удерживает этого agent в тёплом состоянии, чтобы контроллер простоя не останавливал его в выбранный период.",
+      "pinAgentHint": "Используйте целые часы. Закреплённые runtime остаются тёплыми, пока lease не истечёт или вы не снимете pin."
+    },
+    "toasts": {
+      "pinUpdated": "Pin runtime обновлён",
+      "pinUpdateFailed": "Не удалось обновить pin runtime",
+      "unpinned": "Pin runtime снят",
+      "unpinFailed": "Не удалось снять pin runtime"
+    }
+  },
   "conversationView": {
     "title": "Чат",
     "search": "Поиск",
@@ -634,6 +668,7 @@
       "assignmentStatus": "Assignment status",
       "updatedAt": "Обновлено",
       "session": "Execution session",
+      "runtime": "Постоянный runtime",
       "container": "Sandbox container",
       "lastTriggeredAt": "Последний запуск",
       "lastCompletedAt": "Последнее завершение"

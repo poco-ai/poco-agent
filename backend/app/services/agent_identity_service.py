@@ -75,17 +75,14 @@ class AgentIdentityService:
             )
         response = AgentIdentityResponse.model_validate(agent_identity)
         if agent_identity.persistent_state is not None:
-            runtime = self._persistent_runtime_service.ensure_server_agent_runtime(
-                db,
-                agent_identity=agent_identity,
+            runtime_summary = (
+                self._persistent_runtime_service.build_server_agent_runtime_summary(
+                    db,
+                    agent_identity=agent_identity,
+                )
             )
             response = response.model_copy(
-                update={
-                    "runtime_summary": self._persistent_runtime_service.get_runtime(
-                        db,
-                        runtime.runtime_key,
-                    )
-                }
+                update={"runtime_summary": runtime_summary}
             )
         return response
 

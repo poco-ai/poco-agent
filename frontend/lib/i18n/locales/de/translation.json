@@ -185,6 +185,40 @@
       "contextFailed": "Failed to load channel context"
     }
   },
+  "runtime": {
+    "states": {
+      "running": "Läuft",
+      "warmIdle": "Warm im Leerlauf",
+      "sleeping": "Schlafend",
+      "manuallyStopped": "Gestoppt",
+      "stale": "Inkonsistent",
+      "removed": "Entfernt",
+      "failed": "Fehlgeschlagen",
+      "unknown": "Status nicht verfügbar"
+    },
+    "labels": {
+      "pinned": "Angeheftet"
+    },
+    "fields": {
+      "durationHours": "Pin-Dauer (Stunden)"
+    },
+    "actions": {
+      "pin": "Anheften",
+      "pinned": "Angeheftet",
+      "unpin": "Lösen",
+      "updatePin": "Pin aktualisieren"
+    },
+    "descriptions": {
+      "pinAgent": "Hält diesen Agenten warm, damit der Idle-Controller ihn im ausgewählten Zeitraum nicht stoppt.",
+      "pinAgentHint": "Nur ganze Stunden. Angeheftete Runtimes bleiben warm, bis die Lease abläuft oder du sie löst."
+    },
+    "toasts": {
+      "pinUpdated": "Runtime-Pin aktualisiert",
+      "pinUpdateFailed": "Runtime-Pin konnte nicht aktualisiert werden",
+      "unpinned": "Runtime-Pin entfernt",
+      "unpinFailed": "Runtime-Pin konnte nicht entfernt werden"
+    }
+  },
   "conversationView": {
     "title": "Chat",
     "search": "Suchen",
@@ -634,6 +668,7 @@
       "assignmentStatus": "Assignment status",
       "updatedAt": "Aktualisiert",
       "session": "Execution session",
+      "runtime": "Persistente Runtime",
       "container": "Sandbox container",
       "lastTriggeredAt": "Zuletzt ausgelöst",
       "lastCompletedAt": "Zuletzt abgeschlossen"

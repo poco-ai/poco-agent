@@ -185,6 +185,40 @@
       "contextFailed": "Failed to load channel context"
     }
   },
+  "runtime": {
+    "states": {
+      "running": "実行中",
+      "warmIdle": "ウォームアイドル",
+      "sleeping": "スリープ中",
+      "manuallyStopped": "停止中",
+      "stale": "不整合",
+      "removed": "削除済み",
+      "failed": "失敗",
+      "unknown": "状態不明"
+    },
+    "labels": {
+      "pinned": "Pin中"
+    },
+    "fields": {
+      "durationHours": "Pin時間（時間）"
+    },
+    "actions": {
+      "pin": "Pin",
+      "pinned": "Pin中",
+      "unpin": "Pin解除",
+      "updatePin": "Pin更新"
+    },
+    "descriptions": {
+      "pinAgent": "指定した時間のあいだこの agent をウォーム状態に保ち、アイドルコントローラによる停止を防ぎます。",
+      "pinAgentHint": "整数時間で入力してください。Pin した runtime は、期限切れになるか手動で解除するまでウォーム状態を保ちます。"
+    },
+    "toasts": {
+      "pinUpdated": "runtime の Pin を更新しました",
+      "pinUpdateFailed": "runtime の Pin 更新に失敗しました",
+      "unpinned": "runtime の Pin を解除しました",
+      "unpinFailed": "runtime の Pin 解除に失敗しました"
+    }
+  },
   "conversationView": {
     "title": "チャット",
     "search": "検索",
@@ -634,6 +668,7 @@
       "assignmentStatus": "Assignment status",
       "updatedAt": "更新日時",
       "session": "Execution session",
+      "runtime": "永続 runtime",
       "container": "Sandbox container",
       "lastTriggeredAt": "最終トリガー",
       "lastCompletedAt": "最終完了"

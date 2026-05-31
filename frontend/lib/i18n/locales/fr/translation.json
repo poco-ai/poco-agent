@@ -185,6 +185,40 @@
       "contextFailed": "Failed to load channel context"
     }
   },
+  "runtime": {
+    "states": {
+      "running": "En cours",
+      "warmIdle": "Veille chaude",
+      "sleeping": "En veille",
+      "manuallyStopped": "Arrêté",
+      "stale": "Désynchronisé",
+      "removed": "Supprimé",
+      "failed": "Échec",
+      "unknown": "Statut indisponible"
+    },
+    "labels": {
+      "pinned": "Épinglé"
+    },
+    "fields": {
+      "durationHours": "Durée du pin (heures)"
+    },
+    "actions": {
+      "pin": "Épingler",
+      "pinned": "Épinglé",
+      "unpin": "Retirer l'épingle",
+      "updatePin": "Mettre à jour l'épingle"
+    },
+    "descriptions": {
+      "pinAgent": "Maintient cet agent au chaud pour que le contrôleur d'inactivité ne l'arrête pas pendant la durée choisie.",
+      "pinAgentHint": "Utilisez des heures entières. Les runtimes épinglés restent chauds jusqu'à l'expiration du bail ou jusqu'à ce que vous retiriez l'épingle."
+    },
+    "toasts": {
+      "pinUpdated": "Épinglage du runtime mis à jour",
+      "pinUpdateFailed": "Impossible de mettre à jour l'épinglage du runtime",
+      "unpinned": "Épinglage du runtime retiré",
+      "unpinFailed": "Impossible de retirer l'épinglage du runtime"
+    }
+  },
   "conversationView": {
     "title": "Chat",
     "search": "Recherche",
@@ -634,6 +668,7 @@
       "assignmentStatus": "Assignment status",
       "updatedAt": "Mis à jour",
       "session": "Execution session",
+      "runtime": "Runtime persistante",
       "container": "Sandbox container",
       "lastTriggeredAt": "Dernier déclenchement",
       "lastCompletedAt": "Dernière exécution terminée"
