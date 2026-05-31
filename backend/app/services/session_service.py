@@ -35,7 +35,7 @@ from app.schemas.session import (
     SessionUpdateRequest,
 )
 from app.schemas.task import TaskEnqueueResponse
-from app.services.agent_runtime_service import AgentRuntimeService
+from app.services.persistent_runtime_service import PersistentRuntimeService
 from app.services.session_queue_service import SessionQueueService
 from app.services.task_service import TaskService
 
@@ -259,7 +259,7 @@ class SessionService:
         runtime_mode = (config_snapshot.get("agent_runtime_mode") or "").strip().lower()
         if not agent_identity_id or runtime_mode != "persistent":
             return
-        AgentRuntimeService().release_runtime_for_session(
+        PersistentRuntimeService().release_runtime_for_session(
             db,
             session_id=db_session.id,
             callback_status=callback_status,

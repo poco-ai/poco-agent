@@ -37,6 +37,7 @@ from app.api.v1 import (
     plugin_installs,
     plugins,
     pending_skill_creations,
+    internal_persistent_runtimes,
     presets,
     projects,
     project_files,
@@ -117,6 +118,7 @@ api_v1_router.include_router(internal_channel_runtime.router)
 api_v1_router.include_router(internal_memories.router)
 api_v1_router.include_router(internal_skills.router)
 api_v1_router.include_router(internal_mcp_config.router)
+api_v1_router.include_router(internal_persistent_runtimes.router)
 api_v1_router.include_router(internal_server_channel_tasks.router)
 api_v1_router.include_router(internal_skill_config.router)
 api_v1_router.include_router(internal_scheduled_tasks.router)

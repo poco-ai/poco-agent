@@ -27,11 +27,13 @@ from app.repositories.server_repository import ServerRepository
 from app.schemas.agent_identity import (
     AgentIdentityCreateRequest,
     AgentIdentityResponse,
+    AgentRuntimePinRequest,
     AgentIdentityUpdateRequest,
     ChannelAgentMemberCreateRequest,
     ChannelAgentMemberResponse,
 )
 from app.services.agent_runtime_service import AgentRuntimeService
+from app.services.persistent_runtime_service import PersistentRuntimeService
 from app.services.agent_state_bootstrap_service import ensure_agent_state_bootstrap
 from app.services.server_channel_access import require_channel_member_access
 from app.services.server_member_service import (
@@ -53,9 +55,13 @@ class AgentIdentityService:
         *,
         session_service: SessionService | None = None,
         runtime_service: AgentRuntimeService | None = None,
+        persistent_runtime_service: PersistentRuntimeService | None = None,
     ) -> None:
         self._session_service = session_service or SessionService()
         self._runtime_service = runtime_service or AgentRuntimeService()
+        self._persistent_runtime_service = (
+            persistent_runtime_service or PersistentRuntimeService()
+        )
 
     def _to_agent_response(
         self,
@@ -67,7 +73,16 @@ class AgentIdentityService:
                 db,
                 agent_identity.persistent_state,
             )
-        return AgentIdentityResponse.model_validate(agent_identity)
+        response = AgentIdentityResponse.model_validate(agent_identity)
+        if agent_identity.persistent_state is not None:
+            runtime_summary = (
+                self._persistent_runtime_service.build_server_agent_runtime_summary(
+                    db,
+                    agent_identity=agent_identity,
+                )
+            )
+            response = response.model_copy(update={"runtime_summary": runtime_summary})
+        return response
 
     @staticmethod
     def _to_channel_member_response(
@@ -209,6 +224,10 @@ class AgentIdentityService:
         AgentPersistentStateRepository.create(
             db,
             persistent_state,
+        )
+        self._persistent_runtime_service.ensure_server_agent_runtime(
+            db,
+            agent_identity=agent_identity,
         )
         ensure_agent_state_bootstrap(
             agent_identity=agent_identity,
@@ -434,10 +453,15 @@ class AgentIdentityService:
         agent_identity.updated_by = current_user.id
         agent_identity.removed_at = datetime.now(UTC)
         agent_identity.removed_by = current_user.id
-        if agent_identity.persistent_state is not None:
-            agent_identity.persistent_state.runtime_status = "idle"
-            agent_identity.persistent_state.active_session_id = None
-            agent_identity.persistent_state.active_task_id = None
+        runtime = self._persistent_runtime_service.ensure_server_agent_runtime(
+            db,
+            agent_identity=agent_identity,
+        )
+        self._persistent_runtime_service.mark_removed(
+            db,
+            runtime_key=runtime.runtime_key,
+            stop_reason="agent_removed_from_server",
+        )
         self._cancel_queued_scope(
             db,
             agent_identity_id=agent_identity.id,
@@ -471,10 +495,21 @@ class AgentIdentityService:
         self._discard_active_execution(db, agent_identity, reason="Agent restarted")
         agent_identity.lifecycle_state = "active"
         agent_identity.updated_by = current_user.id
-        if agent_identity.persistent_state is not None:
-            agent_identity.persistent_state.runtime_status = "idle"
-            agent_identity.persistent_state.active_session_id = None
-            agent_identity.persistent_state.active_task_id = None
+        runtime = self._persistent_runtime_service.ensure_server_agent_runtime(
+            db,
+            agent_identity=agent_identity,
+        )
+        runtime.lifecycle_state = "sleeping"
+        runtime.session_id = None
+        runtime.container_id = None
+        runtime.keepalive_until = None
+        runtime.last_stopped_at = datetime.now(UTC)
+        runtime.last_stop_reason = "agent_restarted"
+        self._persistent_runtime_service._sync_legacy_owner_state(
+            db,
+            runtime,
+            channel_task_id=None,
+        )
         db.commit()
         db.refresh(agent_identity)
         return self._to_agent_response(db, agent_identity)
@@ -500,10 +535,82 @@ class AgentIdentityService:
         self._discard_active_execution(db, agent_identity, reason="Agent stopped")
         agent_identity.lifecycle_state = "inactive"
         agent_identity.updated_by = current_user.id
-        if agent_identity.persistent_state is not None:
-            agent_identity.persistent_state.runtime_status = "idle"
-            agent_identity.persistent_state.active_session_id = None
-            agent_identity.persistent_state.active_task_id = None
+        runtime = self._persistent_runtime_service.ensure_server_agent_runtime(
+            db,
+            agent_identity=agent_identity,
+        )
+        self._persistent_runtime_service.mark_manually_stopped(
+            db,
+            runtime_key=runtime.runtime_key,
+            stop_reason="agent_stopped",
+        )
+        db.commit()
+        db.refresh(agent_identity)
+        return self._to_agent_response(db, agent_identity)
+
+    def pin_agent_runtime(
+        self,
+        db: Session,
+        current_user: User,
+        server_id: uuid.UUID,
+        agent_identity_id: uuid.UUID,
+        request: AgentRuntimePinRequest,
+    ) -> AgentIdentityResponse:
+        agent_identity = self._require_owner_agent(
+            db,
+            current_user,
+            server_id,
+            agent_identity_id,
+        )
+        if self._is_removed(agent_identity):
+            raise AppException(
+                error_code=ErrorCode.BAD_REQUEST,
+                message=f"Agent identity has been removed: {agent_identity_id}",
+            )
+        if (agent_identity.lifecycle_state or "").strip().lower() != "active":
+            raise AppException(
+                error_code=ErrorCode.BAD_REQUEST,
+                message="Start the agent before pinning its runtime",
+            )
+        runtime = self._persistent_runtime_service.ensure_server_agent_runtime(
+            db,
+            agent_identity=agent_identity,
+        )
+        self._persistent_runtime_service.extend_keepalive(
+            db,
+            runtime_key=runtime.runtime_key,
+            duration_seconds=request.duration_hours * 3600,
+        )
+        db.commit()
+        db.refresh(agent_identity)
+        return self._to_agent_response(db, agent_identity)
+
+    def unpin_agent_runtime(
+        self,
+        db: Session,
+        current_user: User,
+        server_id: uuid.UUID,
+        agent_identity_id: uuid.UUID,
+    ) -> AgentIdentityResponse:
+        agent_identity = self._require_owner_agent(
+            db,
+            current_user,
+            server_id,
+            agent_identity_id,
+        )
+        if self._is_removed(agent_identity):
+            raise AppException(
+                error_code=ErrorCode.BAD_REQUEST,
+                message=f"Agent identity has been removed: {agent_identity_id}",
+            )
+        runtime = self._persistent_runtime_service.ensure_server_agent_runtime(
+            db,
+            agent_identity=agent_identity,
+        )
+        self._persistent_runtime_service.clear_keepalive(
+            db,
+            runtime_key=runtime.runtime_key,
+        )
         db.commit()
         db.refresh(agent_identity)
         return self._to_agent_response(db, agent_identity)

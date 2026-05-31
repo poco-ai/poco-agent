@@ -185,6 +185,50 @@
       "contextFailed": "Failed to load channel context"
     }
   },
+  "runtime": {
+    "states": {
+      "running": "Выполняется",
+      "warmIdle": "Тёплый простой",
+      "sleeping": "Спит",
+      "manuallyStopped": "Остановлен",
+      "stale": "Рассинхронизирован",
+      "removed": "Удалён",
+      "failed": "Сбой",
+      "unknown": "Статус недоступен"
+    },
+    "labels": {
+      "pinned": "Закреплён"
+    },
+    "fields": {
+      "durationHours": "Длительность pin (часы)"
+    },
+    "actions": {
+      "pin": "Закрепить",
+      "pinned": "Закреплён",
+      "unpin": "Снять pin",
+      "updatePin": "Обновить pin"
+    },
+    "descriptions": {
+      "pinAgent": "Удерживает этого agent в тёплом состоянии, чтобы контроллер простоя не останавливал его в выбранный период.",
+      "pinAgentHint": "Используйте целые часы. Закреплённые runtime остаются тёплыми, пока lease не истечёт или вы не снимете pin."
+    },
+    "tooltips": {
+      "running": "Этот runtime сейчас выполняет работу или готов сразу продолжить текущее выполнение.",
+      "warm_idle": "Этот runtime только что завершил недавнюю работу и всё ещё остаётся тёплым для быстрого продолжения.",
+      "sleeping": "Контейнер остановлен, но постоянное состояние сохранено для последующего возобновления.",
+      "manually_stopped": "Этот runtime был остановлен явно и не будет автоматически возобновлён обычным mention.",
+      "stale": "Сохранённое состояние runtime больше не совпадает с фактическим состоянием контейнера.",
+      "removed": "Этот agent удалён из активного списка текущего server.",
+      "failed": "Последний runtime или выполнение завершилось ошибкой.",
+      "unknown": "Не удалось определить состояние runtime."
+    },
+    "toasts": {
+      "pinUpdated": "Pin runtime обновлён",
+      "pinUpdateFailed": "Не удалось обновить pin runtime",
+      "unpinned": "Pin runtime снят",
+      "unpinFailed": "Не удалось снять pin runtime"
+    }
+  },
   "conversationView": {
     "title": "Чат",
     "search": "Поиск",
@@ -634,6 +678,7 @@
       "assignmentStatus": "Assignment status",
       "updatedAt": "Обновлено",
       "session": "Execution session",
+      "runtime": "Постоянный runtime",
       "container": "Sandbox container",
       "lastTriggeredAt": "Последний запуск",
       "lastCompletedAt": "Последнее завершение"

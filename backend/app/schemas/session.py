@@ -41,6 +41,7 @@ class TaskConfig(BaseModel):
     subagent_ids: list[int] = Field(default_factory=list)
     subagent_configs: list[TaskSubAgentConfig] = Field(default_factory=list)
     container_mode: Literal["ephemeral", "persistent"] = "ephemeral"
+    persistent_runtime_key: str | None = None
     agent_identity_id: UUID | None = None
     channel_task_id: UUID | None = None
     agent_runtime_mode: Literal["persistent", "temporary"] | None = None

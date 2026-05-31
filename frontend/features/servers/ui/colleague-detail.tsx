@@ -5,8 +5,10 @@ import {
   ArrowLeft,
   CalendarDays,
   Check,
+  CircleHelp,
   MessageSquare,
   Pencil,
+  Pin,
   Power,
   RotateCw,
   Shield,
@@ -16,6 +18,12 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { PersistentRuntimeInlineStatus } from "@/components/shared/persistent-runtime-inline-status";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   Select,
   SelectContent,
@@ -33,6 +41,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import type { Preset } from "@/features/capabilities/presets/lib/preset-types";
 import { serversApi } from "@/features/servers";
 import type { FileNode } from "@/features/chat/types";
@@ -49,10 +66,7 @@ import {
   getServerRoleLabelKey,
   isServerRole,
 } from "@/features/servers/lib/server-member-permissions";
-import {
-  getAgentRuntimeDotClassName,
-  getAgentRuntimeStatus,
-} from "@/features/servers/lib/agent-runtime-status";
+import { getAgentRuntimeStatus } from "@/features/servers/lib/agent-runtime-status";
 import type {
   ServerAgentItem,
   ServerChannelMemberItem,
@@ -62,7 +76,6 @@ import type {
 } from "@/features/servers/model/types";
 import type { ColleagueSelection } from "@/features/servers/ui/server-workspace-types";
 import { useT } from "@/lib/i18n/client";
-import { cn } from "@/lib/utils";
 import { ServerAgentAvatar } from "./server-agent-avatar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AgentPersistentFilesPanel } from "./agent-persistent-files-panel";
@@ -93,6 +106,8 @@ export function ColleagueDetail({
   onRemoveMember,
   onRestartAgent,
   onStopAgent,
+  onPinAgentRuntime,
+  onUnpinAgentRuntime,
   onUpdateAgentDescription,
   onRemoveAgentFromServer,
   onRemoveMemberFromChannel,
@@ -120,6 +135,8 @@ export function ColleagueDetail({
   onRemoveMember: (membershipId: number) => void;
   onRestartAgent: (agentId: string) => void;
   onStopAgent: (agentId: string) => void;
+  onPinAgentRuntime: (agentId: string, durationHours: number) => Promise<void>;
+  onUnpinAgentRuntime: (agentId: string) => Promise<void>;
   onUpdateAgentDescription: (
     agentId: string,
     description: string,
@@ -191,6 +208,9 @@ export function ColleagueDetail({
   const [restartAgentConfirmOpen, setRestartAgentConfirmOpen] =
     React.useState(false);
   const [stopAgentConfirmOpen, setStopAgentConfirmOpen] = React.useState(false);
+  const [pinDialogOpen, setPinDialogOpen] = React.useState(false);
+  const [pinDurationHours, setPinDurationHours] = React.useState("1");
+  const [isUpdatingPin, setIsUpdatingPin] = React.useState(false);
   const [isEditingDescription, setIsEditingDescription] = React.useState(false);
   const [descriptionDraft, setDescriptionDraft] = React.useState("");
   const [isSavingDescription, setIsSavingDescription] = React.useState(false);
@@ -202,12 +222,32 @@ export function ColleagueDetail({
     : [];
   const selectedAgentStopped =
     (selectedAgent?.lifecycleState || "").trim().toLowerCase() === "inactive";
+  const selectedAgentPinned = selectedRuntimeStatus?.isPinned ?? false;
 
   React.useEffect(() => {
     setIsEditingDescription(false);
     setDescriptionDraft(selectedAgent?.description ?? "");
     setIsSavingDescription(false);
   }, [selectedAgent?.description, selectedAgent?.id]);
+
+  React.useEffect(() => {
+    if (!selectedAgent?.runtimeSummary?.keepaliveUntil) {
+      setPinDurationHours("1");
+      return;
+    }
+    const keepaliveUntil = new Date(
+      selectedAgent.runtimeSummary.keepaliveUntil,
+    );
+    if (Number.isNaN(keepaliveUntil.getTime())) {
+      setPinDurationHours("1");
+      return;
+    }
+    const remainingHours = Math.max(
+      1,
+      Math.ceil((keepaliveUntil.getTime() - Date.now()) / (60 * 60 * 1000)),
+    );
+    setPinDurationHours(String(remainingHours));
+  }, [selectedAgent?.id, selectedAgent?.runtimeSummary?.keepaliveUntil]);
 
   const handleDescriptionAction = async () => {
     if (!selectedAgent || selectedAgentRemoved || isSavingDescription) {
@@ -250,6 +290,36 @@ export function ColleagueDetail({
       return;
     }
     await onTransferOwnership(selectedMember.userId);
+  };
+
+  const handlePinRuntime = async () => {
+    if (!selectedAgent || selectedAgentRemoved || isUpdatingPin) {
+      return;
+    }
+    const parsedHours = Number.parseInt(pinDurationHours, 10);
+    if (!Number.isFinite(parsedHours) || parsedHours < 1 || parsedHours > 24) {
+      return;
+    }
+    setIsUpdatingPin(true);
+    try {
+      await onPinAgentRuntime(selectedAgent.id, parsedHours);
+      setPinDialogOpen(false);
+    } finally {
+      setIsUpdatingPin(false);
+    }
+  };
+
+  const handleUnpinRuntime = async () => {
+    if (!selectedAgent || selectedAgentRemoved || isUpdatingPin) {
+      return;
+    }
+    setIsUpdatingPin(true);
+    try {
+      await onUnpinAgentRuntime(selectedAgent.id);
+      setPinDialogOpen(false);
+    } finally {
+      setIsUpdatingPin(false);
+    }
   };
 
   React.useEffect(() => {
@@ -330,38 +400,36 @@ export function ColleagueDetail({
                 fallbackClassName="text-lg"
               />
               <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-3">
+                <div className="flex flex-wrap items-start justify-between gap-3">
                   <p className="truncate text-lg font-semibold text-foreground">
                     {selectedAgent.displayName}
                   </p>
-                  {selectedRuntimeStatus ? (
-                    <span className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-2.5 py-1 text-xs text-muted-foreground">
-                      <span
-                        className={cn(
-                          "size-2 rounded-full",
-                          getAgentRuntimeDotClassName(
-                            selectedRuntimeStatus.tone,
-                          ),
-                        )}
-                      />
-                      {t(selectedRuntimeStatus.labelKey)}
-                    </span>
-                  ) : null}
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="outline"
+                    onClick={() => onOpenDm(selectedAgent.id)}
+                    disabled={selectedAgentRemoved}
+                    aria-label={t("conversationView.messageAgent")}
+                    title={t("conversationView.messageAgent")}
+                    className="size-8 rounded-full border-border/70 bg-background/60 text-foreground hover:bg-muted/60"
+                  >
+                    <MessageSquare className="size-4" />
+                  </Button>
                 </div>
                 <div className="mt-1 flex flex-wrap items-center gap-2">
                   <p className="text-sm text-muted-foreground">
                     @{selectedAgent.handle}
                   </p>
-                  <Button
-                    type="button"
-                    size="sm"
-                    onClick={() => onOpenDm(selectedAgent.id)}
-                    disabled={selectedAgentRemoved}
-                    className="h-7 pl-3.5 pr-3"
-                  >
-                    <MessageSquare className="size-3.5" />
-                    {t("conversationView.messageAgent")}
-                  </Button>
+                  {selectedRuntimeStatus ? (
+                    <PersistentRuntimeInlineStatus
+                      status={selectedRuntimeStatus}
+                      text={t(selectedRuntimeStatus.labelKey)}
+                      tooltip={t(
+                        `runtime.tooltips.${selectedRuntimeStatus.state}`,
+                      )}
+                    />
+                  ) : null}
                 </div>
               </div>
             </div>
@@ -412,12 +480,27 @@ export function ColleagueDetail({
             {canInspectPersistentFiles && selectedAgent.persistentState ? (
               <div className="flex min-h-0 flex-1 flex-col space-y-3 overflow-hidden px-1 py-1">
                 <div className="shrink-0 space-y-2">
-                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                    {t("conversationView.colleagues.persistentFiles")}
-                  </p>
-                  <p className="text-sm leading-6 text-muted-foreground">
-                    {t("conversationView.colleagues.persistentFilesHint")}
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                      {t("conversationView.colleagues.persistentFiles")}
+                    </p>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          className="inline-flex size-5 items-center justify-center rounded-full text-muted-foreground transition hover:text-foreground"
+                          aria-label={t(
+                            "conversationView.colleagues.persistentFiles",
+                          )}
+                        >
+                          <CircleHelp className="size-3.5" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent sideOffset={6} className="max-w-64">
+                        {t("conversationView.colleagues.persistentFilesHint")}
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
                 </div>
                 <AgentPersistentFilesPanel
                   files={persistentFiles}
@@ -430,8 +513,7 @@ export function ColleagueDetail({
               </div>
             ) : null}
             <div className="mt-auto flex shrink-0 flex-wrap justify-end gap-2 border-t border-border pt-5">
-              {selectedRuntimeStatus?.labelKey ===
-                "conversationView.colleagues.runtimeStates.active" &&
+              {selectedRuntimeStatus?.state === "running" &&
               selectedAgentActiveChannelId &&
               onOpenActiveChannel ? (
                 <Button
@@ -448,6 +530,18 @@ export function ColleagueDetail({
               ) : null}
               {canManageServerOperations ? (
                 <>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setPinDialogOpen(true)}
+                    disabled={selectedAgentRemoved || selectedAgentStopped}
+                  >
+                    <Pin className="size-4" />
+                    {selectedAgentPinned
+                      ? t("runtime.actions.pinned")
+                      : t("runtime.actions.pin")}
+                  </Button>
                   <Button
                     type="button"
                     size="sm"
@@ -814,6 +908,69 @@ export function ColleagueDetail({
           </AlertDialogContent>
         </AlertDialog>
       ) : null}
+      <Dialog open={pinDialogOpen} onOpenChange={setPinDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("runtime.actions.pin")}</DialogTitle>
+            <DialogDescription>
+              {t("runtime.descriptions.pinAgent")}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <label
+              htmlFor="agent-pin-hours"
+              className="text-sm font-medium text-foreground"
+            >
+              {t("runtime.fields.durationHours")}
+            </label>
+            <Input
+              id="agent-pin-hours"
+              type="number"
+              min={1}
+              max={24}
+              step={1}
+              value={pinDurationHours}
+              onChange={(event) => setPinDurationHours(event.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              {t("runtime.descriptions.pinAgentHint")}
+            </p>
+          </div>
+          <DialogFooter className="gap-2 sm:justify-between">
+            {selectedAgentPinned ? (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => void handleUnpinRuntime()}
+                disabled={isUpdatingPin}
+              >
+                {t("runtime.actions.unpin")}
+              </Button>
+            ) : (
+              <span />
+            )}
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setPinDialogOpen(false)}
+                disabled={isUpdatingPin}
+              >
+                {t("common.cancel")}
+              </Button>
+              <Button
+                type="button"
+                onClick={() => void handlePinRuntime()}
+                disabled={isUpdatingPin}
+              >
+                {selectedAgentPinned
+                  ? t("runtime.actions.updatePin")
+                  : t("runtime.actions.pin")}
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </aside>
   );
 }

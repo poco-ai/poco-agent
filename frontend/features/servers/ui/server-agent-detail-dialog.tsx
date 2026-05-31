@@ -12,6 +12,7 @@ import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { PersistentRuntimeBadge } from "@/components/shared/persistent-runtime-badge";
 import {
   Dialog,
   DialogContent,
@@ -19,13 +20,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  getAgentRuntimeDotClassName,
-  getAgentRuntimeStatus,
-} from "@/features/servers/lib/agent-runtime-status";
+import { getAgentRuntimeStatus } from "@/features/servers/lib/agent-runtime-status";
 import type { ServerAgentItem } from "@/features/servers/model/types";
 import { useT } from "@/lib/i18n/client";
-import { cn } from "@/lib/utils";
 
 function formatDateTime(value: string | null | undefined): string | null {
   if (!value) {
@@ -81,18 +78,11 @@ export function ServerAgentDetailDialog({
             <div className="flex flex-wrap gap-2">
               <Badge variant="secondary">{agent.lifecycleState}</Badge>
               <Badge variant="outline">{agent.visibility}</Badge>
-              <Badge
-                variant="outline"
-                className="inline-flex items-center gap-2"
-              >
-                <span
-                  className={cn(
-                    "size-2 rounded-full",
-                    getAgentRuntimeDotClassName(runtimeStatus.tone),
-                  )}
-                />
-                {t(runtimeStatus.labelKey)}
-              </Badge>
+              <PersistentRuntimeBadge
+                status={runtimeStatus}
+                label={t(runtimeStatus.labelKey)}
+                pinnedLabel={t("runtime.labels.pinned")}
+              />
               <Badge variant="outline">
                 {t("servers.agents.preset", { id: agent.presetId })}
               </Badge>

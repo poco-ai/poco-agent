@@ -3,6 +3,8 @@ from uuid import UUID
 
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
+from app.schemas.persistent_runtime import PersistentRuntimeResponse
+
 
 class AgentPersistentStateResponse(BaseModel):
     persistent_state_id: UUID = Field(
@@ -40,6 +42,10 @@ class AgentIdentityUpdateRequest(BaseModel):
     description: str | None = None
 
 
+class AgentRuntimePinRequest(BaseModel):
+    duration_hours: int = Field(ge=1, le=24)
+
+
 class AgentIdentityResponse(BaseModel):
     agent_identity_id: UUID = Field(
         validation_alias=AliasChoices("id", "agent_identity_id")
@@ -57,6 +63,7 @@ class AgentIdentityResponse(BaseModel):
     removed_at: datetime | None = None
     removed_by: str | None = None
     persistent_state: AgentPersistentStateResponse | None = None
+    runtime_summary: PersistentRuntimeResponse | None = None
     created_at: datetime
     updated_at: datetime
 

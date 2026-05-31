@@ -37,7 +37,21 @@ class ChannelRuntimeServiceTests(unittest.TestCase):
             handoff_depth=1,
         )
         self.task_service = MagicMock()
-        self.service = ChannelRuntimeService(task_service=self.task_service)
+        self.runtime_service = MagicMock()
+        self.runtime_service.ensure_server_agent_runtime.side_effect = (
+            lambda _db, agent_identity: SimpleNamespace(
+                runtime_key=f"server_agent:{agent_identity.id}",
+                session_id=getattr(
+                    getattr(agent_identity, "persistent_state", None),
+                    "active_session_id",
+                    None,
+                ),
+            )
+        )
+        self.service = ChannelRuntimeService(
+            task_service=self.task_service,
+            persistent_runtime_service=self.runtime_service,
+        )
 
     def _message(
         self,

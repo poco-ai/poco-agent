@@ -4,6 +4,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.schemas.persistent_runtime import PersistentRuntimeResponse
+
 
 class AgentAssignmentResponse(BaseModel):
     assignment_id: UUID = Field(validation_alias="id")
@@ -20,6 +22,7 @@ class AgentAssignmentResponse(BaseModel):
     schedule_cron: str | None = None
     last_triggered_at: datetime | None = None
     last_completed_at: datetime | None = None
+    runtime_summary: PersistentRuntimeResponse | None = None
     created_by: str
     created_at: datetime
     updated_at: datetime

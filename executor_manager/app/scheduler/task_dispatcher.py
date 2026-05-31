@@ -12,6 +12,7 @@ from app.core.observability.request_context import (
     set_request_id,
     set_trace_id,
 )
+from app.schemas.filesystem import MountResolutionResult
 from app.services.backend_client import BackendClient
 from app.services.container_pool import ContainerPool
 from app.services.executor_client import ExecutorClient
@@ -83,7 +84,7 @@ class TaskDispatcher:
         browser_enabled: bool,
         container_mode: str,
         container_id: str | None,
-    ) -> tuple[str, str | None, object]:
+    ) -> tuple[str, str | None, MountResolutionResult]:
         container_pool = cls.get_container_pool()
         return await container_pool.get_or_create_container(
             session_id=session_id,
@@ -322,7 +323,7 @@ class TaskDispatcher:
             (
                 executor_url,
                 container_id,
-                _,
+                mount_resolution,
             ) = await TaskDispatcher.resolve_executor_target(
                 session_id=session_id,
                 user_id=user_id,
@@ -344,6 +345,18 @@ class TaskDispatcher:
                     "browser_enabled": browser_enabled,
                 },
             )
+            persistent_runtime_key = str(
+                resolved_config.get("persistent_runtime_key") or ""
+            ).strip()
+            if persistent_runtime_key:
+                await backend_client.mark_persistent_runtime_started(
+                    persistent_runtime_key,
+                    session_id=session_id,
+                    container_id=container_id,
+                    worker_id=settings.worker_id,
+                    browser_enabled=browser_enabled,
+                    filesystem_fingerprint=mount_resolution.mount_fingerprint,
+                )
 
             if await TaskDispatcher._session_stop_requested(
                 backend_client,

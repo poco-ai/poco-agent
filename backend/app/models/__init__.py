@@ -25,6 +25,7 @@ from app.models.memory_create_job import MemoryCreateJob
 from app.models.pending_skill_creation import PendingSkillCreation
 from app.models.plugin import Plugin
 from app.models.plugin_import_job import PluginImportJob
+from app.models.persistent_runtime import PersistentRuntime
 from app.models.preset import Preset
 from app.models.preset_visual import PresetVisual
 from app.models.project import Project
@@ -85,6 +86,7 @@ __all__ = [
     "McpServer",
     "MemoryCreateJob",
     "PendingSkillCreation",
+    "PersistentRuntime",
     "Plugin",
     "PluginImportJob",
     "Preset",

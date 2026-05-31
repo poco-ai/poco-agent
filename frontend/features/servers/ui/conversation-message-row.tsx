@@ -18,6 +18,7 @@ import { toast } from "sonner";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { FileCard } from "@/components/shared/file-card";
+import { PersistentRuntimeInlineStatus } from "@/components/shared/persistent-runtime-inline-status";
 import type { InputFile } from "@/features/chat/types";
 import {
   getUserAvatarUrl,
@@ -493,18 +494,18 @@ function AvatarSummaryCard({
             fallbackClassName="text-sm"
           />
           <div className="min-w-0 flex-1">
-            <div className="flex min-w-0 items-center gap-1.5">
+            <div className="flex min-w-0 items-center gap-2">
               <p className="truncate text-sm font-semibold">
                 {matchingAgent.displayName}
               </p>
-              <span className="size-1.5 shrink-0 rounded-full bg-muted-foreground" />
-              <span className="shrink-0 text-[11px] leading-none text-muted-foreground">
-                {t(runtimeStatus.labelKey)}
-              </span>
             </div>
-            <p className="mt-0.5 truncate text-xs text-muted-foreground">
-              @{matchingAgent.handle}
-            </p>
+            <div className="mt-0.5 flex min-w-0 flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+              <span className="truncate">@{matchingAgent.handle}</span>
+              <PersistentRuntimeInlineStatus
+                status={runtimeStatus}
+                text={t(runtimeStatus.labelKey)}
+              />
+            </div>
           </div>
         </div>
         <div className="border-t border-border/80 px-3 py-2">

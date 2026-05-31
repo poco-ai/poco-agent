@@ -185,6 +185,50 @@
       "contextFailed": "Failed to load channel context"
     }
   },
+  "runtime": {
+    "states": {
+      "running": "En cours",
+      "warmIdle": "Veille chaude",
+      "sleeping": "En veille",
+      "manuallyStopped": "Arrêté",
+      "stale": "Désynchronisé",
+      "removed": "Supprimé",
+      "failed": "Échec",
+      "unknown": "Statut indisponible"
+    },
+    "labels": {
+      "pinned": "Épinglé"
+    },
+    "fields": {
+      "durationHours": "Durée du pin (heures)"
+    },
+    "actions": {
+      "pin": "Épingler",
+      "pinned": "Épinglé",
+      "unpin": "Retirer l'épingle",
+      "updatePin": "Mettre à jour l'épingle"
+    },
+    "descriptions": {
+      "pinAgent": "Maintient cet agent au chaud pour que le contrôleur d'inactivité ne l'arrête pas pendant la durée choisie.",
+      "pinAgentHint": "Utilisez des heures entières. Les runtimes épinglés restent chauds jusqu'à l'expiration du bail ou jusqu'à ce que vous retiriez l'épingle."
+    },
+    "tooltips": {
+      "running": "Le runtime travaille actuellement ou est prêt à reprendre immédiatement l'exécution en cours.",
+      "warm_idle": "Le runtime vient de terminer un travail récent et reste chaud pour un enchaînement rapide.",
+      "sleeping": "Le conteneur est arrêté, mais l'état persistant est conservé pour une reprise ultérieure.",
+      "manually_stopped": "Le runtime a été arrêté explicitement et ne reprendra pas automatiquement lors d'une mention ordinaire.",
+      "stale": "L'état enregistré du runtime ne correspond plus à l'état réel du conteneur.",
+      "removed": "Cet agent a été retiré de la liste active du serveur.",
+      "failed": "Le dernier runtime ou la dernière exécution s'est terminé par un échec.",
+      "unknown": "L'état du runtime n'a pas pu être déterminé."
+    },
+    "toasts": {
+      "pinUpdated": "Épinglage du runtime mis à jour",
+      "pinUpdateFailed": "Impossible de mettre à jour l'épinglage du runtime",
+      "unpinned": "Épinglage du runtime retiré",
+      "unpinFailed": "Impossible de retirer l'épinglage du runtime"
+    }
+  },
   "conversationView": {
     "title": "Chat",
     "search": "Recherche",
@@ -634,6 +678,7 @@
       "assignmentStatus": "Assignment status",
       "updatedAt": "Mis à jour",
       "session": "Execution session",
+      "runtime": "Runtime persistante",
       "container": "Sandbox container",
       "lastTriggeredAt": "Dernier déclenchement",
       "lastCompletedAt": "Dernière exécution terminée"

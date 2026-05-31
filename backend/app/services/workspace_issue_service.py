@@ -43,9 +43,22 @@ class WorkspaceIssueService:
             issue.status = status
             issue.position = index
 
-    @staticmethod
-    def _to_response(issue: WorkspaceIssue) -> WorkspaceIssueResponse:
-        return WorkspaceIssueResponse.model_validate(issue)
+    def _to_response(
+        self,
+        db: Session,
+        issue: WorkspaceIssue,
+    ) -> WorkspaceIssueResponse:
+        response = WorkspaceIssueResponse.model_validate(issue)
+        if issue.agent_assignment is None:
+            return response
+        return response.model_copy(
+            update={
+                "agent_assignment": self._assignment_service._to_response(
+                    db,
+                    issue.agent_assignment,
+                )
+            }
+        )
 
     def _move_issue_within_board(
         self,
@@ -184,7 +197,7 @@ class WorkspaceIssueService:
             )
         db.commit()
         db.refresh(issue)
-        return self._to_response(issue)
+        return self._to_response(db, issue)
 
     def list_issues(
         self,
@@ -200,7 +213,7 @@ class WorkspaceIssueService:
             )
         require_workspace_member(db, board.workspace_id, current_user.id)
         return [
-            self._to_response(issue)
+            self._to_response(db, issue)
             for issue in WorkspaceIssueRepository.list_by_board(db, board_id)
         ]
 
@@ -217,7 +230,7 @@ class WorkspaceIssueService:
                 message=f"Workspace issue not found: {issue_id}",
             )
         require_workspace_member(db, issue.workspace_id, current_user.id)
-        return self._to_response(issue)
+        return self._to_response(db, issue)
 
     @auditable(
         action="issue.updated",
@@ -354,7 +367,7 @@ class WorkspaceIssueService:
         issue.updated_by = current_user.id
         db.commit()
         db.refresh(issue)
-        return self._to_response(issue)
+        return self._to_response(db, issue)
 
     def move_issue(
         self,
@@ -388,7 +401,7 @@ class WorkspaceIssueService:
             source_status=source_status,
             source_position=source_position,
         )
-        return self._to_response(issue)
+        return self._to_response(db, issue)
 
     @auditable(
         action="issue.deleted",
@@ -410,7 +423,7 @@ class WorkspaceIssueService:
                 message=f"Workspace issue not found: {issue_id}",
             )
         require_workspace_member(db, issue.workspace_id, current_user.id)
-        response = self._to_response(issue)
+        response = self._to_response(db, issue)
         db.delete(issue)
         db.commit()
         return response
