@@ -85,11 +85,21 @@ test("getChannelEventContent reads structured event payloads", () => {
     membershipId: null,
     joinReason: null,
     taskId: "task-1",
+    taskNumber: null,
+    taskTitle: null,
     title: "Fix parser",
     status: null,
     priority: null,
+    commentText: null,
     fromStatus: null,
     toStatus: null,
+    artifactId: null,
+    artifactDisplayName: null,
+    artifactLogicalPath: null,
+    artifactMimeType: null,
+    artifactSizeBytes: null,
+    fromAssignee: undefined,
+    toAssignee: undefined,
     assignee: undefined,
   });
 });
@@ -102,5 +112,13 @@ test("getChannelEventLabelKey falls back for unknown event types", () => {
   assert.equal(
     getChannelEventLabelKey("custom.event"),
     "conversationView.events.unknown",
+  );
+  assert.equal(
+    getChannelEventLabelKey("artifact.uploaded"),
+    "conversationView.events.artifactUploaded",
+  );
+  assert.equal(
+    getChannelEventLabelKey("artifact.deleted"),
+    "conversationView.events.artifactDeleted",
   );
 });

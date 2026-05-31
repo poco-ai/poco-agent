@@ -14,7 +14,9 @@ export function getAssignmentExecutionMeta(
   return {
     isScheduled: assignment?.trigger_mode === "scheduled_task",
     hasSession: Boolean(assignment?.session_id),
-    hasRetainedContainer: Boolean(assignment?.container_id),
+    hasRetainedContainer: Boolean(
+      assignment?.runtime_summary?.container_id ?? assignment?.container_id,
+    ),
     lastTriggeredAt: assignment?.last_triggered_at ?? null,
     lastCompletedAt: assignment?.last_completed_at ?? null,
   };

@@ -1,4 +1,6 @@
 import unittest
+from pathlib import Path
+from tempfile import TemporaryDirectory
 from unittest.mock import AsyncMock, patch
 
 import httpx
@@ -6,9 +8,11 @@ import httpx
 from app.core.channel_runtime import (
     CHANNEL_RUNTIME_MCP_SERVER_KEY,
     ChannelRuntimeClient,
+    DownloadedArtifact,
     _format_tool_error,
     _format_tool_result,
     _run_tool,
+    stage_downloaded_artifact,
 )
 
 
@@ -184,6 +188,95 @@ class ChannelRuntimeToolContractTests(unittest.IsolatedAsyncioTestCase):
             "/api/v1/agent-channel-artifacts/list",
             {},
         )
+
+    async def test_client_reads_artifact_text_through_facade(self) -> None:
+        client = ChannelRuntimeClient("http://manager", "session-1")
+
+        with patch.object(
+            client,
+            "_request",
+            new=AsyncMock(return_value={"content": "Experienced engineer"}),
+        ) as request:
+            result = await client.read_artifact_text(
+                artifact_id="artifact-1",
+                logical_path=None,
+                start_char=0,
+                max_chars=2000,
+            )
+
+        self.assertEqual(result, {"content": "Experienced engineer"})
+        request.assert_awaited_once_with(
+            "/api/v1/agent-channel-artifacts/text",
+            {
+                "artifact_id": "artifact-1",
+                "logical_path": None,
+                "start_char": 0,
+                "max_chars": 2000,
+            },
+        )
+
+    async def test_client_downloads_artifact_through_runtime_proxy(self) -> None:
+        class FakeAsyncClient:
+            def __init__(self, *args, **kwargs) -> None:
+                pass
+
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, exc_type, exc, tb) -> None:
+                pass
+
+            async def post(self, *args, **kwargs) -> httpx.Response:
+                request = httpx.Request(
+                    "POST",
+                    "http://manager/api/v1/agent-channel-artifacts/download",
+                )
+                return httpx.Response(
+                    200,
+                    content=b"%PDF-1.7",
+                    headers={
+                        "content-type": "application/pdf",
+                        "x-artifact-id": "artifact-1",
+                        "x-artifact-display-name": "resume.pdf",
+                        "x-artifact-logical-path": "/Uploads/resume.pdf",
+                        "x-artifact-size-bytes": "9",
+                    },
+                    request=request,
+                )
+
+        client = ChannelRuntimeClient("http://manager", "session-1")
+
+        with patch("app.core.channel_runtime.httpx.AsyncClient", FakeAsyncClient):
+            result = await client.download_artifact(
+                artifact_id="artifact-1",
+                logical_path=None,
+            )
+
+        self.assertEqual(result.display_name, "resume.pdf")
+        self.assertEqual(result.mime_type, "application/pdf")
+        self.assertEqual(result.content, b"%PDF-1.7")
+        self.assertEqual(result.size_bytes, 9)
+
+    def test_stage_downloaded_artifact_writes_file_under_inputs_root(self) -> None:
+        with TemporaryDirectory() as tmp_dir:
+            result = stage_downloaded_artifact(
+                DownloadedArtifact(
+                    artifact_id="artifact-1",
+                    logical_path="/Uploads/resume.pdf",
+                    display_name="resume.pdf",
+                    mime_type="application/pdf",
+                    size_bytes=9,
+                    content=b"%PDF-1.7",
+                ),
+                workspace_root=Path(tmp_dir),
+            )
+
+            self.assertTrue(result.local_path.endswith("resume.pdf"))
+            self.assertEqual(
+                Path(result.local_path).read_bytes(),
+                b"%PDF-1.7",
+            )
+            self.assertIn("/inputs/channel-artifacts/", result.local_path)
 
     async def test_client_routes_task_tools_through_facade(self) -> None:
         client = ChannelRuntimeClient("http://manager", "session-1")

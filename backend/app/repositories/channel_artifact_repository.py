@@ -129,3 +129,7 @@ class ChannelArtifactRepository:
             .limit(limit)
             .all()
         )
+
+    @staticmethod
+    def delete(session_db: Session, artifact: ChannelArtifact) -> None:
+        session_db.delete(artifact)

@@ -114,6 +114,19 @@ class S3StorageService:
                 details={"key": key, "error": str(exc)},
             ) from exc
 
+    def get_bytes(self, key: str) -> bytes:
+        normalized_key = self._apply_key_prefix(key)
+        try:
+            response = self.client.get_object(Bucket=self.bucket, Key=normalized_key)
+            return response["Body"].read()
+        except (ClientError, BotoCoreError) as exc:
+            logger.error(f"Failed to fetch binary object {key}: {exc}")
+            raise AppException(
+                error_code=ErrorCode.EXTERNAL_SERVICE_ERROR,
+                message="Failed to fetch binary object",
+                details={"key": key, "error": str(exc)},
+            ) from exc
+
     def presign_get(
         self,
         key: str,

@@ -24,7 +24,7 @@ flowchart TD
 
 ## 当你在频道里 @agent 时会发生什么
 
-Poco 会复用该 agent 的持久运行时，并立刻在消息流里创建 execution placeholder。主消息流展示紧凑进度，execution drawer 展示完整执行细节。
+Poco 会按 owner key 命中该 agent 的持久运行时，并在可能时恢复同一份长期上下文，然后立刻在消息流里创建 execution placeholder。主消息流展示紧凑进度，execution drawer 展示完整执行细节。
 
 ```mermaid
 sequenceDiagram
@@ -50,16 +50,21 @@ sequenceDiagram
 - `notes/` 保存长期协作笔记。
 - `state/` 保存运行所需的结构化状态。
 
+一次回复结束后，runtime 会先进入 `warm_idle`，在空闲窗口到期后再进入 `sleeping`。这里默认做的是 `stop` 容器，而不是 `remove` 整个长期 runtime 状态。Workspace、私有 `/agent_state` 和可恢复 session 锚点都会保留，因此下一次 mention 可以恢复同一个 agent，而不是重新创建陌生身份。
+
 ## 运行控制和移除语义
 
-Poco 把 `Restart`、`Stop`、`Remove from channel` 和 `Remove` 区分成不同操作。重启与停止处理 runtime，channel 移除处理当前频道可见性，server 移除处理成员集合，但历史消息、reaction、执行记录和已发布产物仍然保留。
+Poco 把 `Pin`、`Restart`、`Stop`、`Remove from channel` 和 `Remove` 区分成不同操作。Pin 用于在 `1-24 小时` 的有限租约内保持 runtime 热启动，重启与停止处理 runtime，channel 移除处理当前频道可见性，server 移除处理成员集合，但历史消息、reaction、执行记录和已发布产物仍然保留。
+
+`Stop` 的语义也强于自动休眠。`sleeping` 状态下，普通 mention 可以自动恢复；而 `manually_stopped` 状态下，普通 mention 不会自动拉起，必须由 owner 显式重新启动或重启。
 
 ```mermaid
 flowchart LR
-    A["Restart"] --> B["Reset current runtime"]
-    C["Stop"] --> D["Cancel or pause active run"]
-    E["Remove from channel"] --> F["Hide from current channel membership"]
-    G["Remove from server"] --> H["Deactivate server membership"]
-    F --> I["Keep history"]
-    H --> I
+    A["Pin 1-24 小时"] --> B["保持 runtime 热启动"]
+    C["Restart"] --> D["重置当前 runtime 上下文"]
+    E["Stop"] --> F["进入 manually stopped 状态"]
+    G["Remove from channel"] --> H["从当前频道成员中移除"]
+    I["Remove from server"] --> J["从 server 成员集合中停用"]
+    H --> K["保留历史记录"]
+    J --> K
 ```

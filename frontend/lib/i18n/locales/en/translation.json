@@ -185,6 +185,50 @@
       "statusFailed": "Failed to update task status"
     }
   },
+  "runtime": {
+    "states": {
+      "running": "Running",
+      "warmIdle": "Warm idle",
+      "sleeping": "Sleeping",
+      "manuallyStopped": "Stopped",
+      "stale": "Stale",
+      "removed": "Removed",
+      "failed": "Failed",
+      "unknown": "Status unavailable"
+    },
+    "labels": {
+      "pinned": "Pinned"
+    },
+    "fields": {
+      "durationHours": "Pin duration (hours)"
+    },
+    "actions": {
+      "pin": "Pin",
+      "pinned": "Pinned",
+      "unpin": "Unpin",
+      "updatePin": "Update pin"
+    },
+    "descriptions": {
+      "pinAgent": "Keep this agent warm so the idle controller will not stop it during the selected window.",
+      "pinAgentHint": "Use whole hours. Pinned runtimes stay warm until the lease expires or you unpin them."
+    },
+    "tooltips": {
+      "running": "The runtime is actively working or ready to continue the current execution.",
+      "warm_idle": "The runtime finished recent work and is still warm for a fast follow-up.",
+      "sleeping": "The container is stopped, but the persistent state is kept for resume.",
+      "manually_stopped": "The runtime was explicitly stopped and will not auto-resume on ordinary mentions.",
+      "stale": "The recorded runtime state no longer matches the actual container state.",
+      "removed": "This agent has been removed from the active server roster.",
+      "failed": "The latest runtime or execution ended in failure.",
+      "unknown": "The runtime state could not be determined."
+    },
+    "toasts": {
+      "pinUpdated": "Runtime pin updated",
+      "pinUpdateFailed": "Failed to update runtime pin",
+      "unpinned": "Runtime unpinned",
+      "unpinFailed": "Failed to unpin runtime"
+    }
+  },
   "conversationView": {
     "title": "Chat",
     "search": "Search",
@@ -253,7 +297,12 @@
       "actor": "Someone",
       "task": "Untitled task",
       "channelMemberJoined": "{{target}} joined",
+      "channelMemberInvited": "{{actor}} added {{target}} to the channel",
+      "channelMemberJoinedByInvite": "{{target}} joined through an invite",
       "channelAgentJoined": "{{target}} joined",
+      "channelAgentInvited": "{{actor}} added {{target}} to the channel",
+      "artifactUploaded": "{{actor}} uploaded {{artifact}}",
+      "artifactDeleted": "{{actor}} deleted {{artifact}}",
       "taskCreated": "{{actor}} created task {{task}}",
       "taskCreatedAssigned": "{{actor}} created task {{task}} and assigned it to {{assignee}}",
       "taskStatusChanged": "{{actor}} moved task from {{fromStatus}} to {{toStatus}}",
@@ -629,6 +678,7 @@
       "assignmentStatus": "Assignment status",
       "updatedAt": "Updated",
       "session": "Execution session",
+      "runtime": "Persistent runtime",
       "container": "Sandbox container",
       "lastTriggeredAt": "Last triggered",
       "lastCompletedAt": "Last completed"
@@ -2830,6 +2880,11 @@
     "actions": "Actions",
     "downloadAll": "Download all",
     "download": "Download",
+    "delete": "Delete",
+    "deleteTitle": "Delete file?",
+    "deleteConfirm": "Delete {{name}}? This cannot be undone.",
+    "deleteSuccess": "File deleted",
+    "deleteFailed": "Failed to delete file",
     "downloadFile": "Download file",
     "noFiles": "No files yet",
     "packageAsSkill": "Package as Skill",

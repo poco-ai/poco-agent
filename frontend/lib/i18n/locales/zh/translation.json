@@ -185,6 +185,50 @@
       "statusFailed": "更新任务状态失败"
     }
   },
+  "runtime": {
+    "states": {
+      "running": "运行中",
+      "warmIdle": "热空闲",
+      "sleeping": "休眠中",
+      "manuallyStopped": "已停止",
+      "stale": "状态漂移",
+      "removed": "已移除",
+      "failed": "失败",
+      "unknown": "状态未知"
+    },
+    "labels": {
+      "pinned": "已 Pin"
+    },
+    "fields": {
+      "durationHours": "Pin 时长（小时）"
+    },
+    "actions": {
+      "pin": "Pin",
+      "pinned": "已 Pin",
+      "unpin": "取消 Pin",
+      "updatePin": "更新 Pin"
+    },
+    "descriptions": {
+      "pinAgent": "在所选时间窗口内保持这个 agent 热启动，避免 idle controller 自动停掉它。",
+      "pinAgentHint": "按整小时输入。被 Pin 的 runtime 会一直保温，直到租约到期或你手动取消。"
+    },
+    "tooltips": {
+      "running": "这个 runtime 正在执行任务，或已经热启动并准备继续当前执行。",
+      "warm_idle": "这个 runtime 刚完成最近一次工作，当前仍保持热状态，便于快速继续。",
+      "sleeping": "容器已经停止，但持久状态仍然保留，后续可以恢复。",
+      "manually_stopped": "这个 runtime 是被显式停止的，普通 mention 不会自动恢复。",
+      "stale": "记录里的 runtime 状态和实际容器状态已经不一致。",
+      "removed": "这个 agent 已经从当前 server 的活跃成员列表中移除。",
+      "failed": "最近一次 runtime 或执行以失败结束。",
+      "unknown": "当前无法确定这个 runtime 的状态。"
+    },
+    "toasts": {
+      "pinUpdated": "已更新 runtime Pin",
+      "pinUpdateFailed": "更新 runtime Pin 失败",
+      "unpinned": "已取消 runtime Pin",
+      "unpinFailed": "取消 runtime Pin 失败"
+    }
+  },
   "conversationView": {
     "title": "聊天",
     "search": "搜索",
@@ -253,7 +297,12 @@
       "actor": "有人",
       "task": "未命名任务",
       "channelMemberJoined": "{{target}} 加入了频道",
+      "channelMemberInvited": "{{actor}} 邀请 {{target}} 加入了频道",
+      "channelMemberJoinedByInvite": "{{target}} 通过邀请加入了频道",
       "channelAgentJoined": "{{target}} 加入了频道",
+      "channelAgentInvited": "{{actor}} 将 {{target}} 加入了频道",
+      "artifactUploaded": "{{actor}} 上传了共享文件：{{artifact}}",
+      "artifactDeleted": "{{actor}} 删除了共享文件：{{artifact}}",
       "taskCreated": "{{actor}} 创建了任务：{{task}}",
       "taskCreatedAssigned": "{{actor}} 创建了任务 {{task}} 并分配给 {{assignee}}",
       "taskStatusChanged": "{{actor}} 将任务从 {{fromStatus}} 移到 {{toStatus}}",
@@ -629,6 +678,7 @@
       "assignmentStatus": "分配状态",
       "updatedAt": "更新时间",
       "session": "执行会话",
+      "runtime": "持久 runtime",
       "container": "Sandbox 容器",
       "lastTriggeredAt": "最近触发时间",
       "lastCompletedAt": "最近完成时间"
@@ -2830,6 +2880,11 @@
     "actions": "操作",
     "downloadAll": "下载全部",
     "download": "下载",
+    "delete": "删除",
+    "deleteTitle": "删除文件？",
+    "deleteConfirm": "确定删除 {{name}} 吗？此操作无法撤销。",
+    "deleteSuccess": "文件已删除",
+    "deleteFailed": "删除文件失败",
     "downloadFile": "下载文件",
     "noFiles": "暂无文件",
     "packageAsSkill": "打包为 Skill",

@@ -106,6 +106,7 @@ import {
   canManageServerOperations,
   isServerRole,
 } from "@/features/servers/lib/server-member-permissions";
+import { getExplicitColleagueSelection } from "@/features/servers/lib/colleague-selection";
 import {
   toggleMessageReaction,
   updateMessageById,
@@ -1946,8 +1947,6 @@ export function ServerConversationPageClient({
   const [createChannelOpen, setCreateChannelOpen] = React.useState(false);
   const [leaveChannelOpen, setLeaveChannelOpen] = React.useState(false);
   const [agentPresetOpen, setAgentPresetOpen] = React.useState(false);
-  const [colleagueDetailClosed, setColleagueDetailClosed] =
-    React.useState(false);
   const [isArchivingChannel, setIsArchivingChannel] = React.useState(false);
   const [isLeavingChannel, setIsLeavingChannel] = React.useState(false);
 
@@ -2050,17 +2049,15 @@ export function ServerConversationPageClient({
   const showMobileBack = !isDesktop && isMobileDetailVisible;
   const showMobileChannelActions = showMobileBack && mode === "conversation";
   const colleagueSelection = React.useMemo<ColleagueSelection | null>(() => {
-    if (drawer.type === "colleague" && drawer.selection) {
-      return drawer.selection;
-    }
-    if (knownAgents[0]) {
-      return { kind: "agent", id: knownAgents[0].id };
-    }
-    if (serverMembers[0]) {
-      return { kind: "human", id: serverMembers[0].id };
-    }
-    return null;
-  }, [drawer, knownAgents, serverMembers]);
+    return getExplicitColleagueSelection(drawer);
+  }, [drawer]);
+  const colleagueDirectoryAgents = React.useMemo(
+    () =>
+      serverAgents.filter(
+        (agent) => !agent.removedAt && agent.lifecycleState !== "removed",
+      ),
+    [serverAgents],
+  );
   const availableChannelAgents = React.useMemo(() => {
     const existingIds = new Set(channelAgents.map((agent) => agent.id));
     return serverAgents.filter((agent) => !existingIds.has(agent.id));
@@ -2405,38 +2402,10 @@ export function ServerConversationPageClient({
   }, [channelAgentsByChannelId, channels, messagesByChannel, selectedServerId]);
 
   React.useEffect(() => {
-    if (mode === "colleagues") {
-      setColleagueDetailClosed(false);
-    }
     setDrawer((current) =>
       isDrawerCompatibleWithMode(current, mode) ? current : { type: "none" },
     );
   }, [mode]);
-
-  React.useEffect(() => {
-    if (mode !== "colleagues") {
-      return;
-    }
-    if (colleagueDetailClosed) {
-      return;
-    }
-    if (drawer.type === "colleague" && drawer.selection) {
-      return;
-    }
-    const firstAgent = serverAgents[0];
-    const firstMember = serverMembers[0];
-    if (firstAgent) {
-      setDrawer({
-        type: "colleague",
-        selection: { kind: "agent", id: firstAgent.id },
-      });
-    } else if (firstMember) {
-      setDrawer({
-        type: "colleague",
-        selection: { kind: "human", id: firstMember.id },
-      });
-    }
-  }, [colleagueDetailClosed, drawer, mode, serverAgents, serverMembers]);
 
   React.useEffect(() => {
     const lastSelection = loadLastSelection();
@@ -2590,9 +2559,6 @@ export function ServerConversationPageClient({
   const openMode = (nextMode: WorkspaceMode) => {
     setMode(nextMode);
     setIsMobileDetailVisible(true);
-    if (nextMode === "colleagues") {
-      setColleagueDetailClosed(false);
-    }
     if (nextMode === "conversation" || !selectedServerId) {
       return;
     }
@@ -2650,6 +2616,7 @@ export function ServerConversationPageClient({
       if (!selectedServerId) {
         return;
       }
+      setMode("conversation");
       setIsMobileDetailVisible(true);
       saveLastSelection({
         mode: channel.conversationType === "direct_message" ? "dm" : "channel",
@@ -2682,39 +2649,21 @@ export function ServerConversationPageClient({
         return;
       }
 
-      const existingNames = new Set(
-        draftAttachments
-          .map((item) => (item.name || "").trim().toLowerCase())
-          .filter(Boolean),
-      );
-
       setIsUploadingDraftFile(true);
       try {
         let uploadedAny = false;
         for (const file of files) {
-          const normalizedName = file.name.trim().toLowerCase();
-          if (existingNames.has(normalizedName)) {
-            toast.error(
-              t("hero.toasts.duplicateFileName", {
-                name: file.name,
-              }),
-            );
-            continue;
-          }
-
           if (file.size > MAX_FILE_SIZE) {
             toast.error(t("hero.toasts.fileTooLarge"));
             continue;
           }
 
           try {
-            const uploadedFile = await serversApi.uploadChannelArtifact(
+            await serversApi.uploadChannelArtifact(
               selectedServerId,
               activeChannelId,
               file,
             );
-            setDraftAttachments((current) => [...current, uploadedFile]);
-            existingNames.add(normalizedName);
             uploadedAny = true;
             toast.success(t("hero.toasts.uploadSuccess"));
             playUploadSound();
@@ -2725,18 +2674,54 @@ export function ServerConversationPageClient({
         }
 
         if (uploadedAny) {
-          setChannelArtifacts(
-            await serversApi.listChannelArtifacts(
-              selectedServerId,
-              activeChannelId,
-            ),
-          );
+          const [nextArtifacts, nextMessages] = await Promise.all([
+            serversApi.listChannelArtifacts(selectedServerId, activeChannelId),
+            serversApi.listMessages(selectedServerId, activeChannelId),
+          ]);
+          setChannelArtifacts(nextArtifacts);
+          setMessagesByChannel((current) => ({
+            ...current,
+            [activeChannelId]: nextMessages,
+          }));
         }
       } finally {
         setIsUploadingDraftFile(false);
       }
     },
-    [activeChannelId, draftAttachments, selectedServerId, t],
+    [activeChannelId, selectedServerId, t],
+  );
+
+  const deleteSharedArtifact = React.useCallback(
+    async (file: FileNode) => {
+      if (!selectedServerId || !activeChannelId || !file.artifact_id) {
+        return;
+      }
+
+      try {
+        await serversApi.deleteChannelArtifact(
+          selectedServerId,
+          activeChannelId,
+          file.artifact_id,
+        );
+        const [nextArtifacts, nextMessages] = await Promise.all([
+          serversApi.listChannelArtifacts(selectedServerId, activeChannelId),
+          serversApi.listMessages(selectedServerId, activeChannelId),
+        ]);
+        setChannelArtifacts(nextArtifacts);
+        setMessagesByChannel((current) => ({
+          ...current,
+          [activeChannelId]: nextMessages,
+        }));
+        toast.success(t("fileSidebar.deleteSuccess"));
+      } catch (error) {
+        console.error(
+          "[ServersWorkspace] channel artifact delete failed",
+          error,
+        );
+        toast.error(t("fileSidebar.deleteFailed"));
+      }
+    },
+    [activeChannelId, selectedServerId, t],
   );
 
   const removeDraftAttachment = React.useCallback((index: number) => {
@@ -2998,6 +2983,13 @@ export function ServerConversationPageClient({
     try {
       const dm = await serversApi.createDirectMessage(selectedServerId, {
         targetAgentIdentityId: agentId,
+      });
+      setChannels((current) => {
+        const nextById = new Map(
+          current.map((channel) => [channel.id, channel]),
+        );
+        nextById.set(dm.id, dm);
+        return Array.from(nextById.values());
       });
       openChannel(dm);
     } catch (error) {
@@ -3367,6 +3359,65 @@ export function ServerConversationPageClient({
     }
   };
 
+  const handlePinAgentRuntime = async (
+    agentId: string,
+    durationHours: number,
+  ) => {
+    if (!selectedServerId) {
+      return;
+    }
+    try {
+      await serversApi.pinAgentRuntime(
+        selectedServerId,
+        agentId,
+        durationHours,
+      );
+      await refreshMembership(selectedServerId);
+      if (activeChannelId) {
+        const nextAgents = await serversApi.listChannelAgents(
+          selectedServerId,
+          activeChannelId,
+        );
+        setChannelAgents(nextAgents);
+        setChannelAgentsByChannelId((current) => ({
+          ...current,
+          [activeChannelId]: nextAgents,
+        }));
+      }
+      toast.success(t("runtime.toasts.pinUpdated"));
+    } catch (error) {
+      console.error("[ServersWorkspace] pin agent runtime failed", error);
+      toast.error(t("runtime.toasts.pinUpdateFailed"));
+      throw error;
+    }
+  };
+
+  const handleUnpinAgentRuntime = async (agentId: string) => {
+    if (!selectedServerId) {
+      return;
+    }
+    try {
+      await serversApi.unpinAgentRuntime(selectedServerId, agentId);
+      await refreshMembership(selectedServerId);
+      if (activeChannelId) {
+        const nextAgents = await serversApi.listChannelAgents(
+          selectedServerId,
+          activeChannelId,
+        );
+        setChannelAgents(nextAgents);
+        setChannelAgentsByChannelId((current) => ({
+          ...current,
+          [activeChannelId]: nextAgents,
+        }));
+      }
+      toast.success(t("runtime.toasts.unpinned"));
+    } catch (error) {
+      console.error("[ServersWorkspace] unpin agent runtime failed", error);
+      toast.error(t("runtime.toasts.unpinFailed"));
+      throw error;
+    }
+  };
+
   const handleRemoveServerAgent = async (agentId: string) => {
     if (!selectedServerId) {
       return;
@@ -3653,7 +3704,7 @@ export function ServerConversationPageClient({
               </section>
             ) : colleaguesModeActive ? (
               <ColleaguesPanel
-                agents={knownAgents}
+                agents={colleagueDirectoryAgents}
                 presets={presets}
                 members={serverMembers}
                 selection={colleagueSelection}
@@ -3661,7 +3712,6 @@ export function ServerConversationPageClient({
                 canCreateAgent={canManageServerOps}
                 canInviteMembers={canManageServerOps}
                 onSelect={(selection) => {
-                  setColleagueDetailClosed(false);
                   setDrawer({ type: "colleague", selection });
                 }}
                 onOpenActiveChannel={openChannelById}
@@ -3728,7 +3778,6 @@ export function ServerConversationPageClient({
                   setDrawer({ type: "execution", sessionId })
                 }
                 onOpenAgentProfile={(agentId) => {
-                  setColleagueDetailClosed(false);
                   setDrawer({
                     type: "colleague",
                     selection: { kind: "agent", id: agentId },
@@ -3800,12 +3849,17 @@ export function ServerConversationPageClient({
                     files={channelArtifacts}
                     isLoading={isLoading}
                     onClose={() => setDrawer({ type: "none" })}
+                    onDeleteFile={deleteSharedArtifact}
                     fileListLayoutClassName="xl:grid-cols-[minmax(0,1fr)_minmax(10rem,12rem)]"
                   />
                 ) : drawer.type === "colleague" ? (
                   <ColleagueDetail
                     selection={colleagueSelection}
-                    agents={knownAgents}
+                    agents={
+                      colleaguesModeActive
+                        ? colleagueDirectoryAgents
+                        : knownAgents
+                    }
                     presets={presets}
                     members={serverMembers}
                     serverId={selectedServerId}
@@ -3822,7 +3876,6 @@ export function ServerConversationPageClient({
                     activeChannelIdByAgentId={activeChannelIdByAgentId}
                     channelNamesByAgentId={channelNamesByAgentId}
                     onClose={() => {
-                      setColleagueDetailClosed(true);
                       setDrawer({ type: "none" });
                     }}
                     onOpenDm={handleOpenDm}
@@ -3838,6 +3891,12 @@ export function ServerConversationPageClient({
                       void handleRestartAgent(agentId)
                     }
                     onStopAgent={(agentId) => void handleStopAgent(agentId)}
+                    onPinAgentRuntime={(agentId, durationHours) =>
+                      handlePinAgentRuntime(agentId, durationHours)
+                    }
+                    onUnpinAgentRuntime={(agentId) =>
+                      handleUnpinAgentRuntime(agentId)
+                    }
                     onUpdateAgentDescription={updateAgentDescription}
                     onRemoveAgentFromServer={(agentId) =>
                       void handleRemoveServerAgent(agentId)

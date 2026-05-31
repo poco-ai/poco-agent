@@ -81,6 +81,51 @@ class AgentIdentityApiTests(unittest.TestCase):
         self.assertEqual(body["data"][0]["handle"], "backend-specialist")
         list_agents.assert_called_once()
 
+    @patch("app.api.v1.server_agents.service.pin_agent_runtime")
+    def test_pin_server_agent_runtime_returns_agent_payload(
+        self,
+        pin_agent_runtime,
+    ) -> None:
+        server_id = uuid.uuid4()
+        agent_id = uuid.uuid4()
+        agent = build_agent_response(server_id=server_id)
+        pin_agent_runtime.return_value = agent
+
+        response = self.client.post(
+            f"/api/v1/servers/{server_id}/agents/{agent_id}/pin",
+            json={"duration_hours": 2},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["code"], 0)
+        self.assertEqual(
+            body["data"]["agent_identity_id"], str(agent.agent_identity_id)
+        )
+        pin_agent_runtime.assert_called_once()
+
+    @patch("app.api.v1.server_agents.service.unpin_agent_runtime")
+    def test_unpin_server_agent_runtime_returns_agent_payload(
+        self,
+        unpin_agent_runtime,
+    ) -> None:
+        server_id = uuid.uuid4()
+        agent_id = uuid.uuid4()
+        agent = build_agent_response(server_id=server_id)
+        unpin_agent_runtime.return_value = agent
+
+        response = self.client.delete(
+            f"/api/v1/servers/{server_id}/agents/{agent_id}/pin",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["code"], 0)
+        self.assertEqual(
+            body["data"]["agent_identity_id"], str(agent.agent_identity_id)
+        )
+        unpin_agent_runtime.assert_called_once()
+
 
 if __name__ == "__main__":
     unittest.main()

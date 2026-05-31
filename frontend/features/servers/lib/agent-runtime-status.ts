@@ -1,10 +1,13 @@
 import type { ServerAgentItem } from "@/features/servers/model/types";
+import { getPersistentRuntimeStatus } from "../../../lib/persistent-runtime-status.ts";
 
 export type AgentRuntimeTone = "success" | "warning" | "danger" | "muted";
 export type AgentRuntimeState =
-  | "active"
-  | "idle"
-  | "stopped"
+  | "running"
+  | "warm_idle"
+  | "sleeping"
+  | "manually_stopped"
+  | "stale"
   | "removed"
   | "failed"
   | "unknown";
@@ -12,16 +15,29 @@ export type AgentRuntimeState =
 export function getAgentRuntimeStatus(agent: ServerAgentItem): {
   state: AgentRuntimeState;
   labelKey:
-    | "conversationView.colleagues.runtimeStates.active"
-    | "conversationView.colleagues.runtimeStates.idle"
-    | "conversationView.colleagues.runtimeStates.stopped"
-    | "conversationView.colleagues.runtimeStates.removed"
-    | "conversationView.colleagues.runtimeStates.failed"
-    | "conversationView.colleagues.runtimeStates.unknown";
+    | "runtime.states.running"
+    | "runtime.states.warmIdle"
+    | "runtime.states.sleeping"
+    | "runtime.states.manuallyStopped"
+    | "runtime.states.stale"
+    | "runtime.states.removed"
+    | "runtime.states.failed"
+    | "runtime.states.unknown";
   tone: AgentRuntimeTone;
+  iconKey:
+    | "running"
+    | "warmIdle"
+    | "sleeping"
+    | "stopped"
+    | "stale"
+    | "removed"
+    | "failed"
+    | "unknown"
+    | "pin";
   rawRuntimeStatus: string | null;
   rawLifecycleState: string | null;
   hasActiveExecution: boolean;
+  isPinned: boolean;
 } {
   const lifecycleState = (agent.lifecycleState || "").trim().toLowerCase();
   const runtimeStatus = (agent.persistentState?.runtimeStatus || "")
@@ -31,81 +47,23 @@ export function getAgentRuntimeStatus(agent: ServerAgentItem): {
     agent.persistentState?.activeSessionId ||
     agent.persistentState?.activeTaskId,
   );
-
-  if (agent.removedAt) {
-    return {
-      state: "removed",
-      labelKey: "conversationView.colleagues.runtimeStates.removed",
-      tone: "muted",
-      rawRuntimeStatus: runtimeStatus || null,
-      rawLifecycleState: lifecycleState || null,
-      hasActiveExecution,
-    };
-  }
-
-  if (lifecycleState === "inactive") {
-    return {
-      state: "stopped",
-      labelKey: "conversationView.colleagues.runtimeStates.stopped",
-      tone: "muted",
-      rawRuntimeStatus: runtimeStatus || null,
-      rawLifecycleState: lifecycleState || null,
-      hasActiveExecution,
-    };
-  }
-
-  if (runtimeStatus === "busy" || hasActiveExecution) {
-    return {
-      state: "active",
-      labelKey: "conversationView.colleagues.runtimeStates.active",
-      tone: "warning",
-      rawRuntimeStatus: runtimeStatus || null,
-      rawLifecycleState: lifecycleState || null,
-      hasActiveExecution,
-    };
-  }
-
-  if (runtimeStatus === "failed") {
-    return {
-      state: "failed",
-      labelKey: "conversationView.colleagues.runtimeStates.failed",
-      tone: "danger",
-      rawRuntimeStatus: runtimeStatus || null,
-      rawLifecycleState: lifecycleState || null,
-      hasActiveExecution,
-    };
-  }
-
-  if (runtimeStatus === "idle" || runtimeStatus === "active") {
-    return {
-      state: "idle",
-      labelKey: "conversationView.colleagues.runtimeStates.idle",
-      tone: "success",
-      rawRuntimeStatus: runtimeStatus || null,
-      rawLifecycleState: lifecycleState || null,
-      hasActiveExecution,
-    };
-  }
+  const status = getPersistentRuntimeStatus({
+    removed: Boolean(agent.removedAt),
+    lifecycleState,
+    runtimeLifecycleState: agent.runtimeSummary?.lifecycleState,
+    keepaliveUntil: agent.runtimeSummary?.keepaliveUntil,
+    fallbackRuntimeStatus: runtimeStatus,
+    hasActiveExecution,
+  });
 
   return {
-    state: "unknown",
-    labelKey: "conversationView.colleagues.runtimeStates.unknown",
-    tone: "muted",
+    state: status.state,
+    labelKey: status.labelKey,
+    tone: status.tone,
+    iconKey: status.iconKey,
     rawRuntimeStatus: runtimeStatus || null,
     rawLifecycleState: lifecycleState || null,
     hasActiveExecution,
+    isPinned: status.isPinned,
   };
-}
-
-export function getAgentRuntimeDotClassName(tone: AgentRuntimeTone): string {
-  switch (tone) {
-    case "success":
-      return "bg-emerald-500";
-    case "warning":
-      return "bg-amber-500";
-    case "danger":
-      return "bg-rose-500";
-    default:
-      return "bg-muted-foreground/50";
-  }
 }

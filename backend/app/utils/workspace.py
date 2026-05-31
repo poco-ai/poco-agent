@@ -29,6 +29,8 @@ def build_workspace_file_nodes(
         node_id = node.get("id") or node_path or ""
         name = node.get("name") or ""
         mime_type = node.get("mimeType") or node.get("mime_type")
+        artifact_id = node.get("artifact_id") or node.get("artifactId")
+        source_kind = node.get("source_kind") or node.get("sourceKind")
         oss_status = node.get("oss_status") or node.get("ossStatus")
         oss_meta = node.get("oss_meta") or node.get("ossMeta")
         source = node.get("source") or "workspace"
@@ -63,6 +65,8 @@ def build_workspace_file_nodes(
                 children=children,
                 url=url,
                 mimeType=mime_type,
+                artifact_id=str(artifact_id) if artifact_id is not None else None,
+                source_kind=str(source_kind) if source_kind is not None else None,
                 oss_status=oss_status,
                 oss_meta=oss_meta,
                 source=source,

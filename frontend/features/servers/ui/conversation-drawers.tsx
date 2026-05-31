@@ -16,6 +16,7 @@ import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { PersistentRuntimeBadge } from "@/components/shared/persistent-runtime-badge";
 import { Textarea } from "@/components/ui/textarea";
 import type { Preset } from "@/features/capabilities/presets/lib/preset-types";
 import { ExecutionContainer } from "@/features/chat";
@@ -51,10 +52,7 @@ import { cn } from "@/lib/utils";
 import { SharedArtifactsDrawer } from "@/features/servers/ui/shared-artifacts-drawer";
 
 import { MessageRow } from "./conversation-message-row";
-import {
-  getAgentRuntimeDotClassName,
-  getAgentRuntimeStatus,
-} from "../lib/agent-runtime-status";
+import { getAgentRuntimeStatus } from "../lib/agent-runtime-status";
 import { ServerAgentAvatar } from "./server-agent-avatar";
 
 const overlayDrawerClassName =
@@ -472,15 +470,11 @@ export function AgentDrawer({
                 {(() => {
                   const runtimeStatus = getAgentRuntimeStatus(agent);
                   return (
-                    <span className="inline-flex items-center gap-2 text-xs text-muted-foreground">
-                      <span
-                        className={cn(
-                          "size-2 rounded-full",
-                          getAgentRuntimeDotClassName(runtimeStatus.tone),
-                        )}
-                      />
-                      {t(runtimeStatus.labelKey)}
-                    </span>
+                    <PersistentRuntimeBadge
+                      status={runtimeStatus}
+                      label={t(runtimeStatus.labelKey)}
+                      pinnedLabel={t("runtime.labels.pinned")}
+                    />
                   );
                 })()}
               </div>
@@ -505,17 +499,11 @@ export function AgentDrawer({
                     {selectedAgent.displayName}
                   </p>
                   {selectedRuntimeStatus ? (
-                    <span className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-2.5 py-1 text-xs text-muted-foreground">
-                      <span
-                        className={cn(
-                          "size-2 rounded-full",
-                          getAgentRuntimeDotClassName(
-                            selectedRuntimeStatus.tone,
-                          ),
-                        )}
-                      />
-                      {t(selectedRuntimeStatus.labelKey)}
-                    </span>
+                    <PersistentRuntimeBadge
+                      status={selectedRuntimeStatus}
+                      label={t(selectedRuntimeStatus.labelKey)}
+                      pinnedLabel={t("runtime.labels.pinned")}
+                    />
                   ) : null}
                 </div>
                 <p className="text-sm text-muted-foreground">

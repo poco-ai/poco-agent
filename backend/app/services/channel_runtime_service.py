@@ -30,6 +30,7 @@ from app.schemas.channel_runtime import (
 from app.schemas.session import TaskConfig
 from app.schemas.task import TaskEnqueueRequest
 from app.services.channel_runtime_scope_service import ChannelRuntimeScopeService
+from app.services.persistent_runtime_service import PersistentRuntimeService
 from app.services.server_channel_message_reaction_service import (
     ServerChannelMessageReactionService,
 )
@@ -45,9 +46,13 @@ class ChannelRuntimeService:
         *,
         scope_service: ChannelRuntimeScopeService | None = None,
         task_service: TaskService | None = None,
+        persistent_runtime_service: PersistentRuntimeService | None = None,
     ) -> None:
         self._scope_service = scope_service or ChannelRuntimeScopeService()
         self._task_service = task_service or TaskService()
+        self._persistent_runtime_service = (
+            persistent_runtime_service or PersistentRuntimeService()
+        )
 
     def read_messages(
         self,
@@ -297,13 +302,11 @@ class ChannelRuntimeService:
                 dedupe_key=dedupe_key,
             ),
         )
-        active_session_id = None
-        if getattr(target_agent, "persistent_state", None) is not None:
-            active_session_id = getattr(
-                target_agent.persistent_state,
-                "active_session_id",
-                None,
-            )
+        runtime = self._persistent_runtime_service.ensure_server_agent_runtime(
+            db,
+            agent_identity=target_agent,
+        )
+        active_session_id = runtime.session_id
         result = self._task_service.enqueue_task(
             db,
             target_agent.created_by,
@@ -316,6 +319,7 @@ class ChannelRuntimeService:
                 config=TaskConfig(
                     preset_id=target_agent.preset_id,
                     container_mode="persistent",
+                    persistent_runtime_key=runtime.runtime_key,
                     filesystem_mode="sandbox",
                     agent_identity_id=target_agent.id,
                     agent_runtime_mode="persistent",

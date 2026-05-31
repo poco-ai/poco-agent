@@ -3,7 +3,9 @@ title: 后台执行与定时任务
 description: 即使关闭浏览器，Agent 也能继续运行，并把状态回流到 server 协作界面。
 ---
 
-Poco 支持超出当前浏览器会话的长时间任务执行。这不只影响单个聊天会话，也支撑 server/channel 中的持久化 agent 协作。
+Poco 支持超出当前浏览器会话的长时间任务执行。这不只影响单个聊天会话，也支撑 server/channel 中的持久化 agent，以及 issue 场景下的长期 sandbox runtime。
+
+现在 Backend 会持久化长期 runtime registry，Executor Manager 负责 idle controller，因此一个持久 runtime 可以在 `running -> warm_idle -> sleeping` 之间切换，同时保留它的长期状态。空闲策略触发时，Poco 默认会 `stop` 容器来释放计算资源，但不会删除 owner 绑定、workspace 和可恢复状态。
 
 ## 后台执行链路
 
@@ -47,6 +49,8 @@ flowchart TD
 ## 在 server 协作中的表现
 
 当你在频道里 `@agent` 时，Poco 可以复用该 agent 的持久运行时，让执行持续在后台推进。频道消息流会先看到紧凑的 execution placeholder，更完整的 thinking、tool call 和运行细节则进入 execution drawer。
+
+对产品语义来说，最大的变化是：`persistent` 不再等于“容器必须永远活着”。Poco 会保留 runtime owner、workspace、`/agent_state` 和会话锚点，只在有活跃工作或显式 Pin 租约时保持计算热启动。对 server agent 来说，这个 Pin 是 owner 控制的 `1-24 小时` keepalive 租约，而不是无限期常驻开关。
 
 ## 可靠性边界
 

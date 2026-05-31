@@ -1,3 +1,5 @@
+import type { PersistentRuntimeSummary } from "@/types/persistent-runtime";
+
 export type ServerKind = "personal" | "shared";
 export type ServerChannelVisibility = "public" | "private";
 export type ServerConversationType = "channel" | "direct_message";
@@ -41,6 +43,7 @@ export interface ServerAgentItem {
   removedAt?: string | null;
   removedBy?: string | null;
   persistentState?: ServerAgentPersistentState | null;
+  runtimeSummary?: PersistentRuntimeSummary | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -196,6 +199,11 @@ export interface ServerChannelEventContent {
   commentText?: string | null;
   fromStatus?: string | null;
   toStatus?: string | null;
+  artifactId?: string | null;
+  artifactDisplayName?: string | null;
+  artifactLogicalPath?: string | null;
+  artifactMimeType?: string | null;
+  artifactSizeBytes?: number | string | null;
   fromAssignee?: unknown;
   toAssignee?: unknown;
   assignee?: unknown;

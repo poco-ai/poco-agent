@@ -22,7 +22,7 @@ flowchart TD
 
 ## What happens when you mention an agent
 
-When you `@agent` in a channel, or message an agent in a DM, Poco resumes its persistent runtime and immediately adds an execution placeholder to the conversation. The main message flow stays compact, while detailed thinking, tool calls, todo progress, and execution logs open in the execution drawer on the right.
+When you `@agent` in a channel, or message an agent in a DM, Poco resolves the agent's persistent runtime by owner key and resumes the same long-lived context when possible. The main message flow stays compact, while detailed thinking, tool calls, todo progress, and execution logs open in the execution drawer on the right.
 
 ```mermaid
 sequenceDiagram
@@ -48,16 +48,21 @@ Poco separates long-lived memory, runtime state, and shared files into different
 - The server owner can inspect these private files from the colleague profile through `Persistent files`.
 - A single agent keeps one writable persistent runtime by default, which prevents concurrent tasks from corrupting long-term memory or work directories.
 
+After the reply is finished, the runtime can move from `running` to `warm_idle`, and later to `sleeping` when the idle window expires. Poco stops the container but does not remove the durable runtime state. The workspace, private `/agent_state`, and resumable session anchor remain, so the next mention can cold-resume the same agent instead of creating a new identity.
+
 ## Runtime controls and removal behavior
 
-Poco separates `Restart`, `Stop`, `Remove from channel`, and `Remove` into different operations. Restart and stop control the current runtime, channel removal only affects the active channel, and server removal takes the agent out of the available member set while preserving historical messages, reactions, published artifact ownership, and private persistent state.
+Poco separates `Pin`, `Restart`, `Stop`, `Remove from channel`, and `Remove` into different operations. Pin keeps the runtime warm for a bounded `1-24 hour` lease, restart resets the runtime context, stop turns it into a manual stop state, channel removal only affects the active channel, and server removal takes the agent out of the available member set while preserving historical messages, reactions, published artifact ownership, and private persistent state.
+
+`Stop` is stronger than auto-sleep. A sleeping runtime can auto-resume on the next ordinary mention, while a manually stopped runtime stays inactive until the owner explicitly starts or restarts it again.
 
 ```mermaid
 flowchart LR
-    A["Restart"] --> B["Reset current runtime"]
-    C["Stop"] --> D["Cancel or pause active run"]
-    E["Remove from channel"] --> F["Hide from current channel membership"]
-    G["Remove from server"] --> H["Deactivate server membership"]
-    F --> I["Keep history"]
-    H --> I
+    A["Pin for 1-24 hours"] --> B["Keep runtime warm"]
+    C["Restart"] --> D["Reset current runtime"]
+    E["Stop"] --> F["Enter manually stopped state"]
+    G["Remove from channel"] --> H["Hide from current channel membership"]
+    I["Remove from server"] --> J["Deactivate server membership"]
+    H --> K["Keep history"]
+    J --> K
 ```

@@ -1,4 +1,5 @@
 import asyncio
+from dataclasses import dataclass
 from typing import Any
 
 import httpx
@@ -12,6 +13,13 @@ from app.core.observability.request_context import (
     get_request_id,
     get_trace_id,
 )
+
+
+@dataclass
+class BinaryProxyResponse:
+    content: bytes
+    media_type: str
+    headers: dict[str, str]
 
 
 class BackendClient:
@@ -119,6 +127,102 @@ class BackendClient:
             "POST",
             "/api/v1/internal/agent-assignments/dispatch-due",
             json={"limit": limit},
+            headers={
+                "X-Internal-Token": self.settings.internal_api_token,
+                **self._trace_headers(),
+            },
+            retry_connect_errors=2,
+        )
+        data = response.json()
+        result = data.get("data", {})
+        return result if isinstance(result, dict) else {}
+
+    async def list_controller_persistent_runtimes(
+        self,
+        *,
+        lifecycle_states: list[str] | None = None,
+        limit: int | None = None,
+    ) -> list[dict[str, Any]]:
+        params: list[tuple[str, str | int]] = []
+        for state in lifecycle_states or []:
+            params.append(("lifecycle_state", state))
+        if limit is not None:
+            params.append(("limit", limit))
+        response = await self._request(
+            "GET",
+            "/api/v1/internal/persistent-runtimes/controller",
+            params=params,
+            headers={
+                "X-Internal-Token": self.settings.internal_api_token,
+                **self._trace_headers(),
+            },
+            retry_connect_errors=2,
+        )
+        data = response.json()
+        result = data.get("data", [])
+        return result if isinstance(result, list) else []
+
+    async def mark_persistent_runtime_started(
+        self,
+        runtime_key: str,
+        *,
+        session_id: str | None = None,
+        container_id: str | None = None,
+        worker_id: str | None = None,
+        browser_enabled: bool | None = None,
+        filesystem_fingerprint: str | None = None,
+    ) -> dict[str, Any]:
+        response = await self._request(
+            "POST",
+            f"/api/v1/internal/persistent-runtimes/{runtime_key}/started",
+            json={
+                "session_id": session_id,
+                "container_id": container_id,
+                "worker_id": worker_id,
+                "browser_enabled": browser_enabled,
+                "filesystem_fingerprint": filesystem_fingerprint,
+            },
+            headers={
+                "X-Internal-Token": self.settings.internal_api_token,
+                **self._trace_headers(),
+            },
+            retry_connect_errors=2,
+        )
+        data = response.json()
+        result = data.get("data", {})
+        return result if isinstance(result, dict) else {}
+
+    async def mark_persistent_runtime_sleeping(
+        self,
+        runtime_key: str,
+        *,
+        stop_reason: str,
+        worker_id: str | None = None,
+    ) -> dict[str, Any]:
+        response = await self._request(
+            "POST",
+            f"/api/v1/internal/persistent-runtimes/{runtime_key}/sleep",
+            json={"stop_reason": stop_reason, "worker_id": worker_id},
+            headers={
+                "X-Internal-Token": self.settings.internal_api_token,
+                **self._trace_headers(),
+            },
+            retry_connect_errors=2,
+        )
+        data = response.json()
+        result = data.get("data", {})
+        return result if isinstance(result, dict) else {}
+
+    async def mark_persistent_runtime_stale(
+        self,
+        runtime_key: str,
+        *,
+        stop_reason: str,
+    ) -> dict[str, Any]:
+        response = await self._request(
+            "POST",
+            f"/api/v1/internal/persistent-runtimes/{runtime_key}/stale",
+            json={"stop_reason": stop_reason},
             headers={
                 "X-Internal-Token": self.settings.internal_api_token,
                 **self._trace_headers(),
@@ -678,6 +782,24 @@ class BackendClient:
             response.raise_for_status()
             return response.json().get("data")
 
+    async def read_agent_channel_artifact_text(
+        self,
+        session_id: str,
+        payload: dict[str, Any],
+    ) -> Any:
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"{self.base_url}/api/v1/internal/channel-artifacts/text",
+                params={"session_id": session_id},
+                json=payload,
+                headers={
+                    "X-Internal-Token": self.settings.internal_api_token,
+                    **self._trace_headers(),
+                },
+            )
+            response.raise_for_status()
+            return response.json().get("data")
+
     async def search_agent_channel_artifacts(
         self,
         session_id: str,
@@ -695,6 +817,39 @@ class BackendClient:
             )
             response.raise_for_status()
             return response.json().get("data")
+
+    async def download_agent_channel_artifact(
+        self,
+        session_id: str,
+        payload: dict[str, Any],
+    ) -> "BinaryProxyResponse":
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"{self.base_url}/api/v1/internal/channel-artifacts/download",
+                params={"session_id": session_id},
+                json=payload,
+                headers={
+                    "X-Internal-Token": self.settings.internal_api_token,
+                    **self._trace_headers(),
+                },
+            )
+            response.raise_for_status()
+            forwarded_headers = {
+                key: value
+                for key, value in response.headers.items()
+                if key.lower().startswith("x-artifact-")
+            }
+            if "content-disposition" in response.headers:
+                forwarded_headers["content-disposition"] = response.headers[
+                    "content-disposition"
+                ]
+            return BinaryProxyResponse(
+                content=response.content,
+                media_type=response.headers.get(
+                    "content-type", "application/octet-stream"
+                ),
+                headers=forwarded_headers,
+            )
 
     async def update_agent_channel_task_status(
         self,

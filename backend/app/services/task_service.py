@@ -34,7 +34,7 @@ from app.services.model_config_service import (
     get_allowed_model_ids,
     infer_provider_id,
 )
-from app.services.agent_runtime_service import AgentRuntimeService
+from app.services.persistent_runtime_service import PersistentRuntimeService
 from app.services.session_queue_service import SessionQueueService
 
 logger = logging.getLogger(__name__)
@@ -529,14 +529,13 @@ class TaskService:
     ) -> None:
         if not isinstance(merged_config, dict):
             return
-        agent_identity_id = merged_config.get("agent_identity_id")
-        runtime_mode = (merged_config.get("agent_runtime_mode") or "").strip().lower()
-        if not agent_identity_id or runtime_mode != "persistent":
+        runtime_key = str(merged_config.get("persistent_runtime_key") or "").strip()
+        if not runtime_key:
             return
         channel_task_id = merged_config.get("channel_task_id")
-        AgentRuntimeService().reserve_persistent_runtime(
+        PersistentRuntimeService().reserve_runtime(
             db,
-            agent_identity_id=uuid.UUID(str(agent_identity_id)),
+            runtime_key=runtime_key,
             session_id=session_id,
             channel_task_id=(
                 uuid.UUID(str(channel_task_id)) if channel_task_id else None

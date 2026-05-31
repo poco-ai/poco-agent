@@ -1,5 +1,6 @@
 import unittest
 import uuid
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from fastapi.testclient import TestClient
@@ -99,6 +100,63 @@ class InternalChannelArtifactsApiTests(unittest.TestCase):
         self.assertEqual(body["code"], 0)
         self.assertEqual(len(body["data"]["artifacts"]), 1)
         search_runtime.assert_called_once()
+
+    @patch("app.api.v1.internal_channel_artifacts.service.read_runtime_artifact_text")
+    def test_read_internal_channel_artifact_text_returns_chunk(self, read_text):
+        read_text.return_value.model_dump.return_value = {
+            "artifact": {
+                "artifact_id": str(self.artifact_id),
+                "logical_path": "/Uploads/resume.pdf",
+                "display_name": "resume.pdf",
+                "content_kind": "binary",
+            },
+            "content": "Experienced engineer",
+            "start_char": 0,
+            "end_char": 20,
+            "next_start_char": None,
+            "total_chars": 20,
+            "has_more": False,
+            "extraction_kind": "pdf_text",
+        }
+
+        response = self.client.post(
+            f"/api/v1/internal/channel-artifacts/text?session_id={self.session_id}",
+            headers={"X-Internal-Token": "change-this-token-in-production"},
+            json={"artifact_id": str(self.artifact_id), "max_chars": 2000},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["code"], 0)
+        self.assertEqual(body["data"]["content"], "Experienced engineer")
+        read_text.assert_called_once()
+
+    @patch("app.api.v1.internal_channel_artifacts.service.download_runtime_artifact")
+    def test_download_internal_channel_artifact_streams_file(self, download_runtime):
+        download_runtime.return_value = SimpleNamespace(
+            artifact=SimpleNamespace(
+                id=self.artifact_id,
+                display_name="resume.pdf",
+                logical_path="/Uploads/resume.pdf",
+                mime_type="application/pdf",
+                size_bytes=9,
+            ),
+            filename="resume.pdf",
+            media_type="application/pdf",
+            content=b"%PDF-1.7",
+        )
+
+        response = self.client.post(
+            f"/api/v1/internal/channel-artifacts/download?session_id={self.session_id}",
+            headers={"X-Internal-Token": "change-this-token-in-production"},
+            json={"artifact_id": str(self.artifact_id)},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content, b"%PDF-1.7")
+        self.assertEqual(response.headers["content-type"], "application/pdf")
+        self.assertEqual(response.headers["x-artifact-display-name"], "resume.pdf")
+        download_runtime.assert_called_once()
 
 
 if __name__ == "__main__":

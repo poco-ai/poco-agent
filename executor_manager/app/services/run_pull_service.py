@@ -529,7 +529,7 @@ class RunPullService:
             (
                 executor_url,
                 container_id,
-                _,
+                mount_resolution,
             ) = await self.container_pool.get_or_create_container(
                 session_id=session_id,
                 user_id=user_id,
@@ -549,6 +549,18 @@ class RunPullService:
                     **ctx,
                 },
             )
+            persistent_runtime_key = str(
+                resolved_config.get("persistent_runtime_key") or ""
+            ).strip()
+            if persistent_runtime_key:
+                await self.backend_client.mark_persistent_runtime_started(
+                    persistent_runtime_key,
+                    session_id=session_id,
+                    container_id=container_id,
+                    worker_id=self.worker_id,
+                    browser_enabled=browser_enabled,
+                    filesystem_fingerprint=mount_resolution.mount_fingerprint,
+                )
 
             if await self._session_stop_requested(session_id):
                 await self.container_pool.cancel_task(session_id)

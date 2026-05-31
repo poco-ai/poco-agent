@@ -3,7 +3,9 @@ title: Background execution and scheduled jobs
 description: Keep agents running after the browser closes and flow their status back into server collaboration.
 ---
 
-Poco supports long-running tasks beyond an active browser tab. This powers not only standalone task execution, but also persistent agents inside server and channel collaboration.
+Poco supports long-running tasks beyond an active browser tab. This powers not only standalone task execution, but also long-lived runtimes such as persistent agents and persistent issue sandboxes.
+
+Backend now persists a runtime registry for long-lived owners, while Executor Manager runs an idle controller that can let a runtime go `running -> warm_idle -> sleeping` without deleting its durable state. When the idle policy fires, Poco stops the container to release compute, but keeps the owner binding, workspace, and resumable state for a later wake-up.
 
 ## Background execution flow
 
@@ -53,3 +55,5 @@ Background execution matters most when work needs to keep moving without an acti
 ## How this appears in server collaboration
 
 When you `@agent` inside a channel, Poco can resume that agent's persistent runtime and keep the work moving in the background. The channel shows a compact execution placeholder first, while deeper thinking, tool calls, and runtime details stay inside the execution drawer. You can keep following progress without pinning the browser tab in the foreground.
+
+For operators, the key product change is that "persistent" no longer means "the container must stay alive forever". Instead, Poco preserves the runtime owner, workspace, `/agent_state`, and session anchor, and only keeps the compute hot when there is active work or an explicit pin lease. For server agents, that pin is an owner-controlled `1-24 hour` keepalive lease rather than an unbounded always-on flag.

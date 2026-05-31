@@ -16,6 +16,7 @@ from app.schemas.run import (
     RunResponse,
     RunStartRequest,
 )
+from app.services.persistent_runtime_service import PersistentRuntimeService
 from app.services.run_lifecycle_service import RunLifecycleService
 from app.services.usage_service import UsageService
 
@@ -240,6 +241,11 @@ class RunService:
             db_run,
             status="failed",
             error_message=request.error_message,
+        )
+        PersistentRuntimeService().release_runtime_for_session(
+            db,
+            session_id=db_run.session_id,
+            callback_status="failed",
         )
         db.commit()
         db.refresh(db_run)

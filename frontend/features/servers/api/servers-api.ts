@@ -23,6 +23,7 @@ import {
   getServerMemberRolePath,
   getServerOwnershipTransferPath,
 } from "@/features/servers/lib/server-member-api-paths";
+import type { PersistentRuntimeSummary } from "@/types/persistent-runtime";
 
 interface ServerUserPublicProfileResponse {
   user_id: string;
@@ -101,8 +102,32 @@ interface ServerAgentResponse {
   removed_at?: string | null;
   removed_by?: string | null;
   persistent_state?: ServerAgentPersistentStateResponse | null;
+  runtime_summary?: PersistentRuntimeSummaryResponse | null;
   created_at: string;
   updated_at: string;
+}
+
+interface PersistentRuntimeSummaryResponse {
+  persistent_runtime_id: string;
+  runtime_key: string;
+  owner_type: string;
+  owner_id: string;
+  agent_identity_id?: string | null;
+  assignment_id?: string | null;
+  session_id?: string | null;
+  container_id?: string | null;
+  lifecycle_state: string;
+  auto_resume: boolean;
+  idle_timeout_seconds: number;
+  warm_retention_seconds: number;
+  keepalive_until?: string | null;
+  last_activity_at?: string | null;
+  last_started_at?: string | null;
+  last_stopped_at?: string | null;
+  last_stop_reason?: string | null;
+  worker_id?: string | null;
+  browser_enabled: boolean;
+  filesystem_fingerprint?: string | null;
 }
 
 interface ServerMemberResponse {
@@ -287,8 +312,38 @@ function mapAgent(agent: ServerAgentResponse): ServerAgentItem {
           lastWrittenAt: agent.persistent_state.last_written_at,
         }
       : null,
+    runtimeSummary: agent.runtime_summary
+      ? mapPersistentRuntimeSummary(agent.runtime_summary)
+      : null,
     createdAt: agent.created_at,
     updatedAt: agent.updated_at,
+  };
+}
+
+function mapPersistentRuntimeSummary(
+  runtime: PersistentRuntimeSummaryResponse,
+): PersistentRuntimeSummary {
+  return {
+    id: runtime.persistent_runtime_id,
+    runtimeKey: runtime.runtime_key,
+    ownerType: runtime.owner_type,
+    ownerId: runtime.owner_id,
+    agentIdentityId: runtime.agent_identity_id,
+    assignmentId: runtime.assignment_id,
+    sessionId: runtime.session_id,
+    containerId: runtime.container_id,
+    lifecycleState: runtime.lifecycle_state,
+    autoResume: runtime.auto_resume,
+    idleTimeoutSeconds: runtime.idle_timeout_seconds,
+    warmRetentionSeconds: runtime.warm_retention_seconds,
+    keepaliveUntil: runtime.keepalive_until,
+    lastActivityAt: runtime.last_activity_at,
+    lastStartedAt: runtime.last_started_at,
+    lastStoppedAt: runtime.last_stopped_at,
+    lastStopReason: runtime.last_stop_reason,
+    workerId: runtime.worker_id,
+    browserEnabled: runtime.browser_enabled,
+    filesystemFingerprint: runtime.filesystem_fingerprint,
   };
 }
 
@@ -505,6 +560,16 @@ export const serversApi = {
     );
   },
 
+  deleteChannelArtifact: async (
+    serverId: string,
+    channelId: string,
+    artifactId: string,
+  ): Promise<void> => {
+    await apiClient.delete(
+      `/servers/${serverId}/channels/${channelId}/artifacts/${artifactId}`,
+    );
+  },
+
   listAgentStateFiles: async (
     serverId: string,
     agentId: string,
@@ -603,6 +668,28 @@ export const serversApi = {
   ): Promise<ServerAgentItem> => {
     const agent = await apiClient.post<ServerAgentResponse>(
       `/servers/${serverId}/agents/${agentId}/stop`,
+    );
+    return mapAgent(agent);
+  },
+
+  pinAgentRuntime: async (
+    serverId: string,
+    agentId: string,
+    durationHours: number,
+  ): Promise<ServerAgentItem> => {
+    const agent = await apiClient.post<ServerAgentResponse>(
+      `/servers/${serverId}/agents/${agentId}/pin`,
+      { duration_hours: durationHours },
+    );
+    return mapAgent(agent);
+  },
+
+  unpinAgentRuntime: async (
+    serverId: string,
+    agentId: string,
+  ): Promise<ServerAgentItem> => {
+    const agent = await apiClient.delete<ServerAgentResponse>(
+      `/servers/${serverId}/agents/${agentId}/pin`,
     );
     return mapAgent(agent);
   },
