@@ -72,6 +72,8 @@ async def extend_persistent_runtime_keepalive(
         runtime_key=runtime_key,
         duration_seconds=request.duration_seconds,
     )
+    db.commit()
+    db.refresh(result)
     return Response.success(
         data=PersistentRuntimeResponse.model_validate(result),
         message="Persistent runtime keepalive updated successfully",
@@ -97,6 +99,8 @@ async def mark_persistent_runtime_started(
         browser_enabled=request.browser_enabled,
         filesystem_fingerprint=request.filesystem_fingerprint,
     )
+    db.commit()
+    db.refresh(result)
     return Response.success(
         data=PersistentRuntimeResponse.model_validate(result),
         message="Persistent runtime marked running successfully",
@@ -119,6 +123,8 @@ async def mark_persistent_runtime_sleeping(
         stop_reason=request.stop_reason,
         worker_id=request.worker_id,
     )
+    db.commit()
+    db.refresh(result)
     return Response.success(
         data=PersistentRuntimeResponse.model_validate(result),
         message="Persistent runtime marked sleeping successfully",
@@ -140,6 +146,8 @@ async def mark_persistent_runtime_stale(
         runtime_key=runtime_key,
         stop_reason=request.stop_reason,
     )
+    db.commit()
+    db.refresh(result)
     return Response.success(
         data=PersistentRuntimeResponse.model_validate(result),
         message="Persistent runtime marked stale successfully",

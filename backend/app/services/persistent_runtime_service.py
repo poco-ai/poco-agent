@@ -415,7 +415,12 @@ class PersistentRuntimeService:
             return runtime
 
         if normalized in {"completed", "failed", "cancelled", "canceled"}:
-            runtime.lifecycle_state = "warm_idle"
+            if runtime.container_id is None and runtime.lifecycle_state == "running":
+                runtime.lifecycle_state = "stale"
+                runtime.last_stopped_at = self._now()
+                runtime.last_stop_reason = "container_missing"
+            else:
+                runtime.lifecycle_state = "warm_idle"
             self._sync_legacy_owner_state(db, runtime, channel_task_id=None)
         return runtime
 

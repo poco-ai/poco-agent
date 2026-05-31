@@ -141,7 +141,11 @@ class ContainerPool:
                 )
                 await self.delete_container(container_id)
             else:
+                restarted = self._ensure_container_running(container)
                 host_port = self._wait_for_port_mapping(container)
+                executor_url = f"http://{published_host}:{host_port}"
+                if restarted:
+                    self._wait_for_service_ready(executor_url)
                 logger.info(
                     "timing",
                     extra={
@@ -160,7 +164,7 @@ class ContainerPool:
                     },
                 )
                 return (
-                    f"http://{published_host}:{host_port}",
+                    executor_url,
                     container_id,
                     mount_resolution,
                 )
@@ -268,7 +272,7 @@ class ContainerPool:
             ),
             ports=ports,
             detach=True,
-            auto_remove=True,
+            auto_remove=container_mode != "persistent",
             labels=labels,
             extra_hosts={"host.docker.internal": "host-gateway"},
         )
@@ -497,6 +501,13 @@ class ContainerPool:
         if current_mount_fingerprint != mount_fingerprint:
             reasons.append("mount_fingerprint")
 
+        current_container_mode = str(labels.get("container_mode", "")).strip()
+        if (
+            current_container_mode == "persistent"
+            and self._is_auto_remove_container(container)
+        ):
+            reasons.append("auto_remove")
+
         return reasons
 
     def _resolve_executor_image(self, *, browser_enabled: bool) -> str:
@@ -643,6 +654,16 @@ class ContainerPool:
         raw = str(labels.get("browser_enabled", "")).strip().lower()
         return raw in {"true", "1", "yes"}
 
+    @staticmethod
+    def _is_auto_remove_container(container: "Container") -> bool:
+        attrs = getattr(container, "attrs", None)
+        if not isinstance(attrs, dict):
+            return False
+        host_config = attrs.get("HostConfig")
+        if not isinstance(host_config, dict):
+            return False
+        return bool(host_config.get("AutoRemove"))
+
     def _wait_for_container_ready(
         self,
         container: "Container",
@@ -683,6 +704,34 @@ class ContainerPool:
             error_code=ErrorCode.CONTAINER_START_FAILED,
             message=f"Container {container.name} failed to start within {timeout}s",
         )
+
+    def _ensure_container_running(self, container: "Container") -> bool:
+        """Start a stopped persistent container before reusing its executor service."""
+        try:
+            container.reload()
+        except docker.errors.NotFound as exc:
+            raise AppException(
+                error_code=ErrorCode.CONTAINER_START_FAILED,
+                message=f"Container {container.name} disappeared before reuse",
+            ) from exc
+
+        status = str(getattr(container, "status", "") or "").strip().lower()
+        if status == "running":
+            return False
+
+        logger.info(
+            "container_resume_start",
+            extra={
+                "container_name": container.name,
+                "container_id": (getattr(container, "labels", None) or {}).get(
+                    "container_id"
+                ),
+                "status": status,
+            },
+        )
+        container.start()
+        self._wait_for_container_ready(container)
+        return True
 
     def _wait_for_service_ready(
         self,
@@ -768,8 +817,8 @@ class ContainerPool:
         """Delete a container explicitly (mainly for persistent mode).
 
         This removes any session bindings, stops the container if it is still running,
-        and attempts to remove it from Docker. (In most cases the container is started
-        with auto_remove=True, so removal may already be handled by Docker.)
+        and attempts to remove it from Docker. Persistent runtime sleep uses stop only;
+        this method is for explicit deletion/recreation.
         """
         cid = (container_id or "").strip()
         if not cid:
@@ -906,7 +955,7 @@ class ContainerPool:
                     },
                 )
             except docker.errors.NotFound:
-                # Best-effort: the container may have already been removed (auto_remove=True).
+                # Best-effort: ephemeral containers may have already been auto-removed.
                 stopped_count += 1
             except Exception as e:
                 stop_errors.append(str(e))
