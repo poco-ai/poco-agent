@@ -231,7 +231,7 @@ export function ServerWorkspaceSidebar({
                     : "border-transparent bg-transparent text-foreground hover:bg-muted/20",
                 )}
               >
-                <MessageSquare className="size-5" />
+                <MessageSquare className="size-3" />
                 <span className="truncate text-sm">{channel.name}</span>
               </button>
             ))}

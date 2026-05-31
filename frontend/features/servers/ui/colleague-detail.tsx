@@ -5,6 +5,7 @@ import {
   ArrowLeft,
   CalendarDays,
   Check,
+  CircleHelp,
   MessageSquare,
   Pencil,
   Pin,
@@ -17,7 +18,12 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { PersistentRuntimeBadge } from "@/components/shared/persistent-runtime-badge";
+import { PersistentRuntimeInlineStatus } from "@/components/shared/persistent-runtime-inline-status";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   Select,
   SelectContent,
@@ -394,32 +400,36 @@ export function ColleagueDetail({
                 fallbackClassName="text-lg"
               />
               <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-3">
+                <div className="flex flex-wrap items-start justify-between gap-3">
                   <p className="truncate text-lg font-semibold text-foreground">
                     {selectedAgent.displayName}
                   </p>
-                  {selectedRuntimeStatus ? (
-                    <PersistentRuntimeBadge
-                      status={selectedRuntimeStatus}
-                      label={t(selectedRuntimeStatus.labelKey)}
-                      pinnedLabel={t("runtime.labels.pinned")}
-                    />
-                  ) : null}
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="outline"
+                    onClick={() => onOpenDm(selectedAgent.id)}
+                    disabled={selectedAgentRemoved}
+                    aria-label={t("conversationView.messageAgent")}
+                    title={t("conversationView.messageAgent")}
+                    className="size-8 rounded-full border-border/70 bg-background/60 text-foreground hover:bg-muted/60"
+                  >
+                    <MessageSquare className="size-4" />
+                  </Button>
                 </div>
                 <div className="mt-1 flex flex-wrap items-center gap-2">
                   <p className="text-sm text-muted-foreground">
                     @{selectedAgent.handle}
                   </p>
-                  <Button
-                    type="button"
-                    size="sm"
-                    onClick={() => onOpenDm(selectedAgent.id)}
-                    disabled={selectedAgentRemoved}
-                    className="h-7 pl-3.5 pr-3"
-                  >
-                    <MessageSquare className="size-3.5" />
-                    {t("conversationView.messageAgent")}
-                  </Button>
+                  {selectedRuntimeStatus ? (
+                    <PersistentRuntimeInlineStatus
+                      status={selectedRuntimeStatus}
+                      text={t(selectedRuntimeStatus.labelKey)}
+                      tooltip={t(
+                        `runtime.tooltips.${selectedRuntimeStatus.state}`,
+                      )}
+                    />
+                  ) : null}
                 </div>
               </div>
             </div>
@@ -470,12 +480,27 @@ export function ColleagueDetail({
             {canInspectPersistentFiles && selectedAgent.persistentState ? (
               <div className="flex min-h-0 flex-1 flex-col space-y-3 overflow-hidden px-1 py-1">
                 <div className="shrink-0 space-y-2">
-                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                    {t("conversationView.colleagues.persistentFiles")}
-                  </p>
-                  <p className="text-sm leading-6 text-muted-foreground">
-                    {t("conversationView.colleagues.persistentFilesHint")}
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                      {t("conversationView.colleagues.persistentFiles")}
+                    </p>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          className="inline-flex size-5 items-center justify-center rounded-full text-muted-foreground transition hover:text-foreground"
+                          aria-label={t(
+                            "conversationView.colleagues.persistentFiles",
+                          )}
+                        >
+                          <CircleHelp className="size-3.5" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent sideOffset={6} className="max-w-64">
+                        {t("conversationView.colleagues.persistentFilesHint")}
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
                 </div>
                 <AgentPersistentFilesPanel
                   files={persistentFiles}

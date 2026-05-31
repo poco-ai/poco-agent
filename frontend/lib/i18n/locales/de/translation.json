@@ -212,6 +212,16 @@
       "pinAgent": "Hält diesen Agenten warm, damit der Idle-Controller ihn im ausgewählten Zeitraum nicht stoppt.",
       "pinAgentHint": "Nur ganze Stunden. Angeheftete Runtimes bleiben warm, bis die Lease abläuft oder du sie löst."
     },
+    "tooltips": {
+      "running": "Die Runtime arbeitet gerade aktiv oder ist bereit, die aktuelle Ausführung direkt fortzusetzen.",
+      "warm_idle": "Die Runtime hat die letzte Arbeit gerade beendet und ist noch warm für eine schnelle Anschlussaktion.",
+      "sleeping": "Der Container ist gestoppt, aber der persistente Zustand bleibt zum späteren Wiederaufnehmen erhalten.",
+      "manually_stopped": "Die Runtime wurde explizit gestoppt und wird durch normale Erwähnungen nicht automatisch wieder gestartet.",
+      "stale": "Der gespeicherte Runtime-Status passt nicht mehr zum tatsächlichen Container-Zustand.",
+      "removed": "Dieser Agent wurde aus der aktiven Serverliste entfernt.",
+      "failed": "Die letzte Runtime oder Ausführung ist mit einem Fehler beendet worden.",
+      "unknown": "Der Runtime-Status konnte nicht bestimmt werden."
+    },
     "toasts": {
       "pinUpdated": "Runtime-Pin aktualisiert",
       "pinUpdateFailed": "Runtime-Pin konnte nicht aktualisiert werden",

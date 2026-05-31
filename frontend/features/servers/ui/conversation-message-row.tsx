@@ -18,7 +18,7 @@ import { toast } from "sonner";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { FileCard } from "@/components/shared/file-card";
-import { PersistentRuntimeBadge } from "@/components/shared/persistent-runtime-badge";
+import { PersistentRuntimeInlineStatus } from "@/components/shared/persistent-runtime-inline-status";
 import type { InputFile } from "@/features/chat/types";
 import {
   getUserAvatarUrl,
@@ -498,16 +498,14 @@ function AvatarSummaryCard({
               <p className="truncate text-sm font-semibold">
                 {matchingAgent.displayName}
               </p>
-              <PersistentRuntimeBadge
+            </div>
+            <div className="mt-0.5 flex min-w-0 flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+              <span className="truncate">@{matchingAgent.handle}</span>
+              <PersistentRuntimeInlineStatus
                 status={runtimeStatus}
-                label={t(runtimeStatus.labelKey)}
-                pinnedLabel={t("runtime.labels.pinned")}
-                className="shrink-0 px-2 py-0.5"
+                text={t(runtimeStatus.labelKey)}
               />
             </div>
-            <p className="mt-0.5 truncate text-xs text-muted-foreground">
-              @{matchingAgent.handle}
-            </p>
           </div>
         </div>
         <div className="border-t border-border/80 px-3 py-2">

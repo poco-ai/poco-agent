@@ -212,6 +212,16 @@
       "pinAgent": "在所选时间窗口内保持这个 agent 热启动，避免 idle controller 自动停掉它。",
       "pinAgentHint": "按整小时输入。被 Pin 的 runtime 会一直保温，直到租约到期或你手动取消。"
     },
+    "tooltips": {
+      "running": "这个 runtime 正在执行任务，或已经热启动并准备继续当前执行。",
+      "warm_idle": "这个 runtime 刚完成最近一次工作，当前仍保持热状态，便于快速继续。",
+      "sleeping": "容器已经停止，但持久状态仍然保留，后续可以恢复。",
+      "manually_stopped": "这个 runtime 是被显式停止的，普通 mention 不会自动恢复。",
+      "stale": "记录里的 runtime 状态和实际容器状态已经不一致。",
+      "removed": "这个 agent 已经从当前 server 的活跃成员列表中移除。",
+      "failed": "最近一次 runtime 或执行以失败结束。",
+      "unknown": "当前无法确定这个 runtime 的状态。"
+    },
     "toasts": {
       "pinUpdated": "已更新 runtime Pin",
       "pinUpdateFailed": "更新 runtime Pin 失败",

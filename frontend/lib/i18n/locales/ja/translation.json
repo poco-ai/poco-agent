@@ -212,6 +212,16 @@
       "pinAgent": "指定した時間のあいだこの agent をウォーム状態に保ち、アイドルコントローラによる停止を防ぎます。",
       "pinAgentHint": "整数時間で入力してください。Pin した runtime は、期限切れになるか手動で解除するまでウォーム状態を保ちます。"
     },
+    "tooltips": {
+      "running": "この runtime は現在作業中か、現在の実行をすぐ再開できる状態です。",
+      "warm_idle": "この runtime は直近の作業を終えた直後で、次の操作にすぐ対応できるようまだウォーム状態です。",
+      "sleeping": "コンテナは停止していますが、永続状態は保持されており後で再開できます。",
+      "manually_stopped": "この runtime は明示的に停止されており、通常の mention では自動再開しません。",
+      "stale": "記録された runtime 状態が実際のコンテナ状態と一致していません。",
+      "removed": "この agent は現在の server のアクティブ一覧から削除されています。",
+      "failed": "直近の runtime または実行は失敗で終了しました。",
+      "unknown": "runtime の状態を判定できませんでした。"
+    },
     "toasts": {
       "pinUpdated": "runtime の Pin を更新しました",
       "pinUpdateFailed": "runtime の Pin 更新に失敗しました",

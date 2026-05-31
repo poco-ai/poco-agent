@@ -212,6 +212,16 @@
       "pinAgent": "Keep this agent warm so the idle controller will not stop it during the selected window.",
       "pinAgentHint": "Use whole hours. Pinned runtimes stay warm until the lease expires or you unpin them."
     },
+    "tooltips": {
+      "running": "The runtime is actively working or ready to continue the current execution.",
+      "warm_idle": "The runtime finished recent work and is still warm for a fast follow-up.",
+      "sleeping": "The container is stopped, but the persistent state is kept for resume.",
+      "manually_stopped": "The runtime was explicitly stopped and will not auto-resume on ordinary mentions.",
+      "stale": "The recorded runtime state no longer matches the actual container state.",
+      "removed": "This agent has been removed from the active server roster.",
+      "failed": "The latest runtime or execution ended in failure.",
+      "unknown": "The runtime state could not be determined."
+    },
     "toasts": {
       "pinUpdated": "Runtime pin updated",
       "pinUpdateFailed": "Failed to update runtime pin",
