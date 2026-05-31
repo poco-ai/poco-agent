@@ -84,3 +84,24 @@ async def upload_channel_artifact(
         data=result,
         message="Channel artifact uploaded successfully",
     )
+
+
+@router.delete("/artifacts/{artifact_id}", response_model=ResponseSchema[dict])
+async def delete_channel_artifact(
+    server_id: uuid.UUID,
+    channel_id: uuid.UUID,
+    artifact_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> JSONResponse:
+    service.delete_channel_artifact(
+        db,
+        current_user=current_user,
+        server_id=server_id,
+        channel_id=channel_id,
+        artifact_id=artifact_id,
+    )
+    return Response.success(
+        data={"id": artifact_id},
+        message="Channel artifact deleted successfully",
+    )

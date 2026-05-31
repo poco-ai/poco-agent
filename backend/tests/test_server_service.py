@@ -676,7 +676,59 @@ class ServerChannelServiceTests(unittest.TestCase):
         create_agent_member.assert_called_once()
         created_channel = create_channel.call_args.args[1]
         self.assertEqual(created_channel.conversation_type, "direct_message")
+        self.assertEqual(created_channel.name, "@backend-specialist")
+        self.assertEqual(created_channel.slug, "dm-backend-specialist")
+        self.assertEqual(result.name, "@backend-specialist")
         self.assertEqual(result.conversation_type, "direct_message")
+
+    def test_list_channels_uses_agent_handle_for_direct_message_name(self) -> None:
+        service = ServerChannelService()
+        agent_identity = AgentIdentity(
+            id=uuid.uuid4(),
+            server_id=self.server.id,
+            preset_id=7,
+            handle="api-specialist",
+            display_name="API Specialist",
+            description=None,
+            visual_key="preset-visual-02",
+            visibility="server",
+            lifecycle_state="active",
+            created_by="user-1",
+            updated_by="user-1",
+        )
+        direct_message = ServerChannel(
+            id=uuid.uuid4(),
+            server_id=self.server.id,
+            name=f"DM {str(agent_identity.id)[:8]}",
+            slug=f"dm-{agent_identity.id}",
+            conversation_type="direct_message",
+            visibility="private",
+            direct_agent_identity_id=agent_identity.id,
+            created_by="user-1",
+            archived_at=None,
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
+        )
+
+        with (
+            patch(
+                "app.services.server_channel_service.require_server_member",
+                return_value=MagicMock(status="active", role="member"),
+            ),
+            patch(
+                "app.services.server_channel_service.ServerChannelRepository.list_by_server_for_user",
+                return_value=[direct_message],
+            ),
+            patch(
+                "app.services.server_channel_service.AgentIdentityRepository.list_by_ids",
+                return_value=[agent_identity],
+            ),
+        ):
+            result = service.list_channels(self.db, self.user, self.server.id)
+
+        self.assertEqual(result[0].name, "@api-specialist")
+        self.assertEqual(result[0].slug, f"dm-{agent_identity.id}")
+        self.assertEqual(result[0].direct_agent_identity_id, agent_identity.id)
 
 
 class ServerInviteServiceTests(unittest.TestCase):

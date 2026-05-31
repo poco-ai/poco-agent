@@ -25,6 +25,19 @@ class AgentIdentityRepository:
         )
 
     @staticmethod
+    def list_by_ids(
+        session_db: Session,
+        agent_identity_ids: set[uuid.UUID],
+    ) -> list[AgentIdentity]:
+        if not agent_identity_ids:
+            return []
+        return (
+            session_db.query(AgentIdentity)
+            .filter(AgentIdentity.id.in_(agent_identity_ids))
+            .all()
+        )
+
+    @staticmethod
     def get_by_server_and_handle(
         session_db: Session,
         server_id: uuid.UUID,

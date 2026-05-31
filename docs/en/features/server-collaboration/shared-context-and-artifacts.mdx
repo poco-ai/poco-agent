@@ -1,111 +1,89 @@
 ---
 title: Shared context and published artifacts
-description: Reuse the same public materials across a channel without collapsing private state or local mounts into one shared disk.
+description: Let people and agents keep working from the same public materials without turning a channel into one shared directory.
 ---
 
-Poco does not turn a whole channel into one writable filesystem. Instead, it promotes shared outputs into a separate collaboration surface so people and agents can reuse materials without mixing agent-private state, session workspaces, and local mounts together.
+Poco does not treat a channel like a shared drive. It pulls out the results worth keeping and lets people and agents keep working from them. Private state, temporary files, and host directories stay separate.
 
-## Sharing boundary
+## The sharing boundary
 
-Public outputs, private state, local mounts, and temporary workspaces must stay separate. The Shared files drawer only shows published artifacts. It doesn't expose agent private state directories or raw host mount directories.
+In Poco, public outputs, private state, local directories, and temporary workspaces are four different things.
 
 ```mermaid
 flowchart TD
-    A["Session workspace output"] --> B["Export / collector"]
-    B --> C["Published artifacts"]
-    C --> D["Shared files tree"]
-    D --> E["Human preview"]
-    D --> F["Agent list/search/read tools"]
-    G["Agent private state"] -. "not auto-published" .-> X["Not shared by default"]
-    H["Local mount"] -. "permission boundary" .-> X
-    I["Temporary runtime files"] -. "session scoped" .-> X
+    A["Task output"] --> B["Published artifact"]
+    B --> C["Shared files"]
+    C --> D["Human review"]
+    C --> E["Agent reuse"]
+    F["Agent private state"] -. "not shared" .-> X["Private boundary"]
+    G["Local directory mount"] -. "explicit host permission" .-> X
+    H["Temporary workspace files"] -. "run-scoped" .-> X
 ```
 
-## What the Shared files drawer does
+What a channel shares is the result, not an agent's whole working directory. Private notes, long-term state, and host directories do not automatically appear in shared files. Users see a reusable public results tree instead of an exposed filesystem.
 
-The `Shared files` drawer on the right shows published artifacts. Files are grouped by the agent that produced them, and Poco reuses the existing preview stack to render Markdown, images, and other common outputs.
+## How shared results are formed
 
-## What enters the published artifacts tree
-
-The first release only publishes outputs that are meant for collaboration reuse.
+Not every file created during a task becomes part of collaboration. Only outputs that are valuable for later discussion and reuse are promoted into the shared layer.
 
 ```mermaid
 sequenceDiagram
-    participant Executor as Executor
-    participant Collector as Export / collector
-    participant Backend as Backend
-    participant Channel as Channel shared files
+    participant Task as Task execution
+    participant Result as Result
+    participant Shared as Shared files
+    participant Team as Team collaboration
 
-    Executor->>Collector: Output workspace files
-    Collector->>Collector: Select shareable outputs
-    Collector->>Backend: Register artifact metadata
-    Backend->>Channel: Update shared files tree
-    Channel-->>Backend: Human or agent requests file
-    Backend-->>Channel: Return authorized artifact content
+    Task->>Result: Generate docs, pages, media, or diagrams
+    Result->>Shared: Publish as reusable output
+    Shared->>Team: Reused in later discussion, tasks, and agent work
 ```
 
-- Files that become collaboration-visible through session workspace export
-- Files that are explicitly published
-- Public materials that other people or agents in the same channel need to read next
+What stays behind is useful public material, not a pile of leftovers. It also means later agent work can pick up from an existing result instead of rebuilding the same thing again.
 
-`MEMORY.md`, `notes/`, `state/`, `/agent_state`, and raw local mount directories are not published automatically because they belong to private agent state or lower-level mount permissions.
+## How shared files are used in collaboration
 
-## How agents read shared context
+Shared files are collaboration materials first, processing inputs second. Poco supports both patterns, depending on what the work actually needs.
 
-Persistent agents no longer depend only on one large prompt. Poco injects channel-scoped runtime tools so an agent can read thread messages, shared files, task state, and reactions on demand, and explicitly ask another agent for collaboration when needed. That keeps the backend database and the published artifacts tree as the source of truth instead of a temporary prompt snapshot.
+### Read the content directly
 
-## Channel runtime tool surface
+Best for:
 
-The channel runtime tools are scoped to the current server, channel, session, and
-agent identity. An agent does not pass those identity fields directly. Poco
-resolves them from the current run before reading messages, files, tasks,
-agents, or reactions.
+- reading supporting documents
+- reviewing a PDF resume or report
+- summarizing, comparing, or giving recommendations
+- extracting key information from existing material
 
-- `read_channel_messages` reads channel messages. It can read exact
-  `message_ids`, read a thread with `thread_root_message_id`, page before or
-  after an `anchor_message_id`, return the recent top-level channel timeline
-  when no selector is provided, or read every message with `read_all: true`.
-- `list_channel_artifacts`, `search_channel_artifacts`, and
-  `read_channel_artifact` discover and read published artifacts. They don't
-  read `/workspace`, `/agent_state`, local mount paths, or unpublished session
-  files.
-- `list_channel_agents` returns active agents in the current channel.
-- `request_agent_collaboration` explicitly asks another active channel agent
-  to help. Text that mentions `@handle` in an agent reply is visible text only;
-  it doesn't trigger another agent.
-- `list_channel_tasks` and `read_channel_task` let an agent inspect
-  team-visible channel tasks before it changes task state.
-- `create_channel_task`, `claim_channel_task`,
-  `update_channel_task_status`, and `comment_on_channel_task` operate on
-  team-visible channel tasks. They don't replace the agent's private execution
-  todos.
-- `add_channel_message_reaction` and `remove_channel_message_reaction` let the
-  current agent add or remove lightweight message feedback. Reactions don't
-  trigger agent runs or change message content.
+In this mode, the expectation is simple: keep thinking from the content, not from the raw file.
 
-## From # references to artifact reads
+### Continue from the original file
 
-`#design.md` is a readable composer token, not the read protocol. When a user selects a shared file from the `#` picker, the message stores an `artifact/reference` entity whose `target_id` is the stable `artifact_id`. After the backend verifies that the artifact belongs to the current channel, Poco projects that id into `AgentTriggerEnvelope.references.artifact_ids`.
+Best for:
 
-At runtime, agents should call `read_channel_artifact(artifact_id=...)` first. `display_name` is only for display, search, and historical fallback; it is not a read id. `logical_path` is only a fallback when it is the complete value returned by an artifact API or tool. This keeps reads stable even when a channel has duplicate file names or a display name changes later.
+- document conversion
+- layout-sensitive editing
+- asset extraction or page-level operations
+- any task that depends on the original file format itself
 
-If an artifact is missing, the input is invalid, or the agent no longer has permission, the runtime facade must preserve the backend business error instead of wrapping it as a generic 500. The agent should then correct the selector, search/list artifacts again, or explain that the referenced object is unavailable.
+In this mode, the point is to work from the file itself, not only from its text.
 
-## Message reading strategy
+Keeping those two paths separate makes reading-heavy work lighter and file-heavy work less awkward.
 
-Message reads use progressive disclosure. The agent starts from the trigger
-message and only expands the context it needs.
+## From references to ongoing collaboration
 
-- Use `message_ids` when the trigger envelope or another tool already points to
-  specific messages.
-- Use `thread_root_message_id` when the relevant context is inside a reply
-  thread.
-- Use `anchor_message_id` with `direction: "before"` or `direction: "after"`
-  when the agent needs nearby channel history around a known message.
-- Use no selector to inspect the recent top-level channel timeline.
-- Use `read_all: true` only when the agent truly needs the full current channel
-  message set. This mode can return thread replies as well as top-level
-  messages.
+Referencing a shared file in a channel is more than a convenience feature. It keeps later work anchored to the same material.
 
-Anchor-based paging currently follows the top-level channel timeline. It does
-not merge thread replies into the same ordered timeline.
+Users can point an agent at the exact document that matters without pasting everything again. Even when several similar files exist in the same channel, later work stays tied to the one the user actually selected. Replies, task progress, and generated results all stay aligned to the same shared material.
+
+For long-running work and multi-agent collaboration, that kind of stability matters more than squeezing more text into one prompt.
+
+## Why Poco uses this design
+
+Poco chooses a shared outputs tree instead of a shared writable directory because it fits real collaboration better.
+
+| Model                     | What users run into                                                     | Poco's choice |
+| ------------------------- | ----------------------------------------------------------------------- | ------------- |
+| Share the whole directory | Temporary files, private content, and public results get mixed together | Not used      |
+| Share only chat messages  | File-based results are hard to reuse reliably                           | Not used      |
+| Share published outputs   | Public materials stay clear, reusable, and stable over time             | Used          |
+
+From the user's point of view, the value is straightforward: clearer public boundaries, steadier follow-up work, and a better fit for both reading-focused and file-processing tasks.

@@ -10,6 +10,8 @@ export interface FileNode {
   children?: FileNode[] | null;
   url?: string | null;
   mimeType?: string | null;
+  artifact_id?: string | null;
+  source_kind?: string | null;
   oss_status?: string | null;
   oss_meta?: Record<string, unknown> | null;
   source?: "workspace" | "local_mount";

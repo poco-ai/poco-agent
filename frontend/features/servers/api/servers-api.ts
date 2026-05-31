@@ -505,6 +505,16 @@ export const serversApi = {
     );
   },
 
+  deleteChannelArtifact: async (
+    serverId: string,
+    channelId: string,
+    artifactId: string,
+  ): Promise<void> => {
+    await apiClient.delete(
+      `/servers/${serverId}/channels/${channelId}/artifacts/${artifactId}`,
+    );
+  },
+
   listAgentStateFiles: async (
     serverId: string,
     agentId: string,

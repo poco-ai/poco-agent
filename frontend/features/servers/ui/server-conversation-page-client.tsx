@@ -2650,6 +2650,7 @@ export function ServerConversationPageClient({
       if (!selectedServerId) {
         return;
       }
+      setMode("conversation");
       setIsMobileDetailVisible(true);
       saveLastSelection({
         mode: channel.conversationType === "direct_message" ? "dm" : "channel",
@@ -2682,39 +2683,21 @@ export function ServerConversationPageClient({
         return;
       }
 
-      const existingNames = new Set(
-        draftAttachments
-          .map((item) => (item.name || "").trim().toLowerCase())
-          .filter(Boolean),
-      );
-
       setIsUploadingDraftFile(true);
       try {
         let uploadedAny = false;
         for (const file of files) {
-          const normalizedName = file.name.trim().toLowerCase();
-          if (existingNames.has(normalizedName)) {
-            toast.error(
-              t("hero.toasts.duplicateFileName", {
-                name: file.name,
-              }),
-            );
-            continue;
-          }
-
           if (file.size > MAX_FILE_SIZE) {
             toast.error(t("hero.toasts.fileTooLarge"));
             continue;
           }
 
           try {
-            const uploadedFile = await serversApi.uploadChannelArtifact(
+            await serversApi.uploadChannelArtifact(
               selectedServerId,
               activeChannelId,
               file,
             );
-            setDraftAttachments((current) => [...current, uploadedFile]);
-            existingNames.add(normalizedName);
             uploadedAny = true;
             toast.success(t("hero.toasts.uploadSuccess"));
             playUploadSound();
@@ -2725,18 +2708,54 @@ export function ServerConversationPageClient({
         }
 
         if (uploadedAny) {
-          setChannelArtifacts(
-            await serversApi.listChannelArtifacts(
-              selectedServerId,
-              activeChannelId,
-            ),
-          );
+          const [nextArtifacts, nextMessages] = await Promise.all([
+            serversApi.listChannelArtifacts(selectedServerId, activeChannelId),
+            serversApi.listMessages(selectedServerId, activeChannelId),
+          ]);
+          setChannelArtifacts(nextArtifacts);
+          setMessagesByChannel((current) => ({
+            ...current,
+            [activeChannelId]: nextMessages,
+          }));
         }
       } finally {
         setIsUploadingDraftFile(false);
       }
     },
-    [activeChannelId, draftAttachments, selectedServerId, t],
+    [activeChannelId, selectedServerId, t],
+  );
+
+  const deleteSharedArtifact = React.useCallback(
+    async (file: FileNode) => {
+      if (!selectedServerId || !activeChannelId || !file.artifact_id) {
+        return;
+      }
+
+      try {
+        await serversApi.deleteChannelArtifact(
+          selectedServerId,
+          activeChannelId,
+          file.artifact_id,
+        );
+        const [nextArtifacts, nextMessages] = await Promise.all([
+          serversApi.listChannelArtifacts(selectedServerId, activeChannelId),
+          serversApi.listMessages(selectedServerId, activeChannelId),
+        ]);
+        setChannelArtifacts(nextArtifacts);
+        setMessagesByChannel((current) => ({
+          ...current,
+          [activeChannelId]: nextMessages,
+        }));
+        toast.success(t("fileSidebar.deleteSuccess"));
+      } catch (error) {
+        console.error(
+          "[ServersWorkspace] channel artifact delete failed",
+          error,
+        );
+        toast.error(t("fileSidebar.deleteFailed"));
+      }
+    },
+    [activeChannelId, selectedServerId, t],
   );
 
   const removeDraftAttachment = React.useCallback((index: number) => {
@@ -2998,6 +3017,13 @@ export function ServerConversationPageClient({
     try {
       const dm = await serversApi.createDirectMessage(selectedServerId, {
         targetAgentIdentityId: agentId,
+      });
+      setChannels((current) => {
+        const nextById = new Map(
+          current.map((channel) => [channel.id, channel]),
+        );
+        nextById.set(dm.id, dm);
+        return Array.from(nextById.values());
       });
       openChannel(dm);
     } catch (error) {
@@ -3800,6 +3826,7 @@ export function ServerConversationPageClient({
                     files={channelArtifacts}
                     isLoading={isLoading}
                     onClose={() => setDrawer({ type: "none" })}
+                    onDeleteFile={deleteSharedArtifact}
                     fileListLayoutClassName="xl:grid-cols-[minmax(0,1fr)_minmax(10rem,12rem)]"
                   />
                 ) : drawer.type === "colleague" ? (

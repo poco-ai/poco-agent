@@ -7,6 +7,8 @@ import {
   ChevronDown,
   ChevronUp,
   Copy,
+  FileX,
+  FileUp,
   MessageSquare,
   Shield,
   SmilePlus,
@@ -178,6 +180,13 @@ type HumanSummaryOverride = {
   user: ServerUserPublicProfile | null;
 };
 
+type EventParticipantSummary = {
+  label: string;
+  agent: ServerAgentItem | null;
+  member: ServerChannelMemberItem | null;
+  human: HumanSummaryOverride | null;
+};
+
 function normalizeSummaryLookup(value: string | null | undefined): string {
   return value?.trim().toLowerCase() ?? "";
 }
@@ -252,13 +261,32 @@ function ChannelEventRow({
   const fromAssignee = getEventActorLabel(event.fromAssignee);
   const toAssignee = getEventActorLabel(event.toAssignee);
   const task = taskNumber ? `#${taskNumber}: ${taskTitle}` : taskTitle;
-  const labelKey =
-    event.eventType === "task.created" && assignee
-      ? "conversationView.events.taskCreatedAssigned"
-      : getChannelEventLabelKey(event.eventType);
+  const artifact =
+    event.artifactDisplayName?.trim() ||
+    event.artifactLogicalPath?.trim() ||
+    event.targetLabel?.trim() ||
+    "";
+  const labelKey = (() => {
+    if (event.eventType === "task.created" && assignee) {
+      return "conversationView.events.taskCreatedAssigned";
+    }
+    if (event.eventType === "channel.member_joined") {
+      if (event.joinReason === "admin_added") {
+        return "conversationView.events.channelMemberInvited";
+      }
+      if (event.joinReason === "server_invite") {
+        return "conversationView.events.channelMemberJoinedByInvite";
+      }
+    }
+    if (event.eventType === "channel.agent_joined") {
+      return "conversationView.events.channelAgentInvited";
+    }
+    return getChannelEventLabelKey(event.eventType);
+  })();
   const label = t(labelKey, {
     actor,
     target,
+    artifact,
     task,
     taskTitle,
     taskNumber,
@@ -269,41 +297,121 @@ function ChannelEventRow({
     fromStatus: event.fromStatus ?? "",
     toStatus: event.toStatus ?? event.status ?? "",
   });
-  const fallbackName =
-    event.eventType === "channel.agent_joined" ? target : actor;
-  const summaryUsesTarget = event.eventType === "channel.agent_joined";
-  const summaryAgent = findChannelEventAgent(
-    agents,
-    summaryUsesTarget
-      ? event.targetAgentIdentityId
-      : event.actorAgentIdentityId,
-    summaryUsesTarget ? event.targetAgentHandle : event.actorAgentHandle,
-    fallbackName,
-  );
-  const summaryMember = summaryAgent
-    ? null
-    : findChannelEventMember(
-        members,
-        summaryUsesTarget ? event.targetUserId : event.actorUserId,
-        fallbackName,
-      );
-  const summaryUserId =
-    summaryMember?.userId ??
-    (summaryUsesTarget ? event.targetUserId : event.actorUserId) ??
-    null;
-  const summaryHuman =
-    summaryAgent || (!summaryMember && !summaryUserId)
+  const resolveParticipantSummary = (
+    participantLabel: string,
+    agentIdentityId: string | null | undefined,
+    agentHandle: string | null | undefined,
+    userId: string | null | undefined,
+  ): EventParticipantSummary => {
+    const participantAgent = findChannelEventAgent(
+      agents,
+      agentIdentityId,
+      agentHandle,
+      participantLabel,
+    );
+    const participantMember = participantAgent
       ? null
-      : {
-          label: summaryMember
-            ? getUserDisplayName(summaryMember.user, summaryMember.userId)
-            : fallbackName,
-          userId: summaryUserId,
-          user: summaryMember?.user ?? null,
-        };
+      : findChannelEventMember(members, userId, participantLabel);
+    const participantUserId = participantMember?.userId ?? userId ?? null;
+    const participantHuman =
+      participantAgent || (!participantMember && !participantUserId)
+        ? null
+        : {
+            label: participantMember
+              ? getUserDisplayName(
+                  participantMember.user,
+                  participantMember.userId,
+                )
+              : participantLabel,
+            userId: participantUserId,
+            user: participantMember?.user ?? null,
+          };
+
+    return {
+      label: participantLabel,
+      agent: participantAgent,
+      member: participantMember,
+      human: participantHuman,
+    };
+  };
+  const actorSummary = resolveParticipantSummary(
+    actor,
+    event.actorAgentIdentityId,
+    event.actorAgentHandle,
+    event.actorUserId,
+  );
+  const targetSummary = resolveParticipantSummary(
+    target,
+    event.targetAgentIdentityId,
+    event.targetAgentHandle,
+    event.targetUserId,
+  );
   const isJoinEvent =
     event.eventType === "channel.member_joined" ||
     event.eventType === "channel.agent_joined";
+  const isArtifactUploadEvent = event.eventType === "artifact.uploaded";
+  const isArtifactDeleteEvent = event.eventType === "artifact.deleted";
+  const participantClassName =
+    "font-medium text-muted-foreground underline decoration-muted-foreground/50 underline-offset-4";
+  const renderParticipant = (
+    summary: EventParticipantSummary,
+    key: React.Key,
+  ) => {
+    const labelNode = (
+      <span key={`${String(key)}-label`} className={participantClassName}>
+        {summary.label}
+      </span>
+    );
+    if (!summary.agent && !summary.human) {
+      return labelNode;
+    }
+    return (
+      <AvatarSummaryTrigger
+        key={key}
+        message={message}
+        matchingAgent={summary.agent}
+        member={summary.member}
+        presets={presets}
+        humanSummary={summary.human}
+      >
+        {labelNode}
+      </AvatarSummaryTrigger>
+    );
+  };
+  const renderLabel = () => {
+    const summaries = [actorSummary];
+    if (targetSummary.label !== actorSummary.label) {
+      summaries.push(targetSummary);
+    }
+    const ranges = summaries
+      .map((summary) => ({
+        summary,
+        start: label.indexOf(summary.label),
+      }))
+      .filter((item) => item.start >= 0)
+      .sort((a, b) => a.start - b.start);
+
+    if (ranges.length === 0) {
+      return label;
+    }
+
+    const nodes: React.ReactNode[] = [];
+    let cursor = 0;
+    ranges.forEach(({ summary, start }, index) => {
+      if (start < cursor) {
+        return;
+      }
+      if (start > cursor) {
+        nodes.push(label.slice(cursor, start));
+      }
+      nodes.push(renderParticipant(summary, `${summary.label}-${index}`));
+      cursor = start + summary.label.length;
+    });
+    if (cursor < label.length) {
+      nodes.push(label.slice(cursor));
+    }
+    return nodes;
+  };
 
   return (
     <article
@@ -315,33 +423,16 @@ function ChannelEventRow({
       <span className="flex size-7 shrink-0 items-center justify-center text-base">
         {isJoinEvent ? (
           <span aria-hidden="true">👋</span>
+        ) : isArtifactUploadEvent ? (
+          <FileUp className="size-4" aria-hidden="true" />
+        ) : isArtifactDeleteEvent ? (
+          <FileX className="size-4" aria-hidden="true" />
         ) : (
           <SquareCheckBig className="size-4" aria-hidden="true" />
         )}
       </span>
       <div className="min-w-0 flex-1 truncate leading-6">
-        <span className="truncate">
-          {summaryAgent || summaryHuman ? (
-            <AvatarSummaryTrigger
-              message={message}
-              matchingAgent={summaryAgent}
-              member={summaryMember}
-              presets={presets}
-              humanSummary={summaryHuman}
-            >
-              <span className="font-medium text-muted-foreground underline decoration-muted-foreground/50 underline-offset-4">
-                {fallbackName}
-              </span>
-            </AvatarSummaryTrigger>
-          ) : (
-            <span className="font-medium text-muted-foreground underline decoration-muted-foreground/50 underline-offset-4">
-              {fallbackName}
-            </span>
-          )}
-          {label.startsWith(fallbackName)
-            ? label.slice(fallbackName.length)
-            : ` ${label}`}
-        </span>
+        <span className="truncate">{renderLabel()}</span>
         <span className="whitespace-nowrap">
           {" "}
           · {formatRelativeDate(message.createdAt)}{" "}

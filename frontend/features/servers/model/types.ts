@@ -196,6 +196,11 @@ export interface ServerChannelEventContent {
   commentText?: string | null;
   fromStatus?: string | null;
   toStatus?: string | null;
+  artifactId?: string | null;
+  artifactDisplayName?: string | null;
+  artifactLogicalPath?: string | null;
+  artifactMimeType?: string | null;
+  artifactSizeBytes?: number | string | null;
   fromAssignee?: unknown;
   toAssignee?: unknown;
   assignee?: unknown;

@@ -97,6 +97,14 @@ export function getChannelEventContent(
     commentText: readString(message.content, "comment_text"),
     fromStatus: readString(message.content, "from_status"),
     toStatus: readString(message.content, "to_status"),
+    artifactId: readString(message.content, "artifact_id"),
+    artifactDisplayName: readString(message.content, "artifact_display_name"),
+    artifactLogicalPath: readString(message.content, "artifact_logical_path"),
+    artifactMimeType: readString(message.content, "artifact_mime_type"),
+    artifactSizeBytes: readNumberOrString(
+      message.content,
+      "artifact_size_bytes",
+    ),
     fromAssignee: message.content.from_assignee,
     toAssignee: message.content.to_assignee,
     assignee: message.content.assignee,
@@ -123,6 +131,10 @@ export function getChannelEventLabelKey(eventType: string): string {
       return "conversationView.events.taskUpdated";
     case "task.commented":
       return "conversationView.events.taskCommented";
+    case "artifact.uploaded":
+      return "conversationView.events.artifactUploaded";
+    case "artifact.deleted":
+      return "conversationView.events.artifactDeleted";
     default:
       return "conversationView.events.unknown";
   }

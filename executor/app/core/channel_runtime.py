@@ -1,4 +1,8 @@
+import hashlib
 import json
+import re
+from dataclasses import asdict, dataclass
+from pathlib import Path
 from typing import Any
 
 import httpx
@@ -13,6 +17,61 @@ from app.core.observability.request_context import (
 )
 
 CHANNEL_RUNTIME_MCP_SERVER_KEY = "__poco_channel_runtime"
+_CONTROL_CHARS = re.compile(r"[\x00-\x1f\x7f-\x9f]+")
+
+
+@dataclass
+class DownloadedArtifact:
+    artifact_id: str | None
+    logical_path: str | None
+    display_name: str
+    mime_type: str | None
+    size_bytes: int | None
+    content: bytes
+
+
+@dataclass
+class StagedArtifact:
+    artifact_id: str | None
+    logical_path: str | None
+    display_name: str
+    local_path: str
+    mime_type: str | None
+    size_bytes: int | None
+
+
+def _sanitize_stage_name(raw_name: str | None) -> str:
+    clean = (raw_name or "").strip().replace("\\", "/")
+    clean = clean.split("/")[-1].strip()
+    clean = _CONTROL_CHARS.sub("", clean)
+    return clean or "artifact.bin"
+
+
+def _stage_directory_name(downloaded: DownloadedArtifact) -> str:
+    if downloaded.artifact_id:
+        return downloaded.artifact_id
+    seed = downloaded.logical_path or downloaded.display_name or "artifact"
+    return hashlib.sha256(seed.encode("utf-8")).hexdigest()[:16]
+
+
+def stage_downloaded_artifact(
+    downloaded: DownloadedArtifact,
+    *,
+    workspace_root: Path,
+) -> StagedArtifact:
+    inputs_root = workspace_root / "inputs" / "channel-artifacts"
+    target_dir = inputs_root / _stage_directory_name(downloaded)
+    target_dir.mkdir(parents=True, exist_ok=True)
+    target_path = target_dir / _sanitize_stage_name(downloaded.display_name)
+    target_path.write_bytes(downloaded.content)
+    return StagedArtifact(
+        artifact_id=downloaded.artifact_id,
+        logical_path=downloaded.logical_path,
+        display_name=downloaded.display_name,
+        local_path=str(target_path),
+        mime_type=downloaded.mime_type,
+        size_bytes=downloaded.size_bytes,
+    )
 
 
 class ChannelRuntimeClient:
@@ -131,6 +190,64 @@ class ChannelRuntimeClient:
             },
         )
 
+    async def read_artifact_text(
+        self,
+        *,
+        artifact_id: str | None,
+        logical_path: str | None,
+        start_char: int,
+        max_chars: int,
+    ) -> Any:
+        return await self._request(
+            "/api/v1/agent-channel-artifacts/text",
+            {
+                "artifact_id": artifact_id,
+                "logical_path": logical_path,
+                "start_char": start_char,
+                "max_chars": max_chars,
+            },
+        )
+
+    async def download_artifact(
+        self,
+        *,
+        artifact_id: str | None,
+        logical_path: str | None,
+    ) -> DownloadedArtifact:
+        async with httpx.AsyncClient(timeout=self.timeout) as client:
+            response = await client.post(
+                f"{self.base_url}/api/v1/agent-channel-artifacts/download",
+                json={
+                    "session_id": self.session_id,
+                    "artifact_id": artifact_id,
+                    "logical_path": logical_path,
+                },
+                headers=self._trace_headers(),
+            )
+
+        if response.is_error:
+            message = response.text or response.reason_phrase
+            try:
+                body = response.json()
+            except ValueError:
+                body = None
+            if isinstance(body, dict):
+                message = str(body.get("message") or message)
+            raise RuntimeError(message)
+
+        size_header = response.headers.get("x-artifact-size-bytes")
+        size_bytes = int(size_header) if size_header and size_header.isdigit() else None
+        return DownloadedArtifact(
+            artifact_id=response.headers.get("x-artifact-id"),
+            logical_path=response.headers.get("x-artifact-logical-path"),
+            display_name=response.headers.get("x-artifact-display-name")
+            or "artifact.bin",
+            mime_type=response.headers.get("x-artifact-mime-type")
+            or response.headers.get("content-type"),
+            size_bytes=size_bytes,
+            content=response.content,
+        )
+
     async def create_task(
         self,
         *,
@@ -216,6 +333,8 @@ async def _run_tool(title: str, operation) -> dict[str, Any]:
 
 def create_channel_runtime_mcp_server(
     runtime_client: ChannelRuntimeClient,
+    *,
+    workspace_root: str = "/workspace",
 ) -> McpSdkServerConfig:
     @tool(
         "list_channel_artifacts",
@@ -291,6 +410,80 @@ def create_channel_runtime_mcp_server(
                     include_content if isinstance(include_content, bool) else False
                 ),
             ),
+        )
+
+    @tool(
+        "read_channel_artifact_text",
+        "Read extracted text from a published channel artifact without staging the original file",
+        {"artifact_id": str, "logical_path": str, "start_char": int, "max_chars": int},
+    )
+    async def read_channel_artifact_text(args: dict[str, Any]) -> dict[str, Any]:
+        artifact_id = args.get("artifact_id")
+        logical_path = args.get("logical_path")
+        if (not isinstance(artifact_id, str) or not artifact_id.strip()) and (
+            not isinstance(logical_path, str) or not logical_path.strip()
+        ):
+            return _format_tool_error(
+                "read_channel_artifact_text",
+                "artifact_id or logical_path must be provided",
+                code="invalid_arguments",
+            )
+        start_char = args.get("start_char")
+        max_chars = args.get("max_chars")
+        return await _run_tool(
+            "read_channel_artifact_text",
+            runtime_client.read_artifact_text(
+                artifact_id=artifact_id.strip()
+                if isinstance(artifact_id, str)
+                else None,
+                logical_path=(
+                    logical_path.strip() if isinstance(logical_path, str) else None
+                ),
+                start_char=start_char if isinstance(start_char, int) else 0,
+                max_chars=max_chars if isinstance(max_chars, int) else 12000,
+            ),
+        )
+
+    @tool(
+        "stage_channel_artifact_to_workspace",
+        "Download a published channel artifact into the current workspace for local processing and return the local path",
+        {"artifact_id": str, "logical_path": str},
+    )
+    async def stage_channel_artifact_to_workspace(
+        args: dict[str, Any],
+    ) -> dict[str, Any]:
+        artifact_id = args.get("artifact_id")
+        logical_path = args.get("logical_path")
+        if (not isinstance(artifact_id, str) or not artifact_id.strip()) and (
+            not isinstance(logical_path, str) or not logical_path.strip()
+        ):
+            return _format_tool_error(
+                "stage_channel_artifact_to_workspace",
+                "artifact_id or logical_path must be provided",
+                code="invalid_arguments",
+            )
+        try:
+            downloaded = await runtime_client.download_artifact(
+                artifact_id=artifact_id.strip()
+                if isinstance(artifact_id, str)
+                else None,
+                logical_path=(
+                    logical_path.strip() if isinstance(logical_path, str) else None
+                ),
+            )
+            staged = stage_downloaded_artifact(
+                downloaded,
+                workspace_root=Path(workspace_root),
+            )
+        except Exception as exc:
+            return _format_tool_error(
+                "stage_channel_artifact_to_workspace",
+                str(exc),
+                code="runtime_error",
+            )
+        return _format_tool_result(
+            "stage_channel_artifact_to_workspace",
+            asdict(staged),
         )
 
     @tool(
@@ -650,6 +843,8 @@ def create_channel_runtime_mcp_server(
             list_channel_artifacts,
             read_channel_artifact,
             search_channel_artifacts,
+            read_channel_artifact_text,
+            stage_channel_artifact_to_workspace,
             read_channel_messages,
             list_channel_agents,
             request_agent_collaboration,

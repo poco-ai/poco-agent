@@ -1,6 +1,8 @@
+import mimetypes
 import os
 import re
 import uuid
+from io import BytesIO
 from pathlib import PurePosixPath
 from typing import Any, cast
 
@@ -20,16 +22,24 @@ from app.repositories.server_channel_agent_member_repository import (
 from app.repositories.session_repository import SessionRepository
 from app.repositories.user_repository import UserRepository
 from app.schemas.channel_artifact import (
+    AgentChannelArtifactDownloadResponse,
     AgentChannelArtifactListResponse,
     AgentChannelArtifactMetadata,
     AgentChannelArtifactReadResponse,
     AgentChannelArtifactSearchResponse,
+    AgentChannelArtifactTextResponse,
     ChannelArtifactCandidateResponse,
     ChannelArtifactPublisherSummary,
 )
 from app.schemas.input_file import InputFile
 from app.schemas.workspace import FileNode
+from app.services.server_channel_event_service import (
+    ChannelEventActor,
+    ChannelEventTarget,
+    create_channel_event_message,
+)
 from app.services.server_channel_access import require_channel_member_access
+from app.services.server_member_service import require_server_member
 from app.services.storage_service import S3StorageService
 from app.utils.workspace import build_workspace_file_nodes
 from app.utils.workspace_manifest import (
@@ -45,6 +55,8 @@ class ChannelArtifactService:
     _CONTROL_CHARS = re.compile(r"[\x00-\x1f\x7f-\x9f]+")
     DEFAULT_READ_BYTES = 32 * 1024
     MAX_READ_BYTES = 64 * 1024
+    DEFAULT_TEXT_CHARS = 12_000
+    MAX_TEXT_CHARS = 50_000
     TEXT_EXTENSIONS = {
         ".md",
         ".txt",
@@ -60,9 +72,20 @@ class ChannelArtifactService:
         ".sql",
         ".csv",
     }
+    PDF_EXTENSIONS = {".pdf"}
 
     def __init__(self) -> None:
         self._storage = S3StorageService()
+
+    @staticmethod
+    def _user_label(user: Any) -> str:
+        display_name = str(getattr(user, "display_name", "") or "").strip()
+        if display_name:
+            return display_name
+        primary_email = str(getattr(user, "primary_email", "") or "").strip()
+        if primary_email:
+            return primary_email
+        return str(getattr(user, "id", "") or "User")
 
     @staticmethod
     def _parse_scope_ids(
@@ -186,6 +209,18 @@ class ChannelArtifactService:
     @classmethod
     def _content_kind(cls, artifact: ChannelArtifact) -> str:
         return "text" if cls._is_text_artifact(artifact) else "binary"
+
+    @classmethod
+    def _is_pdf_artifact(cls, artifact: ChannelArtifact) -> bool:
+        mime_type = artifact.mime_type or ""
+        if mime_type == "application/pdf":
+            return True
+        suffix = PurePosixPath(artifact.logical_path).suffix.lower()
+        return suffix in cls.PDF_EXTENSIONS
+
+    @classmethod
+    def _supports_text_extraction(cls, artifact: ChannelArtifact) -> bool:
+        return cls._is_text_artifact(artifact) or cls._is_pdf_artifact(artifact)
 
     @classmethod
     def _metadata(cls, artifact: ChannelArtifact) -> AgentChannelArtifactMetadata:
@@ -363,7 +398,7 @@ class ChannelArtifactService:
         channel_id: uuid.UUID,
         file: UploadFile,
     ) -> InputFile:
-        require_channel_member_access(
+        channel = require_channel_member_access(
             db,
             server_id=server_id,
             channel_id=channel_id,
@@ -413,6 +448,29 @@ class ChannelArtifactService:
             is_previewable=True,
         )
         db.add(artifact)
+        create_channel_event_message(
+            db,
+            channel_id=channel_id,
+            event_type="artifact.uploaded",
+            actor=ChannelEventActor(
+                actor_type="user",
+                actor_user_id=current_user.id,
+                actor_label=self._user_label(current_user),
+            ),
+            target=ChannelEventTarget(target_label=artifact.display_name),
+            content={
+                "artifact_id": str(artifact.id),
+                "artifact_display_name": artifact.display_name,
+                "artifact_logical_path": artifact.logical_path,
+                "artifact_mime_type": artifact.mime_type,
+                "artifact_size_bytes": artifact.size_bytes,
+                "source_kind": artifact.source_kind,
+            },
+            text_preview=(
+                f"{self._user_label(current_user)} uploaded "
+                f"{artifact.display_name} to {channel.name}"
+            ),
+        )
         db.commit()
         db.refresh(artifact)
         return InputFile(
@@ -424,6 +482,78 @@ class ChannelArtifactService:
             content_type=artifact.mime_type,
             path=artifact.logical_path,
         )
+
+    def delete_channel_artifact(
+        self,
+        db: Session,
+        *,
+        current_user: Any,
+        server_id: uuid.UUID,
+        channel_id: uuid.UUID,
+        artifact_id: uuid.UUID,
+    ) -> None:
+        channel = require_channel_member_access(
+            db,
+            server_id=server_id,
+            channel_id=channel_id,
+            user_id=current_user.id,
+        )
+        membership = require_server_member(db, server_id, current_user.id)
+        artifact = ChannelArtifactRepository.get_by_channel_and_id(
+            db,
+            channel_id=channel_id,
+            artifact_id=artifact_id,
+        )
+        if artifact is None or artifact.server_id != server_id:
+            raise AppException(
+                error_code=ErrorCode.NOT_FOUND,
+                message=f"Channel artifact not found: {artifact_id}",
+            )
+        if artifact.source_kind != self.UPLOAD_SOURCE_KIND:
+            raise AppException(
+                error_code=ErrorCode.BAD_REQUEST,
+                message="Only user-uploaded channel artifacts can be deleted",
+            )
+        is_admin = getattr(membership, "role", None) in {"owner", "admin"}
+        if artifact.publisher_user_id != current_user.id and not is_admin:
+            raise AppException(
+                error_code=ErrorCode.FORBIDDEN,
+                message="Only the uploader or server admins can delete this file",
+            )
+
+        display_name = artifact.display_name
+        logical_path = artifact.logical_path
+        mime_type = artifact.mime_type
+        size_bytes = artifact.size_bytes
+        object_key = artifact.object_key
+        source_kind = artifact.source_kind
+
+        self._storage.delete_object(key=object_key)
+        ChannelArtifactRepository.delete(db, artifact)
+        create_channel_event_message(
+            db,
+            channel_id=channel_id,
+            event_type="artifact.deleted",
+            actor=ChannelEventActor(
+                actor_type="user",
+                actor_user_id=current_user.id,
+                actor_label=self._user_label(current_user),
+            ),
+            target=ChannelEventTarget(target_label=display_name),
+            content={
+                "artifact_id": str(artifact_id),
+                "artifact_display_name": display_name,
+                "artifact_logical_path": logical_path,
+                "artifact_mime_type": mime_type,
+                "artifact_size_bytes": size_bytes,
+                "source_kind": source_kind,
+            },
+            text_preview=(
+                f"{self._user_label(current_user)} deleted "
+                f"{display_name} from {channel.name}"
+            ),
+        )
+        db.commit()
 
     def list_runtime_artifacts(
         self,
@@ -437,15 +567,14 @@ class ChannelArtifactService:
             artifacts=[self._metadata(artifact) for artifact in artifacts]
         )
 
-    def read_runtime_artifact(
+    def _resolve_runtime_artifact(
         self,
         db: Session,
         *,
         session_id: uuid.UUID,
         artifact_id: uuid.UUID | None = None,
         logical_path: str | None = None,
-        max_bytes: int | None = None,
-    ) -> AgentChannelArtifactReadResponse:
+    ) -> ChannelArtifact:
         _, channel_id, _ = self._resolve_runtime_scope(db, session_id=session_id)
         artifact: ChannelArtifact | None = None
         if artifact_id is not None:
@@ -472,7 +601,57 @@ class ChannelArtifactService:
                 error_code=ErrorCode.NOT_FOUND,
                 message="Channel artifact not found",
             )
+        return artifact
 
+    def _extract_pdf_text_from_bytes(self, content: bytes) -> str:
+        try:
+            from pypdf import PdfReader
+        except ImportError as exc:
+            raise AppException(
+                error_code=ErrorCode.EXTERNAL_SERVICE_ERROR,
+                message="PDF text extraction dependency is not installed",
+            ) from exc
+
+        try:
+            reader = PdfReader(BytesIO(content))
+            parts = [(page.extract_text() or "").strip() for page in reader.pages]
+        except Exception as exc:
+            raise AppException(
+                error_code=ErrorCode.EXTERNAL_SERVICE_ERROR,
+                message="Failed to extract text from PDF artifact",
+                details={"error": str(exc)},
+            ) from exc
+
+        return "\n\n".join(part for part in parts if part).strip()
+
+    @staticmethod
+    def _slice_text_content(
+        content: str,
+        *,
+        start_char: int,
+        max_chars: int,
+    ) -> tuple[str, int, int, int | None]:
+        total_chars = len(content)
+        safe_start = min(start_char, total_chars)
+        end_char = min(safe_start + max_chars, total_chars)
+        next_start_char = end_char if end_char < total_chars else None
+        return content[safe_start:end_char], safe_start, end_char, next_start_char
+
+    def read_runtime_artifact(
+        self,
+        db: Session,
+        *,
+        session_id: uuid.UUID,
+        artifact_id: uuid.UUID | None = None,
+        logical_path: str | None = None,
+        max_bytes: int | None = None,
+    ) -> AgentChannelArtifactReadResponse:
+        artifact = self._resolve_runtime_artifact(
+            db,
+            session_id=session_id,
+            artifact_id=artifact_id,
+            logical_path=logical_path,
+        )
         metadata = self._metadata(artifact)
         if not self._is_text_artifact(artifact):
             return AgentChannelArtifactReadResponse(
@@ -503,6 +682,80 @@ class ChannelArtifactService:
             artifact=metadata,
             content=content,
             truncated=truncated,
+        )
+
+    def read_runtime_artifact_text(
+        self,
+        db: Session,
+        *,
+        session_id: uuid.UUID,
+        artifact_id: uuid.UUID | None = None,
+        logical_path: str | None = None,
+        start_char: int = 0,
+        max_chars: int = DEFAULT_TEXT_CHARS,
+    ) -> AgentChannelArtifactTextResponse:
+        artifact = self._resolve_runtime_artifact(
+            db,
+            session_id=session_id,
+            artifact_id=artifact_id,
+            logical_path=logical_path,
+        )
+        if not self._supports_text_extraction(artifact):
+            raise AppException(
+                error_code=ErrorCode.BAD_REQUEST,
+                message="Artifact does not support text extraction",
+            )
+
+        safe_max_chars = min(max_chars, self.MAX_TEXT_CHARS)
+        extraction_kind = "text"
+        if self._is_text_artifact(artifact):
+            content = self._storage.get_text(artifact.object_key)
+        else:
+            extraction_kind = "pdf_text"
+            content = self._extract_pdf_text_from_bytes(
+                self._storage.get_bytes(artifact.object_key)
+            )
+
+        chunk, safe_start, end_char, next_start_char = self._slice_text_content(
+            content,
+            start_char=start_char,
+            max_chars=safe_max_chars,
+        )
+        return AgentChannelArtifactTextResponse(
+            artifact=self._metadata(artifact),
+            content=chunk,
+            start_char=safe_start,
+            end_char=end_char,
+            next_start_char=next_start_char,
+            total_chars=len(content),
+            has_more=next_start_char is not None,
+            extraction_kind=cast(Any, extraction_kind),
+        )
+
+    def download_runtime_artifact(
+        self,
+        db: Session,
+        *,
+        session_id: uuid.UUID,
+        artifact_id: uuid.UUID | None = None,
+        logical_path: str | None = None,
+    ) -> AgentChannelArtifactDownloadResponse:
+        artifact = self._resolve_runtime_artifact(
+            db,
+            session_id=session_id,
+            artifact_id=artifact_id,
+            logical_path=logical_path,
+        )
+        media_type = (
+            artifact.mime_type
+            or mimetypes.guess_type(artifact.display_name)[0]
+            or "application/octet-stream"
+        )
+        return AgentChannelArtifactDownloadResponse(
+            artifact=self._metadata(artifact),
+            filename=artifact.display_name,
+            media_type=media_type,
+            content=self._storage.get_bytes(artifact.object_key),
         )
 
     def search_runtime_artifacts(
@@ -609,6 +862,8 @@ class ChannelArtifactService:
                     "path": relative_path,
                     "key": artifact.object_key,
                     "mimeType": artifact.mime_type,
+                    "artifact_id": str(artifact.id),
+                    "source_kind": artifact.source_kind,
                     "size": getattr(artifact, "size_bytes", None),
                 }
             )

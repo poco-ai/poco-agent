@@ -98,3 +98,33 @@ class AgentChannelArtifactSearchRequest(BaseModel):
 
 class AgentChannelArtifactSearchResponse(BaseModel):
     artifacts: list[AgentChannelArtifactMetadata]
+
+
+class AgentChannelArtifactTextRequest(BaseModel):
+    artifact_id: UUID | None = None
+    logical_path: str | None = None
+    start_char: int = Field(default=0, ge=0)
+    max_chars: int = Field(default=12000, ge=1, le=50000)
+
+
+class AgentChannelArtifactTextResponse(BaseModel):
+    artifact: AgentChannelArtifactMetadata
+    content: str
+    start_char: int
+    end_char: int
+    next_start_char: int | None = None
+    total_chars: int
+    has_more: bool = False
+    extraction_kind: Literal["text", "pdf_text"]
+
+
+class AgentChannelArtifactDownloadRequest(BaseModel):
+    artifact_id: UUID | None = None
+    logical_path: str | None = None
+
+
+class AgentChannelArtifactDownloadResponse(BaseModel):
+    artifact: AgentChannelArtifactMetadata
+    filename: str
+    media_type: str
+    content: bytes

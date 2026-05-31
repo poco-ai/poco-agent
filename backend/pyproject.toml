@@ -18,6 +18,7 @@ dependencies = [
     "lark-oapi>=1.5.3",
     "mem0ai>=0.1.116",
     "psycopg2-binary>=2.9.9",
+    "pypdf>=6.1.3",
     "pydantic-settings>=2.12.0",
     "python-multipart>=0.0.21",
     "python-socks>=2.8.0",

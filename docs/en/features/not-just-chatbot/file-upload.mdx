@@ -1,31 +1,39 @@
 ---
 title: File Upload
-description: Bring files into the workflow for richer agent input and processing.
+description: Bring real materials into an agent task instead of relying on plain text prompts alone.
 ---
 
-Poco supports file-based input so agents can work from more than plain text prompts.
+Poco supports file-based input so agents can work from screenshots, reports, documents, datasets, and other real materials. The point is not just to attach a file to a chat. It is to let the task start from the material itself instead of a hand-written summary.
 
-## Upload flow
+## The role of uploaded files
 
-Uploaded files are registered as session or project context, then included in the run snapshot. The agent can read those materials during execution and produce new artifacts as output.
+Uploaded files belong to the task input layer. They usually support the current session, the current task, or the current project goal.
 
 ```mermaid
-sequenceDiagram
-    participant User as User
-    participant Frontend as Frontend
-    participant Backend as Backend
-    participant Executor as Executor
-
-    User->>Frontend: Upload reference files
-    Frontend->>Backend: Store file metadata and content reference
-    Backend->>Backend: Attach files to project or session
-    Backend->>Executor: Inject file context in run snapshot
-    Executor->>Executor: Read files and execute task
-    Executor-->>Backend: Return output and artifacts
+flowchart LR
+    A["Uploaded files"] --> B["Task context"]
+    B --> C["Agent work"]
+    C --> D["Generated result"]
+    D --> E["Shared output if worth reusing"]
 ```
+
+Poco keeps the roles clear: uploads help the agent understand the task, and the right outputs can later become shared collaboration material.
 
 ## Typical uses
 
-- Upload reference files as task context
+- Upload reference files as task input
+- Let the agent reason over instructions and document content together
 - Process multiple file types in one workflow
-- Combine user instructions with file content for better execution quality
+- Generate follow-up work from screenshots, reports, or design documents
+
+## Uploaded files, project files, and shared files
+
+These three file types do different jobs in the product.
+
+| Type            | Main purpose                                | Lifecycle                         |
+| --------------- | ------------------------------------------- | --------------------------------- |
+| Session uploads | Input materials for one task                | Current session or current task   |
+| Project files   | Stable reusable project context             | Persistent across the project     |
+| Shared files    | Public outputs worth reusing in the channel | Reused over time in collaboration |
+
+That distinction matters. Not every upload should automatically become a public result, and not every public result should still be treated like a one-off attachment. A file can begin as task input and later move into the shared collaboration layer once it proves useful beyond the original run.

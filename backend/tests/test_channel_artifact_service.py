@@ -1,8 +1,13 @@
 import unittest
 import uuid
+from io import BytesIO
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
+from fastapi import UploadFile
+from starlette.datastructures import Headers
+
+from app.core.errors.exceptions import AppException
 from app.models.agent_session import AgentSession
 from app.services.channel_artifact_service import ChannelArtifactService
 
@@ -168,6 +173,8 @@ class ChannelArtifactServiceTests(unittest.TestCase):
             plan_children[0].url,
             "https://example.com/rate-limit-plan.md",
         )
+        self.assertEqual(plan_children[0].artifact_id, str(artifacts[0].id))
+        self.assertEqual(plan_children[0].source_kind, "workspace_export")
 
     def test_list_channel_artifact_candidates_returns_flat_matches(self) -> None:
         artifact_id = uuid.uuid4()
@@ -225,6 +232,153 @@ class ChannelArtifactServiceTests(unittest.TestCase):
         self.assertEqual(result[0].logical_path, "/Uploads/design.md")
         assert result[0].publisher is not None
         self.assertEqual(result[0].publisher.label, "Alice")
+
+    def test_upload_channel_artifact_emits_channel_event(self) -> None:
+        file = UploadFile(
+            filename="design.md",
+            file=BytesIO(b"# Design\n"),
+            headers=Headers({"content-type": "text/markdown"}),
+        )
+        channel = SimpleNamespace(id=self.channel_id, name="Product")
+
+        with (
+            patch(
+                "app.services.channel_artifact_service.require_channel_member_access",
+                return_value=channel,
+            ),
+            patch(
+                "app.services.channel_artifact_service."
+                "ChannelArtifactRepository.get_by_channel_and_path",
+                return_value=None,
+            ),
+            patch.object(self.service._storage, "upload_fileobj"),
+            patch(
+                "app.services.channel_artifact_service.create_channel_event_message"
+            ) as create_event,
+        ):
+            result = self.service.upload_channel_artifact(
+                self.db,
+                current_user=SimpleNamespace(
+                    id="user-1",
+                    display_name="Alice",
+                    primary_email="alice@example.com",
+                ),
+                server_id=self.server_id,
+                channel_id=self.channel_id,
+                file=file,
+            )
+
+        self.assertEqual(result.name, "design.md")
+        create_event.assert_called_once()
+        self.assertEqual(
+            create_event.call_args.kwargs["event_type"],
+            "artifact.uploaded",
+        )
+        self.assertEqual(
+            create_event.call_args.kwargs["content"]["artifact_display_name"],
+            "design.md",
+        )
+        self.assertEqual(
+            create_event.call_args.kwargs["content"]["artifact_logical_path"],
+            "/Uploads/design.md",
+        )
+
+    def test_delete_channel_artifact_removes_user_upload(self) -> None:
+        artifact_id = uuid.uuid4()
+        artifact = SimpleNamespace(
+            id=artifact_id,
+            server_id=self.server_id,
+            channel_id=self.channel_id,
+            publisher_user_id="user-1",
+            logical_path="/Uploads/design.md",
+            display_name="design.md",
+            mime_type="text/markdown",
+            object_key="channel-artifacts/server/channel/Uploads/artifact/file",
+            source_kind="user_upload",
+            size_bytes=12,
+        )
+
+        with (
+            patch(
+                "app.services.channel_artifact_service.require_channel_member_access",
+                return_value=SimpleNamespace(id=self.channel_id, name="Product"),
+            ),
+            patch(
+                "app.services.channel_artifact_service.require_server_member",
+                return_value=SimpleNamespace(role="member"),
+            ),
+            patch(
+                "app.services.channel_artifact_service."
+                "ChannelArtifactRepository.get_by_channel_and_id",
+                return_value=artifact,
+            ),
+            patch(
+                "app.services.channel_artifact_service.ChannelArtifactRepository.delete"
+            ) as delete_artifact,
+            patch.object(self.service._storage, "delete_object") as delete_object,
+            patch(
+                "app.services.channel_artifact_service.create_channel_event_message"
+            ) as create_event,
+        ):
+            self.service.delete_channel_artifact(
+                self.db,
+                current_user=SimpleNamespace(
+                    id="user-1",
+                    display_name="Alice",
+                    primary_email="alice@example.com",
+                ),
+                server_id=self.server_id,
+                channel_id=self.channel_id,
+                artifact_id=artifact_id,
+            )
+
+        delete_object.assert_called_once_with(key=artifact.object_key)
+        delete_artifact.assert_called_once_with(self.db, artifact)
+        create_event.assert_called_once()
+        self.assertEqual(
+            create_event.call_args.kwargs["event_type"],
+            "artifact.deleted",
+        )
+        self.db.commit.assert_called_once()
+
+    def test_delete_channel_artifact_rejects_workspace_export(self) -> None:
+        artifact_id = uuid.uuid4()
+        artifact = SimpleNamespace(
+            id=artifact_id,
+            server_id=self.server_id,
+            channel_id=self.channel_id,
+            publisher_user_id="user-1",
+            logical_path="/plans/design.md",
+            display_name="design.md",
+            mime_type="text/markdown",
+            object_key="workspaces/user-1/session/files/plans/design.md",
+            source_kind="workspace_export",
+            size_bytes=12,
+        )
+
+        with (
+            patch(
+                "app.services.channel_artifact_service.require_channel_member_access",
+                return_value=SimpleNamespace(id=self.channel_id, name="Product"),
+            ),
+            patch(
+                "app.services.channel_artifact_service.require_server_member",
+                return_value=SimpleNamespace(role="member"),
+            ),
+            patch(
+                "app.services.channel_artifact_service."
+                "ChannelArtifactRepository.get_by_channel_and_id",
+                return_value=artifact,
+            ),
+            self.assertRaises(AppException),
+        ):
+            self.service.delete_channel_artifact(
+                self.db,
+                current_user=SimpleNamespace(id="user-1"),
+                server_id=self.server_id,
+                channel_id=self.channel_id,
+                artifact_id=artifact_id,
+            )
 
     def test_read_runtime_artifact_returns_truncated_text(self) -> None:
         artifact_id = uuid.uuid4()
@@ -437,6 +591,115 @@ class ChannelArtifactServiceTests(unittest.TestCase):
 
         self.assertEqual(len(result.artifacts), 1)
         self.assertEqual(result.artifacts[0].logical_path, "/plans/rate-limit-plan.md")
+
+    def test_read_runtime_artifact_text_extracts_pdf_content_with_offsets(self) -> None:
+        artifact = SimpleNamespace(
+            id=uuid.uuid4(),
+            channel_id=self.channel_id,
+            agent_identity_id=None,
+            publisher_user_id="user-1",
+            logical_path="/Uploads/resume.pdf",
+            display_name="resume.pdf",
+            mime_type="application/pdf",
+            object_key="objects/resume.pdf",
+            source_kind="user_upload",
+            source_session_id=None,
+            size_bytes=4096,
+            is_previewable=True,
+        )
+
+        with (
+            patch(
+                "app.services.channel_artifact_service.SessionRepository.get_by_id",
+                return_value=self.session,
+            ),
+            patch(
+                "app.services.channel_artifact_service."
+                "ServerChannelAgentMemberRepository.get_by_channel_and_agent",
+                return_value=SimpleNamespace(),
+            ),
+            patch(
+                "app.services.channel_artifact_service."
+                "ChannelArtifactRepository.get_by_channel_and_path",
+                return_value=artifact,
+            ),
+            patch.object(
+                self.service._storage,
+                "get_bytes",
+                return_value=b"%PDF-1.7",
+                create=True,
+            ),
+            patch.object(
+                self.service,
+                "_extract_pdf_text_from_bytes",
+                return_value="Alpha Beta Gamma",
+            ),
+        ):
+            result = self.service.read_runtime_artifact_text(
+                self.db,
+                session_id=self.session_id,
+                logical_path="/Uploads/resume.pdf",
+                start_char=6,
+                max_chars=4,
+            )
+
+        self.assertEqual(result.artifact.display_name, "resume.pdf")
+        self.assertEqual(result.content, "Beta")
+        self.assertEqual(result.start_char, 6)
+        self.assertEqual(result.end_char, 10)
+        self.assertEqual(result.next_start_char, 10)
+        self.assertEqual(result.total_chars, 16)
+        self.assertTrue(result.has_more)
+        self.assertEqual(result.extraction_kind, "pdf_text")
+
+    def test_download_runtime_artifact_returns_binary_payload(self) -> None:
+        artifact = SimpleNamespace(
+            id=uuid.uuid4(),
+            channel_id=self.channel_id,
+            agent_identity_id=None,
+            publisher_user_id="user-1",
+            logical_path="/Uploads/resume.pdf",
+            display_name="resume.pdf",
+            mime_type="application/pdf",
+            object_key="objects/resume.pdf",
+            source_kind="user_upload",
+            source_session_id=None,
+            size_bytes=9,
+            is_previewable=True,
+        )
+
+        with (
+            patch(
+                "app.services.channel_artifact_service.SessionRepository.get_by_id",
+                return_value=self.session,
+            ),
+            patch(
+                "app.services.channel_artifact_service."
+                "ServerChannelAgentMemberRepository.get_by_channel_and_agent",
+                return_value=SimpleNamespace(),
+            ),
+            patch(
+                "app.services.channel_artifact_service."
+                "ChannelArtifactRepository.get_by_channel_and_id",
+                return_value=artifact,
+            ),
+            patch.object(
+                self.service._storage,
+                "get_bytes",
+                return_value=b"%PDF-1.7",
+                create=True,
+            ),
+        ):
+            result = self.service.download_runtime_artifact(
+                self.db,
+                session_id=self.session_id,
+                artifact_id=artifact.id,
+            )
+
+        self.assertEqual(result.artifact.display_name, "resume.pdf")
+        self.assertEqual(result.filename, "resume.pdf")
+        self.assertEqual(result.media_type, "application/pdf")
+        self.assertEqual(result.content, b"%PDF-1.7")
 
 
 if __name__ == "__main__":
