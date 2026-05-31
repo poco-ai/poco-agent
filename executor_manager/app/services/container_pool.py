@@ -502,9 +502,8 @@ class ContainerPool:
             reasons.append("mount_fingerprint")
 
         current_container_mode = str(labels.get("container_mode", "")).strip()
-        if (
-            current_container_mode == "persistent"
-            and self._is_auto_remove_container(container)
+        if current_container_mode == "persistent" and self._is_auto_remove_container(
+            container
         ):
             reasons.append("auto_remove")
 

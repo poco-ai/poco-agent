@@ -41,7 +41,9 @@ function isPinned(keepaliveUntil?: string | null): boolean {
     return false;
   }
   const keepaliveAt = new Date(keepaliveUntil);
-  return !Number.isNaN(keepaliveAt.getTime()) && keepaliveAt.getTime() > Date.now();
+  return (
+    !Number.isNaN(keepaliveAt.getTime()) && keepaliveAt.getTime() > Date.now()
+  );
 }
 
 export function getPersistentRuntimeStatus(input: {

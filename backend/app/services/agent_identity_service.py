@@ -81,9 +81,7 @@ class AgentIdentityService:
                     agent_identity=agent_identity,
                 )
             )
-            response = response.model_copy(
-                update={"runtime_summary": runtime_summary}
-            )
+            response = response.model_copy(update={"runtime_summary": runtime_summary})
         return response
 
     @staticmethod

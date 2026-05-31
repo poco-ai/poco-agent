@@ -30,23 +30,25 @@ function RuntimeInlineIcon({
 }) {
   switch (iconKey) {
     case "running":
-      return <Bot className={className} />;
+      return <Bot className={cn("fill-current", className)} />;
     case "warmIdle":
-      return <Flame className={className} />;
+      return <Flame className={cn("fill-current", className)} />;
     case "sleeping":
-      return <MoonStar className={className} />;
+      return <MoonStar className={cn("fill-current", className)} />;
     case "stopped":
-      return <Square className={className} />;
+      return <Square className={cn("fill-current", className)} />;
     case "stale":
-      return <AlertTriangle className={className} />;
+      return <AlertTriangle className={cn("fill-current", className)} />;
     case "removed":
-      return <Trash2 className={className} />;
+      return <Trash2 className={cn("fill-current", className)} />;
     default:
-      return <CircleAlert className={className} />;
+      return <CircleAlert className={cn("fill-current", className)} />;
   }
 }
 
-function getIconClassName(tone: PersistentRuntimeStatusPresentation["tone"]): string {
+function getIconClassName(
+  tone: PersistentRuntimeStatusPresentation["tone"],
+): string {
   switch (tone) {
     case "success":
       return "text-emerald-300";

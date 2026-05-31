@@ -1,36 +1,40 @@
 import asyncio
-from types import SimpleNamespace
 import unittest
 import uuid
 from unittest.mock import MagicMock
 
 import docker.errors
 
+from app.core.settings import Settings
 from app.schemas.filesystem import MountResolutionResult
 from app.services.container_pool import ContainerPool
 
 
 class ContainerPoolPersistentRuntimeTests(unittest.TestCase):
     @staticmethod
+    def _build_settings() -> Settings:
+        settings = Settings()
+        settings.anthropic_base_url = "https://api.example.test"
+        settings.anthropic_api_key = ""
+        settings.callback_base_url = "http://manager.test"
+        settings.callback_token = "token"
+        settings.default_model = "claude-test"
+        settings.executor_browser_image = "executor:full"
+        settings.executor_image = "executor:lite"
+        settings.executor_local_browser_image = None
+        settings.executor_local_image = None
+        settings.executor_prefer_local_image = False
+        settings.executor_published_host = "localhost"
+        settings.executor_timezone = "Asia/Shanghai"
+        settings.playwright_mcp_image_responses = "omit"
+        settings.playwright_mcp_output_mode = "file"
+        settings.poco_browser_viewport_size = "1366x768"
+        return settings
+
+    @staticmethod
     def _build_pool_for_create() -> ContainerPool:
         pool = ContainerPool.__new__(ContainerPool)
-        pool.settings = SimpleNamespace(
-            anthropic_base_url="https://api.example.test",
-            anthropic_api_key="",
-            callback_base_url="http://manager.test",
-            callback_token="token",
-            default_model="claude-test",
-            executor_browser_image="executor:full",
-            executor_image="executor:lite",
-            executor_local_browser_image=None,
-            executor_local_image=None,
-            executor_prefer_local_image=False,
-            executor_published_host="localhost",
-            executor_timezone="Asia/Shanghai",
-            playwright_mcp_image_responses="omit",
-            playwright_mcp_output_mode="file",
-            poco_browser_viewport_size="1366x768",
-        )
+        pool.settings = ContainerPoolPersistentRuntimeTests._build_settings()
         pool.workspace_manager = MagicMock()
         pool.workspace_manager.get_workspace_volume.return_value = "/tmp/workspace"
         pool.local_mount_service = MagicMock()
@@ -101,7 +105,8 @@ class ContainerPoolPersistentRuntimeTests(unittest.TestCase):
             "persistent_runtime_key": runtime_key,
         }
         pool = self._build_pool_for_create()
-        pool.docker_client.containers.run.return_value = container
+        run_mock = MagicMock(return_value=container)
+        pool.docker_client.containers.run = run_mock
 
         asyncio.run(
             pool.get_or_create_container(
@@ -112,10 +117,12 @@ class ContainerPoolPersistentRuntimeTests(unittest.TestCase):
             )
         )
 
-        _, kwargs = pool.docker_client.containers.run.call_args
+        _, kwargs = run_mock.call_args
         self.assertIs(kwargs["auto_remove"], False)
 
-    def test_reusing_stopped_persistent_container_starts_it_before_waiting(self) -> None:
+    def test_reusing_stopped_persistent_container_starts_it_before_waiting(
+        self,
+    ) -> None:
         runtime_key = f"server_agent:{uuid.uuid4()}"
         logical_container_id = f"agent-{runtime_key.split(':', maxsplit=1)[1][:8]}"
         container = MagicMock()

@@ -106,7 +106,9 @@ class PersistentRuntimeService:
             warm_retention_seconds=self.DEFAULT_SERVER_AGENT_WARM_RETENTION_SECONDS,
             keepalive_until=None,
             last_activity_at=(
-                persistent_state.last_synced_at if persistent_state is not None else None
+                persistent_state.last_synced_at
+                if persistent_state is not None
+                else None
             ),
             last_started_at=None,
             last_stopped_at=None,

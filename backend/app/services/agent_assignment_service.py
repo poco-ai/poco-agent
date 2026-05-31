@@ -63,13 +63,13 @@ class AgentAssignmentService:
         response = AgentAssignmentResponse.model_validate(assignment)
         if assignment.trigger_mode != "persistent_sandbox":
             return response
-        runtime_summary = self._persistent_runtime_service.build_assignment_runtime_summary(
-            db,
-            assignment=assignment,
+        runtime_summary = (
+            self._persistent_runtime_service.build_assignment_runtime_summary(
+                db,
+                assignment=assignment,
+            )
         )
-        return response.model_copy(
-            update={"runtime_summary": runtime_summary}
-        )
+        return response.model_copy(update={"runtime_summary": runtime_summary})
 
     def _log_activity(
         self,

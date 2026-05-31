@@ -3856,7 +3856,9 @@ export function ServerConversationPageClient({
                   <ColleagueDetail
                     selection={colleagueSelection}
                     agents={
-                      colleaguesModeActive ? colleagueDirectoryAgents : knownAgents
+                      colleaguesModeActive
+                        ? colleagueDirectoryAgents
+                        : knownAgents
                     }
                     presets={presets}
                     members={serverMembers}
