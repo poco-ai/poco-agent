@@ -54,6 +54,7 @@ from app.api.v1 import (
     scheduled_tasks,
     session_queue,
     sessions,
+    session_shares,
     skill_marketplace,
     slash_commands,
     skill_installs,
@@ -79,6 +80,7 @@ api_v1_router.include_router(activity_logs.router)
 api_v1_router.include_router(auth.router)
 api_v1_router.include_router(admin.router)
 api_v1_router.include_router(sessions.router)
+api_v1_router.include_router(session_shares.router)
 api_v1_router.include_router(session_queue.router)
 api_v1_router.include_router(tasks.router)
 api_v1_router.include_router(runs.router)
