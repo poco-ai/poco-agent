@@ -8,7 +8,7 @@
 | **预期改动范围** | backend session share models / share and fork APIs / channel import service / frontend chat share UI / readonly share page / server thread timeline / tests |
 | **改动类型** | feat |
 | **优先级** | P1 |
-| **状态** | in-progress |
+| **状态** | review |
 | **关联 constitution** | `specs/constitution/2026-06-09-chat-share-link-and-channel-thread-projection.md` |
 
 ## 实施阶段
@@ -17,7 +17,7 @@
 - [x] Phase 1: 后端支持 share link、只读快照和 fork
 - [x] Phase 2: 后端支持分享到频道 thread projection
 - [x] Phase 3: 前端支持 share link、频道分享和 timeline 展示
-- [ ] Phase 4: 验证、回归和 spec 回写
+- [x] Phase 4: 验证、回归和 spec 回写
 
 ---
 
@@ -217,22 +217,34 @@
 
 **验收标准：**
 
-- [ ] share link create/read/fork 测试通过
-- [ ] share to channel 不触发 agent 测试通过
+- [x] share link create/read/fork 测试通过
+- [x] share to channel 不触发 agent 测试通过
+
+**验证记录：**
+
+- `cd backend && uv run python -m unittest tests/test_session_share_service.py -v` 通过 5 个用例，覆盖 share create/read/fork、fork runtime config 清理和 share-to-channel 不触发 agent。
+- `cd backend && uv run python -m py_compile app/models/session_share.py app/repositories/session_share_repository.py app/schemas/session_share.py app/services/session_share_service.py app/api/v1/session_shares.py app/api/v1/__init__.py` 通过。
+- `cd backend && uv run -m alembic heads` 输出 `2b7e4c91d6a0 (head)`。
 
 #### 4.2 前端静态验证
 
 **验收标准：**
 
-- [ ] `pnpm lint` 通过或记录阻塞原因
-- [ ] `pnpm build` 通过或记录阻塞原因
+- [x] `pnpm lint` 通过或记录阻塞原因
+- [x] `pnpm build` 通过或记录阻塞原因
+
+**验证记录：**
+
+- `cd frontend && pnpm lint` 通过。
+- `cd frontend && pnpm build` 通过；存在 Next.js workspace root 多 lockfile warning，不影响构建。
+- `cd frontend && pnpm exec tsc --noEmit` 暴露既有测试类型问题：`features/channel-tasks/lib/channel-task-board.test.ts` 中 `displayNumber` 可为 `undefined`，与 `ChannelTask.displayNumber: number` 不匹配；本次 `pnpm build` 未受影响。
 
 #### 4.3 Spec 状态回写
 
 **验收标准：**
 
-- [ ] 所有已完成 phase 标记为 `[x]`
-- [ ] 状态更新为 `review`
+- [x] 所有已完成 phase 标记为 `[x]`
+- [x] 状态更新为 `review`
 
 ## 风险与缓解
 
