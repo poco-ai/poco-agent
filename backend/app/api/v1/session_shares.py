@@ -11,6 +11,8 @@ from app.schemas.session_share import (
     SessionShareForkResponse,
     SessionShareResponse,
     SessionShareSnapshotResponse,
+    SessionShareToChannelRequest,
+    SessionShareToChannelResponse,
 )
 from app.services.session_share_service import SessionShareService
 
@@ -69,4 +71,26 @@ async def fork_session_share(
     return Response.success(
         data=result,
         message="Session share forked successfully",
+    )
+
+
+@router.post(
+    "/{token}/channels",
+    response_model=ResponseSchema[SessionShareToChannelResponse],
+)
+async def share_session_to_channel(
+    token: str,
+    request: SessionShareToChannelRequest,
+    user_id: str = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+) -> JSONResponse:
+    result = service.share_to_channel(
+        db,
+        token=token,
+        current_user_id=user_id,
+        request=request,
+    )
+    return Response.success(
+        data=result,
+        message="Session share imported to channel successfully",
     )

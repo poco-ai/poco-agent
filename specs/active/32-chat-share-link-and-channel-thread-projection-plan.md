@@ -14,8 +14,8 @@
 ## 实施阶段
 
 - [x] Phase 0: 固定分享语义和实施计划
-- [ ] Phase 1: 后端支持 share link、只读快照和 fork
-- [ ] Phase 2: 后端支持分享到频道 thread projection
+- [x] Phase 1: 后端支持 share link、只读快照和 fork
+- [x] Phase 2: 后端支持分享到频道 thread projection
 - [ ] Phase 3: 前端支持 share link、频道分享和 timeline 展示
 - [ ] Phase 4: 验证、回归和 spec 回写
 
@@ -95,9 +95,9 @@
 
 **验收标准：**
 
-- [ ] share token 不可猜测且唯一
-- [ ] share 记录关联 source session 和 owner
-- [ ] soft revoke / disabled 状态可表达
+- [x] share token 不可猜测且唯一
+- [x] share 记录关联 source session 和 owner
+- [x] soft revoke / disabled 状态可表达
 
 #### 1.2 增加 share/fork service 和 API
 
@@ -110,10 +110,10 @@
 
 **验收标准：**
 
-- [ ] owner 可以为自己的普通聊天创建 share link
-- [ ] share token 可读取只读 snapshot，包括 session、messages、runs
-- [ ] 登录用户可从 share token fork 出自己的普通聊天
-- [ ] fork 后 `sdk_session_id=None`，不会继续原 SDK thread
+- [x] owner 可以为自己的普通聊天创建 share link
+- [x] share token 可读取只读 snapshot，包括 session、messages、runs
+- [x] 登录用户可从 share token fork 出自己的普通聊天
+- [x] fork 后 `sdk_session_id=None`，不会继续原 SDK thread
 
 ---
 
@@ -135,10 +135,10 @@
 
 **验收标准：**
 
-- [ ] 分享到频道时校验当前用户是频道成员
-- [ ] 创建 `conversation.shared` event
-- [ ] 创建 root message 和完整 thread replies
-- [ ] 导入 transcript 中的 `@agent` 不产生 run / queue item
+- [x] 分享到频道时校验当前用户是频道成员
+- [x] 创建 `conversation.shared` event
+- [x] 创建 root message 和完整 thread replies
+- [x] 导入 transcript 中的 `@agent` 不产生 run / queue item
 
 #### 2.2 提供 thread timeline 数据
 
@@ -150,8 +150,8 @@
 
 **验收标准：**
 
-- [ ] timeline item 能关联 imported message、source run、artifact reference
-- [ ] thread 页面可根据 root message id 读取 timeline
+- [x] timeline item 能关联 imported message、source run、artifact reference
+- [x] thread 页面可根据 root message id 读取 timeline
 
 ---
 
@@ -242,4 +242,3 @@
 | 导入频道误触发 agent | 产生非预期 run | import service 不调用 `send_message()` 和 trigger service，测试覆盖 `@agent` 文本 |
 | channel tools 污染 private fork | private chat 仍能操作频道 | fork 到普通聊天时不写入 server/channel/agent runtime config |
 | timeline 成为第二事实源 | UI 状态不一致 | timeline 只引用 message/run/artifact id，不存储正文副本作为事实 |
-

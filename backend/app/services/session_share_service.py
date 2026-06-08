@@ -1,6 +1,7 @@
 import secrets
 import uuid
 from copy import deepcopy
+from datetime import datetime, timezone
 from typing import Any, TypeVar
 
 from sqlalchemy.orm import Session
@@ -10,23 +11,39 @@ from app.core.errors.exceptions import AppException
 from app.models.agent_message import AgentMessage
 from app.models.agent_run import AgentRun
 from app.models.agent_session import AgentSession
+from app.models.server_channel_message import ServerChannelMessage
 from app.models.session_share import SessionShare
 from app.models.usage_log import UsageLog
 from app.repositories.message_repository import MessageRepository
 from app.repositories.run_repository import RunRepository
 from app.repositories.session_repository import SessionRepository
 from app.repositories.session_share_repository import SessionShareRepository
+from app.repositories.server_channel_message_repository import (
+    ServerChannelMessageRepository,
+)
 from app.repositories.tool_execution_repository import ToolExecutionRepository
 from app.repositories.usage_log_repository import UsageLogRepository
 from app.schemas.message import MessageResponse
+from app.schemas.server_channel_message import (
+    ServerChannelMessageResponse,
+    ServerChannelThreadResponse,
+)
 from app.schemas.session_share import (
     ConversationTimelineItem,
     SessionShareCreateRequest,
     SessionShareForkResponse,
     SessionShareResponse,
     SessionShareSnapshotResponse,
+    SessionShareToChannelRequest,
+    SessionShareToChannelResponse,
     SharedRunSummary,
     SharedSessionSummary,
+)
+from app.services.server_channel_access import require_channel_member_access
+from app.services.server_channel_event_service import (
+    ChannelEventActor,
+    ChannelEventTarget,
+    create_channel_event_message,
 )
 
 JsonValueT = TypeVar("JsonValueT")
@@ -195,6 +212,55 @@ class SessionShareService:
             )
         return sorted(items, key=lambda item: item.created_at)
 
+    @classmethod
+    def _build_channel_import_timeline(
+        cls,
+        *,
+        event: ServerChannelMessage,
+        thread_messages: list[ServerChannelMessage],
+    ) -> list[ConversationTimelineItem]:
+        items = [
+            ConversationTimelineItem(
+                id=f"channel-event:{event.id}",
+                item_type="channel_event",
+                label=cls._truncate_label(event.text_preview or "Shared conversation"),
+                channel_message_id=event.id,
+                created_at=event.created_at,
+                metadata={
+                    "event_type": (event.content or {}).get("event_type"),
+                },
+            )
+        ]
+        for message in thread_messages:
+            content = message.content if isinstance(message.content, dict) else {}
+            source_message_id = content.get("source_message_id")
+            source_run_id = content.get("source_run_id")
+            items.append(
+                ConversationTimelineItem(
+                    id=f"channel-message:{message.id}",
+                    item_type="channel_message",
+                    label=cls._truncate_label(message.text_preview or "Imported turn"),
+                    role=content.get("source_role")
+                    if isinstance(content.get("source_role"), str)
+                    else None,
+                    channel_message_id=message.id,
+                    source_message_id=source_message_id
+                    if isinstance(source_message_id, int)
+                    else None,
+                    source_run_id=uuid.UUID(str(source_run_id))
+                    if source_run_id
+                    else None,
+                    created_at=message.created_at,
+                    metadata={
+                        "message_type": message.message_type,
+                        "source": content.get("source"),
+                        "artifact_references": content.get("artifact_references")
+                        or [],
+                    },
+                )
+            )
+        return sorted(items, key=lambda item: item.created_at)
+
     @staticmethod
     def _active_share_or_404(db: Session, token: str) -> SessionShare:
         share = SessionShareRepository.get_active_by_token(db, token)
@@ -307,6 +373,233 @@ class SessionShareService:
             source_session_id=source_session.id,
             share_id=share.id,
         )
+
+    def share_to_channel(
+        self,
+        db: Session,
+        *,
+        token: str,
+        current_user_id: str,
+        request: SessionShareToChannelRequest,
+    ) -> SessionShareToChannelResponse:
+        share = self._active_share_or_404(db, token)
+        source_session = self._source_session_or_404(db, share)
+        channel = require_channel_member_access(
+            db,
+            server_id=request.server_id,
+            channel_id=request.channel_id,
+            user_id=current_user_id,
+        )
+        source_messages = MessageRepository.list_by_session(
+            db,
+            source_session.id,
+            limit=1000,
+        )
+        if not source_messages:
+            raise AppException(
+                error_code=ErrorCode.BAD_REQUEST,
+                message="Shared session has no messages to import",
+            )
+
+        title = (
+            request.title
+            or share.title
+            or source_session.title
+            or "Shared conversation"
+        ).strip()
+        root_source_message = self._select_thread_root_message(source_messages)
+        source_runs_by_user_message_id = self._map_runs_by_user_message_id(
+            db,
+            source_session.id,
+        )
+        imported_at = datetime.now(timezone.utc).isoformat()
+
+        root = ServerChannelMessageRepository.create(
+            db,
+            ServerChannelMessage(
+                channel_id=channel.id,
+                author_user_id=current_user_id
+                if root_source_message.role == "user"
+                else None,
+                message_type="user"
+                if root_source_message.role == "user"
+                else "system",
+                content=self._build_imported_message_content(
+                    share=share,
+                    source_session=source_session,
+                    source_message=root_source_message,
+                    title=title,
+                    imported_at=imported_at,
+                    source_run=None,
+                ),
+                text_preview=self._truncate_label(
+                    self._extract_message_text(root_source_message)
+                ),
+                thread_root_message_id=None,
+            ),
+        )
+        db.flush()
+
+        replies: list[ServerChannelMessage] = []
+        latest_user_message_id: int | None = None
+        for source_message in source_messages:
+            if source_message.id == root_source_message.id:
+                if source_message.role == "user":
+                    latest_user_message_id = source_message.id
+                continue
+            if source_message.role == "user":
+                latest_user_message_id = source_message.id
+            source_run = (
+                source_runs_by_user_message_id.get(latest_user_message_id)
+                if latest_user_message_id is not None
+                else None
+            )
+            reply = ServerChannelMessageRepository.create(
+                db,
+                ServerChannelMessage(
+                    channel_id=channel.id,
+                    author_user_id=current_user_id
+                    if source_message.role == "user"
+                    else None,
+                    message_type="user" if source_message.role == "user" else "system",
+                    content=self._build_imported_message_content(
+                        share=share,
+                        source_session=source_session,
+                        source_message=source_message,
+                        title=title,
+                        imported_at=imported_at,
+                        source_run=source_run,
+                    ),
+                    text_preview=self._truncate_label(
+                        self._extract_message_text(source_message)
+                    ),
+                    thread_root_message_id=root.id,
+                ),
+            )
+            replies.append(reply)
+        db.flush()
+
+        event = create_channel_event_message(
+            db,
+            channel_id=channel.id,
+            event_type="conversation.shared",
+            actor=ChannelEventActor(
+                actor_type="user",
+                actor_label=current_user_id,
+                actor_user_id=current_user_id,
+            ),
+            target=ChannelEventTarget(target_label=title),
+            content={
+                "share_id": str(share.id),
+                "source_session_id": str(source_session.id),
+                "root_message_id": str(root.id),
+                "imported_message_count": len(source_messages),
+            },
+            text_preview=f"Shared conversation: {title}",
+        )
+        db.commit()
+        db.refresh(root)
+        db.refresh(event)
+        for reply in replies:
+            db.refresh(reply)
+
+        return SessionShareToChannelResponse(
+            share_id=share.id,
+            source_session_id=source_session.id,
+            event=ServerChannelMessageResponse.model_validate(event),
+            thread=ServerChannelThreadResponse(
+                root=ServerChannelMessageResponse.model_validate(root),
+                replies=[
+                    ServerChannelMessageResponse.model_validate(reply)
+                    for reply in replies
+                ],
+            ),
+            timeline=self._build_channel_import_timeline(
+                event=event,
+                thread_messages=[root, *replies],
+            ),
+        )
+
+    @staticmethod
+    def _select_thread_root_message(
+        source_messages: list[AgentMessage],
+    ) -> AgentMessage:
+        first_user_message = next(
+            (message for message in source_messages if message.role == "user"),
+            None,
+        )
+        return first_user_message or source_messages[0]
+
+    @staticmethod
+    def _map_runs_by_user_message_id(
+        db: Session,
+        session_id: uuid.UUID,
+    ) -> dict[int, AgentRun]:
+        runs = RunRepository.list_by_session(db, session_id, limit=1000)
+        result: dict[int, AgentRun] = {}
+        for run in runs:
+            if run.status not in {"completed", "failed", "canceled"}:
+                continue
+            result[run.user_message_id] = run
+        return result
+
+    def _build_imported_message_content(
+        self,
+        *,
+        share: SessionShare,
+        source_session: AgentSession,
+        source_message: AgentMessage,
+        title: str,
+        imported_at: str,
+        source_run: AgentRun | None,
+    ) -> dict[str, Any]:
+        text = self._extract_message_text(source_message)
+        source = (
+            "imported_chat_session"
+            if source_message.role == "user"
+            else "imported_agent_session"
+        )
+        content: dict[str, Any] = {
+            "source": source,
+            "source_share_id": str(share.id),
+            "source_session_id": str(source_session.id),
+            "source_message_id": source_message.id,
+            "source_role": source_message.role,
+            "title": title,
+            "text": text,
+            "body": text,
+            "imported_at": imported_at,
+        }
+        if source_run is not None and source_message.role != "user":
+            content["source_run_id"] = str(source_run.id)
+            content["execution_status"] = source_run.status
+            content["workspace_export_status"] = source_run.workspace_export_status
+        artifact_references = self._extract_artifact_references(source_message.content)
+        if artifact_references:
+            content["artifact_references"] = artifact_references
+        return content
+
+    @staticmethod
+    def _extract_artifact_references(content: object) -> list[dict[str, Any]]:
+        if not isinstance(content, dict):
+            return []
+
+        references: list[dict[str, Any]] = []
+        for key in ("artifacts", "artifact_references", "artifactReferences"):
+            raw_items = content.get(key)
+            if not isinstance(raw_items, list):
+                continue
+            for item in raw_items:
+                if isinstance(item, dict):
+                    references.append(deepcopy(item))
+
+        entities = content.get("entities")
+        if isinstance(entities, list):
+            for entity in entities:
+                if not isinstance(entity, dict) or entity.get("kind") != "artifact":
+                    continue
+                references.append(deepcopy(entity))
+        return references
 
     def _clone_session_for_share_fork(
         self,
