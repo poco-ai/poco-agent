@@ -3,6 +3,8 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import {
+  Check,
+  Copy,
   Image as ImageIcon,
   HardDrive,
   Loader2,
@@ -10,6 +12,8 @@ import {
   PanelRightClose,
   PanelRightOpen,
   Quote,
+  Send,
+  Share2,
 } from "lucide-react";
 import { ChatMessageList } from "../../chat/chat-message-list";
 import { TodoList } from "./todo-list";
@@ -43,6 +47,7 @@ import type {
 import { useT } from "@/lib/i18n/client";
 import { toast } from "sonner";
 import { useAppShell } from "@/components/shell/app-shell-context";
+import { Button } from "@/components/ui/button";
 import { persistSessionLocalFilesystem } from "@/features/chat/lib/local-filesystem-persistence";
 import { useTaskHistoryContext } from "@/features/projects/contexts/task-history-context";
 import { SkeletonCircle, SkeletonItem } from "@/components/ui/skeleton-shimmer";
@@ -66,6 +71,7 @@ import {
 import { useLanguage } from "@/hooks/use-language";
 import { ModelSelector } from "@/features/chat/components/chat/model-selector";
 import { chatService } from "@/features/chat/api/chat-api";
+import { sessionShareApi } from "@/features/chat/api/session-share-api";
 import { useModelCatalog } from "@/features/chat/hooks/use-model-catalog";
 import {
   normalizeModelSelection,
@@ -77,6 +83,19 @@ import {
   LocalFilesystemDialog,
   type LocalFilesystemDraft,
 } from "@/features/task-composer";
+import { copyToClipboard } from "@/lib/utils/clipboard/copy-to-clipboard";
+import { serversApi } from "@/features/servers";
+import type {
+  ServerChannelItem,
+  ServerItem,
+} from "@/features/servers/model/types";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface ChatPanelProps {
   session: ExecutionSession | null;
@@ -215,6 +234,18 @@ export function ChatPanel({
   >(undefined);
   const [filesystemDialogOpen, setFilesystemDialogOpen] = React.useState(false);
   const [isSavingFilesystem, setIsSavingFilesystem] = React.useState(false);
+  const [shareToken, setShareToken] = React.useState<string | null>(null);
+  const [isCreatingShare, setIsCreatingShare] = React.useState(false);
+  const [shareToChannelOpen, setShareToChannelOpen] = React.useState(false);
+  const [isSharingToChannel, setIsSharingToChannel] = React.useState(false);
+  const [shareServers, setShareServers] = React.useState<ServerItem[]>([]);
+  const [shareChannels, setShareChannels] = React.useState<ServerChannelItem[]>(
+    [],
+  );
+  const [selectedShareServerId, setSelectedShareServerId] =
+    React.useState<string>("");
+  const [selectedShareChannelId, setSelectedShareChannelId] =
+    React.useState<string>("");
 
   // Message management hook
   const {
@@ -290,11 +321,67 @@ export function ChatPanel({
     setDraftModelSelection(null);
     setDraftPreset(undefined);
     setPersistedPreset(null);
+    setShareToken(null);
     if (stickyTimerRef.current) {
       window.clearTimeout(stickyTimerRef.current);
       stickyTimerRef.current = null;
     }
   }, [session?.session_id]);
+
+  React.useEffect(() => {
+    if (!shareToChannelOpen) {
+      return;
+    }
+    let cancelled = false;
+    void serversApi
+      .listServers()
+      .then((servers) => {
+        if (cancelled) return;
+        setShareServers(servers);
+        setSelectedShareServerId((current) => current || servers[0]?.id || "");
+      })
+      .catch((error) => {
+        console.error("[ChatPanel] Failed to load share servers:", error);
+        if (!cancelled) {
+          toast.error(t("chat.shareLoadTargetsFailed"));
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [shareToChannelOpen, t]);
+
+  React.useEffect(() => {
+    if (!shareToChannelOpen || !selectedShareServerId) {
+      setShareChannels([]);
+      setSelectedShareChannelId("");
+      return;
+    }
+    let cancelled = false;
+    void serversApi
+      .listChannels(selectedShareServerId)
+      .then((channels) => {
+        if (cancelled) return;
+        const visibleChannels = channels.filter(
+          (channel) => channel.conversationType === "channel",
+        );
+        setShareChannels(visibleChannels);
+        setSelectedShareChannelId((current) =>
+          visibleChannels.some((channel) => channel.id === current)
+            ? current
+            : visibleChannels[0]?.id || "",
+        );
+      })
+      .catch((error) => {
+        console.error("[ChatPanel] Failed to load share channels:", error);
+        if (!cancelled) {
+          toast.error(t("chat.shareLoadTargetsFailed"));
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedShareServerId, shareToChannelOpen, t]);
 
   React.useEffect(() => {
     const presetId = session?.config_snapshot?.preset_id ?? null;
@@ -1080,6 +1167,93 @@ export function ChatPanel({
     [canExportConversationImage, headerDescription, isExportingImage, t],
   );
 
+  const buildShareUrl = React.useCallback(
+    (token: string) => {
+      const path = lng ? `/${lng}/share/${token}` : `/share/${token}`;
+      if (typeof window === "undefined") {
+        return path;
+      }
+      return `${window.location.origin}${path}`;
+    },
+    [lng],
+  );
+
+  const ensureShareToken = React.useCallback(async (): Promise<string> => {
+    if (!session?.session_id) {
+      throw new Error("Session is not ready");
+    }
+    if (shareToken) {
+      return shareToken;
+    }
+    setIsCreatingShare(true);
+    try {
+      const share = await sessionShareApi.createShare(session.session_id, {
+        title: headerDescription,
+      });
+      setShareToken(share.token);
+      return share.token;
+    } finally {
+      setIsCreatingShare(false);
+    }
+  }, [headerDescription, session?.session_id, shareToken]);
+
+  const handleCopyShareLink = React.useCallback(async () => {
+    if (!session?.session_id || isCreatingShare) return;
+    try {
+      const token = await ensureShareToken();
+      const copied = await copyToClipboard(buildShareUrl(token));
+      if (copied) {
+        toast.success(t("chat.shareLinkCopied"));
+      } else {
+        toast.error(t("chat.shareCopyFailed"));
+      }
+    } catch (error) {
+      console.error("[ChatPanel] Failed to copy share link:", error);
+      toast.error(t("chat.shareCreateFailed"));
+    }
+  }, [
+    buildShareUrl,
+    ensureShareToken,
+    isCreatingShare,
+    session?.session_id,
+    t,
+  ]);
+
+  const handleShareToChannel = React.useCallback(async () => {
+    if (
+      !session?.session_id ||
+      !selectedShareServerId ||
+      !selectedShareChannelId ||
+      isSharingToChannel
+    ) {
+      return;
+    }
+    setIsSharingToChannel(true);
+    try {
+      const token = await ensureShareToken();
+      await sessionShareApi.shareToChannel(token, {
+        serverId: selectedShareServerId,
+        channelId: selectedShareChannelId,
+        title: headerDescription,
+      });
+      toast.success(t("chat.shareToChannelSuccess"));
+      setShareToChannelOpen(false);
+    } catch (error) {
+      console.error("[ChatPanel] Failed to share to channel:", error);
+      toast.error(t("chat.shareToChannelFailed"));
+    } finally {
+      setIsSharingToChannel(false);
+    }
+  }, [
+    ensureShareToken,
+    headerDescription,
+    isSharingToChannel,
+    selectedShareChannelId,
+    selectedShareServerId,
+    session?.session_id,
+    t,
+  ]);
+
   const localFilesystemValue = React.useMemo<LocalFilesystemDraft>(
     () => ({
       filesystem_mode: session?.config_snapshot?.filesystem_mode ?? "sandbox",
@@ -1203,6 +1377,42 @@ export function ChatPanel({
                         }
                       >
                         {t("chat.exportMultiImage")}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ) : null}
+                {session?.session_id ? (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <PanelHeaderAction
+                        title={t("chat.share")}
+                        disabled={isCreatingShare || isSharingToChannel}
+                      >
+                        {isCreatingShare || isSharingToChannel ? (
+                          <Loader2 className="size-4 animate-spin" />
+                        ) : (
+                          <Share2 className="size-4" />
+                        )}
+                      </PanelHeaderAction>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem
+                        onClick={() => void handleCopyShareLink()}
+                        disabled={isCreatingShare}
+                      >
+                        {shareToken ? (
+                          <Check className="size-4" />
+                        ) : (
+                          <Copy className="size-4" />
+                        )}
+                        {t("chat.copyShareLink")}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => setShareToChannelOpen(true)}
+                        disabled={isSharingToChannel}
+                      >
+                        <Send className="size-4" />
+                        {t("chat.shareToChannel")}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -1375,6 +1585,87 @@ export function ChatPanel({
           onSave={handleSaveLocalFilesystem}
         />
       ) : null}
+
+      <Dialog open={shareToChannelOpen} onOpenChange={setShareToChannelOpen}>
+        <DialogContent className="max-w-md">
+          <DialogTitle>{t("chat.shareToChannel")}</DialogTitle>
+          <DialogDescription>
+            {t("chat.shareToChannelDescription")}
+          </DialogDescription>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">
+                {t("chat.shareServer")}
+              </label>
+              <Select
+                value={selectedShareServerId}
+                onValueChange={(value) => {
+                  setSelectedShareServerId(value);
+                  setSelectedShareChannelId("");
+                }}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder={t("chat.shareServer")} />
+                </SelectTrigger>
+                <SelectContent>
+                  {shareServers.map((server) => (
+                    <SelectItem key={server.id} value={server.id}>
+                      {server.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">
+                {t("chat.shareChannel")}
+              </label>
+              <Select
+                value={selectedShareChannelId}
+                onValueChange={setSelectedShareChannelId}
+                disabled={!selectedShareServerId || shareChannels.length === 0}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder={t("chat.shareChannel")} />
+                </SelectTrigger>
+                <SelectContent>
+                  {shareChannels.map((channel) => (
+                    <SelectItem key={channel.id} value={channel.id}>
+                      #{channel.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShareToChannelOpen(false)}
+              disabled={isSharingToChannel}
+            >
+              {t("common.cancel")}
+            </Button>
+            <Button
+              type="button"
+              onClick={() => void handleShareToChannel()}
+              disabled={
+                !selectedShareServerId ||
+                !selectedShareChannelId ||
+                isSharingToChannel
+              }
+            >
+              {isSharingToChannel ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Send className="size-4" />
+              )}
+              {t("chat.shareToChannel")}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Status Bar - Skills and MCP */}
       {(currentPreset ||

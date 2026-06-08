@@ -39,6 +39,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { FileCard } from "@/components/shared/file-card";
 import { Button } from "@/components/ui/button";
+import { ConversationTimelineRail } from "@/features/chat/components/shared/conversation-timeline-rail";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -112,6 +113,7 @@ import {
   updateMessageById,
 } from "@/features/servers/lib/message-reactions";
 import { shouldShowServerMobileDetail } from "@/features/servers/lib/server-mobile-navigation";
+import { buildChannelTimelineItems } from "@/features/servers/lib/conversation-timeline";
 import { AgentPresetDialog } from "@/features/servers/ui/agent-preset-dialog";
 import { ChannelTasksWorkspace } from "@/features/servers/ui/channel-tasks-workspace";
 import { ColleagueDetail } from "@/features/servers/ui/colleague-detail";
@@ -478,6 +480,9 @@ function ConversationContent({
   const isComposingRef = React.useRef(false);
   const Icon = channel?.conversationType === "direct_message" ? Lock : Hash;
   const scrollContainerRef = React.useRef<HTMLDivElement | null>(null);
+  const messageElementsRef = React.useRef<Map<string, HTMLDivElement>>(
+    new Map(),
+  );
   const hasInitializedScrollRef = React.useRef(false);
   const lastMessageCountRef = React.useRef(messages.length);
   const composerTrigger = React.useMemo(
@@ -491,6 +496,15 @@ function ConversationContent({
   const [contextCandidates, setContextCandidates] = React.useState<
     ComposerCandidate[]
   >([]);
+  const timelineItems = React.useMemo(
+    () => buildChannelTimelineItems(messages),
+    [messages],
+  );
+  const handleSelectTimelineItem = React.useCallback((messageId: string) => {
+    messageElementsRef.current
+      .get(messageId)
+      ?.scrollIntoView({ block: "center", behavior: "smooth" });
+  }, []);
   const participantCandidates = React.useMemo<ComposerCandidate[]>(() => {
     const humans = buildHumanMentionCandidates(members, currentUserId);
     const agentCandidates = agents.map(buildAgentMentionCandidate);
@@ -800,27 +814,52 @@ function ConversationContent({
             ))}
           </div>
         ) : (
-          <div className="relative min-h-0 flex-1">
-            <div
-              ref={scrollContainerRef}
-              className="h-full min-h-0 overflow-y-auto"
-            >
-              {messages.map((message, index) => (
-                <MessageRow
-                  key={message.id}
-                  message={message}
-                  agents={agents}
-                  members={members}
-                  presets={presets}
-                  defaultExpanded={index === messages.length - 1}
-                  onOpenThread={() => onOpenThread(message)}
-                  onOpenExecution={onOpenExecution}
-                  onOpenAgentProfile={onOpenAgentProfile}
-                  isSaved={savedMessageIds.has(message.id)}
-                  onToggleSaved={() => onToggleSaved(message.id)}
-                  onToggleReaction={(emoji) => onToggleReaction(message, emoji)}
-                />
-              ))}
+          <div className="relative min-h-0 flex-1 overflow-hidden">
+            <div className="flex h-full min-h-0">
+              <div
+                ref={scrollContainerRef}
+                className="h-full min-h-0 min-w-0 flex-1 overflow-y-auto"
+              >
+                {messages.map((message, index) => (
+                  <div
+                    key={message.id}
+                    ref={(element) => {
+                      if (element) {
+                        messageElementsRef.current.set(message.id, element);
+                      } else {
+                        messageElementsRef.current.delete(message.id);
+                      }
+                    }}
+                  >
+                    <MessageRow
+                      message={message}
+                      agents={agents}
+                      members={members}
+                      presets={presets}
+                      defaultExpanded={index === messages.length - 1}
+                      onOpenThread={() => onOpenThread(message)}
+                      onOpenExecution={onOpenExecution}
+                      onOpenAgentProfile={onOpenAgentProfile}
+                      isSaved={savedMessageIds.has(message.id)}
+                      onToggleSaved={() => onToggleSaved(message.id)}
+                      onToggleReaction={(emoji) =>
+                        onToggleReaction(message, emoji)
+                      }
+                    />
+                  </div>
+                ))}
+              </div>
+              <ConversationTimelineRail
+                title={t("chat.timeline")}
+                emptyLabel={t("chat.timelineEmpty")}
+                items={timelineItems}
+                className="hidden 2xl:flex"
+                onSelectItem={(item) => {
+                  if (item.channelMessageId) {
+                    handleSelectTimelineItem(item.channelMessageId);
+                  }
+                }}
+              />
             </div>
             {showScrollButton ? (
               <div className="absolute bottom-6 right-6 z-10 animate-in fade-in slide-in-from-bottom-4 duration-300">

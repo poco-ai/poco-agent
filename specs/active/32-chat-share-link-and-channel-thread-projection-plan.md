@@ -16,7 +16,7 @@
 - [x] Phase 0: 固定分享语义和实施计划
 - [x] Phase 1: 后端支持 share link、只读快照和 fork
 - [x] Phase 2: 后端支持分享到频道 thread projection
-- [ ] Phase 3: 前端支持 share link、频道分享和 timeline 展示
+- [x] Phase 3: 前端支持 share link、频道分享和 timeline 展示
 - [ ] Phase 4: 验证、回归和 spec 回写
 
 ---
@@ -173,9 +173,9 @@
 
 **验收标准：**
 
-- [ ] Share 菜单提供 copy link 和 share to channel
-- [ ] copy link 创建 share token 并复制 URL
-- [ ] share to channel 可选择频道并调用后端 projection API
+- [x] Share 菜单提供 copy link 和 share to channel
+- [x] copy link 创建 share token 并复制 URL
+- [x] share to channel 可选择频道并调用后端 projection API
 
 #### 3.2 只读 share 页面和 fork
 
@@ -186,8 +186,8 @@
 
 **验收标准：**
 
-- [ ] share 页面显示只读 transcript 和 timeline
-- [ ] fork 按钮创建普通聊天并跳转
+- [x] share 页面显示只读 transcript 和 timeline
+- [x] fork 按钮创建普通聊天并跳转
 
 #### 3.3 频道 thread timeline
 
@@ -199,9 +199,9 @@
 
 **验收标准：**
 
-- [ ] imported thread 右侧显示 timeline
-- [ ] 频道右侧区域可显示当前 thread timeline
-- [ ] timeline 点击可以定位到 thread message 或打开 execution details
+- [x] imported thread 右侧显示 timeline
+- [x] 频道右侧区域可显示当前 thread timeline
+- [x] timeline 点击可以定位到 thread message 或打开 execution details
 
 ---
 
