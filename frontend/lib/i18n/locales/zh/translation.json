@@ -1121,6 +1121,7 @@
     "shareLoading": "正在加载分享对话",
     "shareSourceStatus": "源会话状态：{{status}}",
     "shareNotFound": "分享链接不存在或已撤销",
+    "shareReadonlyComposerPlaceholder": "只读分享对话",
     "forkToMyChats": "Fork 到我的对话",
     "shareForkCreated": "已创建 fork",
     "shareForkFailed": "Fork 分享对话失败",

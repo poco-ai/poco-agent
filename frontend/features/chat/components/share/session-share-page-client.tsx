@@ -2,21 +2,35 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, GitFork, Loader2, LockKeyhole } from "lucide-react";
+import {
+  ArrowUp,
+  GitFork,
+  Loader2,
+  LockKeyhole,
+  MessageSquare,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { PanelHeader } from "@/components/shared/panel-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChatMessageList } from "@/features/chat/components/chat/chat-message-list";
-import { ConversationTimelineRail } from "@/features/chat/components/shared/conversation-timeline-rail";
 import { sessionShareApi } from "@/features/chat/api/session-share-api";
 import { parseMessages } from "@/features/chat/services/message-parser";
 import type { SessionShareSnapshot } from "@/features/chat/types";
 import { useLanguage } from "@/hooks/use-language";
 import { useT } from "@/lib/i18n/client";
 
-export function SessionSharePageClient({ token }: { token: string }) {
+type ShareAuthStatus = "anonymous" | "authenticated" | "stale";
+
+export function SessionSharePageClient({
+  token,
+  authStatus,
+}: {
+  token: string;
+  authStatus: ShareAuthStatus;
+}) {
   const router = useRouter();
   const lng = useLanguage();
   const { t } = useT("translation");
@@ -60,9 +74,10 @@ export function SessionSharePageClient({ token }: { token: string }) {
       snapshot.runs.map((run) => run.userMessageId),
     ).messages;
   }, [snapshot]);
+  const canFork = authStatus === "authenticated";
 
   const handleFork = React.useCallback(async () => {
-    if (isForking) return;
+    if (!canFork || isForking) return;
     setIsForking(true);
     try {
       const forked = await sessionShareApi.forkShare(token);
@@ -76,57 +91,47 @@ export function SessionSharePageClient({ token }: { token: string }) {
     } finally {
       setIsForking(false);
     }
-  }, [isForking, lng, router, t, token]);
+  }, [canFork, isForking, lng, router, t, token]);
 
   return (
-    <main className="flex min-h-screen flex-col bg-background text-foreground">
-      <header className="flex min-h-16 items-center justify-between gap-4 border-b border-border px-4 py-3 sm:px-6">
-        <div className="flex min-w-0 items-center gap-3">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={() => router.push(lng ? `/${lng}` : "/")}
-            aria-label={t("common.back")}
-          >
-            <ArrowLeft className="size-4" />
-          </Button>
-          <div className="min-w-0">
+    <div className="flex h-dvh min-h-0 min-w-0 overflow-hidden bg-background text-foreground select-text">
+      <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col bg-background">
+        <PanelHeader
+          icon={MessageSquare}
+          title={snapshot?.session.title || t("chat.sharedConversation")}
+          description={
+            snapshot
+              ? t("chat.shareSourceStatus", {
+                  status: snapshot.session.status,
+                })
+              : t("chat.shareLoading")
+          }
+          action={
             <div className="flex min-w-0 items-center gap-2">
-              <h1 className="truncate text-base font-semibold sm:text-lg">
-                {snapshot?.session.title || t("chat.sharedConversation")}
-              </h1>
-              <Badge variant="secondary" className="shrink-0">
+              <Badge variant="secondary" className="h-8 shrink-0 gap-1.5">
                 <LockKeyhole className="size-3" />
                 {t("chat.readonly")}
               </Badge>
+              {canFork ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => void handleFork()}
+                  disabled={!snapshot || isForking}
+                >
+                  {isForking ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <GitFork className="size-4" />
+                  )}
+                  {t("chat.forkToMyChats")}
+                </Button>
+              ) : null}
             </div>
-            <p className="truncate text-xs text-muted-foreground">
-              {snapshot
-                ? t("chat.shareSourceStatus", {
-                    status: snapshot.session.status,
-                  })
-                : t("chat.shareLoading")}
-            </p>
-          </div>
-        </div>
-        <Button
-          type="button"
-          size="sm"
-          onClick={() => void handleFork()}
-          disabled={!snapshot || isForking}
-        >
-          {isForking ? (
-            <Loader2 className="size-4 animate-spin" />
-          ) : (
-            <GitFork className="size-4" />
-          )}
-          {t("chat.forkToMyChats")}
-        </Button>
-      </header>
+          }
+        />
 
-      <div className="flex min-h-0 flex-1 overflow-hidden">
-        <section className="min-w-0 flex-1 overflow-hidden">
+        <div className="min-h-0 flex-1 overflow-hidden">
           {isLoading ? (
             <div className="space-y-4 px-6 py-6">
               {Array.from({ length: 5 }).map((_, index) => (
@@ -137,21 +142,34 @@ export function SessionSharePageClient({ token }: { token: string }) {
             <ChatMessageList
               messages={parsedMessages}
               sessionStatus={snapshot.session.status}
-              showUserPromptTimeline={false}
+              showUserPromptTimeline
+              contentPaddingClassName="px-6 md:px-10 lg:px-12"
             />
           ) : (
             <div className="px-6 py-10 text-sm text-muted-foreground">
               {t("chat.shareNotFound")}
             </div>
           )}
-        </section>
-        <ConversationTimelineRail
-          title={t("chat.timeline")}
-          emptyLabel={t("chat.timelineEmpty")}
-          items={snapshot?.timeline ?? []}
-          className="hidden lg:flex"
-        />
+        </div>
+
+        <div className="shrink-0 border-t border-border px-4 py-3">
+          <div className="flex min-h-11 items-center gap-3 rounded-xl border border-border bg-muted/30 px-4 text-sm text-muted-foreground">
+            <span className="min-w-0 flex-1 truncate">
+              {t("chat.shareReadonlyComposerPlaceholder")}
+            </span>
+            <Button
+              type="button"
+              size="icon"
+              variant="secondary"
+              disabled
+              aria-label={t("chat.readonly")}
+              className="size-8 shrink-0"
+            >
+              <ArrowUp className="size-4" />
+            </Button>
+          </div>
+        </div>
       </div>
-    </main>
+    </div>
   );
 }

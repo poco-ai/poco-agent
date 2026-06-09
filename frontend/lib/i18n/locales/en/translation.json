@@ -1121,6 +1121,7 @@
     "shareLoading": "Loading shared conversation",
     "shareSourceStatus": "Source status: {{status}}",
     "shareNotFound": "Share link not found or revoked",
+    "shareReadonlyComposerPlaceholder": "Readonly shared conversation",
     "forkToMyChats": "Fork to my chats",
     "shareForkCreated": "Fork created",
     "shareForkFailed": "Failed to fork shared conversation",
