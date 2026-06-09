@@ -10,6 +10,7 @@ from app.models.agent_session import AgentSession
 from app.models.server_channel import ServerChannel
 from app.models.server_channel_message import ServerChannelMessage
 from app.models.session_share import SessionShare
+from app.models.user import User
 from app.schemas.message import MessageResponse
 from app.schemas.session_share import (
     SessionShareCreateRequest,
@@ -275,6 +276,43 @@ class SessionShareServiceTests(unittest.TestCase):
         self.assertEqual(snapshot.runs[0].replay_step_count, 2)
         self.assertEqual(len(snapshot.timeline), 2)
 
+    def test_extract_message_text_reads_nested_sdk_text_without_role_fallback(
+        self,
+    ) -> None:
+        nested_message = AgentMessage(
+            id=1,
+            session_id=self.session_id,
+            role="assistant",
+            content={
+                "_type": "AssistantMessage",
+                "message": {
+                    "role": "assistant",
+                    "content": [{"type": "text", "text": "Nested answer"}],
+                },
+            },
+            text_preview=None,
+            created_at=self.now,
+            updated_at=self.now,
+        )
+        role_only_message = AgentMessage(
+            id=2,
+            session_id=self.session_id,
+            role="assistant",
+            content={
+                "_type": "AssistantMessage",
+                "content": [{"_type": "ToolUseBlock", "name": "Search web"}],
+            },
+            text_preview="Assistant",
+            created_at=self.now,
+            updated_at=self.now,
+        )
+
+        self.assertEqual(
+            self.service._extract_message_text(nested_message),
+            "Nested answer",
+        )
+        self.assertEqual(self.service._extract_message_text(role_only_message), "")
+
     def test_fork_share_clones_to_target_user(self) -> None:
         share = SessionShare(
             id=self.share_id,
@@ -504,12 +542,18 @@ class SessionShareServiceTests(unittest.TestCase):
             return message
 
         def create_event(_db, **kwargs):
+            actor = kwargs["actor"]
             message = ServerChannelMessage(
                 id=uuid.uuid4(),
                 channel_id=kwargs["channel_id"],
                 author_user_id=None,
                 message_type="event",
-                content={"event_type": kwargs["event_type"], **kwargs["content"]},
+                content={
+                    "event_type": kwargs["event_type"],
+                    "actor_label": actor.actor_label,
+                    "actor_user_id": actor.actor_user_id,
+                    **kwargs["content"],
+                },
                 text_preview=kwargs["text_preview"],
                 thread_root_message_id=kwargs.get("thread_root_message_id"),
                 created_at=self.now,
@@ -525,6 +569,14 @@ class SessionShareServiceTests(unittest.TestCase):
             patch(
                 "app.services.session_share_service.require_channel_member_access",
                 return_value=channel,
+            ),
+            patch(
+                "app.services.session_share_service.UserRepository.get_by_id",
+                return_value=User(
+                    id="user-1",
+                    display_name="Alice",
+                    primary_email="alice@example.com",
+                ),
             ),
             patch(
                 "app.services.session_share_service.MessageRepository.list_by_session",
@@ -553,6 +605,9 @@ class SessionShareServiceTests(unittest.TestCase):
 
         self.db.commit.assert_called_once()
         create_event_message.assert_called_once()
+        event_actor = create_event_message.call_args.kwargs["actor"]
+        self.assertEqual(event_actor.actor_label, "Alice")
+        self.assertEqual(event_actor.actor_user_id, "user-1")
         list_messages.assert_not_called()
         trigger_for_channel_message.assert_not_called()
         self.assertEqual(len(created_messages), 2)

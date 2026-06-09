@@ -23,6 +23,7 @@ from app.repositories.server_channel_message_repository import (
 )
 from app.repositories.tool_execution_repository import ToolExecutionRepository
 from app.repositories.usage_log_repository import UsageLogRepository
+from app.repositories.user_repository import UserRepository
 from app.schemas.message import MessageResponse
 from app.schemas.server_channel_message import (
     ServerChannelMessageResponse,
@@ -91,25 +92,41 @@ class SessionShareService:
         return sanitized
 
     @staticmethod
-    def _extract_message_text(message: AgentMessage | MessageResponse) -> str:
-        if message.text_preview:
-            return message.text_preview
+    def _extract_text_from_json(value: object) -> str:
+        fragments: list[str] = []
 
-        content = message.content if isinstance(message.content, dict) else {}
-        text = content.get("text")
-        if isinstance(text, str) and text.strip():
-            return text.strip()
+        def visit(node: object) -> None:
+            if isinstance(node, list):
+                for item in node:
+                    visit(item)
+                return
+            if not isinstance(node, dict):
+                return
 
-        blocks = content.get("content")
-        if isinstance(blocks, list):
-            for block in blocks:
-                if not isinstance(block, dict):
-                    continue
-                block_text = block.get("text")
-                if isinstance(block_text, str) and block_text.strip():
-                    return block_text.strip()
+            for key in ("text", "result"):
+                raw_text = node.get(key)
+                if isinstance(raw_text, str) and raw_text.strip():
+                    fragments.append(raw_text.strip())
 
-        return message.role.capitalize()
+            for key in ("message", "content"):
+                nested = node.get(key)
+                if isinstance(nested, dict | list):
+                    visit(nested)
+
+        visit(value)
+        return "\n\n".join(fragments).strip()
+
+    @classmethod
+    def _extract_message_text(cls, message: AgentMessage | MessageResponse) -> str:
+        content_text = cls._extract_text_from_json(message.content)
+        if content_text:
+            return content_text
+
+        preview = (message.text_preview or "").strip()
+        if preview and preview.lower() not in {"user", "assistant", "system"}:
+            return preview
+
+        return ""
 
     @staticmethod
     def _truncate_label(value: str, *, limit: int = 120) -> str:
@@ -117,6 +134,16 @@ class SessionShareService:
         if len(normalized) <= limit:
             return normalized
         return f"{normalized[: limit - 1].rstrip()}..."
+
+    @staticmethod
+    def _resolve_user_label(db: Session, user_id: str) -> str:
+        user = UserRepository.get_by_id(db, user_id)
+        if user is None:
+            return user_id
+        for raw_value in (user.display_name, user.primary_email, user.id):
+            if isinstance(raw_value, str) and raw_value.strip():
+                return raw_value.strip()
+        return user_id
 
     @staticmethod
     def _resolve_file_change_count(run: AgentRun) -> int:
@@ -187,7 +214,9 @@ class SessionShareService:
                 ConversationTimelineItem(
                     id=f"message:{message.id}",
                     item_type="message",
-                    label=cls._truncate_label(cls._extract_message_text(message)),
+                    label=cls._truncate_label(
+                        cls._extract_message_text(message) or "Message"
+                    ),
                     role=message.role,
                     message_id=message.id,
                     created_at=message.created_at,
@@ -530,10 +559,15 @@ class SessionShareService:
             MessageResponse.model_validate(message)
             for message in payload.get("messages", [])
         ]
+        source_messages = [
+            message
+            for message in source_messages
+            if self._extract_message_text(message).strip()
+        ]
         if not source_messages:
             raise AppException(
                 error_code=ErrorCode.BAD_REQUEST,
-                message="Shared session has no messages to import",
+                message="Shared session has no visible messages to import",
             )
 
         title = (
@@ -552,6 +586,7 @@ class SessionShareService:
             if run.status in {"completed", "failed", "canceled"}
         }
         imported_at = datetime.now(timezone.utc).isoformat()
+        actor_label = self._resolve_user_label(db, current_user_id)
 
         root = ServerChannelMessageRepository.create(
             db,
@@ -624,7 +659,7 @@ class SessionShareService:
             event_type="conversation.shared",
             actor=ChannelEventActor(
                 actor_type="user",
-                actor_label=current_user_id,
+                actor_label=actor_label,
                 actor_user_id=current_user_id,
             ),
             target=ChannelEventTarget(target_label=title),
