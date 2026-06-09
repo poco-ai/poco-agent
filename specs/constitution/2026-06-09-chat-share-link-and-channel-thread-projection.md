@@ -17,6 +17,8 @@ Poco 的普通聊天分享采用两条不同语义：
 
 分享不是运行态迁移。普通聊天的 live workspace、SDK session、local mount 和用户私有权限不会因为分享而进入频道或他人账号。
 
+2026-06-09 review 后补充：share link 的页面形态不是独立的全屏阅读页，而是普通聊天区域的只读变体。已登录用户打开 share link 时应尽量保留应用 shell，让只读 transcript 替换普通聊天区；匿名用户仍可查看同一只读聊天区，但不能直接 fork。
+
 ## 背景
 
 当前普通聊天只有前端导出图片能力，适合传播截图，但不适合让其他用户查看完整上下文、fork 继续，也不适合沉淀到频道协作流中。
@@ -26,11 +28,13 @@ Poco 的普通聊天分享采用两条不同语义：
 ## 最终决策
 
 - **产品决策**：
-  - 普通聊天 share link 打开后展示只读页面。
-  - 只读页面允许当前登录用户 fork 到自己的普通聊天中继续。
+  - 普通聊天 share link 打开后展示普通聊天区的只读变体，而不是脱离 app shell 的全屏页面。
+  - 只读页面允许当前登录用户 fork 到自己的普通聊天中继续；匿名用户可查看，但 fork 动作必须隐藏或禁用，不能触发用户信息缺失错误。
   - 分享到频道默认不触发 agent，不创建 channel run。
   - 分享到频道会写入一条 channel event，并创建一个 thread projection。
   - 频道 thread 和频道右侧区域都显示对应 timeline，帮助定位 turn/run/artifact。
+  - 分享到频道的 `conversation.shared` event 必须显示人类可读用户名，不得把 user id 当作 actor label。
+  - 频道 thread 中导入的普通聊天 transcript 应展示原消息正文；`user` / `assistant` 只作为来源元数据，不作为正文 fallback。
   - 暂不提供通用 `Copy to my chats` 作为频道 thread 的主动作；如未来需要 private follow-up，必须显式去除 channel runtime tools，并只复制 transcript summary 与选定 artifacts。
 - **技术决策**：
   - 新增 share link 持久化对象，使用不可猜测 token 作为只读入口。
@@ -49,6 +53,10 @@ Poco 的普通聊天分享采用两条不同语义：
 - 频道可见文件仍以 `published artifacts` 为边界；thread 只引用或展示已发布 artifacts。
 - 导入 transcript 中出现的 `@agent` 不得被解释为 trigger entity。
 - Timeline 是导航和证据视图，不是新的消息事实源。
+- Share link 只读页的重新生成、新建分支、编辑、输入框等写操作必须不可用。
+- Share link 的 fork 入口只对已登录用户可见或可用；匿名查看不得要求注册，也不得在点击 fork 后报错。
+- Channel event 的 actor label 必须来自用户显示名、邮箱或其他可读 fallback，而不是裸 user id。
+- Imported thread message 的正文必须来自原普通聊天消息内容；抽取失败时允许使用空态/截断提示，但不得显示 `User`、`Assistant` 这类角色名作为正文。
 
 ## 关键用户叙事
 
@@ -57,7 +65,8 @@ Poco 的普通聊天分享采用两条不同语义：
 1. Alice 在普通聊天点击 Share。
 2. 系统生成 share link。
 3. Bob 打开链接，只读查看 transcript、runs、artifacts 和 timeline。
-4. Bob 点击 Fork，系统创建属于 Bob 的普通聊天副本，之后 Bob 在自己的聊天中继续。
+4. 如果 Bob 已登录，Bob 可以点击 Fork，系统创建属于 Bob 的普通聊天副本，之后 Bob 在自己的聊天中继续。
+5. 如果 Bob 未登录，Bob 可以继续只读查看；fork 入口不显示或保持禁用。
 
 ### 分享到频道
 

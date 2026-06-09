@@ -8,7 +8,7 @@
 | **预期改动范围** | backend session share models / share and fork APIs / channel import service / frontend chat share UI / readonly share page / server thread timeline / tests |
 | **改动类型** | feat |
 | **优先级** | P1 |
-| **状态** | review |
+| **状态** | review follow-up |
 | **关联 constitution** | `specs/constitution/2026-06-09-chat-share-link-and-channel-thread-projection.md` |
 
 ## 实施阶段
@@ -18,6 +18,7 @@
 - [x] Phase 2: 后端支持分享到频道 thread projection
 - [x] Phase 3: 前端支持 share link、频道分享和 timeline 展示
 - [x] Phase 4: 验证、回归和 spec 回写
+- [x] Phase 5: Browser 批注修正与只读分享体验对齐
 
 ---
 
@@ -34,6 +35,8 @@
 - 只读页面可 fork 到当前用户的普通聊天继续。
 - 普通聊天可分享到频道，频道中显示 event、主消息和对应 thread。
 - Thread drawer 和频道右侧区域能显示对应 timeline，并复用普通聊天 timeline 的视觉和定位思路。
+- Share link 打开后应尽量复用普通聊天区布局：已登录用户保留应用 shell，匿名用户可查看同一只读聊天区；写操作不可用。
+- Share to channel 的 event/thread 展示要保持频道语义：event actor 显示用户名，thread transcript 只显示正文，不显示 `User` / `Assistant` 这类角色 fallback。
 
 ### 非目标
 
@@ -256,6 +259,74 @@
 - [x] public share snapshot 不返回 owner user id 或 source session id 等内部字段。
 - [x] share-to-channel 只允许原 share owner 执行；持有 share link 的接收者如需再次传播，应先 fork 成自己的普通聊天。
 - [x] `conversation.shared` event 在频道 UI 中使用专门 label，不再退化为 generic channel update。
+
+## Phase 5: Browser 批注修正与只读分享体验对齐
+
+### 目标
+
+根据浏览器批注修正已经跑通但显示语义偏差的部分：share link 页面要成为普通聊天区的只读变体，频道 event/thread 要展示人类可读内容。
+
+### 任务清单
+
+#### 5.1 更新设计文档
+
+**涉及文件：**
+
+- `specs/constitution/2026-06-09-chat-share-link-and-channel-thread-projection.md`
+- `specs/active/32-chat-share-link-and-channel-thread-projection-plan.md`
+
+**验收标准：**
+
+- [x] 明确 share link 不是独立全屏阅读页，而是普通聊天区只读变体
+- [x] 明确匿名用户可查看但不能直接 fork
+- [x] 明确 event actor 显示用户名而非 user id
+- [x] 明确 imported thread 显示原消息正文而非 role fallback
+
+#### 5.2 修正 share link 只读页面
+
+**涉及文件：**
+
+- `frontend/app/[lng]/share/[token]/page.tsx`
+- `frontend/features/chat/components/share/session-share-page-client.tsx`
+- `frontend/lib/i18n/locales/*/translation.json`
+
+**验收标准：**
+
+- [x] 已登录用户打开 share link 时保留 app shell，share transcript 替换普通聊天区域
+- [x] 匿名用户可以只读查看 share transcript
+- [x] 匿名用户不显示或不能触发 fork
+- [x] 重新生成、新建分支、编辑和 composer 写入不可用
+- [x] 移除 share 页面独立的简化 timeline rail，避免与普通聊天 timeline 语义冲突
+
+#### 5.3 修正频道 event/thread 展示
+
+**涉及文件：**
+
+- `backend/app/services/session_share_service.py`
+- `backend/tests/test_session_share_service.py`
+
+**验收标准：**
+
+- [x] `conversation.shared` event 的 actor label 使用用户显示名、邮箱或可读 fallback
+- [x] 普通聊天嵌套 SDK message 能抽取正文，不再把 `User` / `Assistant` 当作 thread 正文
+- [x] share to channel 仍不触发 agent
+
+#### 5.4 验证和回写
+
+**验收标准：**
+
+- [x] 后端 session share 单测通过
+- [x] 相关 Python 文件 py_compile / ruff 通过
+- [x] 前端 lint / build 通过或记录阻塞原因
+- [x] 本 Phase todo 状态回写为完成
+
+**验证记录：**
+
+- `cd backend && uv run python -m unittest tests/test_session_share_service.py -v` 通过 8 个用例，新增覆盖 nested SDK message 正文抽取和 `conversation.shared` actor label。
+- `cd backend && uv run python -m py_compile app/services/session_share_service.py tests/test_session_share_service.py` 通过。
+- `cd backend && uv run ruff check app/services/session_share_service.py tests/test_session_share_service.py` 通过。
+- `cd frontend && pnpm lint` 通过。
+- `cd frontend && pnpm build` 通过；仍存在既有 Next.js workspace root 多 lockfile warning，不影响构建。
 
 ## 风险与缓解
 
