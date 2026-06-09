@@ -24,11 +24,18 @@ export interface ConversationTimelineItem {
 export interface SessionShareResponse {
   shareId: string;
   sourceSessionId: string;
-  ownerUserId: string;
   token: string;
   title?: string | null;
   description?: string | null;
   isRevoked: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SessionSharePublicResponse {
+  shareId: string;
+  title?: string | null;
+  description?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -57,7 +64,7 @@ export interface SharedRunSummary {
 }
 
 export interface SessionShareSnapshot {
-  share: SessionShareResponse;
+  share: SessionSharePublicResponse;
   session: SharedSessionSummary;
   messages: MessageResponse[];
   runs: SharedRunSummary[];

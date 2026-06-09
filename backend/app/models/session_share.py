@@ -1,8 +1,8 @@
 import uuid
 from datetime import datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String, Text, text
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, JSON, String, Text, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models import Base, TimestampMixin
@@ -34,6 +34,7 @@ class SessionShare(Base, TimestampMixin):
     token: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
     title: Mapped[str | None] = mapped_column(String(255), nullable=True)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    snapshot_payload: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
     is_revoked: Mapped[bool] = mapped_column(
         Boolean,
         default=False,

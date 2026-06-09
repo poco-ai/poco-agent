@@ -59,7 +59,6 @@ class ConversationTimelineItem(BaseModel):
 class SessionShareResponse(BaseModel):
     share_id: UUID = Field(validation_alias="id")
     source_session_id: UUID
-    owner_user_id: str
     token: str
     title: str | None = None
     description: str | None = None
@@ -70,8 +69,18 @@ class SessionShareResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
 
+class SessionSharePublicResponse(BaseModel):
+    share_id: UUID = Field(validation_alias="id")
+    title: str | None = None
+    description: str | None = None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
+
 class SessionShareSnapshotResponse(BaseModel):
-    share: SessionShareResponse
+    share: SessionSharePublicResponse
     session: SharedSessionSummary
     messages: list[MessageResponse]
     runs: list[SharedRunSummary]

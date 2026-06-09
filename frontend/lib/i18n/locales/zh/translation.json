@@ -303,6 +303,7 @@
       "channelAgentInvited": "{{actor}} 将 {{target}} 加入了频道",
       "artifactUploaded": "{{actor}} 上传了共享文件：{{artifact}}",
       "artifactDeleted": "{{actor}} 删除了共享文件：{{artifact}}",
+      "conversationShared": "{{actor}} 分享了对话：{{target}}",
       "taskCreated": "{{actor}} 创建了任务：{{task}}",
       "taskCreatedAssigned": "{{actor}} 创建了任务 {{task}} 并分配给 {{assignee}}",
       "taskStatusChanged": "{{actor}} 将任务从 {{fromStatus}} 移到 {{toStatus}}",

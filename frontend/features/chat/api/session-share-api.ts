@@ -3,6 +3,7 @@ import type { MessageResponse } from "@/features/chat/types";
 import type {
   ConversationTimelineItem,
   SessionShareForkResponse,
+  SessionSharePublicResponse,
   SessionShareResponse,
   SessionShareSnapshot,
   SessionShareToChannelResponse,
@@ -13,11 +14,18 @@ import type {
 interface SessionShareResponseDto {
   share_id: string;
   source_session_id: string;
-  owner_user_id: string;
   token: string;
   title?: string | null;
   description?: string | null;
   is_revoked: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+interface SessionSharePublicResponseDto {
+  share_id: string;
+  title?: string | null;
+  description?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -61,7 +69,7 @@ interface ConversationTimelineItemDto {
 }
 
 interface SessionShareSnapshotDto {
-  share: SessionShareResponseDto;
+  share: SessionSharePublicResponseDto;
   session: SharedSessionSummaryDto;
   messages: MessageResponse[];
   runs: SharedRunSummaryDto[];
@@ -89,11 +97,22 @@ function mapShare(dto: SessionShareResponseDto): SessionShareResponse {
   return {
     shareId: dto.share_id,
     sourceSessionId: dto.source_session_id,
-    ownerUserId: dto.owner_user_id,
     token: dto.token,
     title: dto.title,
     description: dto.description,
     isRevoked: dto.is_revoked,
+    createdAt: dto.created_at,
+    updatedAt: dto.updated_at,
+  };
+}
+
+function mapPublicShare(
+  dto: SessionSharePublicResponseDto,
+): SessionSharePublicResponse {
+  return {
+    shareId: dto.share_id,
+    title: dto.title,
+    description: dto.description,
     createdAt: dto.created_at,
     updatedAt: dto.updated_at,
   };
@@ -147,7 +166,7 @@ function mapTimelineItem(
 
 function mapSnapshot(dto: SessionShareSnapshotDto): SessionShareSnapshot {
   return {
-    share: mapShare(dto.share),
+    share: mapPublicShare(dto.share),
     session: mapSession(dto.session),
     messages: dto.messages,
     runs: dto.runs.map(mapRun),

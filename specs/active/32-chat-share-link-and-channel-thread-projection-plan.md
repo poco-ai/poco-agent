@@ -222,8 +222,9 @@
 
 **验证记录：**
 
-- `cd backend && uv run python -m unittest tests/test_session_share_service.py -v` 通过 5 个用例，覆盖 share create/read/fork、fork runtime config 清理和 share-to-channel 不触发 agent。
+- `cd backend && uv run python -m unittest tests/test_session_share_service.py -v` 通过 7 个用例，覆盖 share create/read/fork、snapshot immutability、fork runtime config 清理、share-to-channel owner-only、artifact reference 边界和不触发 agent。
 - `cd backend && uv run python -m py_compile app/models/session_share.py app/repositories/session_share_repository.py app/schemas/session_share.py app/services/session_share_service.py app/api/v1/session_shares.py app/api/v1/__init__.py` 通过。
+- `cd backend && uv run ruff check app/models/session_share.py app/schemas/session_share.py app/services/session_share_service.py tests/test_session_share_service.py` 通过。
 - `cd backend && uv run -m alembic heads` 输出 `2b7e4c91d6a0 (head)`。
 
 #### 4.2 前端静态验证
@@ -245,6 +246,16 @@
 
 - [x] 所有已完成 phase 标记为 `[x]`
 - [x] 状态更新为 `review`
+
+#### 4.4 Review follow-up
+
+**验收标准：**
+
+- [x] share link 创建时冻结 session/messages/runs/timeline；只读页、fork、频道投影不再重新读取 source session live state。
+- [x] channel projection 不盲拷普通聊天 artifact references；频道可见文件仍以后续 published artifacts 解析为边界。
+- [x] public share snapshot 不返回 owner user id 或 source session id 等内部字段。
+- [x] share-to-channel 只允许原 share owner 执行；持有 share link 的接收者如需再次传播，应先 fork 成自己的普通聊天。
+- [x] `conversation.shared` event 在频道 UI 中使用专门 label，不再退化为 generic channel update。
 
 ## 风险与缓解
 

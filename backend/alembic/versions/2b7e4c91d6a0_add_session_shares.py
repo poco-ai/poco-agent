@@ -30,6 +30,7 @@ def upgrade() -> None:
         sa.Column("token", sa.String(length=255), nullable=False),
         sa.Column("title", sa.String(length=255), nullable=True),
         sa.Column("description", sa.Text(), nullable=True),
+        sa.Column("snapshot_payload", sa.JSON(), nullable=False),
         sa.Column(
             "is_revoked",
             sa.Boolean(),

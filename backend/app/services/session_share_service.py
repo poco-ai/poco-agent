@@ -32,7 +32,7 @@ from app.schemas.session_share import (
     ConversationTimelineItem,
     SessionShareCreateRequest,
     SessionShareForkResponse,
-    SessionShareResponse,
+    SessionSharePublicResponse,
     SessionShareSnapshotResponse,
     SessionShareToChannelRequest,
     SessionShareToChannelResponse,
@@ -91,7 +91,7 @@ class SessionShareService:
         return sanitized
 
     @staticmethod
-    def _extract_message_text(message: AgentMessage) -> str:
+    def _extract_message_text(message: AgentMessage | MessageResponse) -> str:
         if message.text_preview:
             return message.text_preview
 
@@ -272,14 +272,139 @@ class SessionShareService:
         return share
 
     @staticmethod
-    def _source_session_or_404(db: Session, share: SessionShare) -> AgentSession:
-        source_session = SessionRepository.get_by_id(db, share.source_session_id)
-        if source_session is None:
+    def _snapshot_payload_or_404(share: SessionShare) -> dict[str, Any]:
+        payload = share.snapshot_payload
+        if not isinstance(payload, dict) or payload.get("version") != 1:
             raise AppException(
-                error_code=ErrorCode.NOT_FOUND,
-                message="Shared session not found",
+                error_code=ErrorCode.INTERNAL_ERROR,
+                message="Share snapshot is not available",
             )
-        return source_session
+        return payload
+
+    @staticmethod
+    def _parse_snapshot_datetime(value: object) -> datetime | None:
+        if isinstance(value, datetime):
+            return value
+        if not isinstance(value, str) or not value.strip():
+            return None
+        normalized = value.strip().replace("Z", "+00:00")
+        try:
+            return datetime.fromisoformat(normalized)
+        except ValueError:
+            return None
+
+    @staticmethod
+    def _parse_snapshot_uuid(value: object) -> uuid.UUID | None:
+        if isinstance(value, uuid.UUID):
+            return value
+        if not isinstance(value, str) or not value.strip():
+            return None
+        try:
+            return uuid.UUID(value.strip())
+        except ValueError:
+            return None
+
+    @staticmethod
+    def _serialize_datetime(value: datetime | None) -> str | None:
+        return value.isoformat() if value is not None else None
+
+    def _serialize_run_for_fork(
+        self,
+        run: AgentRun,
+        *,
+        share: SessionShare,
+    ) -> dict[str, Any]:
+        return {
+            "run_id": str(run.id),
+            "user_message_id": run.user_message_id,
+            "status": run.status,
+            "permission_mode": run.permission_mode,
+            "progress": run.progress,
+            "schedule_mode": run.schedule_mode,
+            "scheduled_at": self._serialize_datetime(run.scheduled_at),
+            "config_snapshot": self._sanitize_config_for_fork(
+                run.config_snapshot,
+                share=share,
+            ),
+            "state_patch": self._deepcopy_json(run.state_patch),
+            "attempts": run.attempts,
+            "last_error": run.last_error,
+            "started_at": self._serialize_datetime(run.started_at),
+            "finished_at": self._serialize_datetime(run.finished_at),
+            "workspace_archive_url": run.workspace_archive_url,
+            "workspace_files_prefix": run.workspace_files_prefix,
+            "workspace_manifest_key": run.workspace_manifest_key,
+            "workspace_archive_key": run.workspace_archive_key,
+            "workspace_export_status": run.workspace_export_status,
+        }
+
+    def _serialize_usage_log_for_fork(self, usage_log: UsageLog) -> dict[str, Any]:
+        return {
+            "run_id": str(usage_log.run_id) if usage_log.run_id is not None else None,
+            "duration_ms": usage_log.duration_ms,
+            "input_tokens": usage_log.input_tokens,
+            "output_tokens": usage_log.output_tokens,
+            "cache_creation_input_tokens": usage_log.cache_creation_input_tokens,
+            "cache_read_input_tokens": usage_log.cache_read_input_tokens,
+            "total_tokens": usage_log.total_tokens,
+            "usage_json": self._deepcopy_json(usage_log.usage_json),
+        }
+
+    def _build_share_snapshot_payload(
+        self,
+        db: Session,
+        *,
+        share: SessionShare,
+        source_session: AgentSession,
+    ) -> dict[str, Any]:
+        messages = MessageRepository.list_by_session(db, source_session.id, limit=1000)
+        db_runs = RunRepository.list_by_session(db, source_session.id, limit=1000)
+        run_summaries = self._build_run_summaries(db, db_runs)
+        timeline = self._build_timeline(messages=messages, runs=run_summaries)
+        terminal_runs = [
+            run
+            for run in db_runs
+            if run.status in {"completed", "failed", "canceled"}
+        ]
+        usage_logs = UsageLogRepository.list_by_session(db, source_session.id)
+
+        return {
+            "version": 1,
+            "session": SharedSessionSummary(
+                session_id=source_session.id,
+                title=share.title or source_session.title,
+                status=source_session.status,
+                created_at=source_session.created_at,
+                updated_at=source_session.updated_at,
+            ).model_dump(mode="json"),
+            "messages": [
+                MessageResponse.model_validate(message).model_dump(mode="json")
+                for message in messages
+            ],
+            "runs": [run.model_dump(mode="json") for run in run_summaries],
+            "timeline": [item.model_dump(mode="json") for item in timeline],
+            "fork_session": {
+                "title": share.title or source_session.title,
+                "status": "completed",
+                "config_snapshot": self._sanitize_config_for_fork(
+                    source_session.config_snapshot,
+                    share=share,
+                ),
+                "workspace_archive_url": source_session.workspace_archive_url,
+                "state_patch": self._deepcopy_json(source_session.state_patch),
+                "workspace_files_prefix": source_session.workspace_files_prefix,
+                "workspace_manifest_key": source_session.workspace_manifest_key,
+                "workspace_archive_key": source_session.workspace_archive_key,
+                "workspace_export_status": source_session.workspace_export_status,
+            },
+            "fork_runs": [
+                self._serialize_run_for_fork(run, share=share) for run in terminal_runs
+            ],
+            "usage_logs": [
+                self._serialize_usage_log_for_fork(usage_log)
+                for usage_log in usage_logs
+            ],
+        }
 
     def create_share(
         self,
@@ -315,7 +440,14 @@ class SessionShareService:
                 token=token,
                 title=(request.title or source_session.title or "").strip() or None,
                 description=(request.description or "").strip() or None,
+                snapshot_payload={},
             ),
+        )
+        db.flush()
+        share.snapshot_payload = self._build_share_snapshot_payload(
+            db,
+            share=share,
+            source_session=source_session,
         )
         db.commit()
         db.refresh(share)
@@ -333,22 +465,22 @@ class SessionShareService:
 
     def get_snapshot(self, db: Session, *, token: str) -> SessionShareSnapshotResponse:
         share = self._active_share_or_404(db, token)
-        source_session = self._source_session_or_404(db, share)
-        messages = MessageRepository.list_by_session(db, source_session.id, limit=1000)
-        db_runs = RunRepository.list_by_session(db, source_session.id, limit=1000)
-        run_summaries = self._build_run_summaries(db, db_runs)
+        payload = self._snapshot_payload_or_404(share)
         return SessionShareSnapshotResponse(
-            share=SessionShareResponse.model_validate(share),
-            session=SharedSessionSummary(
-                session_id=source_session.id,
-                title=share.title or source_session.title,
-                status=source_session.status,
-                created_at=source_session.created_at,
-                updated_at=source_session.updated_at,
-            ),
-            messages=[MessageResponse.model_validate(message) for message in messages],
-            runs=run_summaries,
-            timeline=self._build_timeline(messages=messages, runs=run_summaries),
+            share=SessionSharePublicResponse.model_validate(share),
+            session=SharedSessionSummary.model_validate(payload["session"]),
+            messages=[
+                MessageResponse.model_validate(message)
+                for message in payload.get("messages", [])
+            ],
+            runs=[
+                SharedRunSummary.model_validate(run)
+                for run in payload.get("runs", [])
+            ],
+            timeline=[
+                ConversationTimelineItem.model_validate(item)
+                for item in payload.get("timeline", [])
+            ],
         )
 
     def fork_share(
@@ -359,18 +491,16 @@ class SessionShareService:
         target_user_id: str,
     ) -> SessionShareForkResponse:
         share = self._active_share_or_404(db, token)
-        source_session = self._source_session_or_404(db, share)
         forked_session = self._clone_session_for_share_fork(
             db,
             share=share,
-            source_session=source_session,
             target_user_id=target_user_id,
         )
         db.commit()
         db.refresh(forked_session)
         return SessionShareForkResponse(
             session_id=forked_session.id,
-            source_session_id=source_session.id,
+            source_session_id=share.source_session_id,
             share_id=share.id,
         )
 
@@ -383,18 +513,23 @@ class SessionShareService:
         request: SessionShareToChannelRequest,
     ) -> SessionShareToChannelResponse:
         share = self._active_share_or_404(db, token)
-        source_session = self._source_session_or_404(db, share)
+        if share.owner_user_id != current_user_id:
+            raise AppException(
+                error_code=ErrorCode.FORBIDDEN,
+                message="Only the share owner can import the session to a channel",
+            )
+        payload = self._snapshot_payload_or_404(share)
+        source_session_summary = SharedSessionSummary.model_validate(payload["session"])
         channel = require_channel_member_access(
             db,
             server_id=request.server_id,
             channel_id=request.channel_id,
             user_id=current_user_id,
         )
-        source_messages = MessageRepository.list_by_session(
-            db,
-            source_session.id,
-            limit=1000,
-        )
+        source_messages = [
+            MessageResponse.model_validate(message)
+            for message in payload.get("messages", [])
+        ]
         if not source_messages:
             raise AppException(
                 error_code=ErrorCode.BAD_REQUEST,
@@ -404,14 +539,18 @@ class SessionShareService:
         title = (
             request.title
             or share.title
-            or source_session.title
+            or source_session_summary.title
             or "Shared conversation"
         ).strip()
         root_source_message = self._select_thread_root_message(source_messages)
-        source_runs_by_user_message_id = self._map_runs_by_user_message_id(
-            db,
-            source_session.id,
-        )
+        source_runs_by_user_message_id = {
+            run.user_message_id: run
+            for run in (
+                SharedRunSummary.model_validate(item)
+                for item in payload.get("runs", [])
+            )
+            if run.status in {"completed", "failed", "canceled"}
+        }
         imported_at = datetime.now(timezone.utc).isoformat()
 
         root = ServerChannelMessageRepository.create(
@@ -426,7 +565,7 @@ class SessionShareService:
                 else "system",
                 content=self._build_imported_message_content(
                     share=share,
-                    source_session=source_session,
+                    source_session_id=share.source_session_id,
                     source_message=root_source_message,
                     title=title,
                     imported_at=imported_at,
@@ -464,7 +603,7 @@ class SessionShareService:
                     message_type="user" if source_message.role == "user" else "system",
                     content=self._build_imported_message_content(
                         share=share,
-                        source_session=source_session,
+                        source_session_id=share.source_session_id,
                         source_message=source_message,
                         title=title,
                         imported_at=imported_at,
@@ -491,7 +630,7 @@ class SessionShareService:
             target=ChannelEventTarget(target_label=title),
             content={
                 "share_id": str(share.id),
-                "source_session_id": str(source_session.id),
+                "source_session_id": str(share.source_session_id),
                 "root_message_id": str(root.id),
                 "imported_message_count": len(source_messages),
             },
@@ -505,7 +644,7 @@ class SessionShareService:
 
         return SessionShareToChannelResponse(
             share_id=share.id,
-            source_session_id=source_session.id,
+            source_session_id=share.source_session_id,
             event=ServerChannelMessageResponse.model_validate(event),
             thread=ServerChannelThreadResponse(
                 root=ServerChannelMessageResponse.model_validate(root),
@@ -522,36 +661,23 @@ class SessionShareService:
 
     @staticmethod
     def _select_thread_root_message(
-        source_messages: list[AgentMessage],
-    ) -> AgentMessage:
+        source_messages: list[AgentMessage | MessageResponse],
+    ) -> AgentMessage | MessageResponse:
         first_user_message = next(
             (message for message in source_messages if message.role == "user"),
             None,
         )
         return first_user_message or source_messages[0]
 
-    @staticmethod
-    def _map_runs_by_user_message_id(
-        db: Session,
-        session_id: uuid.UUID,
-    ) -> dict[int, AgentRun]:
-        runs = RunRepository.list_by_session(db, session_id, limit=1000)
-        result: dict[int, AgentRun] = {}
-        for run in runs:
-            if run.status not in {"completed", "failed", "canceled"}:
-                continue
-            result[run.user_message_id] = run
-        return result
-
     def _build_imported_message_content(
         self,
         *,
         share: SessionShare,
-        source_session: AgentSession,
-        source_message: AgentMessage,
+        source_session_id: uuid.UUID,
+        source_message: AgentMessage | MessageResponse,
         title: str,
         imported_at: str,
-        source_run: AgentRun | None,
+        source_run: AgentRun | SharedRunSummary | None,
     ) -> dict[str, Any]:
         text = self._extract_message_text(source_message)
         source = (
@@ -562,7 +688,7 @@ class SessionShareService:
         content: dict[str, Any] = {
             "source": source,
             "source_share_id": str(share.id),
-            "source_session_id": str(source_session.id),
+            "source_session_id": str(source_session_id),
             "source_message_id": source_message.id,
             "source_role": source_message.role,
             "title": title,
@@ -571,75 +697,79 @@ class SessionShareService:
             "imported_at": imported_at,
         }
         if source_run is not None and source_message.role != "user":
-            content["source_run_id"] = str(source_run.id)
+            source_run_id = (
+                source_run.id if isinstance(source_run, AgentRun) else source_run.run_id
+            )
+            content["source_run_id"] = str(source_run_id)
             content["execution_status"] = source_run.status
             content["workspace_export_status"] = source_run.workspace_export_status
-        artifact_references = self._extract_artifact_references(source_message.content)
-        if artifact_references:
-            content["artifact_references"] = artifact_references
         return content
-
-    @staticmethod
-    def _extract_artifact_references(content: object) -> list[dict[str, Any]]:
-        if not isinstance(content, dict):
-            return []
-
-        references: list[dict[str, Any]] = []
-        for key in ("artifacts", "artifact_references", "artifactReferences"):
-            raw_items = content.get(key)
-            if not isinstance(raw_items, list):
-                continue
-            for item in raw_items:
-                if isinstance(item, dict):
-                    references.append(deepcopy(item))
-
-        entities = content.get("entities")
-        if isinstance(entities, list):
-            for entity in entities:
-                if not isinstance(entity, dict) or entity.get("kind") != "artifact":
-                    continue
-                references.append(deepcopy(entity))
-        return references
 
     def _clone_session_for_share_fork(
         self,
         db: Session,
         *,
         share: SessionShare,
-        source_session: AgentSession,
         target_user_id: str,
     ) -> AgentSession:
-        source_messages = MessageRepository.list_by_session(
-            db,
-            source_session.id,
-            limit=1000,
-        )
+        payload = self._snapshot_payload_or_404(share)
+        source_messages = [
+            MessageResponse.model_validate(message)
+            for message in payload.get("messages", [])
+        ]
         if not source_messages:
             raise AppException(
                 error_code=ErrorCode.BAD_REQUEST,
                 message="Shared session has no messages to fork",
             )
+        fork_session = payload.get("fork_session")
+        if not isinstance(fork_session, dict):
+            raise AppException(
+                error_code=ErrorCode.INTERNAL_ERROR,
+                message="Share fork snapshot is not available",
+            )
 
         forked_session = SessionRepository.create(
             session_db=db,
             user_id=target_user_id,
-            config=self._sanitize_config_for_fork(
-                source_session.config_snapshot,
-                share=share,
-            ),
+            config=self._deepcopy_json(fork_session.get("config_snapshot")),
             project_id=None,
             kind="chat",
         )
         db.flush()
 
-        forked_session.title = share.title or source_session.title
+        forked_session.title = (
+            fork_session.get("title")
+            if isinstance(fork_session.get("title"), str)
+            else share.title
+        )
         forked_session.status = "completed"
-        forked_session.workspace_archive_url = source_session.workspace_archive_url
-        forked_session.state_patch = self._deepcopy_json(source_session.state_patch)
-        forked_session.workspace_files_prefix = source_session.workspace_files_prefix
-        forked_session.workspace_manifest_key = source_session.workspace_manifest_key
-        forked_session.workspace_archive_key = source_session.workspace_archive_key
-        forked_session.workspace_export_status = source_session.workspace_export_status
+        forked_session.workspace_archive_url = (
+            fork_session.get("workspace_archive_url")
+            if isinstance(fork_session.get("workspace_archive_url"), str)
+            else None
+        )
+        forked_session.state_patch = self._deepcopy_json(fork_session.get("state_patch"))
+        forked_session.workspace_files_prefix = (
+            fork_session.get("workspace_files_prefix")
+            if isinstance(fork_session.get("workspace_files_prefix"), str)
+            else None
+        )
+        forked_session.workspace_manifest_key = (
+            fork_session.get("workspace_manifest_key")
+            if isinstance(fork_session.get("workspace_manifest_key"), str)
+            else None
+        )
+        forked_session.workspace_archive_key = (
+            fork_session.get("workspace_archive_key")
+            if isinstance(fork_session.get("workspace_archive_key"), str)
+            else None
+        )
+        forked_session.workspace_export_status = (
+            fork_session.get("workspace_export_status")
+            if isinstance(fork_session.get("workspace_export_status"), str)
+            else None
+        )
         forked_session.sdk_session_id = None
 
         message_id_map: dict[int, int] = {}
@@ -659,17 +789,17 @@ class SessionShareService:
 
         run_id_map: dict[uuid.UUID, uuid.UUID] = {}
         if copied_user_message_ids:
-            source_runs = (
-                db.query(AgentRun)
-                .filter(AgentRun.session_id == source_session.id)
-                .filter(AgentRun.user_message_id.in_(copied_user_message_ids))
-                .order_by(AgentRun.scheduled_at.asc(), AgentRun.created_at.asc())
-                .all()
-            )
+            source_runs = payload.get("fork_runs", [])
             for source_run in source_runs:
-                if source_run.status not in {"completed", "failed", "canceled"}:
+                if not isinstance(source_run, dict):
                     continue
-                target_user_message_id = message_id_map.get(source_run.user_message_id)
+                source_run_id = self._parse_snapshot_uuid(source_run.get("run_id"))
+                if source_run_id is None:
+                    continue
+                source_user_message_id = source_run.get("user_message_id")
+                if not isinstance(source_user_message_id, int):
+                    continue
+                target_user_message_id = message_id_map.get(source_user_message_id)
                 if target_user_message_id is None:
                     continue
 
@@ -677,56 +807,103 @@ class SessionShareService:
                     session_db=db,
                     session_id=forked_session.id,
                     user_message_id=target_user_message_id,
-                    permission_mode=source_run.permission_mode,
-                    schedule_mode=source_run.schedule_mode,
-                    scheduled_at=source_run.scheduled_at,
-                    config_snapshot=self._sanitize_config_for_fork(
-                        source_run.config_snapshot,
-                        share=share,
+                    permission_mode=str(
+                        source_run.get("permission_mode") or "default"
+                    ),
+                    schedule_mode=str(source_run.get("schedule_mode") or "immediate"),
+                    scheduled_at=self._parse_snapshot_datetime(
+                        source_run.get("scheduled_at")
+                    ),
+                    config_snapshot=self._deepcopy_json(
+                        source_run.get("config_snapshot")
                     ),
                 )
-                forked_run.status = source_run.status
-                forked_run.progress = source_run.progress
-                forked_run.state_patch = self._deepcopy_json(source_run.state_patch)
+                forked_run.status = str(source_run.get("status") or "completed")
+                progress = source_run.get("progress")
+                forked_run.progress = progress if isinstance(progress, int) else 100
+                forked_run.state_patch = self._deepcopy_json(
+                    source_run.get("state_patch")
+                )
                 forked_run.scheduled_task_id = None
                 forked_run.claimed_by = None
                 forked_run.lease_expires_at = None
-                forked_run.attempts = source_run.attempts
-                forked_run.last_error = source_run.last_error
-                forked_run.started_at = source_run.started_at
-                forked_run.finished_at = source_run.finished_at
-                forked_run.workspace_archive_url = source_run.workspace_archive_url
-                forked_run.workspace_files_prefix = source_run.workspace_files_prefix
-                forked_run.workspace_manifest_key = source_run.workspace_manifest_key
-                forked_run.workspace_archive_key = source_run.workspace_archive_key
-                forked_run.workspace_export_status = source_run.workspace_export_status
+                attempts = source_run.get("attempts")
+                forked_run.attempts = attempts if isinstance(attempts, int) else 0
+                forked_run.last_error = (
+                    source_run.get("last_error")
+                    if isinstance(source_run.get("last_error"), str)
+                    else None
+                )
+                forked_run.started_at = self._parse_snapshot_datetime(
+                    source_run.get("started_at")
+                )
+                forked_run.finished_at = self._parse_snapshot_datetime(
+                    source_run.get("finished_at")
+                )
+                forked_run.workspace_archive_url = (
+                    source_run.get("workspace_archive_url")
+                    if isinstance(source_run.get("workspace_archive_url"), str)
+                    else None
+                )
+                forked_run.workspace_files_prefix = (
+                    source_run.get("workspace_files_prefix")
+                    if isinstance(source_run.get("workspace_files_prefix"), str)
+                    else None
+                )
+                forked_run.workspace_manifest_key = (
+                    source_run.get("workspace_manifest_key")
+                    if isinstance(source_run.get("workspace_manifest_key"), str)
+                    else None
+                )
+                forked_run.workspace_archive_key = (
+                    source_run.get("workspace_archive_key")
+                    if isinstance(source_run.get("workspace_archive_key"), str)
+                    else None
+                )
+                forked_run.workspace_export_status = (
+                    source_run.get("workspace_export_status")
+                    if isinstance(source_run.get("workspace_export_status"), str)
+                    else None
+                )
                 db.flush()
-                run_id_map[source_run.id] = forked_run.id
+                run_id_map[source_run_id] = forked_run.id
 
-        source_usage_logs = (
-            db.query(UsageLog)
-            .filter(UsageLog.session_id == source_session.id)
-            .order_by(UsageLog.created_at.asc())
-            .all()
-        )
+        source_usage_logs = payload.get("usage_logs", [])
         for source_log in source_usage_logs:
+            if not isinstance(source_log, dict):
+                continue
             target_run_id: uuid.UUID | None = None
-            if source_log.run_id is not None:
-                target_run_id = run_id_map.get(source_log.run_id)
+            source_run_id = self._parse_snapshot_uuid(source_log.get("run_id"))
+            if source_run_id is not None:
+                target_run_id = run_id_map.get(source_run_id)
                 if target_run_id is None:
                     continue
             UsageLogRepository.create(
                 session_db=db,
                 session_id=forked_session.id,
                 run_id=target_run_id,
-                duration_ms=source_log.duration_ms,
-                input_tokens=source_log.input_tokens,
-                output_tokens=source_log.output_tokens,
-                cache_creation_input_tokens=source_log.cache_creation_input_tokens,
-                cache_read_input_tokens=source_log.cache_read_input_tokens,
-                total_tokens=source_log.total_tokens,
+                duration_ms=source_log.get("duration_ms")
+                if isinstance(source_log.get("duration_ms"), int)
+                else None,
+                input_tokens=source_log.get("input_tokens")
+                if isinstance(source_log.get("input_tokens"), int)
+                else None,
+                output_tokens=source_log.get("output_tokens")
+                if isinstance(source_log.get("output_tokens"), int)
+                else None,
+                cache_creation_input_tokens=source_log.get(
+                    "cache_creation_input_tokens"
+                )
+                if isinstance(source_log.get("cache_creation_input_tokens"), int)
+                else None,
+                cache_read_input_tokens=source_log.get("cache_read_input_tokens")
+                if isinstance(source_log.get("cache_read_input_tokens"), int)
+                else None,
+                total_tokens=source_log.get("total_tokens")
+                if isinstance(source_log.get("total_tokens"), int)
+                else None,
                 include_in_user_analytics=False,
-                usage_json=self._deepcopy_json(source_log.usage_json),
+                usage_json=self._deepcopy_json(source_log.get("usage_json")),
             )
 
         return forked_session

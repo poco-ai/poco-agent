@@ -44,6 +44,7 @@ Poco 的普通聊天分享采用两条不同语义：
 
 - Share link 是快照入口，不是原会话的实时镜像。
 - Fork 到普通聊天后不会保留 channel runtime tools。
+- Share to channel 只能由原普通聊天 share owner 执行；share link 接收者需要先 fork，才能以自己的聊天再次分享。
 - Share to channel 不会把普通聊天的 local mount、persistent state、private workspace 原样暴露给频道。
 - 频道可见文件仍以 `published artifacts` 为边界；thread 只引用或展示已发布 artifacts。
 - 导入 transcript 中出现的 `@agent` 不得被解释为 trigger entity。
@@ -75,4 +76,3 @@ Poco 的普通聊天分享采用两条不同语义：
 | 频道 thread 通用 Copy to my chats | 需要决定是否复制 channel tools、artifacts 和 workspace，语义复杂且容易权限污染 |
 | Share to channel 走普通 send_message | `message_type="user"` 会触发 agent，无法保证导入 transcript 时不误触发 |
 | 把频道 artifacts 当普通聊天文件树复用 | channel artifact 是频道协作资源，普通聊天 input/workspace 是个人执行资源，边界不同 |
-
