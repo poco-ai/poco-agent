@@ -328,6 +328,155 @@
 - `cd frontend && pnpm lint` 通过。
 - `cd frontend && pnpm build` 通过；仍存在既有 Next.js workspace root 多 lockfile warning，不影响构建。
 
+## Phase 6: 只读 share 工作区文件预览补齐
+
+### 目标
+
+share link 打开后右侧工作区面板应与普通聊天保持同一套语义：Computer 展示执行摘要，Artifacts 展示文件树和文件预览。`.ts`、`.tsx`、`.md` 等文本文件不应在 share 场景退化成只有路径的 file change 列表。
+
+### 设计约束
+
+- public share snapshot 不暴露 `workspace_manifest_key`、`workspace_files_prefix` 或 source session 内部字段。
+- share payload 不固化 presigned URL；打开 share 时由后端基于冻结在 `fork_runs` 中的 manifest key/prefix 动态生成只读 `workspace_files`。
+- 前端 share Artifacts 复用普通聊天的 `FileSidebar` 和 `DocumentViewer`，保证 TypeScript 文件预览路径与普通聊天一致。
+- 若旧 share 或未导出工作区没有 `workspace_files`，仍显示 file changes 作为降级视图。
+
+### 任务清单
+
+#### 6.1 后端 public snapshot 带出只读文件树
+
+**涉及文件：**
+
+- `backend/app/schemas/session_share.py`
+- `backend/app/services/session_share_service.py`
+- `backend/app/utils/workspace_export.py`
+- `backend/app/api/v1/runs.py`
+- `backend/app/api/v1/sessions.py`
+
+**验收标准：**
+
+- [x] `SharedRunSummary` 包含 `workspace_files`
+- [x] share snapshot 读取时动态生成 fresh file URLs
+- [x] 普通 run/session workspace files 与 share 使用同一 manifest 解析 helper
+
+#### 6.2 前端 share Artifacts 复用普通文件预览
+
+**涉及文件：**
+
+- `frontend/features/chat/types/api/session-share.ts`
+- `frontend/features/chat/api/session-share-api.ts`
+- `frontend/features/chat/components/share/session-share-execution-panel.tsx`
+
+**验收标准：**
+
+- [x] share DTO 映射 `workspace_files -> workspaceFiles`
+- [x] share Artifacts 显示文件树
+- [x] 点击 `.ts` 文件进入 `DocumentViewer` 预览
+- [x] 没有工作区导出时保留 file changes 降级视图
+
+#### 6.3 验证和回写
+
+**验收标准：**
+
+- [x] 后端 session share 单测通过
+- [x] 相关 Python 文件 py_compile 通过
+- [x] 前端相关文件 lint/type 检查通过或记录阻塞原因
+
+**验证记录：**
+
+- `cd backend && uv run python -m unittest tests.test_session_share_service -v` 通过 9 个用例，新增覆盖 share snapshot 从 fork run manifest 生成 `.ts` 文件节点和只读 URL。
+- `cd backend && uv run python -m py_compile app/utils/workspace_export.py app/api/v1/runs.py app/api/v1/sessions.py app/schemas/session_share.py app/services/session_share_service.py tests/test_session_share_service.py` 通过。
+- `cd backend && uv run ruff check app/utils/workspace_export.py app/api/v1/runs.py app/api/v1/sessions.py app/schemas/session_share.py app/services/session_share_service.py tests/test_session_share_service.py` 通过。
+- `cd frontend && pnpm lint` 通过。
+- `cd frontend && pnpm exec tsc --noEmit --pretty false` 未通过；失败点为既有 `features/channel-tasks/lib/channel-task-board.test.ts` 中 `displayNumber?: number` 与 `ChannelTask.displayNumber: number` 类型不匹配，和本次 share Artifacts 变更无关。
+
+## Phase 7: 只读 share 回放、标题生成和 TypeScript 预览回归修正
+
+### 目标
+
+根据 2026-06-10 的复查批注，补齐 share link 右侧 Computer 面板的真实回放能力，并修正标题生成和 `.ts` 文件预览在普通会话与 share 场景中的共同问题。
+
+### 设计约束
+
+- share link Computer 面板应复用普通会话 `ComputerPanel` 的 viewer、播放控制和步骤列表，不维护第二套只显示摘要的 UI。
+- public share API 不要求匿名用户携带登录态，也不调用私有 run screenshot API；浏览器截图在读取 public snapshot 时由后端生成只读 presigned URL。
+- public share payload 可包含 replay 所需的 `tool_output` 与 `browser_screenshot_url`，但不得返回 source session、owner、manifest key 或 workspace prefix。
+- 标题生成与模型选择必须共用 provider/env 解析规则；只配置 GLM/MiniMax/DeepSeek 任一可识别 provider key 时，也应可生成标题。
+- `.ts`、`.tsx` 等代码文件必须优先按文本预览处理；不能因 Python `mimetypes` 把 `.ts` 判为 `video/mp2t` 而进入视频路径。
+
+### 任务清单
+
+#### 7.1 share Computer 回放复用普通会话面板
+
+**涉及文件：**
+
+- `backend/app/schemas/session_share.py`
+- `backend/app/services/session_share_service.py`
+- `frontend/features/chat/components/execution/computer-panel/index.tsx`
+- `frontend/features/chat/components/share/session-share-execution-panel.tsx`
+- `frontend/features/chat/api/session-share-api.ts`
+- `frontend/features/chat/types/api/session-share.ts`
+
+**验收标准：**
+
+- [x] share snapshot 返回 `tool_output`
+- [x] browser replay step 返回只读 `browser_screenshot_url`
+- [x] share Computer tab 复用 `ComputerPanel`，显示播放按钮、截图 viewer 和步骤 timeline
+- [x] 旧 share snapshot 缺少 replay payload 时可从 source run 补齐只读展示数据
+
+#### 7.2 标题生成 provider/env 解析修正
+
+**涉及文件：**
+
+- `backend/app/core/settings.py`
+- `backend/app/services/model_config_service.py`
+- `backend/app/services/session_title_service.py`
+- `backend/tests/test_session_title_service.py`
+
+**验收标准：**
+
+- [x] `Settings` 声明 GLM/MiniMax/DeepSeek key 和 base URL 字段
+- [x] provider spec 能从 `.env` settings 字段读取对应 key
+- [x] `DEFAULT_MODEL=glm-*` 且只配置 `GLM_API_KEY` 时，标题生成 resolver 返回 GLM provider
+
+#### 7.3 `.ts` 文件 MIME 预览修正
+
+**涉及文件：**
+
+- `backend/app/utils/mime.py`
+- `backend/app/api/v1/sessions.py`
+- `backend/app/services/agent_state_browser_service.py`
+- `backend/app/services/local_mount_browser_service.py`
+- `executor_manager/app/utils/mime.py`
+- `executor_manager/app/services/workspace_export_service.py`
+- `executor_manager/app/services/workspace_manager.py`
+- `frontend/features/chat/components/execution/file-panel/document-viewer/index.tsx`
+
+**验收标准：**
+
+- [x] workspace export、local mount、agent state browser 都使用统一 MIME override
+- [x] `.ts` 返回 `text/typescript`，不再继承 `mimetypes.guess_type(".ts") == "video/mp2t"` 的误判
+- [x] 前端 `DocumentViewer` 在已识别文本后缀时不会再进入 video viewer
+
+#### 7.4 验证和回写
+
+**验收标准：**
+
+- [x] 后端 share/title 单测通过
+- [x] 后端与 executor_manager 定向 py_compile/ruff 通过
+- [x] 前端 lint 通过
+- [x] TypeScript 检查结果记录清楚
+
+**验证记录：**
+
+- `cd backend && uv run python -m unittest tests.test_session_share_service tests.test_session_title_service -v` 通过 14 个用例。
+- `cd backend && uv run python -m py_compile app/services/session_share_service.py app/schemas/session_share.py app/services/session_title_service.py app/services/model_config_service.py app/core/settings.py app/utils/mime.py app/api/v1/sessions.py app/services/agent_state_browser_service.py app/services/local_mount_browser_service.py` 通过。
+- `cd backend && uv run ruff check app/services/session_share_service.py app/schemas/session_share.py app/services/session_title_service.py app/services/model_config_service.py app/core/settings.py app/utils/mime.py app/api/v1/sessions.py app/services/agent_state_browser_service.py app/services/local_mount_browser_service.py tests/test_session_share_service.py tests/test_session_title_service.py` 通过。
+- `cd executor_manager && uv run python -m py_compile app/utils/mime.py app/services/workspace_export_service.py app/services/workspace_manager.py` 通过。
+- `cd executor_manager && uv run ruff check app/utils/mime.py app/services/workspace_export_service.py app/services/workspace_manager.py` 通过。
+- `cd frontend && pnpm lint` 通过。
+- `cd frontend && pnpm exec tsc --noEmit --pretty false` 未通过；失败点仍为既有 `features/channel-tasks/lib/channel-task-board.test.ts` 中 `displayNumber?: number` 与 `ChannelTask.displayNumber: number` 类型不匹配，和本次变更无关。
+
 ## 风险与缓解
 
 | 风险 | 影响 | 缓解措施 |

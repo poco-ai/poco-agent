@@ -10,6 +10,7 @@ from app.models.agent_session import AgentSession
 from app.models.server_channel import ServerChannel
 from app.models.server_channel_message import ServerChannelMessage
 from app.models.session_share import SessionShare
+from app.models.tool_execution import ToolExecution
 from app.models.user import User
 from app.schemas.message import MessageResponse
 from app.schemas.session_share import (
@@ -275,6 +276,184 @@ class SessionShareServiceTests(unittest.TestCase):
         self.assertEqual(snapshot.runs[0].run_id, run.id)
         self.assertEqual(snapshot.runs[0].replay_step_count, 2)
         self.assertEqual(len(snapshot.timeline), 2)
+
+    def test_get_snapshot_hydrates_public_replay_outputs_and_screenshots(
+        self,
+    ) -> None:
+        share = SessionShare(
+            id=self.share_id,
+            source_session_id=self.session_id,
+            owner_user_id="owner",
+            token="token",
+            title="Demo",
+            is_revoked=False,
+            created_at=self.now,
+            updated_at=self.now,
+        )
+        source_session = AgentSession(
+            id=self.session_id,
+            user_id="owner",
+            title="Demo",
+            kind="chat",
+            status="completed",
+            created_at=self.now,
+            updated_at=self.now,
+        )
+        message = AgentMessage(
+            id=1,
+            session_id=self.session_id,
+            role="user",
+            content={"text": "open page"},
+            text_preview="open page",
+            created_at=self.now,
+            updated_at=self.now,
+        )
+        run = AgentRun(
+            id=uuid.uuid4(),
+            session_id=self.session_id,
+            user_message_id=1,
+            status="completed",
+            permission_mode="default",
+            progress=100,
+            schedule_mode="immediate",
+            attempts=1,
+            created_at=self.now,
+            updated_at=self.now,
+            scheduled_at=self.now,
+        )
+        execution = ToolExecution(
+            id=uuid.uuid4(),
+            session_id=self.session_id,
+            run_id=run.id,
+            message_id=1,
+            tool_use_id="tool-1",
+            tool_name="mcp____poco_playwright__browser_navigate",
+            tool_input={"url": "https://example.test"},
+            tool_output={"content": "ok"},
+            is_error=False,
+            duration_ms=1200,
+            created_at=self.now,
+            updated_at=self.now,
+        )
+        share.snapshot_payload = self._snapshot_payload(
+            source_session=source_session,
+            messages=[message],
+            runs=[run],
+            replay_counts={run.id: 1},
+        )
+
+        with (
+            patch(
+                "app.services.session_share_service.SessionShareRepository.get_active_by_token",
+                return_value=share,
+            ),
+            patch(
+                "app.services.session_share_service.ToolExecutionRepository.list_by_run",
+                return_value=[execution],
+            ),
+            patch(
+                "app.services.session_share_service.storage_service.exists",
+                return_value=True,
+            ),
+            patch(
+                "app.services.session_share_service.storage_service.presign_get",
+                return_value="https://files.test/replay.png",
+            ),
+        ):
+            snapshot = self.service.get_snapshot(self.db, token="token")
+
+        replay_execution = snapshot.runs[0].tool_executions[0]
+        self.assertEqual(replay_execution.tool_output, {"content": "ok"})
+        self.assertEqual(
+            replay_execution.browser_screenshot_url,
+            "https://files.test/replay.png",
+        )
+
+    def test_get_snapshot_adds_workspace_files_from_fork_run_manifest(self) -> None:
+        share = SessionShare(
+            id=self.share_id,
+            source_session_id=self.session_id,
+            owner_user_id="owner",
+            token="token",
+            title="Demo",
+            is_revoked=False,
+            created_at=self.now,
+            updated_at=self.now,
+        )
+        source_session = AgentSession(
+            id=self.session_id,
+            user_id="owner",
+            title="Demo",
+            kind="chat",
+            status="completed",
+            created_at=self.now,
+            updated_at=self.now,
+        )
+        message = AgentMessage(
+            id=1,
+            session_id=self.session_id,
+            role="user",
+            content={"text": "hello"},
+            text_preview="hello",
+            created_at=self.now,
+            updated_at=self.now,
+        )
+        run = AgentRun(
+            id=uuid.uuid4(),
+            session_id=self.session_id,
+            user_message_id=1,
+            status="completed",
+            permission_mode="default",
+            progress=100,
+            schedule_mode="immediate",
+            attempts=1,
+            workspace_manifest_key="exports/run/manifest.json",
+            workspace_files_prefix="exports/run/files",
+            workspace_export_status="ready",
+            created_at=self.now,
+            updated_at=self.now,
+            scheduled_at=self.now,
+        )
+        share.snapshot_payload = self._snapshot_payload(
+            source_session=source_session,
+            messages=[message],
+            runs=[run],
+        )
+        manifest = {
+            "files": [
+                {
+                    "path": "/src/app.ts",
+                    "key": "exports/run/files/src/app.ts",
+                    "mimeType": "text/typescript",
+                }
+            ]
+        }
+
+        with (
+            patch(
+                "app.services.session_share_service.SessionShareRepository.get_active_by_token",
+                return_value=share,
+            ),
+            patch(
+                "app.services.session_share_service.storage_service.get_manifest",
+                return_value=manifest,
+            ),
+            patch(
+                "app.services.session_share_service.storage_service.presign_get",
+                side_effect=lambda object_key, **_: f"https://files.test/{object_key}",
+            ),
+        ):
+            snapshot = self.service.get_snapshot(self.db, token="token")
+
+        workspace_root = snapshot.runs[0].workspace_files[0]
+        ts_file = workspace_root.children[0]
+        self.assertEqual(workspace_root.name, "src")
+        self.assertEqual(ts_file.name, "app.ts")
+        self.assertEqual(ts_file.mimeType, "text/typescript")
+        self.assertEqual(
+            ts_file.url,
+            "https://files.test/exports/run/files/src/app.ts",
+        )
 
     def test_extract_message_text_reads_nested_sdk_text_without_role_fallback(
         self,

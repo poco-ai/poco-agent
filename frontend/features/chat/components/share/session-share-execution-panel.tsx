@@ -1,38 +1,76 @@
 "use client";
 
 import * as React from "react";
-import {
-  CheckCircle2,
-  Circle,
-  FileEdit,
-  FilePlus,
-  FileText,
-  FileX,
-  GitCompare,
-  Terminal,
-  Wrench,
-  XCircle,
-} from "lucide-react";
+import { CheckCircle2, Circle, XCircle } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { PanelHeader } from "@/components/shared/panel-header";
+import { ComputerPanel } from "@/features/chat/components/execution/computer-panel";
+import { DocumentViewer } from "@/features/chat/components/execution/file-panel/document-viewer";
+import { FileChangesList } from "@/features/chat/components/execution/file-panel/file-changes-list";
+import {
+  FileSidebar,
+  downloadFileFromUrl,
+} from "@/features/chat/components/execution/file-panel/file-sidebar";
 import { ExecutionTabsSwitch } from "@/features/chat/components/layout/execution-tabs-switch";
 import { RunEvolutionTimeline } from "@/features/chat/components/layout/run-evolution-timeline";
-import { formatDurationSeconds } from "@/features/chat/components/layout/run-timeline-utils";
 import type {
-  FileChange,
+  FileNode,
   RunResponse,
   SessionShareSnapshot,
   SharedRunSummary,
   SharedToolExecution,
+  ToolExecutionResponse,
 } from "@/features/chat/types";
 import { useT } from "@/lib/i18n/client";
-import { cn } from "@/lib/utils";
 
 interface SessionShareExecutionPanelProps {
   snapshot: SessionShareSnapshot;
+}
+
+type RunStatus =
+  | "queued"
+  | "claimed"
+  | "pending"
+  | "running"
+  | "canceling"
+  | "completed"
+  | "failed"
+  | "canceled";
+
+const RUN_STATUSES = new Set<string>([
+  "queued",
+  "claimed",
+  "pending",
+  "running",
+  "canceling",
+  "completed",
+  "failed",
+  "canceled",
+]);
+
+const normalizePath = (path: string) => path.replace(/^\/+/, "");
+
+function asRunStatus(status: string): RunStatus | undefined {
+  return RUN_STATUSES.has(status) ? (status as RunStatus) : undefined;
+}
+
+function findFileByPath(
+  nodes: FileNode[],
+  targetPath: string,
+): FileNode | undefined {
+  const normalizedTarget = normalizePath(targetPath);
+  for (const node of nodes) {
+    if (node.type === "file" && normalizePath(node.path) === normalizedTarget) {
+      return node;
+    }
+    if (node.children?.length) {
+      const found = findFileByPath(node.children, targetPath);
+      if (found) return found;
+    }
+  }
+  return undefined;
 }
 
 function mapSharedRunToRunResponse(
@@ -75,74 +113,6 @@ function mapSharedRunToRunResponse(
   };
 }
 
-function formatDurationMs(
-  durationMs: number | null | undefined,
-  t: (key: string, values?: Record<string, unknown>) => string,
-) {
-  if (typeof durationMs !== "number" || durationMs <= 0) return null;
-  if (durationMs >= 1000) {
-    return t("computer.replay.durationSec", {
-      sec: Math.max(1, Math.round(durationMs / 1000)),
-    });
-  }
-  return t("computer.replay.durationMs", { ms: durationMs });
-}
-
-function getToolSummary(execution: SharedToolExecution) {
-  const input = execution.toolInput ?? {};
-  for (const key of [
-    "command",
-    "url",
-    "path",
-    "file_path",
-    "query",
-    "pattern",
-  ]) {
-    const value = input[key];
-    if (typeof value === "string" && value.trim()) {
-      return value.trim();
-    }
-  }
-  return execution.toolName;
-}
-
-function getToolIcon(toolName: string) {
-  const normalized = toolName.toLowerCase().replace(/[\s_-]/g, "");
-  if (normalized === "bash") return Terminal;
-  if (["read", "write", "edit", "glob", "grep"].includes(normalized)) {
-    return FileText;
-  }
-  return Wrench;
-}
-
-function getFileChangeIcon(status: FileChange["status"]) {
-  switch (status) {
-    case "added":
-      return FilePlus;
-    case "deleted":
-      return FileX;
-    case "renamed":
-      return GitCompare;
-    case "modified":
-    default:
-      return FileEdit;
-  }
-}
-
-function getFileChangeTone(status: FileChange["status"]) {
-  switch (status) {
-    case "added":
-      return "text-primary";
-    case "deleted":
-      return "text-destructive";
-    case "renamed":
-      return "text-chart-3";
-    case "modified":
-    default:
-      return "text-chart-2";
-  }
-}
-
 function StatusBadge({ status }: { status: string }) {
   const Icon =
     status === "completed"
@@ -158,95 +128,88 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-function SharedComputerSnapshot({
-  run,
-  runNumber,
-}: {
-  run: SharedRunSummary;
-  runNumber: number;
-}) {
-  const { t } = useT("translation");
-  const duration = formatDurationSeconds(
-    mapSharedRunToRunResponse(run, "shared-session"),
+function mapSharedToolExecution(
+  execution: SharedToolExecution,
+): ToolExecutionResponse {
+  return {
+    id: execution.id,
+    run_id: execution.runId ?? null,
+    message_id: execution.messageId ?? null,
+    tool_use_id: execution.toolUseId ?? null,
+    tool_name: execution.toolName,
+    tool_input: execution.toolInput ?? null,
+    tool_output: execution.toolOutput ?? null,
+    is_error: execution.isError,
+    duration_ms: execution.durationMs ?? null,
+    created_at: execution.createdAt,
+    updated_at: execution.updatedAt,
+  };
+}
+
+function SharedComputerSnapshot({ run }: { run: SharedRunSummary }) {
+  const toolExecutions = React.useMemo(
+    () => run.toolExecutions.map(mapSharedToolExecution),
+    [run.toolExecutions],
   );
-
+  const screenshotUrlByToolUseId = React.useMemo(() => {
+    const urls = new Map<string, string>();
+    for (const execution of run.toolExecutions) {
+      if (execution.toolUseId && execution.browserScreenshotUrl) {
+        urls.set(execution.toolUseId, execution.browserScreenshotUrl);
+      }
+    }
+    return urls;
+  }, [run.toolExecutions]);
+  const getBrowserScreenshotUrl = React.useCallback(
+    (toolUseId: string) => screenshotUrlByToolUseId.get(toolUseId) ?? null,
+    [screenshotUrlByToolUseId],
+  );
   return (
-    <ScrollArea className="h-full min-h-0 [&_[data-slot=scroll-area-viewport]]:overflow-x-hidden">
-      <div className="space-y-3 p-4">
-        <div className="rounded-xl border border-border bg-card p-4">
-          <div className="flex min-w-0 items-start justify-between gap-3">
-            <div className="min-w-0 space-y-1">
-              <div className="text-sm font-medium">
-                {t("runTimeline.runLabel", { number: runNumber })}
-              </div>
-              <div className="text-xs text-muted-foreground">
-                {t("runTimeline.preview.execution", {
-                  files: run.fileChangeCount,
-                  steps: run.replayStepCount,
-                })}
-              </div>
-              {duration ? (
-                <div className="text-xs text-muted-foreground">
-                  {t("runTimeline.preview.duration", { duration })}
-                </div>
-              ) : null}
-            </div>
-            <StatusBadge status={run.status} />
-          </div>
-        </div>
-
-        {run.toolExecutions.length > 0 ? (
-          <div className="space-y-2">
-            {run.toolExecutions.map((execution) => {
-              const Icon = getToolIcon(execution.toolName);
-              const durationLabel = formatDurationMs(execution.durationMs, t);
-              const summary = getToolSummary(execution);
-              return (
-                <div
-                  key={execution.id}
-                  className={cn(
-                    "flex min-w-0 items-start gap-3 rounded-xl border bg-card p-3 text-sm",
-                    execution.isError
-                      ? "border-destructive/30"
-                      : "border-border",
-                  )}
-                >
-                  <div className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border bg-muted/60">
-                    <Icon className="size-4 text-muted-foreground" />
-                  </div>
-                  <div className="min-w-0 flex-1 space-y-1">
-                    <div className="flex min-w-0 items-center justify-between gap-3">
-                      <div className="min-w-0 truncate font-medium">
-                        {execution.toolName || t("chat.toolCards.tools.tool")}
-                      </div>
-                      {durationLabel ? (
-                        <span className="shrink-0 text-xs text-muted-foreground">
-                          {durationLabel}
-                        </span>
-                      ) : null}
-                    </div>
-                    <div className="line-clamp-2 break-all text-xs text-muted-foreground">
-                      {summary}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="flex h-48 items-center justify-center rounded-xl border border-border bg-card text-sm text-muted-foreground">
-            {t("computer.replay.empty")}
-          </div>
-        )}
-      </div>
-    </ScrollArea>
+    <ComputerPanel
+      runId={run.runId}
+      sessionStatus={asRunStatus(run.status)}
+      hideHeader
+      toolExecutions={toolExecutions}
+      getBrowserScreenshotUrl={getBrowserScreenshotUrl}
+    />
   );
 }
 
 function SharedArtifactsSnapshot({ run }: { run: SharedRunSummary }) {
   const { t } = useT("translation");
+  const [selectedPath, setSelectedPath] = React.useState<string | null>(null);
+  const files = run.workspaceFiles;
+  const selectedFile = React.useMemo(() => {
+    if (!selectedPath) return undefined;
+    return findFileByPath(files, selectedPath);
+  }, [files, selectedPath]);
 
-  if (run.fileChanges.length === 0) {
+  React.useEffect(() => {
+    setSelectedPath(null);
+  }, [run.runId]);
+
+  const handleFileSelect = React.useCallback((file: FileNode) => {
+    if (file.type === "file") {
+      setSelectedPath(file.path);
+    }
+  }, []);
+
+  const handleFileChangeClick = React.useCallback(
+    (path: string) => {
+      const file = findFileByPath(files, path);
+      if (file) {
+        setSelectedPath(file.path);
+      }
+    },
+    [files],
+  );
+
+  const handleDownloadNode = React.useCallback(async (node: FileNode) => {
+    if (node.type !== "file" || !node.url) return;
+    await downloadFileFromUrl(node.url, node.name);
+  }, []);
+
+  if (run.fileChanges.length === 0 && files.length === 0) {
     return (
       <div className="flex h-full items-center justify-center p-6 text-sm text-muted-foreground">
         {t("artifacts.empty.noChanges")}
@@ -255,59 +218,30 @@ function SharedArtifactsSnapshot({ run }: { run: SharedRunSummary }) {
   }
 
   return (
-    <ScrollArea className="h-full min-h-0 [&_[data-slot=scroll-area-viewport]]:overflow-x-hidden">
-      <div className="space-y-3 p-4">
-        {run.fileChanges.map((change, index) => {
-          const Icon = getFileChangeIcon(change.status);
-          const hasLineChanges =
-            (change.added_lines ?? 0) > 0 || (change.deleted_lines ?? 0) > 0;
-          return (
-            <div
-              key={`${change.path}-${index}`}
-              className="rounded-xl border border-border bg-card p-3"
-            >
-              <div className="flex min-w-0 items-center gap-3">
-                <Icon
-                  className={cn(
-                    "size-5 shrink-0",
-                    getFileChangeTone(change.status),
-                  )}
-                />
-                <div className="min-w-0 flex-1">
-                  <div
-                    className="truncate text-sm font-medium"
-                    title={change.path}
-                  >
-                    {change.path}
-                  </div>
-                  {change.old_path ? (
-                    <div
-                      className="truncate text-xs text-muted-foreground"
-                      title={change.old_path}
-                    >
-                      {change.old_path}
-                    </div>
-                  ) : null}
-                </div>
-                <Badge variant="secondary" className="shrink-0">
-                  {change.status}
-                </Badge>
-              </div>
-              {hasLineChanges ? (
-                <div className="mt-3 flex flex-wrap gap-3 text-xs text-muted-foreground">
-                  <span className="text-primary">
-                    +{change.added_lines ?? 0} {t("fileChange.linesAdded")}
-                  </span>
-                  <span className="text-destructive">
-                    -{change.deleted_lines ?? 0} {t("fileChange.linesDeleted")}
-                  </span>
-                </div>
-              ) : null}
-            </div>
-          );
-        })}
+    <div className="grid h-full min-h-0 grid-cols-[minmax(0,70%)_minmax(0,30%)] overflow-hidden">
+      <div className="min-h-0 min-w-0 overflow-hidden border-r border-border/60 bg-background p-3">
+        <div className="h-full min-h-0 overflow-hidden rounded-xl border bg-card">
+          {selectedFile ? (
+            <DocumentViewer file={selectedFile} />
+          ) : (
+            <FileChangesList
+              fileChanges={run.fileChanges}
+              sessionStatus={asRunStatus(run.status)}
+              onFileClick={handleFileChangeClick}
+            />
+          )}
+        </div>
       </div>
-    </ScrollArea>
+      <div className="min-h-0 min-w-0 overflow-hidden bg-muted/30">
+        <FileSidebar
+          files={files}
+          selectedFile={selectedFile}
+          onFileSelect={handleFileSelect}
+          embedded
+          onDownloadNode={handleDownloadNode}
+        />
+      </div>
+    </div>
   );
 }
 
@@ -379,10 +313,7 @@ export function SessionShareExecutionPanel({
           value="computer"
           className="h-full min-h-0 data-[state=inactive]:hidden"
         >
-          <SharedComputerSnapshot
-            run={selectedRun}
-            runNumber={selectedRunIndex + 1}
-          />
+          <SharedComputerSnapshot run={selectedRun} />
         </TabsContent>
         <TabsContent
           value="artifacts"

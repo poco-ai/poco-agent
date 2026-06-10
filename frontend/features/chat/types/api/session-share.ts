@@ -1,4 +1,5 @@
 import type { FileChange } from "./callback";
+import type { FileNode } from "./file";
 import type { MessageResponse } from "./session";
 
 export type ConversationTimelineItemType =
@@ -56,8 +57,10 @@ export interface SharedToolExecution {
   toolUseId?: string | null;
   toolName: string;
   toolInput?: Record<string, unknown> | null;
+  toolOutput?: Record<string, unknown> | null;
   isError: boolean;
   durationMs?: number | null;
+  browserScreenshotUrl?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -72,6 +75,7 @@ export interface SharedRunSummary {
   replayStepCount: number;
   fileChangeCount: number;
   fileChanges: FileChange[];
+  workspaceFiles: FileNode[];
   toolExecutions: SharedToolExecution[];
   startedAt?: string | null;
   finishedAt?: string | null;

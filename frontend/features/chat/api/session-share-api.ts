@@ -2,6 +2,7 @@ import { apiClient, API_ENDPOINTS } from "@/services/api-client";
 import type {
   ConversationTimelineItem,
   FileChange,
+  FileNode,
   MessageResponse,
   SessionShareForkResponse,
   SessionSharePublicResponse,
@@ -47,8 +48,10 @@ interface SharedToolExecutionDto {
   tool_use_id?: string | null;
   tool_name: string;
   tool_input?: Record<string, unknown> | null;
+  tool_output?: Record<string, unknown> | null;
   is_error: boolean;
   duration_ms?: number | null;
+  browser_screenshot_url?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -63,6 +66,7 @@ interface SharedRunSummaryDto {
   replay_step_count: number;
   file_change_count: number;
   file_changes?: FileChange[];
+  workspace_files?: FileNode[];
   tool_executions?: SharedToolExecutionDto[];
   started_at?: string | null;
   finished_at?: string | null;
@@ -153,8 +157,10 @@ function mapToolExecution(dto: SharedToolExecutionDto): SharedToolExecution {
     toolUseId: dto.tool_use_id,
     toolName: dto.tool_name,
     toolInput: dto.tool_input,
+    toolOutput: dto.tool_output,
     isError: dto.is_error,
     durationMs: dto.duration_ms,
+    browserScreenshotUrl: dto.browser_screenshot_url,
     createdAt: dto.created_at,
     updatedAt: dto.updated_at,
   };
@@ -171,6 +177,7 @@ function mapRun(dto: SharedRunSummaryDto): SharedRunSummary {
     replayStepCount: dto.replay_step_count,
     fileChangeCount: dto.file_change_count,
     fileChanges: dto.file_changes ?? [],
+    workspaceFiles: dto.workspace_files ?? [],
     toolExecutions: (dto.tool_executions ?? []).map(mapToolExecution),
     startedAt: dto.started_at,
     finishedAt: dto.finished_at,

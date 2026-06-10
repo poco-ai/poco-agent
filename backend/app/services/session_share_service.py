@@ -1,3 +1,4 @@
+import logging
 import secrets
 import uuid
 from collections.abc import Sequence
@@ -43,14 +44,20 @@ from app.schemas.session_share import (
     SharedToolExecution,
 )
 from app.schemas.callback import FileChange
+from app.schemas.workspace import FileNode
 from app.services.server_channel_access import require_channel_member_access
+from app.services.storage_service import S3StorageService
 from app.services.server_channel_event_service import (
     ChannelEventActor,
     ChannelEventTarget,
     create_channel_event_message,
 )
+from app.utils.computer import build_browser_screenshot_key
+from app.utils.workspace_export import build_workspace_file_nodes_from_export
 
 JsonValueT = TypeVar("JsonValueT")
+logger = logging.getLogger(__name__)
+storage_service = S3StorageService()
 
 
 class SessionShareService:
@@ -297,6 +304,7 @@ class SessionShareService:
                 tool_use_id=execution.tool_use_id,
                 tool_name=execution.tool_name,
                 tool_input=execution.tool_input,
+                tool_output=execution.tool_output,
                 is_error=execution.is_error,
                 duration_ms=execution.duration_ms,
                 created_at=execution.created_at,
@@ -305,11 +313,124 @@ class SessionShareService:
             for execution in ToolExecutionRepository.list_by_run(db, run_id, limit=250)
         ]
 
+    @staticmethod
+    def _coerce_non_empty_string(value: object) -> str | None:
+        return value if isinstance(value, str) and value.strip() else None
+
+    @classmethod
+    def _extract_string_field(cls, payload: dict[str, Any], key: str) -> str | None:
+        return cls._coerce_non_empty_string(payload.get(key))
+
+    @staticmethod
+    def _tool_execution_needs_browser_screenshot(
+        execution: dict[str, Any],
+    ) -> bool:
+        tool_name = execution.get("tool_name")
+        return isinstance(tool_name, str) and tool_name.startswith(
+            "mcp____poco_playwright__"
+        )
+
+    @classmethod
+    def _build_browser_screenshot_url(
+        cls,
+        *,
+        owner_user_id: str,
+        session_id: uuid.UUID,
+        run_id: uuid.UUID | None,
+        tool_use_id: str,
+    ) -> str | None:
+        key = ""
+        if run_id is not None:
+            key = build_browser_screenshot_key(
+                user_id=owner_user_id,
+                session_id=str(session_id),
+                run_id=str(run_id),
+                tool_use_id=tool_use_id,
+            )
+
+        try:
+            if not key or not storage_service.exists(key):
+                legacy_key = build_browser_screenshot_key(
+                    user_id=owner_user_id,
+                    session_id=str(session_id),
+                    tool_use_id=tool_use_id,
+                )
+                key = legacy_key if storage_service.exists(legacy_key) else ""
+            if not key:
+                return None
+            return storage_service.presign_get(
+                key,
+                response_content_disposition="inline",
+                response_content_type="image/png",
+            )
+        except Exception:
+            logger.exception("Failed to build shared browser screenshot URL")
+            return None
+
+    @classmethod
+    def _attach_public_browser_screenshot_urls(
+        cls,
+        executions: list[dict[str, Any]],
+        *,
+        owner_user_id: str,
+        session_id: uuid.UUID,
+        run_id: uuid.UUID | None,
+    ) -> None:
+        for execution in executions:
+            if not cls._tool_execution_needs_browser_screenshot(execution):
+                continue
+            tool_use_id = cls._coerce_non_empty_string(execution.get("tool_use_id"))
+            if not tool_use_id:
+                continue
+            execution["browser_screenshot_url"] = cls._build_browser_screenshot_url(
+                owner_user_id=owner_user_id,
+                session_id=session_id,
+                run_id=run_id,
+                tool_use_id=tool_use_id,
+            )
+
+    @classmethod
+    def _build_workspace_files_for_public_run(
+        cls,
+        db: Session,
+        *,
+        fork_run: dict[str, Any] | None,
+        source_run_id: uuid.UUID | None,
+    ) -> list[FileNode]:
+        manifest_key = (
+            cls._extract_string_field(fork_run, "workspace_manifest_key")
+            if isinstance(fork_run, dict)
+            else None
+        )
+        workspace_files_prefix = (
+            cls._extract_string_field(fork_run, "workspace_files_prefix")
+            if isinstance(fork_run, dict)
+            else None
+        )
+
+        if not manifest_key and source_run_id is not None:
+            source_run = RunRepository.get_by_id(db, source_run_id)
+            if source_run is not None:
+                manifest_key = cls._coerce_non_empty_string(
+                    source_run.workspace_manifest_key
+                )
+                workspace_files_prefix = cls._coerce_non_empty_string(
+                    source_run.workspace_files_prefix
+                )
+
+        return build_workspace_file_nodes_from_export(
+            manifest_key=manifest_key,
+            workspace_files_prefix=workspace_files_prefix,
+            storage_service=storage_service,
+        )
+
     @classmethod
     def _build_public_run_snapshots(
         cls,
         db: Session,
         payload: dict[str, Any],
+        *,
+        share: SessionShare,
     ) -> list[SharedRunSummary]:
         raw_runs = payload.get("runs", [])
         if not isinstance(raw_runs, list):
@@ -346,18 +467,52 @@ class SessionShareService:
                 if not isinstance(raw_count, int) or raw_count <= 0:
                     run_payload["file_change_count"] = len(file_changes)
 
-            if not isinstance(run_payload.get("tool_executions"), list):
-                run_payload["tool_executions"] = (
-                    [
-                        execution.model_dump(mode="json")
-                        for execution in cls._build_shared_tool_executions_from_run_id(
-                            db,
-                            source_run_id,
-                        )
-                    ]
-                    if source_run_id is not None
-                    else []
+            raw_tool_executions = run_payload.get("tool_executions")
+            replay_step_count = run_payload.get("replay_step_count")
+            should_refresh_tool_executions = not isinstance(raw_tool_executions, list)
+            if isinstance(raw_tool_executions, list):
+                should_refresh_tool_executions = (
+                    (
+                        isinstance(replay_step_count, int)
+                        and replay_step_count > 0
+                        and len(raw_tool_executions) == 0
+                    )
+                    or any(
+                        not isinstance(item, dict) or "tool_output" not in item
+                        for item in raw_tool_executions
+                    )
                 )
+            if source_run_id is not None and should_refresh_tool_executions:
+                tool_executions = [
+                    execution.model_dump(mode="json")
+                    for execution in cls._build_shared_tool_executions_from_run_id(
+                        db,
+                        source_run_id,
+                    )
+                ]
+            elif isinstance(raw_tool_executions, list):
+                tool_executions = [
+                    dict(item) for item in raw_tool_executions if isinstance(item, dict)
+                ]
+            else:
+                tool_executions = []
+
+            cls._attach_public_browser_screenshot_urls(
+                tool_executions,
+                owner_user_id=share.owner_user_id,
+                session_id=share.source_session_id,
+                run_id=source_run_id,
+            )
+            run_payload["tool_executions"] = tool_executions
+
+            workspace_files = cls._build_workspace_files_for_public_run(
+                db,
+                fork_run=fork_run if isinstance(fork_run, dict) else None,
+                source_run_id=source_run_id,
+            )
+            run_payload["workspace_files"] = [
+                node.model_dump(mode="json") for node in workspace_files
+            ]
 
             summaries.append(SharedRunSummary.model_validate(run_payload))
         return summaries
@@ -660,7 +815,7 @@ class SessionShareService:
                 MessageResponse.model_validate(message)
                 for message in payload.get("messages", [])
             ],
-            runs=self._build_public_run_snapshots(db, payload),
+            runs=self._build_public_run_snapshots(db, payload, share=share),
             timeline=[
                 ConversationTimelineItem.model_validate(item)
                 for item in payload.get("timeline", [])

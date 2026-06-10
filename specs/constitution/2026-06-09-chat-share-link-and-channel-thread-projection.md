@@ -19,6 +19,10 @@ Poco 的普通聊天分享采用两条不同语义：
 
 2026-06-09 review 后补充：share link 的页面形态不是独立的全屏阅读页，而是普通聊天区域的只读变体。已登录用户打开 share link 时应尽量保留应用 shell，让只读 transcript 替换普通聊天区；匿名用户仍可查看同一只读聊天区，但不能直接 fork。
 
+2026-06-10 review 后补充：share link 的只读变体应展示与普通聊天一致的右侧 Computer / Artifacts 工作区面板。Artifacts 可以展示基于冻结 workspace manifest 动态生成的只读文件树和预览 URL，但 public snapshot 不暴露 manifest key、workspace prefix 或 source session 内部字段。
+
+2026-06-10 replay follow-up 后补充：share link 的 Computer 面板不是执行摘要列表，而是普通聊天 Computer 面板的只读回放变体，应展示播放控制、步骤 timeline 和浏览器截图 viewer。public snapshot 可动态返回只读 replay 数据和 presigned screenshot URL，但不能要求匿名用户调用登录态 run screenshot API。
+
 ## 背景
 
 当前普通聊天只有前端导出图片能力，适合传播截图，但不适合让其他用户查看完整上下文、fork 继续，也不适合沉淀到频道协作流中。
@@ -30,6 +34,8 @@ Poco 的普通聊天分享采用两条不同语义：
 - **产品决策**：
   - 普通聊天 share link 打开后展示普通聊天区的只读变体，而不是脱离 app shell 的全屏页面。
   - 只读页面允许当前登录用户 fork 到自己的普通聊天中继续；匿名用户可查看，但 fork 动作必须隐藏或禁用，不能触发用户信息缺失错误。
+  - 只读页面的 Artifacts 面板应复用普通聊天的文件树和文件预览能力，TypeScript 等代码文件不能退化为仅显示路径。
+  - 只读页面的 Computer 面板应复用普通聊天的回放体验，不能退化为只有步骤文字的摘要列表。
   - 分享到频道默认不触发 agent，不创建 channel run。
   - 分享到频道会写入一条 channel event，并创建一个 thread projection。
   - 频道 thread 和频道右侧区域都显示对应 timeline，帮助定位 turn/run/artifact。
@@ -39,6 +45,10 @@ Poco 的普通聊天分享采用两条不同语义：
 - **技术决策**：
   - 新增 share link 持久化对象，使用不可猜测 token 作为只读入口。
   - share link fork 复用普通聊天 branch/copy 语义，但 fork 后 owner 变成当前用户，且不继承原 SDK session。
+  - share link 的文件预览 URL 在读取 snapshot 时由后端基于冻结 manifest 动态生成，不固化在 share payload 中。
+  - share link 的 browser replay screenshot URL 在读取 snapshot 时动态生成，只作为只读展示数据返回。
+  - 标题生成、模型选择和 runtime env 应共用 provider/env 解析规则；GLM/MiniMax/DeepSeek 等 provider key 配在 `.env` 或系统环境时都应被识别。
+  - workspace 文件 MIME 应对代码后缀做文本覆盖，避免 `.ts` 被 Python `mimetypes` 误识别为 `video/mp2t`。
   - channel projection 使用独立 import service 直接创建 `server_channel_messages`，不调用 `send_message()` 和 agent trigger 链路。
   - imported user turns 可以使用 `message_type="user"`，但必须带 `content.source="imported_chat_session"`；import service 不触发 agent。
   - imported assistant turns 使用 `message_type="system"` + `content.source="imported_agent_session"`。
@@ -54,6 +64,8 @@ Poco 的普通聊天分享采用两条不同语义：
 - 导入 transcript 中出现的 `@agent` 不得被解释为 trigger entity。
 - Timeline 是导航和证据视图，不是新的消息事实源。
 - Share link 只读页的重新生成、新建分支、编辑、输入框等写操作必须不可用。
+- Share link public response 可以返回只读 `workspace_files`，但不得返回 `workspace_manifest_key`、`workspace_files_prefix`、source session id 或 owner id。
+- Share link public response 可以返回只读 replay payload 和 presigned screenshot URL，但不得要求匿名查看者访问私有 run/session replay API。
 - Share link 的 fork 入口只对已登录用户可见或可用；匿名查看不得要求注册，也不得在点击 fork 后报错。
 - Channel event 的 actor label 必须来自用户显示名、邮箱或其他可读 fallback，而不是裸 user id。
 - Imported thread message 的正文必须来自原普通聊天消息内容；抽取失败时允许使用空态/截断提示，但不得显示 `User`、`Assistant` 这类角色名作为正文。

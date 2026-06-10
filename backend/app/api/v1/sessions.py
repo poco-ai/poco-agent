@@ -1,5 +1,4 @@
 import uuid
-import mimetypes
 import shutil
 from datetime import datetime
 from urllib.parse import urlencode
@@ -48,12 +47,11 @@ from app.services.tool_execution_service import ToolExecutionService
 from app.services.usage_service import UsageService
 from app.services.workspace_archive_service import WorkspaceArchiveService
 from app.utils.computer import build_browser_screenshot_key
-from app.utils.workspace import build_workspace_file_nodes
+from app.utils.workspace_export import build_workspace_file_nodes_from_export
 from app.utils.workspace_manifest import (
-    build_nodes_from_manifest,
-    extract_manifest_files,
     normalize_manifest_path,
 )
+from app.utils.mime import guess_mime_type
 
 router = APIRouter(prefix="/sessions", tags=["sessions"])
 
@@ -651,40 +649,10 @@ async def get_session_workspace_files(
     if not db_session.workspace_manifest_key:
         return Response.success(data=[], message="Workspace export not ready")
 
-    manifest = storage_service.get_manifest(db_session.workspace_manifest_key)
-    raw_nodes = build_nodes_from_manifest(manifest)
-    manifest_files = extract_manifest_files(manifest)
-    prefix = (db_session.workspace_files_prefix or "").rstrip("/")
-    file_url_map: dict[str, str] = {}
-
-    for file_entry in manifest_files:
-        file_path = normalize_manifest_path(file_entry.get("path"))
-        if not file_path:
-            continue
-        object_key = (
-            file_entry.get("key")
-            or file_entry.get("object_key")
-            or file_entry.get("oss_key")
-            or file_entry.get("s3_key")
-        )
-        if not object_key and prefix:
-            object_key = f"{prefix}/{file_path.lstrip('/')}"
-        if not object_key:
-            continue
-        mime_type = file_entry.get("mimeType") or file_entry.get("mime_type")
-        file_url_map[file_path] = storage_service.presign_get(
-            object_key,
-            response_content_disposition="inline",
-            response_content_type=mime_type,
-        )
-
-    def build_file_url(file_path: str) -> str | None:
-        normalized = normalize_manifest_path(file_path) or file_path
-        return file_url_map.get(normalized)
-
-    nodes = build_workspace_file_nodes(
-        raw_nodes,
-        file_url_builder=build_file_url,
+    nodes = build_workspace_file_nodes_from_export(
+        manifest_key=db_session.workspace_manifest_key,
+        workspace_files_prefix=db_session.workspace_files_prefix,
+        storage_service=storage_service,
     )
     return Response.success(data=nodes, message="Workspace files retrieved")
 
@@ -733,10 +701,9 @@ async def get_session_local_mount_file(
         mount_id=mount_id,
         path=path,
     )
-    media_type, _ = mimetypes.guess_type(file_path.name)
     return FileResponse(
         path=file_path,
-        media_type=media_type or "application/octet-stream",
+        media_type=guess_mime_type(file_path.name) or "application/octet-stream",
         filename=file_path.name,
         content_disposition_type="attachment"
         if disposition == "attachment"

@@ -10,6 +10,7 @@ from app.schemas.server_channel_message import (
     ServerChannelMessageResponse,
     ServerChannelThreadResponse,
 )
+from app.schemas.workspace import FileNode
 
 TimelineItemType = Literal["message", "run", "channel_message", "channel_event"]
 
@@ -34,8 +35,10 @@ class SharedToolExecution(BaseModel):
     tool_use_id: str | None = None
     tool_name: str
     tool_input: dict[str, Any] | None = None
+    tool_output: dict[str, Any] | None = None
     is_error: bool = False
     duration_ms: int | None = None
+    browser_screenshot_url: str | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -50,6 +53,7 @@ class SharedRunSummary(BaseModel):
     replay_step_count: int = 0
     file_change_count: int = 0
     file_changes: list[FileChange] = Field(default_factory=list)
+    workspace_files: list[FileNode] = Field(default_factory=list)
     tool_executions: list[SharedToolExecution] = Field(default_factory=list)
     started_at: datetime | None = None
     finished_at: datetime | None = None
