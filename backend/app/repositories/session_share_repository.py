@@ -14,9 +14,7 @@ class SessionShareRepository:
     @staticmethod
     def get_by_token(session_db: Session, token: str) -> SessionShare | None:
         return (
-            session_db.query(SessionShare)
-            .filter(SessionShare.token == token)
-            .first()
+            session_db.query(SessionShare).filter(SessionShare.token == token).first()
         )
 
     @staticmethod

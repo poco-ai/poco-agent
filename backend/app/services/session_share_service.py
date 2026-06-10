@@ -40,7 +40,9 @@ from app.schemas.session_share import (
     SessionShareToChannelResponse,
     SharedRunSummary,
     SharedSessionSummary,
+    SharedToolExecution,
 )
+from app.schemas.callback import FileChange
 from app.services.server_channel_access import require_channel_member_access
 from app.services.server_channel_event_service import (
     ChannelEventActor,
@@ -147,32 +149,120 @@ class SessionShareService:
         return user_id
 
     @staticmethod
-    def _resolve_file_change_count(run: AgentRun) -> int:
-        state_patch = run.state_patch if isinstance(run.state_patch, dict) else {}
+    def _extract_workspace_state_from_state_patch(
+        state_patch: dict[str, Any] | None,
+    ) -> dict[str, Any]:
+        if not isinstance(state_patch, dict):
+            return {}
         workspace_state = state_patch.get("workspace_state") or state_patch.get(
             "workspaceState"
         )
         if not isinstance(workspace_state, dict):
-            return 0
+            return {}
+        return workspace_state
 
+    @classmethod
+    def _extract_workspace_state(cls, run: AgentRun) -> dict[str, Any]:
+        state_patch = run.state_patch if isinstance(run.state_patch, dict) else {}
+        return cls._extract_workspace_state_from_state_patch(state_patch)
+
+    @staticmethod
+    def _coerce_int(value: object, default: int = 0) -> int:
+        return value if isinstance(value, int) else default
+
+    @classmethod
+    def _resolve_file_changes_from_workspace_state(
+        cls,
+        workspace_state: dict[str, Any],
+    ) -> list[FileChange]:
+        file_changes = workspace_state.get("file_changes") or workspace_state.get(
+            "fileChanges"
+        )
+        if not isinstance(file_changes, list):
+            return []
+
+        changes_by_path: dict[str, FileChange] = {}
+        for item in file_changes:
+            if not isinstance(item, dict):
+                continue
+            raw_path = item.get("path")
+            if not isinstance(raw_path, str) or not raw_path.strip():
+                continue
+            raw_status = item.get("status")
+            raw_old_path = item.get("old_path") or item.get("oldPath")
+            raw_diff = item.get("diff")
+            path = raw_path.strip()
+            changes_by_path[path] = FileChange(
+                path=path,
+                status=raw_status
+                if isinstance(raw_status, str) and raw_status.strip()
+                else "modified",
+                added_lines=cls._coerce_int(
+                    item.get("added_lines") or item.get("addedLines")
+                ),
+                deleted_lines=cls._coerce_int(
+                    item.get("deleted_lines") or item.get("deletedLines")
+                ),
+                diff=raw_diff if isinstance(raw_diff, str) else None,
+                old_path=raw_old_path if isinstance(raw_old_path, str) else None,
+            )
+        return list(changes_by_path.values())
+
+    @classmethod
+    def _resolve_file_changes(cls, run: AgentRun) -> list[FileChange]:
+        return cls._resolve_file_changes_from_workspace_state(
+            cls._extract_workspace_state(run)
+        )
+
+    @classmethod
+    def _resolve_file_change_count(
+        cls,
+        run: AgentRun,
+        file_changes: list[FileChange] | None = None,
+    ) -> int:
+        workspace_state = cls._extract_workspace_state(run)
         raw_count = workspace_state.get("file_change_count") or workspace_state.get(
             "fileChangeCount"
         )
         if isinstance(raw_count, int) and raw_count > 0:
             return raw_count
 
-        file_changes = workspace_state.get("file_changes") or workspace_state.get(
-            "fileChanges"
+        resolved_file_changes = file_changes or cls._resolve_file_changes(run)
+        return len({change.path for change in resolved_file_changes if change.path})
+
+    @classmethod
+    def _build_tool_execution_snapshots(
+        cls,
+        db: Session,
+        run: AgentRun,
+    ) -> list[SharedToolExecution]:
+        return cls._build_shared_tool_executions_from_run_id(db, run.id)
+
+    @classmethod
+    def _build_run_summary(
+        cls,
+        db: Session,
+        run: AgentRun,
+        *,
+        replay_step_count: int,
+    ) -> SharedRunSummary:
+        file_changes = cls._resolve_file_changes(run)
+        return SharedRunSummary(
+            run_id=run.id,
+            user_message_id=run.user_message_id,
+            status=run.status,
+            progress=run.progress,
+            schedule_mode=run.schedule_mode,
+            workspace_export_status=run.workspace_export_status,
+            replay_step_count=replay_step_count,
+            file_change_count=cls._resolve_file_change_count(run, file_changes),
+            file_changes=file_changes,
+            tool_executions=cls._build_tool_execution_snapshots(db, run),
+            started_at=run.started_at,
+            finished_at=run.finished_at,
+            created_at=run.created_at,
+            updated_at=run.updated_at,
         )
-        if isinstance(file_changes, list):
-            return len(
-                {
-                    item.get("path")
-                    for item in file_changes
-                    if isinstance(item, dict) and item.get("path")
-                }
-            )
-        return 0
 
     @classmethod
     def _build_run_summaries(
@@ -185,22 +275,92 @@ class SessionShareService:
             [run.id for run in runs],
         )
         return [
-            SharedRunSummary(
-                run_id=run.id,
-                user_message_id=run.user_message_id,
-                status=run.status,
-                progress=run.progress,
-                schedule_mode=run.schedule_mode,
-                workspace_export_status=run.workspace_export_status,
+            cls._build_run_summary(
+                db,
+                run,
                 replay_step_count=replay_counts_by_run_id.get(run.id, 0),
-                file_change_count=cls._resolve_file_change_count(run),
-                started_at=run.started_at,
-                finished_at=run.finished_at,
-                created_at=run.created_at,
-                updated_at=run.updated_at,
             )
             for run in runs
         ]
+
+    @classmethod
+    def _build_shared_tool_executions_from_run_id(
+        cls,
+        db: Session,
+        run_id: uuid.UUID,
+    ) -> list[SharedToolExecution]:
+        return [
+            SharedToolExecution(
+                id=execution.id,
+                run_id=execution.run_id,
+                message_id=execution.message_id,
+                tool_use_id=execution.tool_use_id,
+                tool_name=execution.tool_name,
+                tool_input=execution.tool_input,
+                is_error=execution.is_error,
+                duration_ms=execution.duration_ms,
+                created_at=execution.created_at,
+                updated_at=execution.updated_at,
+            )
+            for execution in ToolExecutionRepository.list_by_run(db, run_id, limit=250)
+        ]
+
+    @classmethod
+    def _build_public_run_snapshots(
+        cls,
+        db: Session,
+        payload: dict[str, Any],
+    ) -> list[SharedRunSummary]:
+        raw_runs = payload.get("runs", [])
+        if not isinstance(raw_runs, list):
+            return []
+
+        fork_runs_by_id = {
+            str(item.get("run_id")): item
+            for item in payload.get("fork_runs", [])
+            if isinstance(item, dict) and item.get("run_id")
+        }
+        summaries: list[SharedRunSummary] = []
+        for raw_run in raw_runs:
+            if not isinstance(raw_run, dict):
+                continue
+
+            run_payload = dict(raw_run)
+            source_run_id = cls._parse_snapshot_uuid(run_payload.get("run_id"))
+            fork_run = fork_runs_by_id.get(str(run_payload.get("run_id")))
+            if not isinstance(run_payload.get("file_changes"), list) and isinstance(
+                fork_run, dict
+            ):
+                workspace_state = cls._extract_workspace_state_from_state_patch(
+                    fork_run.get("state_patch")
+                    if isinstance(fork_run.get("state_patch"), dict)
+                    else None
+                )
+                file_changes = cls._resolve_file_changes_from_workspace_state(
+                    workspace_state
+                )
+                run_payload["file_changes"] = [
+                    change.model_dump(mode="json") for change in file_changes
+                ]
+                raw_count = run_payload.get("file_change_count")
+                if not isinstance(raw_count, int) or raw_count <= 0:
+                    run_payload["file_change_count"] = len(file_changes)
+
+            if not isinstance(run_payload.get("tool_executions"), list):
+                run_payload["tool_executions"] = (
+                    [
+                        execution.model_dump(mode="json")
+                        for execution in cls._build_shared_tool_executions_from_run_id(
+                            db,
+                            source_run_id,
+                        )
+                    ]
+                    if source_run_id is not None
+                    else []
+                )
+
+            summaries.append(SharedRunSummary.model_validate(run_payload))
+        return summaries
 
     @classmethod
     def _build_timeline(
@@ -284,8 +444,7 @@ class SessionShareService:
                     metadata={
                         "message_type": message.message_type,
                         "source": content.get("source"),
-                        "artifact_references": content.get("artifact_references")
-                        or [],
+                        "artifact_references": content.get("artifact_references") or [],
                     },
                 )
             )
@@ -392,9 +551,7 @@ class SessionShareService:
         run_summaries = self._build_run_summaries(db, db_runs)
         timeline = self._build_timeline(messages=messages, runs=run_summaries)
         terminal_runs = [
-            run
-            for run in db_runs
-            if run.status in {"completed", "failed", "canceled"}
+            run for run in db_runs if run.status in {"completed", "failed", "canceled"}
         ]
         usage_logs = UsageLogRepository.list_by_session(db, source_session.id)
 
@@ -503,10 +660,7 @@ class SessionShareService:
                 MessageResponse.model_validate(message)
                 for message in payload.get("messages", [])
             ],
-            runs=[
-                SharedRunSummary.model_validate(run)
-                for run in payload.get("runs", [])
-            ],
+            runs=self._build_public_run_snapshots(db, payload),
             timeline=[
                 ConversationTimelineItem.model_validate(item)
                 for item in payload.get("timeline", [])
@@ -596,9 +750,7 @@ class SessionShareService:
                 author_user_id=current_user_id
                 if root_source_message.role == "user"
                 else None,
-                message_type="user"
-                if root_source_message.role == "user"
-                else "system",
+                message_type="user" if root_source_message.role == "user" else "system",
                 content=self._build_imported_message_content(
                     share=share,
                     source_session_id=share.source_session_id,
@@ -785,7 +937,9 @@ class SessionShareService:
             if isinstance(fork_session.get("workspace_archive_url"), str)
             else None
         )
-        forked_session.state_patch = self._deepcopy_json(fork_session.get("state_patch"))
+        forked_session.state_patch = self._deepcopy_json(
+            fork_session.get("state_patch")
+        )
         forked_session.workspace_files_prefix = (
             fork_session.get("workspace_files_prefix")
             if isinstance(fork_session.get("workspace_files_prefix"), str)
@@ -843,9 +997,7 @@ class SessionShareService:
                     session_db=db,
                     session_id=forked_session.id,
                     user_message_id=target_user_message_id,
-                    permission_mode=str(
-                        source_run.get("permission_mode") or "default"
-                    ),
+                    permission_mode=str(source_run.get("permission_mode") or "default"),
                     schedule_mode=str(source_run.get("schedule_mode") or "immediate"),
                     scheduled_at=self._parse_snapshot_datetime(
                         source_run.get("scheduled_at")

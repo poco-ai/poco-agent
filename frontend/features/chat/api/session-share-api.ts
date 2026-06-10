@@ -1,7 +1,8 @@
 import { apiClient, API_ENDPOINTS } from "@/services/api-client";
-import type { MessageResponse } from "@/features/chat/types";
 import type {
   ConversationTimelineItem,
+  FileChange,
+  MessageResponse,
   SessionShareForkResponse,
   SessionSharePublicResponse,
   SessionShareResponse,
@@ -9,6 +10,7 @@ import type {
   SessionShareToChannelResponse,
   SharedRunSummary,
   SharedSessionSummary,
+  SharedToolExecution,
 } from "@/features/chat/types";
 
 interface SessionShareResponseDto {
@@ -38,6 +40,19 @@ interface SharedSessionSummaryDto {
   updated_at: string;
 }
 
+interface SharedToolExecutionDto {
+  id: string;
+  run_id?: string | null;
+  message_id?: number | null;
+  tool_use_id?: string | null;
+  tool_name: string;
+  tool_input?: Record<string, unknown> | null;
+  is_error: boolean;
+  duration_ms?: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
 interface SharedRunSummaryDto {
   run_id: string;
   user_message_id: number;
@@ -47,6 +62,8 @@ interface SharedRunSummaryDto {
   workspace_export_status?: string | null;
   replay_step_count: number;
   file_change_count: number;
+  file_changes?: FileChange[];
+  tool_executions?: SharedToolExecutionDto[];
   started_at?: string | null;
   finished_at?: string | null;
   created_at: string;
@@ -128,6 +145,21 @@ function mapSession(dto: SharedSessionSummaryDto): SharedSessionSummary {
   };
 }
 
+function mapToolExecution(dto: SharedToolExecutionDto): SharedToolExecution {
+  return {
+    id: dto.id,
+    runId: dto.run_id,
+    messageId: dto.message_id,
+    toolUseId: dto.tool_use_id,
+    toolName: dto.tool_name,
+    toolInput: dto.tool_input,
+    isError: dto.is_error,
+    durationMs: dto.duration_ms,
+    createdAt: dto.created_at,
+    updatedAt: dto.updated_at,
+  };
+}
+
 function mapRun(dto: SharedRunSummaryDto): SharedRunSummary {
   return {
     runId: dto.run_id,
@@ -138,6 +170,8 @@ function mapRun(dto: SharedRunSummaryDto): SharedRunSummary {
     workspaceExportStatus: dto.workspace_export_status,
     replayStepCount: dto.replay_step_count,
     fileChangeCount: dto.file_change_count,
+    fileChanges: dto.file_changes ?? [],
+    toolExecutions: (dto.tool_executions ?? []).map(mapToolExecution),
     startedAt: dto.started_at,
     finishedAt: dto.finished_at,
     createdAt: dto.created_at,

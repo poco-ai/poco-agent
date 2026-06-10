@@ -14,8 +14,14 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PanelHeader } from "@/components/shared/panel-header";
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from "@/components/ui/resizable";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChatMessageList } from "@/features/chat/components/chat/chat-message-list";
+import { SessionShareExecutionPanel } from "@/features/chat/components/share/session-share-execution-panel";
 import { sessionShareApi } from "@/features/chat/api/session-share-api";
 import { parseMessages } from "@/features/chat/services/message-parser";
 import type { SessionShareSnapshot } from "@/features/chat/types";
@@ -92,84 +98,110 @@ export function SessionSharePageClient({
       setIsForking(false);
     }
   }, [canFork, isForking, lng, router, t, token]);
+  const showExecutionPanel = Boolean(snapshot && snapshot.runs.length > 0);
 
   return (
     <div className="flex h-dvh min-h-0 min-w-0 overflow-hidden bg-background text-foreground select-text">
-      <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col bg-background">
-        <PanelHeader
-          icon={MessageSquare}
-          title={snapshot?.session.title || t("chat.sharedConversation")}
-          description={
-            snapshot
-              ? t("chat.shareSourceStatus", {
-                  status: snapshot.session.status,
-                })
-              : t("chat.shareLoading")
-          }
-          action={
-            <div className="flex min-w-0 items-center gap-2">
-              <Badge variant="secondary" className="h-8 shrink-0 gap-1.5">
-                <LockKeyhole className="size-3" />
-                {t("chat.readonly")}
-              </Badge>
-              {canFork ? (
+      <ResizablePanelGroup
+        key={showExecutionPanel ? "share-with-execution" : "share-transcript"}
+        direction="horizontal"
+        className="min-h-0 min-w-0"
+      >
+        <ResizablePanel
+          defaultSize={showExecutionPanel ? 45 : 100}
+          minSize={35}
+          className="min-h-0 min-w-0 overflow-hidden"
+        >
+          <div className="flex h-full min-h-0 min-w-0 flex-col bg-background">
+            <PanelHeader
+              icon={MessageSquare}
+              title={snapshot?.session.title || t("chat.sharedConversation")}
+              description={
+                snapshot
+                  ? t("chat.shareSourceStatus", {
+                      status: snapshot.session.status,
+                    })
+                  : t("chat.shareLoading")
+              }
+              action={
+                <div className="flex min-w-0 items-center gap-2">
+                  <Badge variant="secondary" className="h-8 shrink-0 gap-1.5">
+                    <LockKeyhole className="size-3" />
+                    {t("chat.readonly")}
+                  </Badge>
+                  {canFork ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => void handleFork()}
+                      disabled={!snapshot || isForking}
+                    >
+                      {isForking ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : (
+                        <GitFork className="size-4" />
+                      )}
+                      {t("chat.forkToMyChats")}
+                    </Button>
+                  ) : null}
+                </div>
+              }
+            />
+
+            <div className="min-h-0 flex-1 overflow-hidden">
+              {isLoading ? (
+                <div className="space-y-4 px-6 py-6">
+                  {Array.from({ length: 5 }).map((_, index) => (
+                    <Skeleton key={index} className="h-24 rounded-md" />
+                  ))}
+                </div>
+              ) : snapshot ? (
+                <ChatMessageList
+                  messages={parsedMessages}
+                  sessionStatus={snapshot.session.status}
+                  showUserPromptTimeline
+                  contentPaddingClassName="px-6 md:px-10 lg:px-12"
+                />
+              ) : (
+                <div className="px-6 py-10 text-sm text-muted-foreground">
+                  {t("chat.shareNotFound")}
+                </div>
+              )}
+            </div>
+
+            <div className="shrink-0 border-t border-border px-4 py-3">
+              <div className="flex min-h-11 items-center gap-3 rounded-xl border border-border bg-muted/30 px-4 text-sm text-muted-foreground">
+                <span className="min-w-0 flex-1 truncate">
+                  {t("chat.shareReadonlyComposerPlaceholder")}
+                </span>
                 <Button
                   type="button"
-                  size="sm"
-                  onClick={() => void handleFork()}
-                  disabled={!snapshot || isForking}
+                  size="icon"
+                  variant="secondary"
+                  disabled
+                  aria-label={t("chat.readonly")}
+                  className="size-8 shrink-0"
                 >
-                  {isForking ? (
-                    <Loader2 className="size-4 animate-spin" />
-                  ) : (
-                    <GitFork className="size-4" />
-                  )}
-                  {t("chat.forkToMyChats")}
+                  <ArrowUp className="size-4" />
                 </Button>
-              ) : null}
+              </div>
             </div>
-          }
-        />
-
-        <div className="min-h-0 flex-1 overflow-hidden">
-          {isLoading ? (
-            <div className="space-y-4 px-6 py-6">
-              {Array.from({ length: 5 }).map((_, index) => (
-                <Skeleton key={index} className="h-24 rounded-md" />
-              ))}
-            </div>
-          ) : snapshot ? (
-            <ChatMessageList
-              messages={parsedMessages}
-              sessionStatus={snapshot.session.status}
-              showUserPromptTimeline
-              contentPaddingClassName="px-6 md:px-10 lg:px-12"
-            />
-          ) : (
-            <div className="px-6 py-10 text-sm text-muted-foreground">
-              {t("chat.shareNotFound")}
-            </div>
-          )}
-        </div>
-
-        <div className="shrink-0 border-t border-border px-4 py-3">
-          <div className="flex min-h-11 items-center gap-3 rounded-xl border border-border bg-muted/30 px-4 text-sm text-muted-foreground">
-            <span className="min-w-0 flex-1 truncate">
-              {t("chat.shareReadonlyComposerPlaceholder")}
-            </span>
-            <Button
-              type="button"
-              size="icon"
-              variant="secondary"
-              disabled
-              aria-label={t("chat.readonly")}
-              className="size-8 shrink-0"
-            >
-              <ArrowUp className="size-4" />
-            </Button>
           </div>
-        </div>
-      </div>
+        </ResizablePanel>
+
+        {showExecutionPanel && snapshot ? (
+          <div className="hidden min-h-0 min-w-0 lg:contents">
+            <ResizableHandle withHandle />
+            <ResizablePanel
+              defaultSize={55}
+              minSize={30}
+              className="min-h-0 min-w-0 overflow-hidden"
+            >
+              <SessionShareExecutionPanel snapshot={snapshot} />
+            </ResizablePanel>
+          </div>
+        ) : null}
+      </ResizablePanelGroup>
     </div>
   );
 }

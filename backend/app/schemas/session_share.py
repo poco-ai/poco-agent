@@ -5,6 +5,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.schemas.message import MessageResponse
+from app.schemas.callback import FileChange
 from app.schemas.server_channel_message import (
     ServerChannelMessageResponse,
     ServerChannelThreadResponse,
@@ -26,6 +27,19 @@ class SharedSessionSummary(BaseModel):
     updated_at: datetime
 
 
+class SharedToolExecution(BaseModel):
+    id: UUID
+    run_id: UUID | None = None
+    message_id: int | None = None
+    tool_use_id: str | None = None
+    tool_name: str
+    tool_input: dict[str, Any] | None = None
+    is_error: bool = False
+    duration_ms: int | None = None
+    created_at: datetime
+    updated_at: datetime
+
+
 class SharedRunSummary(BaseModel):
     run_id: UUID
     user_message_id: int
@@ -35,6 +49,8 @@ class SharedRunSummary(BaseModel):
     workspace_export_status: str | None = None
     replay_step_count: int = 0
     file_change_count: int = 0
+    file_changes: list[FileChange] = Field(default_factory=list)
+    tool_executions: list[SharedToolExecution] = Field(default_factory=list)
     started_at: datetime | None = None
     finished_at: datetime | None = None
     created_at: datetime
