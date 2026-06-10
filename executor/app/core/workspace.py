@@ -65,8 +65,44 @@ class WorkspaceManager:
         self._ensure_inputs_dir(self.work_path)
         self._ensure_git_excludes(self.work_path)
 
+    @staticmethod
+    def _destructive_claude_symlink_allowed() -> bool:
+        """The ~/.claude rmtree+symlink swap is only safe inside a disposable
+        container, where ~/.claude is throwaway. On a host it would destroy the
+        user's REAL Claude Code data (chat history under ~/.claude/projects).
+
+        Only allow it when we can positively confirm a container context, or
+        when explicitly forced via env. Default = refuse (protect host data).
+        """
+        if os.environ.get("POCO_FORCE_CLAUDE_SYMLINK") == "1":
+            return True
+        if os.environ.get("POCO_IN_CONTAINER"):
+            return True
+        if Path("/.dockerenv").exists() or Path("/run/.containerenv").exists():
+            return True
+        try:
+            cgroup = Path("/proc/1/cgroup").read_text()
+            if any(tok in cgroup for tok in ("docker", "containerd", "kubepods", "lxc")):
+                return True
+        except Exception:
+            pass
+        return False
+
     async def _setup_session_persistence(self):
         self.persistent_claude_data.mkdir(exist_ok=True)
+
+        if not self._destructive_claude_symlink_allowed():
+            # Running on a host (not a disposable container): do NOT touch the
+            # user's real ~/.claude. Skip the symlink swap; the agent will use
+            # the host ~/.claude directly. Set POCO_FORCE_CLAUDE_SYMLINK=1 only
+            # inside an isolated container if you really want the swap.
+            logger.warning(
+                "Skipping ~/.claude symlink swap: no container context detected "
+                "(%s). Refusing to rmtree host data. Set POCO_IN_CONTAINER=1 "
+                "inside a container to enable.",
+                self.system_claude_home,
+            )
+            return
 
         if self.system_claude_home.exists() or self.system_claude_home.is_symlink():
             if self.system_claude_home.is_symlink():
@@ -77,8 +113,12 @@ class WorkspaceManager:
         self.system_claude_home.symlink_to(self.persistent_claude_data)
 
     async def cleanup(self):
-        # Restore system ~/.claude if it was symlinked
-        if self.system_claude_home.is_symlink():
+        # Restore system ~/.claude if it was symlinked. Only unlink a symlink
+        # that points at OUR persistent_claude_data, never an unrelated one.
+        if (
+            self.system_claude_home.is_symlink()
+            and self.system_claude_home.resolve() == self.persistent_claude_data.resolve()
+        ):
             self.system_claude_home.unlink()
         # Best-effort cleanup for temporary askpass helper.
         if self._git_askpass_path:
