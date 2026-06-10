@@ -1,5 +1,6 @@
 import secrets
 import uuid
+from collections.abc import Sequence
 from copy import deepcopy
 from datetime import datetime, timezone
 from typing import Any, TypeVar
@@ -696,7 +697,7 @@ class SessionShareService:
 
     @staticmethod
     def _select_thread_root_message(
-        source_messages: list[AgentMessage | MessageResponse],
+        source_messages: Sequence[AgentMessage | MessageResponse],
     ) -> AgentMessage | MessageResponse:
         first_user_message = next(
             (message for message in source_messages if message.role == "user"),
