@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Sparkles, Upload } from "lucide-react";
+import { FileText, Sparkles, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useT } from "@/lib/i18n/client";
 import { Textarea } from "@/components/ui/textarea";
@@ -36,6 +36,12 @@ import { useFileUpload } from "@/features/task-composer/hooks/use-file-upload";
 import { appendTranscribedText, useVoiceInput } from "@/features/voice";
 import { playInstallSound } from "@/lib/utils/sound";
 import { useCapabilityToggle } from "@/features/connectors";
+import {
+  filterInputFileReferences,
+  getInputFileReferenceCandidates,
+  getInputFileReferenceTrigger,
+  insertInputFileReference,
+} from "@/features/chat/lib/input-file-reference";
 import type { RunScheduleMode } from "@/features/task-composer/model/run-schedule";
 import type {
   ComposerMode,
@@ -43,6 +49,7 @@ import type {
   RepoUsageMode,
   TaskSendOptions,
 } from "@/features/task-composer/types";
+import type { ChatInputFileReference } from "@/features/chat/types/api/session";
 import type { CapabilityRecommendation } from "@/features/task-composer/types/capability-recommendation";
 import type { Preset } from "@/features/capabilities/presets/lib/preset-types";
 
@@ -148,20 +155,103 @@ export function TaskComposer({
     disabled: Boolean(isSubmitting) || upload.isUploading,
     onFilesDrop: upload.uploadFiles,
   });
+  const [inputFileReferences, setInputFileReferences] = React.useState<
+    ChatInputFileReference[]
+  >([]);
+  const [selectionStart, setSelectionStart] = React.useState(0);
+  const [fileReferenceActiveIndex, setFileReferenceActiveIndex] =
+    React.useState(0);
+
+  const handleValueChange = React.useCallback(
+    (nextValue: string) => {
+      onChange(nextValue);
+      setInputFileReferences((current) =>
+        filterInputFileReferences(current, nextValue, upload.attachments),
+      );
+    },
+    [onChange, upload.attachments],
+  );
 
   // ---- Slash-command autocomplete ----
   const slashAutocomplete = useSlashCommandAutocomplete({
     value,
-    onChange,
+    onChange: handleValueChange,
     textareaRef,
   });
+
+  const inputFileReferenceTrigger = React.useMemo(
+    () => getInputFileReferenceTrigger(value, selectionStart),
+    [selectionStart, value],
+  );
+  const inputFileReferenceCandidates = React.useMemo(
+    () =>
+      inputFileReferenceTrigger
+        ? getInputFileReferenceCandidates(
+            upload.attachments,
+            inputFileReferenceTrigger.query,
+          )
+        : [],
+    [inputFileReferenceTrigger, upload.attachments],
+  );
+  const isInputFileReferenceOpen =
+    !slashAutocomplete.isOpen &&
+    Boolean(inputFileReferenceTrigger) &&
+    inputFileReferenceCandidates.length > 0;
+
+  React.useEffect(() => {
+    setFileReferenceActiveIndex(0);
+  }, [inputFileReferenceTrigger?.query, inputFileReferenceCandidates.length]);
+
+  React.useEffect(() => {
+    setInputFileReferences((current) =>
+      filterInputFileReferences(current, value, upload.attachments),
+    );
+  }, [upload.attachments, value]);
+
+  const applyInputFileReferenceSelection = React.useCallback(
+    (index: number) => {
+      const candidate = inputFileReferenceCandidates[index];
+      const textarea = textareaRef.current;
+      if (!candidate || !textarea) return;
+
+      const result = insertInputFileReference(
+        value,
+        textarea.selectionStart,
+        textarea.selectionEnd,
+        candidate,
+      );
+      if (!result) return;
+
+      handleValueChange(result.value);
+      setSelectionStart(result.cursor);
+      setInputFileReferences((current) => [
+        ...filterInputFileReferences(
+          current,
+          result.value,
+          upload.attachments,
+        ),
+        result.reference,
+      ]);
+      requestAnimationFrame(() => {
+        textarea.focus();
+        textarea.setSelectionRange(result.cursor, result.cursor);
+      });
+    },
+    [
+      handleValueChange,
+      inputFileReferenceCandidates,
+      textareaRef,
+      upload.attachments,
+      value,
+    ],
+  );
   const voiceInput = useVoiceInput({
     t,
     language: lng,
     onTranscription: React.useCallback(
       (text: string) => {
         const nextValue = appendTranscribedText(latestValueRef.current, text);
-        onChange(nextValue);
+        handleValueChange(nextValue);
 
         requestAnimationFrame(() => {
           const textarea = textareaRef.current;
@@ -170,7 +260,7 @@ export function TaskComposer({
           textarea.setSelectionRange(nextValue.length, nextValue.length);
         });
       },
-      [onChange, textareaRef],
+      [handleValueChange, textareaRef],
     ),
   });
 
@@ -390,6 +480,17 @@ export function TaskComposer({
     repoUrl,
   ]);
 
+  const handleRemoveAttachment = React.useCallback(
+    (index: number) => {
+      const nextAttachments = upload.attachments.filter((_, i) => i !== index);
+      upload.removeAttachment(index);
+      setInputFileReferences((current) =>
+        filterInputFileReferences(current, value, nextAttachments),
+      );
+    },
+    [upload, value],
+  );
+
   const canSubmit = React.useMemo(() => {
     if (mode === "scheduled") {
       return Boolean(value.trim()) && Boolean(scheduledCron.trim());
@@ -413,8 +514,14 @@ export function TaskComposer({
       return;
     }
 
+    const currentInputFileReferences = filterInputFileReferences(
+      inputFileReferences,
+      value,
+      upload.attachments,
+    );
     const payload: TaskSendOptions = {
       attachments: upload.attachments,
+      input_file_references: currentInputFileReferences,
       repo_url: repoUrl.trim() || null,
       git_branch: gitBranch.trim() || null,
       git_token_env_key: repoUrl.trim() ? gitTokenEnvKey.trim() || null : null,
@@ -461,6 +568,7 @@ export function TaskComposer({
 
     onSend(payload);
     upload.clearAttachments();
+    setInputFileReferences([]);
     setRunScheduleMode("immediate");
     setRunScheduledAt(null);
   }, [
@@ -469,6 +577,7 @@ export function TaskComposer({
     canSubmit,
     gitBranch,
     gitTokenEnvKey,
+    inputFileReferences,
     isSubmitting,
     memoryEnabled,
     memoryFeatureEnabled,
@@ -580,7 +689,7 @@ export function TaskComposer({
           attachments={upload.attachments}
           onOpenRepoDialog={() => setRepoDialogOpen(true)}
           onRemoveRepo={() => setRepoUrl("")}
-          onRemoveAttachment={upload.removeAttachment}
+          onRemoveAttachment={handleRemoveAttachment}
         />
 
         {/* Repo dialog */}
@@ -673,11 +782,54 @@ export function TaskComposer({
             onHover={slashAutocomplete.setActiveIndex}
             onSelect={slashAutocomplete.applySelection}
           />
+          {isInputFileReferenceOpen ? (
+            <div className="absolute bottom-full left-0 z-50 mb-2 w-full overflow-hidden rounded-lg border border-border bg-popover shadow-md">
+              <div className="max-h-64 overflow-auto py-1">
+                {inputFileReferenceCandidates.map((item, idx) => {
+                  const selected = idx === fileReferenceActiveIndex;
+                  return (
+                    <button
+                      key={item.source}
+                      type="button"
+                      onMouseEnter={() => setFileReferenceActiveIndex(idx)}
+                      onMouseDown={(event) => {
+                        event.preventDefault();
+                        applyInputFileReferenceSelection(idx);
+                      }}
+                      className={cn(
+                        "flex w-full min-w-0 items-center gap-2 px-3 py-2 text-left text-sm",
+                        selected
+                          ? "bg-accent text-accent-foreground"
+                          : "hover:bg-accent/50",
+                      )}
+                    >
+                      <FileText className="size-4 shrink-0 text-muted-foreground" />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate font-medium">
+                          #{item.displayName}
+                        </span>
+                        {item.description ? (
+                          <span className="block truncate text-xs text-muted-foreground">
+                            {item.description}
+                          </span>
+                        ) : null}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
           <Textarea
             ref={textareaRef}
             value={value}
             disabled={isSubmitting}
-            onChange={(e) => onChange(e.target.value)}
+            onChange={(e) => {
+              handleValueChange(e.target.value);
+              setSelectionStart(e.target.selectionStart);
+            }}
+            onClick={(e) => setSelectionStart(e.currentTarget.selectionStart)}
+            onKeyUp={(e) => setSelectionStart(e.currentTarget.selectionStart)}
             onCompositionStart={() => (isComposing.current = true)}
             onCompositionEnd={() => {
               requestAnimationFrame(() => {
@@ -693,6 +845,35 @@ export function TaskComposer({
                 e.stopPropagation();
                 onModeChange(getNextComposerMode(mode));
                 return;
+              }
+              if (isInputFileReferenceOpen) {
+                if (e.key === "ArrowDown") {
+                  e.preventDefault();
+                  setFileReferenceActiveIndex((current) =>
+                    Math.min(
+                      current + 1,
+                      inputFileReferenceCandidates.length - 1,
+                    ),
+                  );
+                  return;
+                }
+                if (e.key === "ArrowUp") {
+                  e.preventDefault();
+                  setFileReferenceActiveIndex((current) =>
+                    Math.max(current - 1, 0),
+                  );
+                  return;
+                }
+                if (e.key === "Enter" || e.key === "Tab") {
+                  e.preventDefault();
+                  applyInputFileReferenceSelection(fileReferenceActiveIndex);
+                  return;
+                }
+                if (e.key === "Escape") {
+                  e.preventDefault();
+                  setSelectionStart(-1);
+                  return;
+                }
               }
               if (slashAutocomplete.handleKeyDown(e)) return;
               if (e.key === "Enter") {

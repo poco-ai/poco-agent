@@ -1,5 +1,6 @@
 import type { AddTaskOptions } from "@/features/projects/types";
 import type {
+  ChatInputFileReference,
   InputFile,
   LocalMountConfig,
 } from "@/features/chat/types/api/session";
@@ -16,6 +17,7 @@ export type RepoUsageMode = "session" | "create_project";
 
 export interface TaskSendOptions {
   attachments?: InputFile[];
+  input_file_references?: ChatInputFileReference[];
   repo_url?: string | null;
   git_branch?: string | null;
   git_token_env_key?: string | null;

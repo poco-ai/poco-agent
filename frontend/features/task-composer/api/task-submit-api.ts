@@ -32,6 +32,9 @@ function buildTaskConfig(
   if (inputFiles.length > 0) {
     config.input_files = inputFiles;
   }
+  if ((options.input_file_references?.length ?? 0) > 0) {
+    config.input_file_references = options.input_file_references;
+  }
   if (repoUrl) {
     config.repo_url = repoUrl;
     config.git_branch = gitBranch;

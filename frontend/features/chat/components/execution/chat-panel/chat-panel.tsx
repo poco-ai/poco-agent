@@ -39,6 +39,7 @@ import {
   regenerateMessageAction,
 } from "@/features/chat/actions/session-actions";
 import type {
+  ChatInputFileReference,
   ExecutionSession,
   InputFile,
   StatePatch,
@@ -685,7 +686,11 @@ export function ChatPanel({
 
   // Handle send from input
   const handleSend = React.useCallback(
-    async (content: string, attachments?: InputFile[]) => {
+    async (
+      content: string,
+      attachments?: InputFile[],
+      inputFileReferences?: ChatInputFileReference[],
+    ) => {
       if (!session?.session_id) return;
 
       if (hasActiveUserInput) {
@@ -718,6 +723,7 @@ export function ChatPanel({
       const result = await sendMessage(
         content,
         attachments,
+        inputFileReferences,
         selectedModelSelection,
       );
 
@@ -733,6 +739,7 @@ export function ChatPanel({
           id: result.queueItemId ?? `queued-${Date.now()}`,
           content,
           attachments,
+          inputFileReferences,
           status: "queued",
         });
       }
@@ -842,6 +849,7 @@ export function ChatPanel({
         inputRef.current?.setDraftAndFocus({
           value: draft.content,
           attachments: draft.attachments,
+          inputFileReferences: draft.inputFileReferences,
         });
         await refreshTasks();
       } catch (error) {

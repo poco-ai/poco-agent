@@ -5,6 +5,7 @@ import {
   useEffect,
   useImperativeHandle,
   forwardRef,
+  useMemo,
 } from "react";
 import {
   ArrowUp,
@@ -14,9 +15,10 @@ import {
   Mic,
   MicOff,
   Upload,
+  FileText,
 } from "lucide-react";
 import { uploadAttachment } from "@/features/attachments/api/attachment-api";
-import type { InputFile } from "@/features/chat/types";
+import type { ChatInputFileReference, InputFile } from "@/features/chat/types";
 import { toast } from "sonner";
 import { FileCard } from "@/components/shared/file-card";
 import {
@@ -31,9 +33,19 @@ import { useFileDropUpload } from "@/features/task-composer";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/hooks/use-language";
 import { appendTranscribedText, useVoiceInput } from "@/features/voice";
+import {
+  filterInputFileReferences,
+  getInputFileReferenceCandidates,
+  getInputFileReferenceTrigger,
+  insertInputFileReference,
+} from "@/features/chat/lib/input-file-reference";
 
 interface ChatInputProps {
-  onSend: (content: string, attachments?: InputFile[]) => void;
+  onSend: (
+    content: string,
+    attachments?: InputFile[],
+    inputFileReferences?: ChatInputFileReference[],
+  ) => void;
   onCancel?: () => void;
   canCancel?: boolean;
   isCancelling?: boolean;
@@ -45,6 +57,7 @@ interface ChatInputProps {
 export interface ChatInputDraft {
   value: string;
   attachments?: InputFile[];
+  inputFileReferences?: ChatInputFileReference[];
 }
 
 export interface ChatInputRef {
@@ -73,28 +86,38 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
     const { t } = useT("translation");
     const [value, setValue] = useState("");
     const [attachments, setAttachments] = useState<InputFile[]>([]);
+    const [inputFileReferences, setInputFileReferences] = useState<
+      ChatInputFileReference[]
+    >([]);
     const [isUploading, setIsUploading] = useState(false);
     const [historyIndex, setHistoryIndex] = useState(-1);
+    const [selectionStart, setSelectionStart] = useState(0);
+    const [fileReferenceActiveIndex, setFileReferenceActiveIndex] = useState(0);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const valueRef = useRef(value);
     const uploadAbortControllerRef = useRef<AbortController | null>(null);
     const lng = useLanguage();
 
-    const syncTextareaValue = useCallback((nextValue: string) => {
-      const textarea = textareaRef.current;
-      if (!textarea) return;
-      textarea.focus();
-      textarea.setSelectionRange(nextValue.length, nextValue.length);
-      textarea.style.height = "auto";
-      textarea.style.height = `${Math.min(textarea.scrollHeight, 160)}px`;
-    }, []);
+    const syncTextareaValue = useCallback(
+      (nextValue: string, cursor?: number) => {
+        const textarea = textareaRef.current;
+        if (!textarea) return;
+        const nextCursor = cursor ?? nextValue.length;
+        textarea.focus();
+        textarea.setSelectionRange(nextCursor, nextCursor);
+        textarea.style.height = "auto";
+        textarea.style.height = `${Math.min(textarea.scrollHeight, 160)}px`;
+      },
+      [],
+    );
 
     const applyValue = useCallback(
-      (nextValue: string) => {
+      (nextValue: string, cursor?: number) => {
         setValue(nextValue);
+        setSelectionStart(cursor ?? nextValue.length);
         requestAnimationFrame(() => {
-          syncTextareaValue(nextValue);
+          syncTextareaValue(nextValue, cursor);
         });
       },
       [syncTextareaValue],
@@ -123,6 +146,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
     useImperativeHandle(ref, () => ({
       setValueAndFocus: (newValue: string) => {
         setHistoryIndex(-1);
+        setInputFileReferences([]);
         applyValue(newValue);
       },
       appendValueAndFocus: (newValue: string) => {
@@ -132,9 +156,18 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
       setDraftAndFocus: ({
         value: newValue,
         attachments: nextAttachments,
+        inputFileReferences: nextInputFileReferences,
       }: ChatInputDraft) => {
         setHistoryIndex(-1);
-        setAttachments(nextAttachments ?? []);
+        const draftAttachments = nextAttachments ?? [];
+        setAttachments(draftAttachments);
+        setInputFileReferences(
+          filterInputFileReferences(
+            nextInputFileReferences,
+            newValue,
+            draftAttachments,
+          ),
+        );
         applyValue(newValue);
       },
     }));
@@ -147,6 +180,63 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
       onChange: setValue,
       textareaRef,
     });
+
+    const inputFileReferenceTrigger = useMemo(
+      () => getInputFileReferenceTrigger(value, selectionStart),
+      [selectionStart, value],
+    );
+    const inputFileReferenceCandidates = useMemo(
+      () =>
+        inputFileReferenceTrigger
+          ? getInputFileReferenceCandidates(
+              attachments,
+              inputFileReferenceTrigger.query,
+            )
+          : [],
+      [attachments, inputFileReferenceTrigger],
+    );
+    const isInputFileReferenceOpen =
+      !slashAutocomplete.isOpen &&
+      Boolean(inputFileReferenceTrigger) &&
+      inputFileReferenceCandidates.length > 0;
+
+    useEffect(() => {
+      setFileReferenceActiveIndex(0);
+    }, [inputFileReferenceTrigger?.query, inputFileReferenceCandidates.length]);
+
+    const applyInputFileReferenceSelection = useCallback(
+      (index: number) => {
+        const candidate = inputFileReferenceCandidates[index];
+        const textarea = textareaRef.current;
+        if (!candidate || !textarea) return;
+
+        const result = insertInputFileReference(
+          value,
+          textarea.selectionStart,
+          textarea.selectionEnd,
+          candidate,
+        );
+        if (!result) return;
+
+        setHistoryIndex(-1);
+        setValue(result.value);
+        setSelectionStart(result.cursor);
+        setInputFileReferences((prev) => [
+          ...filterInputFileReferences(prev, result.value, attachments),
+          result.reference,
+        ]);
+        requestAnimationFrame(() => {
+          syncTextareaValue(result.value, result.cursor);
+        });
+      },
+      [
+        attachments,
+        inputFileReferenceCandidates,
+        syncTextareaValue,
+        value,
+      ],
+    );
+
     const uploadFiles = useCallback(
       async (files: File[]) => {
         if (files.length === 0) return;
@@ -293,15 +383,21 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
 
       const content = value;
       const currentAttachments = [...attachments];
+      const currentReferences = filterInputFileReferences(
+        inputFileReferences,
+        content,
+        currentAttachments,
+      );
       setHistoryIndex(-1);
       setValue(""); // Clear immediately
       setAttachments([]);
+      setInputFileReferences([]);
       // Reset textarea height
       if (textareaRef.current) {
         textareaRef.current.style.height = "auto";
       }
-      onSend(content, currentAttachments);
-    }, [attachments, onSend, value, voiceInput.isBusy]);
+      onSend(content, currentAttachments, currentReferences);
+    }, [attachments, inputFileReferences, onSend, value, voiceInput.isBusy]);
 
     // Reset textarea height when value becomes empty
     useEffect(() => {
@@ -318,6 +414,30 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
 
     const handleKeyDown = useCallback(
       (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+        if (isInputFileReferenceOpen) {
+          if (e.key === "ArrowDown") {
+            e.preventDefault();
+            setFileReferenceActiveIndex((current) =>
+              Math.min(current + 1, inputFileReferenceCandidates.length - 1),
+            );
+            return;
+          }
+          if (e.key === "ArrowUp") {
+            e.preventDefault();
+            setFileReferenceActiveIndex((current) => Math.max(current - 1, 0));
+            return;
+          }
+          if (e.key === "Enter" || e.key === "Tab") {
+            e.preventDefault();
+            applyInputFileReferenceSelection(fileReferenceActiveIndex);
+            return;
+          }
+          if (e.key === "Escape") {
+            e.preventDefault();
+            setSelectionStart(-1);
+            return;
+          }
+        }
         if (slashAutocomplete.handleKeyDown(e)) return;
         if (
           disabled ||
@@ -340,6 +460,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
                 : Math.max(0, historyIndex - 1);
             setHistoryIndex(nextIndex);
             applyValue(history[nextIndex] ?? "");
+            setInputFileReferences([]);
             return;
           }
           if (e.key === "ArrowDown") {
@@ -349,6 +470,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
               historyIndex >= history.length - 1 ? -1 : historyIndex + 1;
             setHistoryIndex(nextIndex);
             applyValue(nextIndex === -1 ? "" : (history[nextIndex] ?? ""));
+            setInputFileReferences([]);
             return;
           }
         }
@@ -373,6 +495,10 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
         value,
         attachments,
         handleSend,
+        isInputFileReferenceOpen,
+        inputFileReferenceCandidates.length,
+        applyInputFileReferenceSelection,
+        fileReferenceActiveIndex,
         slashAutocomplete,
         disabled,
         historyIndex,
@@ -393,12 +519,17 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
 
     const handleInputChange = useCallback(
       (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-        setValue(e.target.value);
+        const nextValue = e.target.value;
+        setValue(nextValue);
+        setSelectionStart(e.target.selectionStart);
+        setInputFileReferences((prev) =>
+          filterInputFileReferences(prev, nextValue, attachments),
+        );
         if (historyIndex !== -1) {
           setHistoryIndex(-1);
         }
       },
-      [historyIndex],
+      [attachments, historyIndex],
     );
 
     const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -414,7 +545,13 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
     };
 
     const removeAttachment = (index: number) => {
-      setAttachments((prev) => prev.filter((_, i) => i !== index));
+      setAttachments((prev) => {
+        const next = prev.filter((_, i) => i !== index);
+        setInputFileReferences((current) =>
+          filterInputFileReferences(current, value, next),
+        );
+        return next;
+      });
     };
 
     const hasDraft = value.trim().length > 0 || attachments.length > 0;
@@ -474,6 +611,44 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
                 </div>
               </div>
             ) : null}
+            {isInputFileReferenceOpen ? (
+              <div className="absolute bottom-full left-0 z-50 mb-2 w-full overflow-hidden rounded-lg border border-border bg-popover shadow-md">
+                <div className="max-h-64 overflow-auto py-1">
+                  {inputFileReferenceCandidates.map((item, idx) => {
+                    const selected = idx === fileReferenceActiveIndex;
+                    return (
+                      <button
+                        key={item.source}
+                        type="button"
+                        onMouseEnter={() => setFileReferenceActiveIndex(idx)}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          applyInputFileReferenceSelection(idx);
+                        }}
+                        className={cn(
+                          "flex w-full min-w-0 items-center gap-2 px-3 py-2 text-left text-sm",
+                          selected
+                            ? "bg-accent text-accent-foreground"
+                            : "hover:bg-accent/50",
+                        )}
+                      >
+                        <FileText className="size-4 shrink-0 text-muted-foreground" />
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate font-medium">
+                            #{item.displayName}
+                          </span>
+                          {item.description ? (
+                            <span className="block truncate text-xs text-muted-foreground">
+                              {item.description}
+                            </span>
+                          ) : null}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
 
             <Tooltip>
               <TooltipTrigger asChild>
@@ -500,6 +675,8 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
               ref={textareaRef}
               value={value}
               onChange={handleInputChange}
+              onClick={(e) => setSelectionStart(e.currentTarget.selectionStart)}
+              onKeyUp={(e) => setSelectionStart(e.currentTarget.selectionStart)}
               onKeyDown={handleKeyDown}
               onCompositionStart={handleCompositionStart}
               onCompositionEnd={handleCompositionEnd}
