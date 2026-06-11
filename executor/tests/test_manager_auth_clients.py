@@ -126,21 +126,21 @@ class RunTaskClientWiringTests(unittest.IsolatedAsyncioTestCase):
         from app.schemas.request import TaskConfig, TaskRun
 
         background_tasks = MagicMock()
-        created_clients: dict[str, object] = {}
+        created_clients: dict[str, dict[str, object]] = {}
 
-        def callback_factory(**kwargs):
+        def callback_factory(**kwargs: object):
             created_clients["callback"] = kwargs
             return AsyncMock()
 
-        def user_input_factory(**kwargs):
+        def user_input_factory(**kwargs: object):
             created_clients["user_input"] = kwargs
             return AsyncMock()
 
-        def computer_factory(**kwargs):
+        def computer_factory(**kwargs: object):
             created_clients["computer"] = kwargs
             return AsyncMock()
 
-        def memory_factory(**kwargs):
+        def memory_factory(**kwargs: object):
             created_clients["memory"] = kwargs
             return AsyncMock()
 
@@ -167,7 +167,9 @@ class RunTaskClientWiringTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(result["status"], "accepted")
         self.assertEqual(created_clients["callback"]["callback_token"], CALLBACK_TOKEN)
-        self.assertEqual(created_clients["user_input"]["callback_token"], CALLBACK_TOKEN)
+        self.assertEqual(
+            created_clients["user_input"]["callback_token"], CALLBACK_TOKEN
+        )
         self.assertEqual(created_clients["computer"]["callback_token"], CALLBACK_TOKEN)
         self.assertEqual(created_clients["memory"]["callback_token"], CALLBACK_TOKEN)
 

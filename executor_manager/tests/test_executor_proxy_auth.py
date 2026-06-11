@@ -123,18 +123,6 @@ class ExecutorManagerProxyAuthTests(unittest.TestCase):
             ),
             (
                 "POST",
-                "/api/v1/computer/screenshots",
-                {
-                    "data": {
-                        "session_id": "session-1",
-                        "tool_use_id": "tool-1",
-                    },
-                    "files": {"file": ("screenshot.png", b"data", "image/png")},
-                },
-                "multipart",
-            ),
-            (
-                "POST",
                 "/api/v1/memories",
                 {
                     "session_id": "session-1",
@@ -175,11 +163,19 @@ class ExecutorManagerProxyAuthTests(unittest.TestCase):
         with self._with_common_patches():
             for method, path, body, mode in requests:
                 with self.subTest(path=path):
-                    if mode == "multipart":
-                        response = client.request(method, path, **body)
-                    else:
-                        response = client.request(method, path, json=body)
+                    response = client.request(method, path, json=body)
                     self.assertEqual(response.status_code, 403)
+            with self.subTest(path="/api/v1/computer/screenshots"):
+                response = client.request(
+                    "POST",
+                    "/api/v1/computer/screenshots",
+                    data={
+                        "session_id": "session-1",
+                        "tool_use_id": "tool-1",
+                    },
+                    files={"file": ("screenshot.png", b"data", "image/png")},
+                )
+                self.assertEqual(response.status_code, 403)
 
     def test_proxy_routes_reject_internal_token_as_callback_token(self) -> None:
         client = TestClient(self._app())
