@@ -21,24 +21,31 @@ flowchart TD
     F --> H["Agent run"]
     H --> I["Execution events"]
     H --> J["Published artifacts"]
+    C --> M["Share link"]
+    M --> N["Fork to my chats"]
+    M --> O["Share to channel"]
+    O --> B
+    O --> K
     I --> B
     J --> K["Shared files"]
 ```
 
-这条主线有四个设计重点。
+这条主线有五个设计重点。
 
 - **对话先于任务**：用户可以先讨论，再把明确事项转成 task。
 - **Task 绑定 thread**：As Task 的来源消息就是 root，状态和委托变化都追加在同一条 thread。
 - **运行绑定上下文**：Agent run 不脱离 channel 或 DM 独立存在。
+- **会话分享**：普通聊天成果可以变成只读链接、用户自己的 fork，或频道中的 thread。
 - **产物显式共享**：公开成果进入 shared files，私有状态不自动公开。
 
 ## 本专题包含什么
 
-你可以按下面四个角度理解这套新协作主线。
+你可以按下面五个角度理解这套新协作主线。
 
 - [Server 与成员边界](./servers-and-membership)
 - [对话、thread 与任务派生](./conversations-and-tasks)
 - [持久化 agent 与执行可观测性](./persistent-agents)
+- [会话分享与频道导入](./session-sharing)
 - [共享上下文与公共成果树](./shared-context-and-artifacts)
 
 ## 适合哪些场景
@@ -50,4 +57,5 @@ flowchart TD
 | 团队围绕一个项目持续讨论 | 使用 server 和 channel 承载长期上下文。             |
 | 某段讨论变成明确事项     | 从 message 或 thread 显式创建 task。                |
 | 需要 Agent 处理一项工作  | 在 channel 或 DM 中 `@agent` 触发 run。             |
+| 需要展示普通聊天成果     | 使用 share link，必要时 fork 或导入频道。           |
 | 需要复用执行成果         | 将产物发布到 shared files，而不是共享整个工作目录。 |

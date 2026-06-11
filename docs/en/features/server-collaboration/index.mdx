@@ -21,22 +21,29 @@ flowchart TD
     F --> H["Agent run"]
     H --> I["Execution events"]
     H --> J["Published artifacts"]
+    C --> M["Share link"]
+    M --> N["Fork to my chats"]
+    M --> O["Share to channel"]
+    O --> B
+    O --> K
     I --> B
     J --> K["Shared files"]
 ```
 
-This main line has four design focuses.
+This main line has five design focuses.
 
 - ** Dialogue precedes tasks ** : Users can discuss first and then convert clear matters into tasks.
 - **Task Binding thread** : The source message of As Task is root, and the status and delegate changes are appended to the same thread.
 - ** run Binding context ** : Agent run does not exist independently of channel or DM.
+- **Conversation sharing** : Private chat results can become readonly links, user-owned forks, or channel threads.
 - ** Explicit Product sharing ** : Public results enter shared files, and private status is not automatically disclosed.
 
 ## What this section covers
 
-You can read the new collaboration model from these four angles.
+You can read the new collaboration model from these five angles.
 
 - [Servers and membership boundaries](./servers-and-membership)
 - [Conversations, threads, and task derivation](./conversations-and-tasks)
 - [Persistent agents and execution observability](./persistent-agents)
+- [Conversation sharing and channel import](./session-sharing)
 - [Shared context and published artifacts](./shared-context-and-artifacts)
