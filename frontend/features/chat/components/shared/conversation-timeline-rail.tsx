@@ -24,7 +24,10 @@ interface ConversationTimelineRailProps {
 function getTimelineIcon(item: ConversationTimelineItem) {
   if (item.itemType === "run") return PlayCircle;
   if (item.itemType === "channel_event") return Radio;
-  if (item.role === "assistant" || item.metadata.source === "imported_agent_session") {
+  if (
+    item.role === "assistant" ||
+    item.metadata.source === "imported_agent_session"
+  ) {
     return Sparkles;
   }
   if (item.itemType === "message" || item.itemType === "channel_message") {
@@ -100,7 +103,9 @@ export function ConversationTimelineRail({
                       {item.label}
                     </span>
                     <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
-                      {item.status || item.role || formatTimelineTime(item.createdAt)}
+                      {item.status ||
+                        item.role ||
+                        formatTimelineTime(item.createdAt)}
                     </span>
                   </span>
                 </button>

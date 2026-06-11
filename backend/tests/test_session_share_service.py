@@ -446,7 +446,10 @@ class SessionShareServiceTests(unittest.TestCase):
             snapshot = self.service.get_snapshot(self.db, token="token")
 
         workspace_root = snapshot.runs[0].workspace_files[0]
-        ts_file = workspace_root.children[0]
+        children = workspace_root.children
+        self.assertIsNotNone(children)
+        assert children is not None
+        ts_file = children[0]
         self.assertEqual(workspace_root.name, "src")
         self.assertEqual(ts_file.name, "app.ts")
         self.assertEqual(ts_file.mimeType, "text/typescript")

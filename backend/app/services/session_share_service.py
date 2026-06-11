@@ -502,15 +502,12 @@ class SessionShareService:
             should_refresh_tool_executions = not isinstance(raw_tool_executions, list)
             if isinstance(raw_tool_executions, list):
                 should_refresh_tool_executions = (
-                    (
-                        isinstance(replay_step_count, int)
-                        and replay_step_count > 0
-                        and len(raw_tool_executions) == 0
-                    )
-                    or any(
-                        not isinstance(item, dict) or "tool_output" not in item
-                        for item in raw_tool_executions
-                    )
+                    isinstance(replay_step_count, int)
+                    and replay_step_count > 0
+                    and len(raw_tool_executions) == 0
+                ) or any(
+                    not isinstance(item, dict) or "tool_output" not in item
+                    for item in raw_tool_executions
                 )
             if source_run_id is not None and should_refresh_tool_executions:
                 tool_executions = [
@@ -930,9 +927,7 @@ class SessionShareService:
         workspace_manifest_key, workspace_files_prefix = (
             self._resolve_share_workspace_export(payload)
         )
-        shared_artifacts_path = (
-            f"/{ChannelArtifactService.SHARED_FOLDER}/{share.id}"
-        )
+        shared_artifacts_path = f"/{ChannelArtifactService.SHARED_FOLDER}/{share.id}"
         published_artifact_count = (
             channel_artifact_service.publish_share_workspace_artifacts(
                 db,

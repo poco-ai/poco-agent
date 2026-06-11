@@ -405,12 +405,13 @@ class ChannelArtifactService:
         share_id: uuid.UUID,
     ) -> str:
         return (
-            f"channel-artifacts/{server_id}/{channel_id}/"
-            f"{cls.SHARED_FOLDER}/{share_id}"
+            f"channel-artifacts/{server_id}/{channel_id}/{cls.SHARED_FOLDER}/{share_id}"
         )
 
     @staticmethod
-    def _artifact_mime_type(file_entry: dict[str, Any], logical_path: str) -> str | None:
+    def _artifact_mime_type(
+        file_entry: dict[str, Any], logical_path: str
+    ) -> str | None:
         raw_mime_type = file_entry.get("mimeType") or file_entry.get("mime_type")
         if isinstance(raw_mime_type, str) and raw_mime_type.strip():
             return raw_mime_type.strip()
