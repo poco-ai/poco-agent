@@ -1,6 +1,5 @@
 import json
 import logging
-import mimetypes
 import os
 import shutil
 import tarfile
@@ -10,6 +9,7 @@ from pathlib import Path
 from typing import Literal
 
 from app.core.settings import Settings, get_settings
+from app.utils.mime import guess_mime_type
 
 logger = logging.getLogger(__name__)
 BOOTSTRAP_SCHEMA_VERSION = 1
@@ -179,14 +179,13 @@ class WorkspaceManager:
                         }
                     )
                 elif entry.is_file():
-                    mime_type, _ = mimetypes.guess_type(entry.name)
                     nodes.append(
                         {
                             "id": rel_path,
                             "name": entry.name,
                             "type": "file",
                             "path": rel_path,
-                            "mimeType": mime_type,
+                            "mimeType": guess_mime_type(entry.name),
                         }
                     )
 

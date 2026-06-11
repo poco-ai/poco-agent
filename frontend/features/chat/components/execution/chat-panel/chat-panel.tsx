@@ -3,6 +3,8 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import {
+  Check,
+  Copy,
   Image as ImageIcon,
   HardDrive,
   Loader2,
@@ -10,6 +12,8 @@ import {
   PanelRightClose,
   PanelRightOpen,
   Quote,
+  Send,
+  Share2,
 } from "lucide-react";
 import { ChatMessageList } from "../../chat/chat-message-list";
 import { TodoList } from "./todo-list";
@@ -66,6 +70,8 @@ import {
 import { useLanguage } from "@/hooks/use-language";
 import { ModelSelector } from "@/features/chat/components/chat/model-selector";
 import { chatService } from "@/features/chat/api/chat-api";
+import { ShareToChannelDialog } from "@/features/chat/components/share/share-to-channel-dialog";
+import { useSessionShareActions } from "@/features/chat/hooks/use-session-share-actions";
 import { useModelCatalog } from "@/features/chat/hooks/use-model-catalog";
 import {
   normalizeModelSelection,
@@ -1018,6 +1024,11 @@ export function ChatPanel({
     session?.new_message?.title?.trim() ||
     t("chat.executionTitle");
   const headerDescription = session?.title?.trim() || t("chat.emptyStateDesc");
+  const shareActions = useSessionShareActions({
+    sessionId: session?.session_id,
+    title: headerDescription,
+    logContext: "ChatPanel",
+  });
   const safeCollapsedChatContentInsetPercent = Math.min(
     20,
     Math.max(0, collapsedChatContentInsetPercent),
@@ -1207,6 +1218,46 @@ export function ChatPanel({
                     </DropdownMenuContent>
                   </DropdownMenu>
                 ) : null}
+                {session?.session_id ? (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <PanelHeaderAction
+                        title={t("chat.share")}
+                        disabled={
+                          shareActions.isCreatingShare ||
+                          shareActions.isSharingToChannel
+                        }
+                      >
+                        {shareActions.isCreatingShare ||
+                        shareActions.isSharingToChannel ? (
+                          <Loader2 className="size-4 animate-spin" />
+                        ) : (
+                          <Share2 className="size-4" />
+                        )}
+                      </PanelHeaderAction>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem
+                        onClick={() => void shareActions.copyShareLink()}
+                        disabled={shareActions.isCreatingShare}
+                      >
+                        {shareActions.shareToken ? (
+                          <Check className="size-4" />
+                        ) : (
+                          <Copy className="size-4" />
+                        )}
+                        {t("chat.copyShareLink")}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => shareActions.setShareToChannelOpen(true)}
+                        disabled={shareActions.isSharingToChannel}
+                      >
+                        <Send className="size-4" />
+                        {t("chat.shareToChannel")}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ) : null}
                 {showRightPanelToggle ? (
                   <PanelHeaderAction
                     onClick={onToggleRightPanel}
@@ -1375,6 +1426,19 @@ export function ChatPanel({
           onSave={handleSaveLocalFilesystem}
         />
       ) : null}
+
+      <ShareToChannelDialog
+        open={shareActions.shareToChannelOpen}
+        onOpenChange={shareActions.setShareToChannelOpen}
+        servers={shareActions.shareServers}
+        channels={shareActions.shareChannels}
+        selectedServerId={shareActions.selectedShareServerId}
+        onSelectedServerIdChange={shareActions.setSelectedShareServerId}
+        selectedChannelId={shareActions.selectedShareChannelId}
+        onSelectedChannelIdChange={shareActions.setSelectedShareChannelId}
+        isSharing={shareActions.isSharingToChannel}
+        onShare={shareActions.shareToChannel}
+      />
 
       {/* Status Bar - Skills and MCP */}
       {(currentPreset ||

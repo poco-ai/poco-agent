@@ -41,6 +41,7 @@ from app.services.server_channel_event_service import (
 from app.services.server_channel_access import require_channel_member_access
 from app.services.server_member_service import require_server_member
 from app.services.storage_service import S3StorageService
+from app.utils.mime import guess_mime_type
 from app.utils.workspace import build_workspace_file_nodes
 from app.utils.workspace_manifest import (
     build_nodes_from_file_entries,
@@ -51,7 +52,9 @@ from app.utils.workspace_manifest import (
 
 class ChannelArtifactService:
     UPLOADS_FOLDER = "Uploads"
+    SHARED_FOLDER = "Shared"
     UPLOAD_SOURCE_KIND = "user_upload"
+    SHARE_SOURCE_KIND = "session_share"
     _CONTROL_CHARS = re.compile(r"[\x00-\x1f\x7f-\x9f]+")
     DEFAULT_READ_BYTES = 32 * 1024
     MAX_READ_BYTES = 64 * 1024
@@ -388,6 +391,116 @@ class ChannelArtifactService:
 
         ChannelArtifactRepository.upsert_many(db, artifacts=artifacts)
         return len(artifacts)
+
+    @classmethod
+    def _shared_conversation_logical_prefix(cls, share_id: uuid.UUID) -> str:
+        return f"/{cls.SHARED_FOLDER}/{share_id}"
+
+    @classmethod
+    def _shared_conversation_object_prefix(
+        cls,
+        *,
+        server_id: uuid.UUID,
+        channel_id: uuid.UUID,
+        share_id: uuid.UUID,
+    ) -> str:
+        return (
+            f"channel-artifacts/{server_id}/{channel_id}/{cls.SHARED_FOLDER}/{share_id}"
+        )
+
+    @staticmethod
+    def _artifact_mime_type(
+        file_entry: dict[str, Any], logical_path: str
+    ) -> str | None:
+        raw_mime_type = file_entry.get("mimeType") or file_entry.get("mime_type")
+        if isinstance(raw_mime_type, str) and raw_mime_type.strip():
+            return raw_mime_type.strip()
+        return guess_mime_type(logical_path)
+
+    @staticmethod
+    def _upsert_by_channel_path(db: Session, artifact: ChannelArtifact) -> None:
+        existing = ChannelArtifactRepository.get_by_channel_and_path(
+            db,
+            channel_id=artifact.channel_id,
+            logical_path=artifact.logical_path,
+        )
+        if existing is None:
+            db.add(artifact)
+            return
+
+        existing.server_id = artifact.server_id
+        existing.source_session_id = artifact.source_session_id
+        existing.agent_identity_id = artifact.agent_identity_id
+        existing.publisher_user_id = artifact.publisher_user_id
+        existing.source_kind = artifact.source_kind
+        existing.display_name = artifact.display_name
+        existing.object_key = artifact.object_key
+        existing.mime_type = artifact.mime_type
+        existing.size_bytes = artifact.size_bytes
+        existing.is_previewable = artifact.is_previewable
+
+    def publish_share_workspace_artifacts(
+        self,
+        db: Session,
+        *,
+        server_id: uuid.UUID,
+        channel_id: uuid.UUID,
+        share_id: uuid.UUID,
+        publisher_user_id: str,
+        workspace_manifest_key: str | None,
+        workspace_files_prefix: str | None,
+    ) -> int:
+        if not workspace_manifest_key or not workspace_files_prefix:
+            return 0
+
+        manifest = self._storage.get_manifest(workspace_manifest_key)
+        logical_prefix = self._shared_conversation_logical_prefix(share_id)
+        object_prefix = self._shared_conversation_object_prefix(
+            server_id=server_id,
+            channel_id=channel_id,
+            share_id=share_id,
+        )
+
+        published = 0
+        for file_entry in extract_manifest_files(manifest):
+            normalized_path = normalize_manifest_path(file_entry.get("path"))
+            if not normalized_path or not self._is_publishable_path(normalized_path):
+                continue
+            source_object_key = self._resolve_object_key(
+                file_entry,
+                workspace_files_prefix=workspace_files_prefix,
+            )
+            if not source_object_key:
+                continue
+
+            relative_path = normalized_path.lstrip("/")
+            destination_object_key = f"{object_prefix}/{relative_path}"
+            logical_path = normalize_manifest_path(f"{logical_prefix}/{relative_path}")
+            if logical_path is None:
+                continue
+
+            self._storage.copy_object(
+                source_key=source_object_key,
+                destination_key=destination_object_key,
+            )
+            artifact = ChannelArtifact(
+                server_id=server_id,
+                channel_id=channel_id,
+                source_session_id=None,
+                agent_identity_id=None,
+                publisher_user_id=publisher_user_id,
+                source_kind=self.SHARE_SOURCE_KIND,
+                logical_path=logical_path,
+                display_name=PurePosixPath(logical_path).name,
+                object_key=destination_object_key,
+                mime_type=self._artifact_mime_type(file_entry, logical_path),
+                size_bytes=file_entry.get("size"),
+                is_previewable=True,
+            )
+            self._upsert_by_channel_path(db, artifact)
+            published += 1
+
+        return published
 
     def upload_channel_artifact(
         self,
@@ -830,9 +943,13 @@ class ChannelArtifactService:
         grouped_entries: dict[str, dict[str, Any]] = {}
         for artifact in artifacts:
             is_user_upload = artifact.source_kind == self.UPLOAD_SOURCE_KIND
+            is_shared_conversation = artifact.source_kind == self.SHARE_SOURCE_KIND
             if is_user_upload:
                 group_key = "uploads"
                 group_name = self.UPLOADS_FOLDER
+            elif is_shared_conversation:
+                group_key = "shared"
+                group_name = self.SHARED_FOLDER
             elif artifact.agent_identity_id is not None:
                 group_key = f"agent:{artifact.agent_identity_id}"
                 agent = AgentIdentityRepository.get_by_id(
@@ -857,6 +974,10 @@ class ChannelArtifactService:
                 uploads_prefix = f"{self.UPLOADS_FOLDER}/"
                 if relative_path.startswith(uploads_prefix):
                     relative_path = relative_path[len(uploads_prefix) :]
+            elif is_shared_conversation:
+                shared_prefix = f"{self.SHARED_FOLDER}/"
+                if relative_path.startswith(shared_prefix):
+                    relative_path = relative_path[len(shared_prefix) :]
             group["files"].append(
                 {
                     "path": relative_path,

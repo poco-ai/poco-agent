@@ -258,6 +258,42 @@ class S3StorageService:
                 details={"key": key, "error": str(exc)},
             ) from exc
 
+    def copy_object(
+        self,
+        *,
+        source_key: str,
+        destination_key: str,
+    ) -> None:
+        normalized_source_key = source_key.strip()
+        normalized_destination_key = destination_key.strip()
+        if not normalized_source_key or not normalized_destination_key:
+            raise AppException(
+                error_code=ErrorCode.BAD_REQUEST,
+                message="Source and destination object keys cannot be empty",
+            )
+        try:
+            self.client.copy(
+                {
+                    "Bucket": self.bucket,
+                    "Key": self._apply_key_prefix(normalized_source_key),
+                },
+                self.bucket,
+                self._apply_key_prefix(normalized_destination_key),
+            )
+        except (ClientError, BotoCoreError) as exc:
+            logger.error(
+                f"Failed to copy object {source_key} to {destination_key}: {exc}"
+            )
+            raise AppException(
+                error_code=ErrorCode.EXTERNAL_SERVICE_ERROR,
+                message="Failed to copy file",
+                details={
+                    "source_key": source_key,
+                    "destination_key": destination_key,
+                    "error": str(exc),
+                },
+            ) from exc
+
     def list_objects(self, prefix: str) -> Iterable[str]:
         normalized_prefix = self._apply_prefix(prefix)
         try:

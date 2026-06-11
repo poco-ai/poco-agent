@@ -1,7 +1,15 @@
 "use client";
 
 import * as React from "react";
-import { FolderPlus, Pencil, Pin, PinOff, Trash2 } from "lucide-react";
+import {
+  Copy,
+  FolderPlus,
+  Pencil,
+  Pin,
+  PinOff,
+  Send,
+  Trash2,
+} from "lucide-react";
 import { useT } from "@/lib/i18n/client";
 import {
   DropdownMenu,
@@ -24,6 +32,9 @@ interface TaskActionsDropdownProps {
   projects?: TaskMenuProject[];
   onTogglePin?: (taskId: string) => void | Promise<void>;
   onRename?: () => void;
+  onCopyShareLink?: (taskId: string) => void | Promise<void>;
+  onShareToChannel?: (taskId: string) => void | Promise<void>;
+  isShareActionPending?: boolean;
   onMoveToProject?: (
     taskId: string,
     projectId: string | null,
@@ -42,6 +53,9 @@ export function TaskActionsDropdown({
   projects = [],
   onTogglePin,
   onRename,
+  onCopyShareLink,
+  onShareToChannel,
+  isShareActionPending = false,
   onMoveToProject,
   onDelete,
   open,
@@ -84,6 +98,32 @@ export function TaskActionsDropdown({
             <span>{t("sidebar.rename")}</span>
           </DropdownMenuItem>
         )}
+
+        {onCopyShareLink ? (
+          <DropdownMenuItem
+            disabled={isShareActionPending}
+            onClick={(event) => {
+              event.stopPropagation();
+              void onCopyShareLink(taskId);
+            }}
+          >
+            <Copy className="size-4" />
+            <span>{t("chat.copyShareLink")}</span>
+          </DropdownMenuItem>
+        ) : null}
+
+        {onShareToChannel ? (
+          <DropdownMenuItem
+            disabled={isShareActionPending}
+            onClick={(event) => {
+              event.stopPropagation();
+              void onShareToChannel(taskId);
+            }}
+          >
+            <Send className="size-4" />
+            <span>{t("chat.shareToChannel")}</span>
+          </DropdownMenuItem>
+        ) : null}
 
         {canMoveToProject ? (
           <DropdownMenuSub>

@@ -42,6 +42,7 @@ from app.models.server_channel_task import ServerChannelTask
 from app.models.server_invite import ServerInvite
 from app.models.server_member import ServerMember
 from app.models.session_queue_item import AgentSessionQueueItem
+from app.models.session_share import SessionShare
 from app.models.skill import Skill
 from app.models.skill_import_job import SkillImportJob
 from app.models.slash_command import SlashCommand
@@ -104,6 +105,7 @@ __all__ = [
     "ServerChannelTask",
     "ServerInvite",
     "ServerMember",
+    "SessionShare",
     "Skill",
     "SkillImportJob",
     "SlashCommand",

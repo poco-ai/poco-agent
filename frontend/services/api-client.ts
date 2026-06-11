@@ -66,6 +66,11 @@ export const API_ENDPOINTS = {
     `/sessions/${sessionId}/workspace/folder-archive`,
   sessionWorkspaceSubmitSkill: (sessionId: string) =>
     `/sessions/${sessionId}/workspace/submit-skill`,
+  sessionShareCreate: (sessionId: string) =>
+    `/session-shares/sessions/${sessionId}`,
+  sessionShare: (token: string) => `/session-shares/${token}`,
+  sessionShareFork: (token: string) => `/session-shares/${token}/fork`,
+  sessionShareToChannel: (token: string) => `/session-shares/${token}/channels`,
 
   // User Input Requests
   userInputRequests: "/user-input-requests",

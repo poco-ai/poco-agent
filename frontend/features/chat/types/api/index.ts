@@ -4,6 +4,7 @@
  */
 
 export * from "./session";
+export * from "./session-share";
 export * from "./session-queue-item";
 export * from "./run";
 export * from "./callback";

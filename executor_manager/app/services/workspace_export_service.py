@@ -1,6 +1,5 @@
 import json
 import logging
-import mimetypes
 import os
 import shutil
 import zipfile
@@ -13,6 +12,7 @@ from app.core.errors.exceptions import AppException
 from app.schemas.workspace import WorkspaceExportResult
 from app.services.storage_service import S3StorageService
 from app.services.workspace_manager import WorkspaceManager
+from app.utils.mime import guess_mime_type
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +58,7 @@ class WorkspaceExportService:
             for file_path in files:
                 rel_path = file_path.relative_to(workspace_dir).as_posix()
                 object_key = f"{files_prefix}/{rel_path}"
-                mime_type, _ = mimetypes.guess_type(file_path.name)
+                mime_type = guess_mime_type(file_path.name)
 
                 storage_service.upload_file(
                     file_path=str(file_path),
@@ -238,7 +238,7 @@ class WorkspaceExportService:
             for file_path in files:
                 rel_path = file_path.relative_to(workspace_dir).as_posix()
                 object_key = f"{files_prefix}/{rel_path}"
-                mime_type, _ = mimetypes.guess_type(file_path.name)
+                mime_type = guess_mime_type(file_path.name)
                 storage_service.upload_file(
                     file_path=str(file_path),
                     key=object_key,

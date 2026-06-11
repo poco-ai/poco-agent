@@ -1,4 +1,3 @@
-import mimetypes
 import shutil
 import tempfile
 from pathlib import Path
@@ -9,6 +8,7 @@ from app.models.agent_session import AgentSession
 from app.schemas.filesystem import LocalMountAccessMode, LocalMountConfig
 from app.schemas.session import TaskConfig
 from app.schemas.workspace import FileNode
+from app.utils.mime import guess_mime_type
 
 _LOCAL_MOUNT_PREFIX = "local-mounts"
 _FORBIDDEN_ROOTS = {
@@ -270,7 +270,6 @@ class LocalMountBrowserService:
                 )
                 continue
 
-            mime_type, _ = mimetypes.guess_type(entry.name)
             nodes.append(
                 FileNode(
                     id=node_path,
@@ -280,7 +279,7 @@ class LocalMountBrowserService:
                     source="local_mount",
                     mount_id=mount_id,
                     access_mode=access_mode,
-                    mimeType=mime_type,
+                    mimeType=guess_mime_type(entry.name),
                 )
             )
 
