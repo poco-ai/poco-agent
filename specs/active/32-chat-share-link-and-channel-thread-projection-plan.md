@@ -527,6 +527,47 @@ share link 打开后右侧工作区面板应与普通聊天保持同一套语义
 - `cd backend && uv run ruff check app/services/storage_service.py app/services/channel_artifact_service.py app/services/session_share_service.py tests/test_channel_artifact_service.py tests/test_session_share_service.py` 通过。
 - `cd backend && uv run python -m py_compile app/services/storage_service.py app/services/channel_artifact_service.py app/services/session_share_service.py tests/test_channel_artifact_service.py tests/test_session_share_service.py` 通过。
 
+## Phase 9: Sidebar conversation menu share entrypoints
+
+### 目标
+
+只读 share 页面保留应用 shell 时，左侧普通聊天历史菜单也应提供和普通聊天顶部一致的 share 操作：复制分享链接、分享到频道。该入口面向“再次发布/转发已有普通聊天”的操作，不应引入第二套 share 语义。
+
+### 设计约束
+
+- 侧边栏菜单入口复用普通聊天顶部的 session share 创建、复制链接和 share-to-channel API。
+- 分享到频道仍走 `sessionShareApi.shareToChannel()`，因此继续触发 Phase 8 的 `/Shared/<share-id>/...` 独立发布副本。
+- 菜单项文案复用既有 `chat.copyShareLink` 与 `chat.shareToChannel` i18n key，避免只补中文/英文。
+- 只读 share 页面里的菜单入口只是针对左侧会话历史中的普通聊天，不改变当前 share snapshot 的只读状态。
+
+### 任务清单
+
+#### 9.1 抽取 share action 和 channel dialog
+
+**涉及文件：**
+
+- `frontend/features/chat/hooks/use-session-share-actions.ts`
+- `frontend/features/chat/components/share/share-to-channel-dialog.tsx`
+- `frontend/features/chat/components/execution/chat-panel/chat-panel.tsx`
+
+**验收标准：**
+
+- [x] 普通聊天顶部分享菜单继续可复制链接和分享到频道
+- [x] share token 创建、目标频道加载、channel projection 只维护一套前端逻辑
+
+#### 9.2 侧边栏任务菜单增加分享入口
+
+**涉及文件：**
+
+- `frontend/features/projects/components/task-actions-dropdown.tsx`
+- `frontend/components/shell/sidebar/task-history-list.tsx`
+
+**验收标准：**
+
+- [x] 任务菜单显示复制分享链接
+- [x] 任务菜单显示分享到频道
+- [x] 分享过程中禁用重复点击
+
 ## 风险与缓解
 
 | 风险 | 影响 | 缓解措施 |

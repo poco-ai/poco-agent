@@ -25,6 +25,8 @@ Poco 的普通聊天分享采用两条不同语义：
 
 2026-06-11 channel publish follow-up 后补充：share to channel 不只是投影 transcript，也应把普通聊天最终 workspace 中可发布文件复制到频道 Artifacts 的 `/Shared/<share-id>/...` 文件夹。该发布是独立拷贝，不复用原会话 workspace object key；后续频道协作默认读取频道 artifact 副本。
 
+2026-06-11 sidebar entrypoint follow-up 后补充：普通聊天的分享能力不应只存在于聊天顶部工具栏。只要应用 shell 暴露普通聊天历史菜单，包括 share link 只读页左侧历史菜单，也应能从对应会话菜单执行复制分享链接和分享到频道。
+
 ## 背景
 
 当前普通聊天只有前端导出图片能力，适合传播截图，但不适合让其他用户查看完整上下文、fork 继续，也不适合沉淀到频道协作流中。
@@ -38,6 +40,7 @@ Poco 的普通聊天分享采用两条不同语义：
   - 只读页面允许当前登录用户 fork 到自己的普通聊天中继续；匿名用户可查看，但 fork 动作必须隐藏或禁用，不能触发用户信息缺失错误。
   - 只读页面的 Artifacts 面板应复用普通聊天的文件树和文件预览能力，TypeScript 等代码文件不能退化为仅显示路径。
   - 只读页面的 Computer 面板应复用普通聊天的回放体验，不能退化为只有步骤文字的摘要列表。
+  - 普通聊天历史菜单应提供复制分享链接和分享到频道入口，并复用普通聊天顶部 Share 的行为。
   - 分享到频道默认不触发 agent，不创建 channel run。
   - 分享到频道会写入一条 channel event，并创建一个 thread projection。
   - 分享到频道会在频道 Artifacts 中创建 `/Shared/<share-id>/...` 文件夹，保存该会话发布出来的文件副本。
