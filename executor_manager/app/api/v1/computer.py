@@ -1,10 +1,15 @@
-from fastapi import APIRouter, File, Form, UploadFile
+from fastapi import APIRouter, Depends, File, Form, UploadFile
 
+from app.core.deps import require_callback_token
 from app.schemas.computer import ComputerScreenshotUploadResponse
 from app.schemas.response import Response, ResponseSchema
 from app.services.computer_service import ComputerService
 
-router = APIRouter(prefix="/computer", tags=["computer"])
+router = APIRouter(
+    prefix="/computer",
+    tags=["computer"],
+    dependencies=[Depends(require_callback_token)],
+)
 
 computer_service = ComputerService()
 

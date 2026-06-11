@@ -18,17 +18,26 @@ MEMORY_MCP_SERVER_KEY = "__poco_memory"
 class MemoryClient:
     """Client for manager memory proxy APIs."""
 
-    def __init__(self, base_url: str, session_id: str, timeout: float = 10.0) -> None:
+    def __init__(
+        self,
+        base_url: str,
+        session_id: str,
+        callback_token: str = "",
+        timeout: float = 10.0,
+    ) -> None:
         self.base_url = base_url.rstrip("/")
         self.session_id = session_id
+        self.callback_token = callback_token
         self.timeout = timeout
 
-    @staticmethod
-    def _trace_headers() -> dict[str, str]:
-        return {
+    def _headers(self) -> dict[str, str]:
+        headers = {
             "X-Request-ID": get_request_id() or generate_request_id(),
             "X-Trace-ID": get_trace_id() or generate_trace_id(),
         }
+        if self.callback_token:
+            headers["Authorization"] = f"Bearer {self.callback_token}"
+        return headers
 
     async def _request(
         self,
@@ -44,7 +53,7 @@ class MemoryClient:
                 url=f"{self.base_url}{path}",
                 params=params,
                 json=json_body,
-                headers=self._trace_headers(),
+                headers=self._headers(),
             )
             response.raise_for_status()
 

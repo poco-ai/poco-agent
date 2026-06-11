@@ -1,6 +1,7 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 
+from app.core.deps import require_callback_token
 from app.schemas.response import Response, ResponseSchema
 from app.schemas.user_input_request import (
     UserInputRequestCreateRequest,
@@ -8,7 +9,11 @@ from app.schemas.user_input_request import (
 )
 from app.services.backend_client import BackendClient
 
-router = APIRouter(prefix="/user-input-requests", tags=["user-input-requests"])
+router = APIRouter(
+    prefix="/user-input-requests",
+    tags=["user-input-requests"],
+    dependencies=[Depends(require_callback_token)],
+)
 
 backend_client = BackendClient()
 
