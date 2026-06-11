@@ -9,6 +9,7 @@ from starlette.datastructures import Headers
 
 from app.core.errors.exceptions import AppException
 from app.models.agent_session import AgentSession
+from app.models.channel_artifact import ChannelArtifact
 from app.services.channel_artifact_service import ChannelArtifactService
 
 
@@ -114,6 +115,67 @@ class ChannelArtifactServiceTests(unittest.TestCase):
         rows = upsert_many.call_args.kwargs["artifacts"]
         self.assertEqual(rows[0].logical_path, "/plans/rate-limit-plan.md")
 
+    def test_publish_share_workspace_artifacts_copies_into_shared_folder(self) -> None:
+        share_id = uuid.uuid4()
+        manifest = {
+            "files": [
+                {
+                    "path": "src/app.ts",
+                    "key": "workspaces/user-1/session/files/src/app.ts",
+                    "size": 1200,
+                },
+                {
+                    "path": "/agent_state/MEMORY.md",
+                    "key": "workspaces/user-1/session/files/agent_state/MEMORY.md",
+                    "mimeType": "text/markdown",
+                    "size": 200,
+                },
+            ]
+        }
+
+        with (
+            patch.object(
+                self.service._storage,
+                "get_manifest",
+                return_value=manifest,
+            ),
+            patch.object(self.service._storage, "copy_object") as copy_object,
+            patch(
+                "app.services.channel_artifact_service."
+                "ChannelArtifactRepository.get_by_channel_and_path",
+                return_value=None,
+            ),
+        ):
+            count = self.service.publish_share_workspace_artifacts(
+                self.db,
+                server_id=self.server_id,
+                channel_id=self.channel_id,
+                share_id=share_id,
+                publisher_user_id="user-1",
+                workspace_manifest_key="workspaces/user-1/session/manifest.json",
+                workspace_files_prefix="workspaces/user-1/session/files",
+            )
+
+        self.assertEqual(count, 1)
+        copy_object.assert_called_once_with(
+            source_key="workspaces/user-1/session/files/src/app.ts",
+            destination_key=(
+                f"channel-artifacts/{self.server_id}/{self.channel_id}/"
+                f"Shared/{share_id}/src/app.ts"
+            ),
+        )
+        added_artifact = self.db.add.call_args.args[0]
+        self.assertEqual(added_artifact.source_session_id, None)
+        self.assertEqual(added_artifact.source_kind, "session_share")
+        self.assertEqual(added_artifact.publisher_user_id, "user-1")
+        self.assertEqual(added_artifact.logical_path, f"/Shared/{share_id}/src/app.ts")
+        self.assertEqual(added_artifact.mime_type, "text/typescript")
+        self.assertEqual(
+            added_artifact.object_key,
+            f"channel-artifacts/{self.server_id}/{self.channel_id}/"
+            f"Shared/{share_id}/src/app.ts",
+        )
+
     def test_list_channel_artifact_nodes_groups_files_by_agent(self) -> None:
         artifacts = [
             SimpleNamespace(
@@ -175,6 +237,60 @@ class ChannelArtifactServiceTests(unittest.TestCase):
         )
         self.assertEqual(plan_children[0].artifact_id, str(artifacts[0].id))
         self.assertEqual(plan_children[0].source_kind, "workspace_export")
+
+    def test_list_channel_artifact_nodes_groups_share_files_under_shared(self) -> None:
+        share_id = uuid.uuid4()
+        artifact = ChannelArtifact(
+            id=uuid.uuid4(),
+            server_id=self.server_id,
+            channel_id=self.channel_id,
+            source_session_id=None,
+            agent_identity_id=None,
+            publisher_user_id="user-1",
+            source_kind="session_share",
+            logical_path=f"/Shared/{share_id}/src/app.ts",
+            display_name="app.ts",
+            object_key=f"channel-artifacts/{self.server_id}/{self.channel_id}/Shared/{share_id}/src/app.ts",
+            mime_type="text/typescript",
+            size_bytes=128,
+            is_previewable=True,
+        )
+
+        with (
+            patch(
+                "app.services.channel_artifact_service.ChannelArtifactRepository.list_by_channel",
+                return_value=[artifact],
+            ),
+            patch.object(
+                self.service._storage,
+                "presign_get",
+                return_value="https://example.com/app.ts",
+            ),
+            patch(
+                "app.services.channel_artifact_service.require_channel_member_access",
+                return_value=object(),
+            ),
+        ):
+            nodes = self.service.list_channel_artifact_nodes(
+                self.db,
+                current_user=SimpleNamespace(id="user-1"),
+                server_id=self.server_id,
+                channel_id=self.channel_id,
+            )
+
+        self.assertEqual(len(nodes), 1)
+        self.assertEqual(nodes[0].name, "Shared")
+        share_children = nodes[0].children
+        assert share_children is not None
+        self.assertEqual(share_children[0].name, str(share_id))
+        src_children = share_children[0].children
+        assert src_children is not None
+        file_children = src_children[0].children
+        assert file_children is not None
+        self.assertEqual(src_children[0].name, "src")
+        self.assertEqual(file_children[0].name, "app.ts")
+        self.assertEqual(file_children[0].source_kind, "session_share")
+        self.assertEqual(file_children[0].url, "https://example.com/app.ts")
 
     def test_list_channel_artifact_candidates_returns_flat_matches(self) -> None:
         artifact_id = uuid.uuid4()

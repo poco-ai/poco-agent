@@ -45,6 +45,7 @@ from app.schemas.session_share import (
 )
 from app.schemas.callback import FileChange
 from app.schemas.workspace import FileNode
+from app.services.channel_artifact_service import ChannelArtifactService
 from app.services.server_channel_access import require_channel_member_access
 from app.services.storage_service import S3StorageService
 from app.services.server_channel_event_service import (
@@ -58,6 +59,7 @@ from app.utils.workspace_export import build_workspace_file_nodes_from_export
 JsonValueT = TypeVar("JsonValueT")
 logger = logging.getLogger(__name__)
 storage_service = S3StorageService()
+channel_artifact_service = ChannelArtifactService()
 
 
 class SessionShareService:
@@ -423,6 +425,34 @@ class SessionShareService:
             workspace_files_prefix=workspace_files_prefix,
             storage_service=storage_service,
         )
+
+    @classmethod
+    def _resolve_share_workspace_export(
+        cls,
+        payload: dict[str, Any],
+    ) -> tuple[str | None, str | None]:
+        candidates: list[dict[str, Any]] = []
+        fork_session = payload.get("fork_session")
+        if isinstance(fork_session, dict):
+            candidates.append(fork_session)
+        fork_runs = payload.get("fork_runs")
+        if isinstance(fork_runs, list):
+            candidates.extend(
+                item for item in reversed(fork_runs) if isinstance(item, dict)
+            )
+
+        for candidate in candidates:
+            manifest_key = cls._extract_string_field(
+                candidate,
+                "workspace_manifest_key",
+            )
+            workspace_files_prefix = cls._extract_string_field(
+                candidate,
+                "workspace_files_prefix",
+            )
+            if manifest_key and workspace_files_prefix:
+                return manifest_key, workspace_files_prefix
+        return None, None
 
     @classmethod
     def _build_public_run_snapshots(
@@ -897,6 +927,23 @@ class SessionShareService:
         }
         imported_at = datetime.now(timezone.utc).isoformat()
         actor_label = self._resolve_user_label(db, current_user_id)
+        workspace_manifest_key, workspace_files_prefix = (
+            self._resolve_share_workspace_export(payload)
+        )
+        shared_artifacts_path = (
+            f"/{ChannelArtifactService.SHARED_FOLDER}/{share.id}"
+        )
+        published_artifact_count = (
+            channel_artifact_service.publish_share_workspace_artifacts(
+                db,
+                server_id=channel.server_id,
+                channel_id=channel.id,
+                share_id=share.id,
+                publisher_user_id=current_user_id,
+                workspace_manifest_key=workspace_manifest_key,
+                workspace_files_prefix=workspace_files_prefix,
+            )
+        )
 
         root = ServerChannelMessageRepository.create(
             db,
@@ -976,6 +1023,8 @@ class SessionShareService:
                 "source_session_id": str(share.source_session_id),
                 "root_message_id": str(root.id),
                 "imported_message_count": len(source_messages),
+                "shared_artifacts_path": shared_artifacts_path,
+                "published_artifact_count": published_artifact_count,
             },
             text_preview=f"Shared conversation: {title}",
         )

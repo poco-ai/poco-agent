@@ -477,6 +477,56 @@ share link 打开后右侧工作区面板应与普通聊天保持同一套语义
 - `cd frontend && pnpm lint` 通过。
 - `cd frontend && pnpm exec tsc --noEmit --pretty false` 未通过；失败点仍为既有 `features/channel-tasks/lib/channel-task-board.test.ts` 中 `displayNumber?: number` 与 `ChannelTask.displayNumber: number` 类型不匹配，和本次变更无关。
 
+## Phase 8: Share to channel 发布独立频道文件夹
+
+### 目标
+
+分享到频道时，除了投影 transcript/thread/event，也把普通聊天最终 workspace 中可发布文件复制到频道 Artifacts 的 `/Shared/<share-id>/...` 文件夹。频道协作后续读取的是频道 artifact 副本，而不是原普通聊天 workspace 对象。
+
+### 设计约束
+
+- 目标 logical path 固定为 `/Shared/<share-id>/<relative-path>`，频道 Artifacts UI 中应表现为 `Shared / <share-id> / ...`。
+- 发布必须复制对象到 `channel-artifacts/<server-id>/<channel-id>/Shared/<share-id>/...`，不能只引用原 workspace object key。
+- 发布只使用 share snapshot 中冻结的 session workspace export；若 session 级 export 不存在，允许降级到最近 terminal run 的 export。
+- 继续沿用 channel artifact 的 publishable path 规则，跳过 `/agent_state/` 和 `/.poco-local/`。
+- `conversation.shared` event content 记录 `shared_artifacts_path` 和 `published_artifact_count`，作为审计和 UI 提示依据。
+
+### 任务清单
+
+#### 8.1 后端发布 share workspace 到频道 artifacts
+
+**涉及文件：**
+
+- `backend/app/services/storage_service.py`
+- `backend/app/services/channel_artifact_service.py`
+- `backend/app/services/session_share_service.py`
+
+**验收标准：**
+
+- [x] S3/RustFS 支持单对象复制
+- [x] `ChannelArtifactService` 能从 workspace manifest 发布 `session_share` artifacts
+- [x] share-to-channel 调用发布逻辑，并写入 `/Shared/<share-id>` 路径与发布数量
+
+#### 8.2 测试覆盖独立发布语义
+
+**涉及文件：**
+
+- `backend/tests/test_channel_artifact_service.py`
+- `backend/tests/test_session_share_service.py`
+
+**验收标准：**
+
+- [x] 发布时复制 object key 到 channel artifact namespace
+- [x] 发布后的 artifact `source_session_id=None`，与原普通聊天 workspace 解耦
+- [x] 频道 artifact tree 把 `session_share` 文件归入 `Shared / <share-id>`
+- [x] share-to-channel event 包含 `shared_artifacts_path` 和 `published_artifact_count`
+
+**验证记录：**
+
+- `cd backend && uv run python -m unittest tests.test_channel_artifact_service tests.test_session_share_service -v` 通过 26 个用例。
+- `cd backend && uv run ruff check app/services/storage_service.py app/services/channel_artifact_service.py app/services/session_share_service.py tests/test_channel_artifact_service.py tests/test_session_share_service.py` 通过。
+- `cd backend && uv run python -m py_compile app/services/storage_service.py app/services/channel_artifact_service.py app/services/session_share_service.py tests/test_channel_artifact_service.py tests/test_session_share_service.py` 通过。
+
 ## 风险与缓解
 
 | 风险 | 影响 | 缓解措施 |

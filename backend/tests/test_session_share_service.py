@@ -656,6 +656,9 @@ class SessionShareServiceTests(unittest.TestCase):
             title="Demo",
             kind="chat",
             status="completed",
+            workspace_manifest_key="exports/session/manifest.json",
+            workspace_files_prefix="exports/session/files",
+            workspace_export_status="ready",
             created_at=self.now,
             updated_at=self.now,
         )
@@ -769,6 +772,11 @@ class SessionShareServiceTests(unittest.TestCase):
                 side_effect=create_event,
             ) as create_event_message,
             patch(
+                "app.services.session_share_service."
+                "channel_artifact_service.publish_share_workspace_artifacts",
+                return_value=2,
+            ) as publish_share_workspace_artifacts,
+            patch(
                 "app.services.server_channel_message_service.ServerAgentTriggerService.trigger_for_channel_message"
             ) as trigger_for_channel_message,
         ):
@@ -783,7 +791,19 @@ class SessionShareServiceTests(unittest.TestCase):
             )
 
         self.db.commit.assert_called_once()
+        publish_share_workspace_artifacts.assert_called_once_with(
+            self.db,
+            server_id=self.server_id,
+            channel_id=self.channel_id,
+            share_id=self.share_id,
+            publisher_user_id="user-1",
+            workspace_manifest_key="exports/session/manifest.json",
+            workspace_files_prefix="exports/session/files",
+        )
         create_event_message.assert_called_once()
+        event_content = create_event_message.call_args.kwargs["content"]
+        self.assertEqual(event_content["shared_artifacts_path"], f"/Shared/{share.id}")
+        self.assertEqual(event_content["published_artifact_count"], 2)
         event_actor = create_event_message.call_args.kwargs["actor"]
         self.assertEqual(event_actor.actor_label, "Alice")
         self.assertEqual(event_actor.actor_user_id, "user-1")
