@@ -180,14 +180,18 @@ class FileReferenceService:
                 continue
 
             inserted_text = reference.inserted_text.strip()
-            if prompt is not None and inserted_text and inserted_text not in prompt_text:
+            if (
+                prompt is not None
+                and inserted_text
+                and inserted_text not in prompt_text
+            ):
                 continue
 
             if isinstance(reference, InputFileReference):
                 source = reference.source.strip()
-                input_file = available_by_source.get(source) or historical_by_source.get(
+                input_file = available_by_source.get(
                     source
-                )
+                ) or historical_by_source.get(source)
                 if input_file is None:
                     raise AppException(
                         error_code=ErrorCode.BAD_REQUEST,

@@ -571,13 +571,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
           setHistoryIndex(-1);
         }
       },
-      [
-        attachments,
-        historyIndex,
-        sessionFiles,
-        sessionId,
-        sessionInputFiles,
-      ],
+      [attachments, historyIndex, sessionFiles, sessionId, sessionInputFiles],
     );
 
     const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {

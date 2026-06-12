@@ -1,18 +1,20 @@
 import unittest
 import uuid
-from types import SimpleNamespace
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 from app.core.errors.exceptions import AppException
+from app.models.agent_session import AgentSession
 from app.schemas.input_file import InputFile
 from app.services.file_reference_service import FileReferenceService
+from app.services.storage_service import S3StorageService
 
 
-class FakeStorageService:
-    def __init__(self, manifest: dict) -> None:
+class FakeStorageService(S3StorageService):
+    def __init__(self, manifest: dict[str, Any]) -> None:
         self.manifest = manifest
 
-    def get_manifest(self, key: str) -> dict:
+    def get_manifest(self, key: str) -> dict[str, Any]:
         return self.manifest
 
 
@@ -20,8 +22,11 @@ class FileReferenceServiceTests(unittest.TestCase):
     def setUp(self) -> None:
         self.session_id = uuid.uuid4()
         self.db = MagicMock()
-        self.db_session = SimpleNamespace(
+        self.db_session = AgentSession(
             id=self.session_id,
+            user_id="user-1",
+            kind="chat",
+            status="running",
             workspace_export_status="ready",
             workspace_manifest_key="workspaces/user/session/manifest.json",
             workspace_files_prefix="workspaces/user/session/files",
@@ -68,7 +73,9 @@ class FileReferenceServiceTests(unittest.TestCase):
         self.assertEqual(references[0]["path"], "/reports/summary.md")
 
     def test_rejects_missing_workspace_reference_path(self) -> None:
-        service = FileReferenceService(storage_service=FakeStorageService({"files": []}))
+        service = FileReferenceService(
+            storage_service=FakeStorageService({"files": []})
+        )
 
         with (
             patch.object(

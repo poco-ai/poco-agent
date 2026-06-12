@@ -72,7 +72,11 @@ class SessionService:
             if not isinstance(reference, dict):
                 continue
             inserted_text = str(reference.get("insertedText") or "").strip()
-            if prompt is not None and inserted_text and inserted_text not in prompt_text:
+            if (
+                prompt is not None
+                and inserted_text
+                and inserted_text not in prompt_text
+            ):
                 continue
             filtered.append(SessionService._deepcopy_json(reference))
         return filtered

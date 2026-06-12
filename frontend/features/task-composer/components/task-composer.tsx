@@ -225,11 +225,7 @@ export function TaskComposer({
       handleValueChange(result.value);
       setSelectionStart(result.cursor);
       setInputFileReferences((current) => [
-        ...filterInputFileReferences(
-          current,
-          result.value,
-          upload.attachments,
-        ),
+        ...filterInputFileReferences(current, result.value, upload.attachments),
         result.reference,
       ]);
       requestAnimationFrame(() => {

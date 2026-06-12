@@ -401,7 +401,9 @@ function renderFileReferenceText(
 
   if (cursor < text.length) {
     nodes.push(
-      <React.Fragment key={`text-${cursor}`}>{text.slice(cursor)}</React.Fragment>,
+      <React.Fragment key={`text-${cursor}`}>
+        {text.slice(cursor)}
+      </React.Fragment>,
     );
   }
   return nodes;

@@ -101,7 +101,12 @@ test("insertInputFileReference replaces trigger with readable token", () => {
   const candidate = getInputFileReferenceCandidates(files, "des")[0];
   assert.ok(candidate);
 
-  const result = insertInputFileReference("please read #des", 16, 16, candidate);
+  const result = insertInputFileReference(
+    "please read #des",
+    16,
+    16,
+    candidate,
+  );
   assert.ok(result);
   assert.equal(result.value, "please read #design.pdf ");
   assert.equal(result.cursor, 24);
@@ -133,11 +138,8 @@ test("filterInputFileReferences removes deleted tokens and missing files", () =>
   assert.ok(inserted);
 
   assert.equal(
-    filterInputFileReferences(
-      [inserted.reference],
-      "read #design.pdf",
-      files,
-    ).length,
+    filterInputFileReferences([inserted.reference], "read #design.pdf", files)
+      .length,
     1,
   );
   assert.equal(

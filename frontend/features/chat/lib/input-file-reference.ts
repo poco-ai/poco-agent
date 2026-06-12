@@ -16,16 +16,14 @@ interface BaseInputFileReferenceCandidate {
   description: string | null;
 }
 
-export interface UploadedInputFileReferenceCandidate
-  extends BaseInputFileReferenceCandidate {
+export interface UploadedInputFileReferenceCandidate extends BaseInputFileReferenceCandidate {
   kind: "input_file";
   file: InputFile;
   displayName: string;
   source: string;
 }
 
-export interface WorkspaceInputFileReferenceCandidate
-  extends BaseInputFileReferenceCandidate {
+export interface WorkspaceInputFileReferenceCandidate extends BaseInputFileReferenceCandidate {
   kind: "workspace_file";
   file: FileNode;
   sessionId: string;
@@ -103,7 +101,11 @@ function formatWorkspaceDescription(file: FileNode): string | null {
   return parts.length > 0 ? parts.join(" · ") : null;
 }
 
-function matchesQuery(displayName: string, path: string, query: string): boolean {
+function matchesQuery(
+  displayName: string,
+  path: string,
+  query: string,
+): boolean {
   const normalizedQuery = query.trim().toLowerCase();
   if (!normalizedQuery) return true;
   return (
