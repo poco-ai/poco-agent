@@ -18,7 +18,8 @@ import {
   FileText,
 } from "lucide-react";
 import { uploadAttachment } from "@/features/attachments/api/attachment-api";
-import type { ChatInputFileReference, InputFile } from "@/features/chat/types";
+import type { ChatFileReference, InputFile } from "@/features/chat/types";
+import type { FileNode } from "@/features/chat/types/api/file";
 import { toast } from "sonner";
 import { FileCard } from "@/components/shared/file-card";
 import {
@@ -44,20 +45,24 @@ interface ChatInputProps {
   onSend: (
     content: string,
     attachments?: InputFile[],
-    inputFileReferences?: ChatInputFileReference[],
+    fileReferences?: ChatFileReference[],
   ) => void;
   onCancel?: () => void;
   canCancel?: boolean;
   isCancelling?: boolean;
   disabled?: boolean;
   history?: string[];
+  sessionId?: string | null;
+  sessionInputFiles?: InputFile[];
+  sessionFiles?: FileNode[];
   className?: string;
 }
 
 export interface ChatInputDraft {
   value: string;
   attachments?: InputFile[];
-  inputFileReferences?: ChatInputFileReference[];
+  fileReferences?: ChatFileReference[];
+  inputFileReferences?: ChatFileReference[];
 }
 
 export interface ChatInputRef {
@@ -79,6 +84,9 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
       isCancelling = false,
       disabled = false,
       history = [],
+      sessionId,
+      sessionInputFiles = [],
+      sessionFiles = [],
       className,
     },
     ref,
@@ -87,7 +95,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
     const [value, setValue] = useState("");
     const [attachments, setAttachments] = useState<InputFile[]>([]);
     const [inputFileReferences, setInputFileReferences] = useState<
-      ChatInputFileReference[]
+      ChatFileReference[]
     >([]);
     const [isUploading, setIsUploading] = useState(false);
     const [historyIndex, setHistoryIndex] = useState(-1);
@@ -156,16 +164,20 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
       setDraftAndFocus: ({
         value: newValue,
         attachments: nextAttachments,
+        fileReferences: nextFileReferences,
         inputFileReferences: nextInputFileReferences,
       }: ChatInputDraft) => {
         setHistoryIndex(-1);
         const draftAttachments = nextAttachments ?? [];
         setAttachments(draftAttachments);
+        const draftFileReferences =
+          nextFileReferences ?? nextInputFileReferences;
         setInputFileReferences(
           filterInputFileReferences(
-            nextInputFileReferences,
+            draftFileReferences,
             newValue,
-            draftAttachments,
+            [...draftAttachments, ...sessionInputFiles],
+            { sessionId, workspaceFiles: sessionFiles },
           ),
         );
         applyValue(newValue);
@@ -189,11 +201,18 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
       () =>
         inputFileReferenceTrigger
           ? getInputFileReferenceCandidates(
-              attachments,
+              [...attachments, ...sessionInputFiles],
               inputFileReferenceTrigger.query,
+              { sessionId, workspaceFiles: sessionFiles },
             )
           : [],
-      [attachments, inputFileReferenceTrigger],
+      [
+        attachments,
+        inputFileReferenceTrigger,
+        sessionFiles,
+        sessionId,
+        sessionInputFiles,
+      ],
     );
     const isInputFileReferenceOpen =
       !slashAutocomplete.isOpen &&
@@ -222,7 +241,12 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
         setValue(result.value);
         setSelectionStart(result.cursor);
         setInputFileReferences((prev) => [
-          ...filterInputFileReferences(prev, result.value, attachments),
+          ...filterInputFileReferences(
+            prev,
+            result.value,
+            [...attachments, ...sessionInputFiles],
+            { sessionId, workspaceFiles: sessionFiles },
+          ),
           result.reference,
         ]);
         requestAnimationFrame(() => {
@@ -232,6 +256,9 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
       [
         attachments,
         inputFileReferenceCandidates,
+        sessionFiles,
+        sessionId,
+        sessionInputFiles,
         syncTextareaValue,
         value,
       ],
@@ -386,7 +413,8 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
       const currentReferences = filterInputFileReferences(
         inputFileReferences,
         content,
-        currentAttachments,
+        [...currentAttachments, ...sessionInputFiles],
+        { sessionId, workspaceFiles: sessionFiles },
       );
       setHistoryIndex(-1);
       setValue(""); // Clear immediately
@@ -397,7 +425,16 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
         textareaRef.current.style.height = "auto";
       }
       onSend(content, currentAttachments, currentReferences);
-    }, [attachments, inputFileReferences, onSend, value, voiceInput.isBusy]);
+    }, [
+      attachments,
+      inputFileReferences,
+      onSend,
+      sessionFiles,
+      sessionId,
+      sessionInputFiles,
+      value,
+      voiceInput.isBusy,
+    ]);
 
     // Reset textarea height when value becomes empty
     useEffect(() => {
@@ -523,13 +560,24 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
         setValue(nextValue);
         setSelectionStart(e.target.selectionStart);
         setInputFileReferences((prev) =>
-          filterInputFileReferences(prev, nextValue, attachments),
+          filterInputFileReferences(
+            prev,
+            nextValue,
+            [...attachments, ...sessionInputFiles],
+            { sessionId, workspaceFiles: sessionFiles },
+          ),
         );
         if (historyIndex !== -1) {
           setHistoryIndex(-1);
         }
       },
-      [attachments, historyIndex],
+      [
+        attachments,
+        historyIndex,
+        sessionFiles,
+        sessionId,
+        sessionInputFiles,
+      ],
     );
 
     const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -548,7 +596,12 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
       setAttachments((prev) => {
         const next = prev.filter((_, i) => i !== index);
         setInputFileReferences((current) =>
-          filterInputFileReferences(current, value, next),
+          filterInputFileReferences(
+            current,
+            value,
+            [...next, ...sessionInputFiles],
+            { sessionId, workspaceFiles: sessionFiles },
+          ),
         );
         return next;
       });
@@ -618,7 +671,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
                     const selected = idx === fileReferenceActiveIndex;
                     return (
                       <button
-                        key={item.source}
+                        key={item.id}
                         type="button"
                         onMouseEnter={() => setFileReferenceActiveIndex(idx)}
                         onMouseDown={(e) => {

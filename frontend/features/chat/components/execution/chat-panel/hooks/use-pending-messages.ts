@@ -5,7 +5,11 @@ import {
   type TaskEnqueueActionResult,
 } from "@/features/chat/actions/session-actions";
 import { getQueuedQueriesAction } from "@/features/chat/actions/query-actions";
-import type { ExecutionSession, InputFile } from "@/features/chat/types";
+import type {
+  ChatFileReference,
+  ExecutionSession,
+  InputFile,
+} from "@/features/chat/types";
 import type { ModelSelection } from "@/features/chat/lib/model-catalog";
 
 const PENDING_MESSAGE_POLLING_INTERVAL = 3000;
@@ -18,6 +22,8 @@ export interface PendingMessage {
   id: string;
   content: string;
   attachments?: InputFile[];
+  fileReferences?: ChatFileReference[];
+  inputFileReferences?: ChatFileReference[];
   modelSelection?: ModelSelection | null;
   status: "queued" | "paused";
   sequenceNo: number;
@@ -41,6 +47,8 @@ function toPendingMessage(item: {
   queue_item_id: string;
   prompt: string;
   attachments?: InputFile[];
+  file_references?: ChatFileReference[] | null;
+  input_file_references?: ChatFileReference[] | null;
   status: "queued" | "paused" | "promoted" | "canceled";
   sequence_no: number;
 }): PendingMessage {
@@ -48,6 +56,10 @@ function toPendingMessage(item: {
     id: item.queue_item_id,
     content: item.prompt,
     attachments: item.attachments ?? undefined,
+    fileReferences:
+      item.file_references ?? item.input_file_references ?? undefined,
+    inputFileReferences:
+      item.file_references ?? item.input_file_references ?? undefined,
     status: item.status === "paused" ? "paused" : "queued",
     sequenceNo: item.sequence_no,
   };

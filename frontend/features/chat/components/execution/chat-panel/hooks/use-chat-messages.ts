@@ -10,7 +10,7 @@ import {
   getRunsBySessionAction,
 } from "@/features/chat/actions/query-actions";
 import type {
-  ChatInputFileReference,
+  ChatFileReference,
   ChatMessage,
   ExecutionSession,
   InputFile,
@@ -36,7 +36,7 @@ interface UseChatMessagesReturn {
   sendMessage: (
     content: string,
     attachments?: InputFile[],
-    inputFileReferences?: ChatInputFileReference[],
+    fileReferences?: ChatFileReference[],
     modelSelection?: ModelSelection | null,
   ) => Promise<TaskEnqueueActionResult | null>;
   beginOptimisticRegenerate: (assistantMessageId: number) => string;
@@ -503,7 +503,7 @@ export function useChatMessages({
     async (
       content: string,
       attachments?: InputFile[],
-      inputFileReferences?: ChatInputFileReference[],
+      fileReferences?: ChatFileReference[],
       modelSelection?: ModelSelection | null,
     ): Promise<TaskEnqueueActionResult | null> => {
       if (!session?.session_id) return null;
@@ -525,7 +525,7 @@ export function useChatMessages({
           status: "sent",
           timestamp: new Date().toISOString(),
           metadata: {
-            inputFileReferences,
+            inputFileReferences: fileReferences,
           },
           attachments,
         };
@@ -540,7 +540,7 @@ export function useChatMessages({
           sessionId,
           content: normalizedContent,
           attachments,
-          input_file_references: inputFileReferences,
+          file_references: fileReferences,
           model: modelSelection?.modelId,
           model_provider_id: modelSelection?.providerId,
         });

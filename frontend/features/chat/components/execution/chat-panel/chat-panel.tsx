@@ -39,8 +39,9 @@ import {
   regenerateMessageAction,
 } from "@/features/chat/actions/session-actions";
 import type {
-  ChatInputFileReference,
+  ChatFileReference,
   ExecutionSession,
+  FileNode,
   InputFile,
   StatePatch,
   UserInputRequest,
@@ -247,6 +248,51 @@ export function ChatPanel({
     modifyPendingMessage,
     deletePendingMessage,
   } = usePendingMessages({ session });
+  const [sessionFiles, setSessionFiles] = React.useState<FileNode[]>([]);
+
+  const sessionInputFiles = React.useMemo(() => {
+    const bySource = new Map<string, InputFile>();
+    for (const message of displayMessages) {
+      for (const attachment of message.attachments ?? []) {
+        const source = (attachment.source || "").trim();
+        if (source && !bySource.has(source)) {
+          bySource.set(source, attachment);
+        }
+      }
+    }
+    for (const message of pendingMessages) {
+      for (const attachment of message.attachments ?? []) {
+        const source = (attachment.source || "").trim();
+        if (source && !bySource.has(source)) {
+          bySource.set(source, attachment);
+        }
+      }
+    }
+    return Array.from(bySource.values());
+  }, [displayMessages, pendingMessages]);
+
+  React.useEffect(() => {
+    const sessionId = session?.session_id;
+    if (!sessionId) {
+      setSessionFiles([]);
+      return;
+    }
+
+    let cancelled = false;
+    void chatService.getFiles(sessionId).then((files) => {
+      if (!cancelled) {
+        setSessionFiles(files);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    session?.session_id,
+    session?.state_patch?.workspace_state?.file_change_count,
+    session?.workspace_export_status,
+  ]);
 
   // Determine if session is running/active
   const isSessionActive =
@@ -689,7 +735,7 @@ export function ChatPanel({
     async (
       content: string,
       attachments?: InputFile[],
-      inputFileReferences?: ChatInputFileReference[],
+      fileReferences?: ChatFileReference[],
     ) => {
       if (!session?.session_id) return;
 
@@ -723,7 +769,7 @@ export function ChatPanel({
       const result = await sendMessage(
         content,
         attachments,
-        inputFileReferences,
+        fileReferences,
         selectedModelSelection,
       );
 
@@ -739,7 +785,7 @@ export function ChatPanel({
           id: result.queueItemId ?? `queued-${Date.now()}`,
           content,
           attachments,
-          inputFileReferences,
+          inputFileReferences: fileReferences,
           status: "queued",
         });
       }
@@ -1495,6 +1541,9 @@ export function ChatPanel({
           session?.status === "canceling"
         }
         history={userPromptHistory}
+        sessionId={session?.session_id}
+        sessionInputFiles={sessionInputFiles}
+        sessionFiles={sessionFiles}
         className={
           isRightPanelCollapsed ? collapsedContentInsetClass : undefined
         }

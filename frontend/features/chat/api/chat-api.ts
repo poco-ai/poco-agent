@@ -223,7 +223,7 @@ export const chatService = {
     model?: string | null,
     modelProviderId?: string | null,
     attachments?: InputFile[],
-    inputFileReferences?: TaskConfig["input_file_references"],
+    fileReferences?: TaskConfig["file_references"],
     clientRequestId?: string,
   ): Promise<TaskEnqueueResponse> => {
     const normalizedModel = (model || "").trim() || undefined;
@@ -231,18 +231,16 @@ export const chatService = {
       (modelProviderId || "").trim() || undefined;
     const hasModelOverride = Boolean(normalizedModel);
     const hasAttachments = (attachments?.length ?? 0) > 0;
-    const hasInputFileReferences = (inputFileReferences?.length ?? 0) > 0;
+    const hasFileReferences = (fileReferences?.length ?? 0) > 0;
     const config: TaskConfig | undefined =
-      hasModelOverride || hasAttachments || hasInputFileReferences
+      hasModelOverride || hasAttachments || hasFileReferences
         ? {
             ...(hasModelOverride ? { model: normalizedModel } : {}),
             ...(hasModelOverride && normalizedModelProviderId
               ? { model_provider_id: normalizedModelProviderId }
               : {}),
             ...(hasAttachments ? { input_files: attachments } : {}),
-            ...(hasInputFileReferences
-              ? { input_file_references: inputFileReferences }
-              : {}),
+            ...(hasFileReferences ? { file_references: fileReferences } : {}),
           }
         : undefined;
 

@@ -49,7 +49,7 @@ import type {
   RepoUsageMode,
   TaskSendOptions,
 } from "@/features/task-composer/types";
-import type { ChatInputFileReference } from "@/features/chat/types/api/session";
+import type { ChatFileReference } from "@/features/chat/types/api/session";
 import type { CapabilityRecommendation } from "@/features/task-composer/types/capability-recommendation";
 import type { Preset } from "@/features/capabilities/presets/lib/preset-types";
 
@@ -156,7 +156,7 @@ export function TaskComposer({
     onFilesDrop: upload.uploadFiles,
   });
   const [inputFileReferences, setInputFileReferences] = React.useState<
-    ChatInputFileReference[]
+    ChatFileReference[]
   >([]);
   const [selectionStart, setSelectionStart] = React.useState(0);
   const [fileReferenceActiveIndex, setFileReferenceActiveIndex] =
@@ -521,7 +521,7 @@ export function TaskComposer({
     );
     const payload: TaskSendOptions = {
       attachments: upload.attachments,
-      input_file_references: currentInputFileReferences,
+      file_references: currentInputFileReferences,
       repo_url: repoUrl.trim() || null,
       git_branch: gitBranch.trim() || null,
       git_token_env_key: repoUrl.trim() ? gitTokenEnvKey.trim() || null : null,

@@ -32,8 +32,10 @@ function buildTaskConfig(
   if (inputFiles.length > 0) {
     config.input_files = inputFiles;
   }
-  if ((options.input_file_references?.length ?? 0) > 0) {
-    config.input_file_references = options.input_file_references;
+  const fileReferences =
+    options.file_references ?? options.input_file_references ?? [];
+  if (fileReferences.length > 0) {
+    config.file_references = fileReferences;
   }
   if (repoUrl) {
     config.repo_url = repoUrl;
