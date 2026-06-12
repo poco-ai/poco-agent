@@ -58,3 +58,48 @@ test("parseMessages leaves plain user messages without triggerContext", () => {
   assert.equal(parsed.messages.length, 1);
   assert.equal(parsed.messages[0].metadata?.triggerContext, undefined);
 });
+
+test("parseMessages maps file_references metadata onto user messages", () => {
+  const fileReferences = [
+    {
+      id: "s3-key:7:18",
+      kind: "input_file",
+      source: "uploads/session/report.md",
+      insertedText: "#report.md",
+      displayName: "report.md",
+      metadata: {
+        path: "/inputs/report.md",
+      },
+    },
+    {
+      id: "session-1:/notes/agent.md:19:30",
+      kind: "workspace_file",
+      sessionId: "session-1",
+      path: "/notes/agent.md",
+      insertedText: "#agent.md",
+      displayName: "agent.md",
+    },
+  ];
+
+  const parsed = parseMessages([
+    {
+      id: 44,
+      role: "user",
+      created_at: "2026-05-08T00:00:00Z",
+      updated_at: "2026-05-08T00:00:00Z",
+      content: {
+        _type: "UserMessage",
+        content: [{ _type: "TextBlock", text: "Use #report.md and #agent.md" }],
+        metadata: {
+          file_references: fileReferences,
+        },
+      },
+    },
+  ]);
+
+  assert.equal(parsed.messages.length, 1);
+  assert.deepEqual(
+    parsed.messages[0].metadata?.inputFileReferences,
+    fileReferences,
+  );
+});

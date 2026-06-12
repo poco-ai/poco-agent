@@ -490,6 +490,7 @@ export function ChatMessageList({
                     messageId={message.id}
                     content={message.content}
                     triggerContext={message.metadata?.triggerContext}
+                    inputFileReferences={message.metadata?.inputFileReferences}
                     attachments={message.attachments}
                     repoUrl={message.id === firstUserMessageId ? repoUrl : null}
                     gitBranch={

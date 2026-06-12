@@ -7,6 +7,7 @@ import {
   ChevronUp,
   Copy,
   Check,
+  FileText,
   Pencil,
 } from "lucide-react";
 import { FileCard } from "@/components/shared/file-card";
@@ -15,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import type {
   AgentTriggerContext,
+  ChatFileReference,
   MessageBlock,
   InputFile,
 } from "@/features/chat/types";
@@ -27,6 +29,7 @@ export function UserMessage({
   messageId,
   content,
   triggerContext,
+  inputFileReferences,
   attachments,
   repoUrl,
   gitBranch,
@@ -35,6 +38,7 @@ export function UserMessage({
   messageId: string;
   content: string | MessageBlock[];
   triggerContext?: AgentTriggerContext;
+  inputFileReferences?: ChatFileReference[];
   attachments?: InputFile[];
   repoUrl?: string | null;
   gitBranch?: string | null;
@@ -72,6 +76,9 @@ export function UserMessage({
   const trimmedGitBranch = (gitBranch || "").trim();
   const hasRepo = trimmedRepoUrl.length > 0;
   const hasAttachments = Boolean(attachments && attachments.length > 0);
+  const hasInputFileReferences = Boolean(
+    inputFileReferences && inputFileReferences.length > 0,
+  );
   const triggerContextRows = React.useMemo(
     () => buildTriggerContextRows(triggerContext, t),
     [triggerContext, t],
@@ -260,6 +267,25 @@ export function UserMessage({
                   ) : null}
                 </div>
               ) : null}
+              {hasInputFileReferences ? (
+                <div className="flex max-w-full flex-wrap justify-end gap-1.5">
+                  {inputFileReferences?.map((reference, index) => {
+                    const displayName = formatFileReferenceDisplay(reference);
+                    return (
+                      <span
+                        key={`${reference.id}:${index}`}
+                        className="inline-flex h-7 max-w-full items-center gap-1.5 rounded-md border border-border bg-background/80 px-2 text-xs text-muted-foreground shadow-sm"
+                        title={formatFileReferenceTitle(reference)}
+                      >
+                        <FileText className="size-3.5 shrink-0" />
+                        <span className="min-w-0 max-w-48 truncate">
+                          {displayName}
+                        </span>
+                      </span>
+                    );
+                  })}
+                </div>
+              ) : null}
               <div className="w-fit min-w-0 max-w-full overflow-hidden rounded-lg bg-muted px-4 py-2 text-foreground">
                 <p
                   ref={observerRef}
@@ -320,6 +346,23 @@ export function UserMessage({
       )}
     </div>
   );
+}
+
+function formatFileReferenceDisplay(reference: ChatFileReference): string {
+  const displayName = reference.displayName?.trim();
+  if (displayName) return displayName;
+  if (reference.kind === "workspace_file") {
+    return reference.path.split("/").filter(Boolean).pop() || reference.path;
+  }
+  return reference.metadata?.path || reference.source;
+}
+
+function formatFileReferenceTitle(reference: ChatFileReference): string {
+  const displayName = formatFileReferenceDisplay(reference);
+  if (reference.kind === "workspace_file") {
+    return reference.path || displayName;
+  }
+  return reference.metadata?.path || reference.source || displayName;
 }
 
 function formatTriggerSource(triggerContext?: AgentTriggerContext): string {
