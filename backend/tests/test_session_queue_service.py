@@ -70,6 +70,42 @@ class SessionQueueServiceTests(unittest.TestCase):
             "Please review this change",
         )
 
+    def test_materialize_run_persists_file_references_in_message_metadata(self) -> None:
+        file_references = [
+            {
+                "id": "ref-1",
+                "kind": "workspace_file",
+                "sessionId": str(self.db_session.id),
+                "path": "/reports/summary.md",
+                "insertedText": "#summary.md",
+                "displayName": "summary.md",
+            }
+        ]
+        db_message = SimpleNamespace(id=123)
+        db_run = SimpleNamespace(id=uuid.uuid4())
+
+        with (
+            patch(
+                "app.services.session_queue_service.MessageRepository.create",
+                return_value=db_message,
+            ) as create_message,
+            patch(
+                "app.services.session_queue_service.RunRepository.create",
+                return_value=db_run,
+            ),
+        ):
+            self.service.materialize_run(
+                self.db,
+                db_session=self.db_session,
+                prompt="Please read #summary.md",
+                permission_mode="default",
+                schedule_mode="immediate",
+                run_config_snapshot={"file_references": file_references},
+            )
+
+        content = create_message.call_args.kwargs["content"]
+        self.assertEqual(content["metadata"]["file_references"], file_references)
+
     def test_materialize_run_keeps_plain_user_messages_without_metadata(self) -> None:
         db_message = SimpleNamespace(id=123)
         db_run = SimpleNamespace(id=uuid.uuid4())

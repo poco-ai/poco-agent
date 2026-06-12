@@ -23,6 +23,59 @@ const inputFileSchema = z
   })
   .passthrough();
 
+const inputFileReferenceSchema = z
+  .object({
+    id: z.string().trim().min(1),
+    kind: z.literal("input_file"),
+    source: z.string().trim().min(1),
+    insertedText: z.string().trim().min(1),
+    displayName: z.string().trim().min(1),
+    range: z
+      .object({
+        start: z.number().int().nonnegative(),
+        end: z.number().int().nonnegative(),
+      })
+      .optional(),
+    metadata: z
+      .object({
+        inputFileId: z.string().optional().nullable(),
+        size: z.number().optional().nullable(),
+        contentType: z.string().optional().nullable(),
+        path: z.string().optional().nullable(),
+      })
+      .optional(),
+  })
+  .passthrough();
+
+const workspaceFileReferenceSchema = z
+  .object({
+    id: z.string().trim().min(1),
+    kind: z.literal("workspace_file"),
+    sessionId: z.string().trim().min(1),
+    path: z.string().trim().min(1),
+    insertedText: z.string().trim().min(1),
+    displayName: z.string().trim().min(1),
+    range: z
+      .object({
+        start: z.number().int().nonnegative(),
+        end: z.number().int().nonnegative(),
+      })
+      .optional(),
+    metadata: z
+      .object({
+        size: z.number().optional().nullable(),
+        contentType: z.string().optional().nullable(),
+        sourceKind: z.string().optional().nullable(),
+      })
+      .optional(),
+  })
+  .passthrough();
+
+const fileReferenceSchema = z.discriminatedUnion("kind", [
+  inputFileReferenceSchema,
+  workspaceFileReferenceSchema,
+]);
+
 const configSchema = z
   .object({
     repo_url: z.string().optional().nullable(),
@@ -63,6 +116,8 @@ const configSchema = z
       )
       .optional(),
     input_files: z.array(inputFileSchema).optional(),
+    file_references: z.array(fileReferenceSchema).optional(),
+    input_file_references: z.array(fileReferenceSchema).optional(),
   })
   .passthrough();
 
@@ -115,6 +170,8 @@ const sendMessageSchema = z
     sessionId: z.string().trim().min(1, VALIDATION_ERRORS.missingSessionId),
     content: z.string(),
     attachments: z.array(inputFileSchema).optional(),
+    file_references: z.array(fileReferenceSchema).optional(),
+    input_file_references: z.array(fileReferenceSchema).optional(),
     model: z.string().trim().optional().nullable(),
     model_provider_id: z.string().trim().optional().nullable(),
   })
@@ -137,9 +194,15 @@ const updateQueuedQuerySchema = queuedQueryItemSchema
   .extend({
     prompt: z.string().optional(),
     attachments: z.array(inputFileSchema).optional(),
+    file_references: z.array(fileReferenceSchema).optional(),
+    input_file_references: z.array(fileReferenceSchema).optional(),
   })
   .refine(
-    (data) => data.prompt !== undefined || data.attachments !== undefined,
+    (data) =>
+      data.prompt !== undefined ||
+      data.attachments !== undefined ||
+      data.file_references !== undefined ||
+      data.input_file_references !== undefined,
     {
       message: VALIDATION_ERRORS.messageContentRequired,
       path: ["prompt"],
@@ -217,9 +280,17 @@ export async function createSessionAction(input: CreateSessionInput) {
 }
 
 export async function sendMessageAction(input: SendMessageInput) {
-  const { sessionId, content, attachments, model, model_provider_id } =
-    sendMessageSchema.parse(input);
+  const {
+    sessionId,
+    content,
+    attachments,
+    file_references,
+    input_file_references,
+    model,
+    model_provider_id,
+  } = sendMessageSchema.parse(input);
 
+  const fileReferences = file_references ?? input_file_references;
   // Ensure we have a prompt if content is empty but attachments exist
   const finalContent =
     content.trim() || (attachments?.length ? "Uploaded files" : content);
@@ -229,6 +300,7 @@ export async function sendMessageAction(input: SendMessageInput) {
     model,
     model_provider_id,
     attachments,
+    fileReferences,
     createClientRequestId(),
   );
   return mapTaskEnqueueResult(result);
@@ -367,11 +439,19 @@ export async function setSessionPinAction(input: SetSessionPinInput) {
 }
 
 export async function updateQueuedQueryAction(input: UpdateQueuedQueryInput) {
-  const { sessionId, itemId, prompt, attachments } =
-    updateQueuedQuerySchema.parse(input);
+  const {
+    sessionId,
+    itemId,
+    prompt,
+    attachments,
+    file_references,
+    input_file_references,
+  } = updateQueuedQuerySchema.parse(input);
+  const fileReferences = file_references ?? input_file_references;
   return chatService.updateQueuedQuery(sessionId, itemId, {
     prompt,
     attachments,
+    file_references: fileReferences,
   });
 }
 

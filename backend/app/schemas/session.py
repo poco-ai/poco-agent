@@ -7,7 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from app.schemas.agent_trigger import AgentTriggerEnvelope
 from app.schemas.callback import AgentCurrentState
 from app.schemas.filesystem import LocalMountConfig, FilesystemMode
-from app.schemas.input_file import InputFile
+from app.schemas.input_file import FileReference, InputFile
 from app.schemas.sub_agent import SubAgentModel
 
 
@@ -54,6 +54,8 @@ class TaskConfig(BaseModel):
     filesystem_mode: FilesystemMode = "sandbox"
     local_mounts: list[LocalMountConfig] = Field(default_factory=list)
     input_files: list[InputFile] = Field(default_factory=list)
+    file_references: list[FileReference] = Field(default_factory=list)
+    input_file_references: list[FileReference] = Field(default_factory=list)
 
 
 class SessionCreateRequest(BaseModel):

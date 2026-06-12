@@ -1,4 +1,4 @@
-import type { InputFile } from "./session";
+import type { ChatFileReference, InputFile } from "./session";
 
 export interface SessionQueueItemResponse {
   queue_item_id: string;
@@ -8,6 +8,8 @@ export interface SessionQueueItemResponse {
   prompt: string;
   permission_mode: string;
   attachments: InputFile[];
+  file_references?: ChatFileReference[] | null;
+  input_file_references?: ChatFileReference[] | null;
   client_request_id?: string | null;
   linked_run_id?: string | null;
   linked_user_message_id?: number | null;
@@ -18,4 +20,6 @@ export interface SessionQueueItemResponse {
 export interface SessionQueueItemUpdateRequest {
   prompt?: string | null;
   attachments?: InputFile[] | null;
+  file_references?: ChatFileReference[] | null;
+  input_file_references?: ChatFileReference[] | null;
 }

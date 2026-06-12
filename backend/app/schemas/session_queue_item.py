@@ -3,7 +3,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.schemas.input_file import InputFile
+from app.schemas.input_file import FileReference, InputFile
 
 
 class SessionQueueItemResponse(BaseModel):
@@ -16,6 +16,7 @@ class SessionQueueItemResponse(BaseModel):
     prompt: str
     permission_mode: str
     attachments: list[InputFile] = Field(default_factory=list)
+    file_references: list[FileReference] = Field(default_factory=list)
     client_request_id: str | None = None
     linked_run_id: UUID | None = None
     linked_user_message_id: int | None = None
@@ -30,3 +31,5 @@ class SessionQueueItemUpdateRequest(BaseModel):
 
     prompt: str | None = None
     attachments: list[InputFile] | None = None
+    file_references: list[FileReference] | None = None
+    input_file_references: list[FileReference] | None = None
