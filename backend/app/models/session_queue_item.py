@@ -99,3 +99,13 @@ class AgentSessionQueueItem(Base, TimestampMixin):
             return []
         input_files = snapshot.get("input_files")
         return list(input_files) if isinstance(input_files, list) else []
+
+    @property
+    def file_references(self) -> list[dict[str, Any]]:
+        snapshot = self.run_config_snapshot
+        if not isinstance(snapshot, dict):
+            return []
+        references = snapshot.get("file_references")
+        if references is None:
+            references = snapshot.get("input_file_references")
+        return list(references) if isinstance(references, list) else []

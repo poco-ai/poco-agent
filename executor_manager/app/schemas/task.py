@@ -59,6 +59,8 @@ class TaskConfig(BaseModel):
     filesystem_mode: FilesystemMode = "sandbox"
     local_mounts: list[LocalMountConfig] = Field(default_factory=list)
     input_files: list[InputFile] = Field(default_factory=list)
+    file_references: list[dict[str, Any]] = Field(default_factory=list)
+    input_file_references: list[dict[str, Any]] = Field(default_factory=list)
     user_id: str = ""
     container_mode: Literal["ephemeral", "persistent"] = "ephemeral"
     container_id: str | None = None

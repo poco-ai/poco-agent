@@ -59,6 +59,24 @@ class SessionService:
             return deepcopy(value)
         return value
 
+    @staticmethod
+    def _filter_file_references_for_prompt(
+        references: Any,
+        prompt: str | None = None,
+    ) -> list[dict[str, Any]]:
+        if not isinstance(references, list):
+            return []
+        prompt_text = prompt or ""
+        filtered: list[dict[str, Any]] = []
+        for reference in references:
+            if not isinstance(reference, dict):
+                continue
+            inserted_text = str(reference.get("insertedText") or "").strip()
+            if prompt is not None and inserted_text and inserted_text not in prompt_text:
+                continue
+            filtered.append(SessionService._deepcopy_json(reference))
+        return filtered
+
     def _ensure_no_active_queue_items(self, db: Session, session_id: uuid.UUID) -> None:
         if SessionQueueItemRepository.has_active_items(db, session_id):
             raise AppException(
@@ -1152,6 +1170,16 @@ class SessionService:
             input_files = latest_target_run.config_snapshot.get("input_files")
             if isinstance(input_files, list):
                 run_config_snapshot["input_files"] = self._deepcopy_json(input_files)
+            file_references = latest_target_run.config_snapshot.get("file_references")
+            if file_references is None:
+                file_references = latest_target_run.config_snapshot.get(
+                    "input_file_references"
+                )
+            normalized_file_references = self._filter_file_references_for_prompt(
+                file_references
+            )
+            if normalized_file_references:
+                run_config_snapshot["file_references"] = normalized_file_references
         # Override model with current selection if provided
         if model is not None:
             run_config_snapshot["model"] = model
@@ -1270,6 +1298,19 @@ class SessionService:
             input_files = latest_target_run.config_snapshot.get("input_files")
             if isinstance(input_files, list):
                 run_config_snapshot["input_files"] = self._deepcopy_json(input_files)
+            file_references = latest_target_run.config_snapshot.get("file_references")
+            if file_references is None:
+                file_references = latest_target_run.config_snapshot.get(
+                    "input_file_references"
+                )
+            normalized_file_references = self._filter_file_references_for_prompt(
+                file_references,
+                prompt,
+            )
+            if normalized_file_references:
+                run_config_snapshot["file_references"] = normalized_file_references
+            else:
+                run_config_snapshot.pop("file_references", None)
         # Override model with current selection if provided
         if model is not None:
             run_config_snapshot["model"] = model
@@ -1280,6 +1321,11 @@ class SessionService:
             "_type": "UserMessage",
             "content": [{"_type": "TextBlock", "text": prompt}],
         }
+        metadata = SessionQueueService._message_metadata_from_run_snapshot(
+            run_config_snapshot
+        )
+        if metadata is not None:
+            user_message.content["metadata"] = metadata
         user_message.text_preview = prompt[:500]
 
         runs_to_delete = (

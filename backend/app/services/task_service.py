@@ -29,6 +29,7 @@ from app.services.capability_policy import (
     resolve_effective_enabled,
 )
 from app.services.env_var_service import EnvVarService
+from app.services.file_reference_service import FileReferenceService
 from app.services.model_config_service import (
     PROVIDER_SPEC_MAP,
     get_allowed_model_ids,
@@ -448,14 +449,27 @@ class TaskService:
         )
 
         run_config_snapshot = dict(merged_config or {})
+        file_reference_service = FileReferenceService()
         merged_input_files = self._merge_input_files(
             self._build_project_input_files(db, project),
             request.config.input_files if request.config is not None else None,
+        )
+        file_references = FileReferenceService.get_config_references(request.config)
+        merged_input_files, normalized_file_references = (
+            file_reference_service.resolve_for_run(
+                db,
+                db_session,
+                file_references,
+                merged_input_files,
+                prompt=prompt,
+            )
         )
         if merged_input_files:
             run_config_snapshot["input_files"] = [
                 f.model_dump(mode="json") for f in merged_input_files
             ]
+        if normalized_file_references:
+            run_config_snapshot["file_references"] = normalized_file_references
         run_config_snapshot = run_config_snapshot or None
 
         if (
@@ -584,6 +598,8 @@ class TaskService:
         merged_base.pop("plugin_files", None)
         # input_files are treated as per-run inputs and should not be persisted into the session-level config snapshot.
         merged_base.pop("input_files", None)
+        merged_base.pop("file_references", None)
+        merged_base.pop("input_file_references", None)
 
         base_mcp_server_ids = self._normalize_mcp_server_ids(
             merged_base.get("mcp_server_ids")
@@ -603,6 +619,8 @@ class TaskService:
             )
             # input_files are per-run and should not be merged into session config.
             request_config.pop("input_files", None)
+            request_config.pop("file_references", None)
+            request_config.pop("input_file_references", None)
             # Extract mcp_config toggles before merging (don't merge as dict)
             request_mcp_toggles = normalize_override_map(
                 request_config.pop("mcp_config", None)
