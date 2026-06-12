@@ -27,7 +27,7 @@ class FileReferenceServiceTests(unittest.TestCase):
             workspace_files_prefix="workspaces/user/session/files",
         )
 
-    def test_resolves_workspace_reference_to_synthetic_input(self) -> None:
+    def test_validates_workspace_reference_without_promoting_to_input(self) -> None:
         service = FileReferenceService(
             storage_service=FakeStorageService(
                 {
@@ -63,13 +63,9 @@ class FileReferenceServiceTests(unittest.TestCase):
                 prompt="read #summary.md",
             )
 
-        self.assertEqual(len(input_files), 1)
-        self.assertEqual(
-            input_files[0].source,
-            "workspaces/user/session/files/reports/summary.md",
-        )
-        self.assertEqual(input_files[0].path, "reports/summary.md")
+        self.assertEqual(input_files, [])
         self.assertEqual(references[0]["kind"], "workspace_file")
+        self.assertEqual(references[0]["path"], "/reports/summary.md")
 
     def test_rejects_missing_workspace_reference_path(self) -> None:
         service = FileReferenceService(storage_service=FakeStorageService({"files": []}))

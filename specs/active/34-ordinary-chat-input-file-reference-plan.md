@@ -6,10 +6,10 @@
 | --- | --- |
 | **创建日期** | 2026-06-11 |
 | **修订日期** | 2026-06-12 |
-| **预期改动范围** | frontend chat input / task composer input / chat message rendering / session file APIs / task enqueue payload / backend task schema and message metadata / executor input hint / tests |
+| **预期改动范围** | frontend chat input / task composer input / chat message rendering / session file APIs / task enqueue payload / backend task schema and message metadata / executor workspace reference hint / tests |
 | **改动类型** | feat |
 | **优先级** | P1 |
-| **状态** | in-progress |
+| **状态** | review |
 | **关联 spec** | `specs/active/30-structured-channel-mentions-and-context-references-plan.md` |
 
 ## 修订说明
@@ -21,11 +21,11 @@
 ## 实施阶段
 
 - [x] Phase 0: 保留前端 `#` 输入交互基线
-- [ ] Phase 1: 固定统一会话文件引用契约
-- [ ] Phase 2: 前端候选源扩展为当前会话文件索引
-- [ ] Phase 3: 后端解析引用并提升为本轮 runtime inputs
-- [ ] Phase 4: 历史消息渲染、编辑、重跑和队列项兼容
-- [ ] Phase 5: 验证、回归和文档回写
+- [x] Phase 1: 固定统一会话文件引用契约
+- [x] Phase 2: 前端候选源扩展为当前会话文件索引
+- [x] Phase 3: 后端解析引用并保留 workspace path 语义
+- [x] Phase 4: 历史消息渲染、编辑、重跑和队列项兼容
+- [x] Phase 5: 验证、回归和文档回写
 
 ---
 
@@ -41,15 +41,15 @@
 - 之前用户消息带入的 input files。
 - agent 在当前会话 workspace 中创建、修改并通过 workspace export 暴露的文件。
 
-因此，普通聊天 `#file` 不能只绑定到当前草稿的附件，也不能只把正文 token 传给模型。它必须先解析成结构化会话文件引用，再在后端转换为本轮 runtime 可访问的 `input_files`。Executor Manager 仍然通过既有 `input_files` staging 机制把文件放到 `/workspace/inputs/...`，executor 只看到可访问路径。
+因此，普通聊天 `#file` 不能只绑定到当前草稿的附件，也不能只把正文 token 传给模型。它必须先解析成结构化会话文件引用。对于 agent 已经写入当前 session workspace 的文件，引用语义是“用户正在讨论 `/workspace/...` 中的这个路径”，不是重新上传或复制成 input；只有用户上传附件、历史输入文件这类本来就不在 workspace 正文路径上的对象，才继续走 `input_files` staging。
 
 ### 目标
 
 - 普通聊天输入框支持输入 `#` 后选择当前会话中的文件。
 - 文件候选统一展示，不要求用户知道文件来自上传、历史输入还是 agent workspace 输出。
 - 选择文件后正文插入人类可读 token，例如 `#report.md`。
-- 发送时携带结构化 references；后端解析 references，自动补齐本轮 `input_files`。
-- runtime 仍以 staged `input_files.path` 为准，不让模型依赖 UI token 或 OSS key。
+- 发送时携带结构化 references；后端解析 references，校验 workspace path 或补齐上传 input。
+- workspace 文件引用在 runtime 中以 `/workspace/<path>` 为准，不让模型把它猜成 `/inputs/<path>`；上传/历史 input 文件仍以 staged `input_files.path` 为准。
 - 历史消息可以把已验证的 `#file` 渲染为 file chip。
 - 编辑、重跑和 queued query 更新不能让正文 token 与实际 runtime inputs 脱节。
 
@@ -64,9 +64,9 @@
 
 ### 关键洞察
 
-#### 1. UI 对象应统一，runtime 输入仍可归一到 `input_files`
+#### 1. UI 对象应统一，但 runtime 路径语义不能混成 `input_files`
 
-用户看到的是统一文件对象，后端执行时需要的是 staged input。两者不矛盾：reference 可以保留原始来源类型，后端在 enqueue 前把被引用文件统一提升为本轮 `input_files`。
+用户看到的是统一文件对象，但不同来源的 runtime 语义不同：workspace 文件已经位于会话 workspace，应作为 `/workspace/...` 路径提示给 agent；上传文件和历史 input 文件才需要通过 `input_files` staging 暴露到 `/workspace/inputs/...`。
 
 #### 2. workspace 文件已经有事实源
 
@@ -124,21 +124,16 @@ type ChatFileReference =
 
 后端 schema 与前端字段同构，接收 `TaskConfig.file_references`。为兼容 `ae3623a3` 已落地的前端基线，短期可以继续接受 `input_file_references` 作为 alias，但内部服务应统一转成 `file_references`。
 
-### Runtime 转换
+### Runtime 解析
 
 后端创建 run snapshot 前执行：
 
 1. 合并 project inputs、当前上传 attachments、历史/引用需要的 synthetic inputs。
 2. 对 `input_file` reference，要求 `source` 能在合并后的 input files 中找到。
 3. 对 `workspace_file` reference，要求 session 属于当前用户、workspace export ready、manifest 中存在该 path。
-4. 从 manifest entry 构造 `InputFile`：
-   - `type = "file"`
-   - `name = basename(path)`
-   - `source = manifest entry key`
-   - `size = manifest entry size`
-   - `content_type = manifest entry mimeType`
-   - `path = /inputs/<normalized workspace path without leading slash>`
-5. 保存 `input_files` 和 `file_references` 到 run config snapshot。
+4. `workspace_file` 不构造 `InputFile`，不触发 EM attachment staging；仅保存规范化后的 `/path`。
+5. executor prompt hint 把 `workspace_file` 映射为 `/workspace/<path>`，并明确禁止 agent 猜测 `/inputs/<path>`。
+6. 保存 `input_files`（仅上传/历史/project inputs）和 `file_references` 到 run config snapshot。
 
 ---
 
@@ -175,21 +170,21 @@ type ChatFileReference =
 - 新建任务首页不会请求不存在的 session workspace。
 - 删除正文 token 或删除 draft attachment 会过滤对应 stale reference。
 
-## Phase 3: 后端解析引用并提升为本轮 runtime inputs
+## Phase 3: 后端解析引用并保留 workspace path 语义
 
 ### 任务
 
 - 新增 file reference resolver service。
 - 从 session workspace manifest 解析 workspace file reference。
-- 将 workspace file synthetic input 合并进 run snapshot `input_files`。
-- 确保 executor manager 仍只通过 `input_files` staging。
+- workspace file reference 只校验并保存路径，不合并进 run snapshot `input_files`。
+- 确保 executor manager 只 staging 上传/历史 input，不 staging workspace reference。
 - 让 queued item update 同步过滤/解析 references。
 
 ### 验收
 
 - 引用不存在的 workspace path 返回 400。
 - 引用其他用户/其他 session 文件返回 403 或 400。
-- workspace reference 出现在本轮 `input_files` 后能 staging 到 `/workspace/inputs/...`。
+- workspace reference 不出现在本轮 `input_files`，executor hint 直接指向 `/workspace/...`。
 - 不依赖 preview URL。
 
 ## Phase 4: 历史消息渲染、编辑、重跑和队列项兼容
@@ -223,5 +218,5 @@ type ChatFileReference =
 
 - 在已有会话中让 agent 创建文件。
 - 继续输入下一条消息，输入 `#`，能看到刚创建的文件。
-- 选择该文件发送后，agent 能在 `/workspace/inputs/...` 看到并读取该文件。
-- 历史消息中该引用显示为 file chip。
+- 选择该文件发送后，agent 的 prompt hint 指向 `/workspace/<path>`，agent 首次读取应使用 workspace 路径而不是 `/inputs/...`。
+- 历史消息中该引用在正文内显示为与频道 artifact 一致的 inline file chip。

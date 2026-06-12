@@ -1,4 +1,3 @@
-from pathlib import PurePosixPath
 from typing import Any
 from uuid import UUID
 
@@ -115,36 +114,11 @@ class FileReferenceService:
                 by_source.setdefault(source, input_file)
         return by_source
 
-    @staticmethod
-    def _manifest_object_key(
-        file_entry: dict[str, Any],
-        *,
-        workspace_files_prefix: str | None,
-        path: str,
-    ) -> str | None:
-        raw = (
-            file_entry.get("key")
-            or file_entry.get("object_key")
-            or file_entry.get("oss_key")
-            or file_entry.get("s3_key")
-        )
-        if isinstance(raw, str) and raw.strip():
-            return raw.strip()
-        prefix = (workspace_files_prefix or "").strip().rstrip("/")
-        if prefix:
-            return f"{prefix}/{path.lstrip('/')}"
-        return None
-
-    @staticmethod
-    def _manifest_size(file_entry: dict[str, Any]) -> int | None:
-        raw = file_entry.get("size")
-        return raw if isinstance(raw, int) else None
-
-    def _workspace_reference_to_input_file(
+    def _validate_workspace_reference(
         self,
         db_session: AgentSession,
         reference: WorkspaceFileReference,
-    ) -> InputFile:
+    ) -> WorkspaceFileReference:
         if reference.session_id != str(db_session.id):
             raise AppException(
                 error_code=ErrorCode.BAD_REQUEST,
@@ -173,28 +147,7 @@ class FileReferenceService:
                 message="workspace_file reference path does not exist",
             )
 
-        object_key = self._manifest_object_key(
-            file_entry,
-            workspace_files_prefix=db_session.workspace_files_prefix,
-            path=normalized_path,
-        )
-        if not object_key:
-            raise AppException(
-                error_code=ErrorCode.BAD_REQUEST,
-                message="workspace_file reference is missing object storage key",
-            )
-
-        name = PurePosixPath(normalized_path).name or reference.display_name
-        content_type = file_entry.get("mimeType") or file_entry.get("mime_type")
-        return InputFile(
-            id=f"workspace:{db_session.id}:{normalized_path}",
-            type="file",
-            name=name,
-            source=object_key,
-            size=self._manifest_size(file_entry),
-            content_type=content_type if isinstance(content_type, str) else None,
-            path=normalized_path.lstrip("/"),
-        )
+        return reference.model_copy(update={"path": normalized_path})
 
     def resolve_for_run(
         self,
@@ -242,7 +195,7 @@ class FileReferenceService:
                     )
                 add_input(input_file)
             else:
-                add_input(self._workspace_reference_to_input_file(db_session, reference))
+                reference = self._validate_workspace_reference(db_session, reference)
 
             normalized_references.append(self._reference_to_dict(reference))
 

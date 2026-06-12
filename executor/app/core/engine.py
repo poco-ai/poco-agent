@@ -510,16 +510,19 @@ class AgentExecutor:
         return None
 
     @staticmethod
-    def _input_hint_relative_path(input_file: object) -> str | None:
-        display = AgentExecutor._input_hint_display_path(input_file)
-        if not display:
-            return None
-        return display.removeprefix("inputs/").lstrip("/")
-
-    @staticmethod
     def _normalized_workspace_reference_path(reference: dict[str, Any]) -> str:
         raw_path = str(reference.get("path") or "").replace("\\", "/").strip()
         return raw_path.lstrip("/")
+
+    @staticmethod
+    def _reference_inserted_text(reference: dict[str, Any]) -> str:
+        return str(
+            reference.get("insertedText")
+            or reference.get("inserted_text")
+            or reference.get("displayName")
+            or reference.get("display_name")
+            or ""
+        ).strip()
 
     @classmethod
     def _build_file_reference_hint_lines(
@@ -527,18 +530,14 @@ class AgentExecutor:
         references: list[dict[str, Any]],
         inputs: list[object],
     ) -> list[str]:
-        if not references or not inputs:
+        if not references:
             return []
 
         inputs_by_source: dict[str, object] = {}
-        inputs_by_relative_path: dict[str, object] = {}
         for input_file in inputs:
             source = str(getattr(input_file, "source", "") or "").strip()
             if source:
                 inputs_by_source.setdefault(source, input_file)
-            relative_path = cls._input_hint_relative_path(input_file)
-            if relative_path:
-                inputs_by_relative_path.setdefault(relative_path, input_file)
 
         lines: list[str] = []
         for reference in references:
@@ -546,33 +545,42 @@ class AgentExecutor:
                 continue
 
             kind = str(reference.get("kind") or "").strip()
-            input_file = None
+            inserted_text = cls._reference_inserted_text(reference)
+            if not inserted_text:
+                continue
+
             if kind == "input_file":
                 source = str(reference.get("source") or "").strip()
                 input_file = inputs_by_source.get(source)
+                display_path = (
+                    cls._input_hint_display_path(input_file) if input_file else None
+                )
+                if display_path:
+                    lines.append(f"- {inserted_text} -> {display_path}")
             elif kind == "workspace_file":
                 path = cls._normalized_workspace_reference_path(reference)
-                input_file = inputs_by_relative_path.get(path)
-
-            display_path = (
-                cls._input_hint_display_path(input_file) if input_file else None
-            )
-            inserted_text = str(
-                reference.get("insertedText")
-                or reference.get("inserted_text")
-                or reference.get("displayName")
-                or reference.get("display_name")
-                or ""
-            ).strip()
-            if display_path and inserted_text:
-                lines.append(f"- {inserted_text} -> {display_path}")
+                if path:
+                    lines.append(f"- {inserted_text} -> /workspace/{path}")
 
         return lines
 
     def _build_input_hint(self, config: TaskConfig) -> str | None:
         lines: list[str] = []
         inputs = config.input_files or []
+        file_reference_lines = self._build_file_reference_hint_lines(
+            config.file_references or config.input_file_references or [],
+            list(inputs),
+        )
+        if file_reference_lines:
+            lines.append("Referenced files in the user prompt resolve to:")
+            lines.extend(file_reference_lines)
+            lines.append(
+                "Use /workspace paths for workspace file references. Do not guess a matching /inputs path unless the mapping above explicitly starts with inputs/."
+            )
+
         if inputs:
+            if lines:
+                lines.append("")
             lines.append(
                 "Input files for this run are available under inputs/ (or /workspace/inputs):"
             )
@@ -580,13 +588,6 @@ class AgentExecutor:
                 display = self._input_hint_display_path(item)
                 if display:
                     lines.append(f"- {display}")
-            reference_lines = self._build_file_reference_hint_lines(
-                config.file_references or config.input_file_references or [],
-                list(inputs),
-            )
-            if reference_lines:
-                lines.append("Referenced files in the user prompt resolve to:")
-                lines.extend(reference_lines)
             lines.append("Do not modify files under inputs/ unless the user asks.")
 
         mounts = config.resolved_local_mounts or []
