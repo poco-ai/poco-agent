@@ -789,7 +789,7 @@ export function TaskComposer({
                   const selected = idx === fileReferenceActiveIndex;
                   return (
                     <button
-                      key={item.source}
+                      key={item.id}
                       type="button"
                       onMouseEnter={() => setFileReferenceActiveIndex(idx)}
                       onMouseDown={(event) => {
