@@ -1,8 +1,9 @@
 from typing import Any
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
 from fastapi.responses import JSONResponse
 
+from app.core.deps import require_callback_token
 from app.schemas.memory import (
     MemoryCreateJobEnqueueResponse,
     MemoryCreateJobResponse,
@@ -13,7 +14,11 @@ from app.schemas.memory import (
 from app.schemas.response import Response, ResponseSchema
 from app.services.backend_client import BackendClient
 
-router = APIRouter(prefix="/memories", tags=["memories"])
+router = APIRouter(
+    prefix="/memories",
+    tags=["memories"],
+    dependencies=[Depends(require_callback_token)],
+)
 
 backend_client = BackendClient()
 

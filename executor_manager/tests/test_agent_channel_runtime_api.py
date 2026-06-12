@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -7,7 +7,19 @@ from fastapi.testclient import TestClient
 from app.api.v1.agent_channel_runtime import router
 
 
+CALLBACK_TOKEN = "callback-token"
+CALLBACK_HEADERS = {"Authorization": f"Bearer {CALLBACK_TOKEN}"}
+
+
 class AgentChannelRuntimeApiTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self._settings_patch = patch(
+            "app.core.deps.get_settings",
+            return_value=MagicMock(callback_token=CALLBACK_TOKEN),
+        )
+        self._settings_patch.start()
+        self.addCleanup(self._settings_patch.stop)
+
     def test_read_messages_proxies_session_payload(self) -> None:
         app = FastAPI()
         app.include_router(router, prefix="/api/v1")
@@ -22,6 +34,7 @@ class AgentChannelRuntimeApiTests(unittest.TestCase):
                     "session_id": "session-1",
                     "message_ids": ["message-1"],
                 },
+                headers=CALLBACK_HEADERS,
             )
 
         self.assertEqual(response.status_code, 200)
@@ -41,6 +54,7 @@ class AgentChannelRuntimeApiTests(unittest.TestCase):
             response = TestClient(app).post(
                 "/api/v1/agent-channel-runtime/agents/list",
                 json={"session_id": "session-1"},
+                headers=CALLBACK_HEADERS,
             )
 
         self.assertEqual(response.status_code, 200)
@@ -61,6 +75,7 @@ class AgentChannelRuntimeApiTests(unittest.TestCase):
                     "agent_handle": "api",
                     "request_text": "Please review this.",
                 },
+                headers=CALLBACK_HEADERS,
             )
 
         self.assertEqual(response.status_code, 200)
@@ -87,6 +102,7 @@ class AgentChannelRuntimeApiTests(unittest.TestCase):
                     "message_id": "message-1",
                     "emoji": "👍",
                 },
+                headers=CALLBACK_HEADERS,
             )
 
         self.assertEqual(response.status_code, 200)
@@ -110,6 +126,7 @@ class AgentChannelRuntimeApiTests(unittest.TestCase):
                     "message_id": "message-1",
                     "emoji": "✅",
                 },
+                headers=CALLBACK_HEADERS,
             )
 
         self.assertEqual(response.status_code, 200)

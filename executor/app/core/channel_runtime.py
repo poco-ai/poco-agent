@@ -75,24 +75,33 @@ def stage_downloaded_artifact(
 
 
 class ChannelRuntimeClient:
-    def __init__(self, base_url: str, session_id: str, timeout: float = 10.0) -> None:
+    def __init__(
+        self,
+        base_url: str,
+        session_id: str,
+        callback_token: str = "",
+        timeout: float = 10.0,
+    ) -> None:
         self.base_url = base_url.rstrip("/")
         self.session_id = session_id
+        self.callback_token = callback_token
         self.timeout = timeout
 
-    @staticmethod
-    def _trace_headers() -> dict[str, str]:
-        return {
+    def _headers(self) -> dict[str, str]:
+        headers = {
             "X-Request-ID": get_request_id() or generate_request_id(),
             "X-Trace-ID": get_trace_id() or generate_trace_id(),
         }
+        if self.callback_token:
+            headers["Authorization"] = f"Bearer {self.callback_token}"
+        return headers
 
     async def _request(self, path: str, payload: dict[str, Any]) -> Any:
         async with httpx.AsyncClient(timeout=self.timeout) as client:
             response = await client.post(
                 f"{self.base_url}{path}",
                 json={"session_id": self.session_id, **payload},
-                headers=self._trace_headers(),
+                headers=self._headers(),
             )
 
         body = response.json()
@@ -222,7 +231,7 @@ class ChannelRuntimeClient:
                     "artifact_id": artifact_id,
                     "logical_path": logical_path,
                 },
-                headers=self._trace_headers(),
+                headers=self._headers(),
             )
 
         if response.is_error:
