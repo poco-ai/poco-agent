@@ -93,6 +93,7 @@ export type ChatMessage = {
     duration?: number;
     toolCalls?: ToolCall[];
     triggerContext?: AgentTriggerContext;
+    fileReferences?: ChatFileReference[];
     inputFileReferences?: ChatFileReference[];
   };
   parentId?: string;

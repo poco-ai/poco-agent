@@ -7,7 +7,6 @@ import {
   ChevronUp,
   Copy,
   Check,
-  FileText,
   Pencil,
 } from "lucide-react";
 import { FileCard } from "@/components/shared/file-card";
@@ -20,6 +19,7 @@ import type {
   MessageBlock,
   InputFile,
 } from "@/features/chat/types";
+import { getFileIcon } from "@/lib/utils/file/get-file-icon";
 import { useT } from "@/lib/i18n/client";
 import { cn } from "@/lib/utils";
 
@@ -29,7 +29,7 @@ export function UserMessage({
   messageId,
   content,
   triggerContext,
-  inputFileReferences,
+  fileReferences,
   attachments,
   repoUrl,
   gitBranch,
@@ -38,7 +38,7 @@ export function UserMessage({
   messageId: string;
   content: string | MessageBlock[];
   triggerContext?: AgentTriggerContext;
-  inputFileReferences?: ChatFileReference[];
+  fileReferences?: ChatFileReference[];
   attachments?: InputFile[];
   repoUrl?: string | null;
   gitBranch?: string | null;
@@ -76,9 +76,6 @@ export function UserMessage({
   const trimmedGitBranch = (gitBranch || "").trim();
   const hasRepo = trimmedRepoUrl.length > 0;
   const hasAttachments = Boolean(attachments && attachments.length > 0);
-  const hasInputFileReferences = Boolean(
-    inputFileReferences && inputFileReferences.length > 0,
-  );
   const triggerContextRows = React.useMemo(
     () => buildTriggerContextRows(triggerContext, t),
     [triggerContext, t],
@@ -267,25 +264,6 @@ export function UserMessage({
                   ) : null}
                 </div>
               ) : null}
-              {hasInputFileReferences ? (
-                <div className="flex max-w-full flex-wrap justify-end gap-1.5">
-                  {inputFileReferences?.map((reference, index) => {
-                    const displayName = formatFileReferenceDisplay(reference);
-                    return (
-                      <span
-                        key={`${reference.id}:${index}`}
-                        className="inline-flex h-7 max-w-full items-center gap-1.5 rounded-md border border-border bg-background/80 px-2 text-xs text-muted-foreground shadow-sm"
-                        title={formatFileReferenceTitle(reference)}
-                      >
-                        <FileText className="size-3.5 shrink-0" />
-                        <span className="min-w-0 max-w-48 truncate">
-                          {displayName}
-                        </span>
-                      </span>
-                    );
-                  })}
-                </div>
-              ) : null}
               <div className="w-fit min-w-0 max-w-full overflow-hidden rounded-lg bg-muted px-4 py-2 text-foreground">
                 <p
                   ref={observerRef}
@@ -293,7 +271,7 @@ export function UserMessage({
                     shouldCollapse && !isExpanded ? "line-clamp-5" : ""
                   }`}
                 >
-                  {textContent}
+                  {renderFileReferenceText(textContent, fileReferences ?? [])}
                 </p>
               </div>
               <div className="flex items-center justify-between w-full gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
@@ -363,6 +341,70 @@ function formatFileReferenceTitle(reference: ChatFileReference): string {
     return reference.path || displayName;
   }
   return reference.metadata?.path || reference.source || displayName;
+}
+
+function formatFileReferenceIconName(reference: ChatFileReference): string {
+  if (reference.kind === "workspace_file") {
+    return reference.path || reference.displayName;
+  }
+  return reference.metadata?.path || reference.displayName || reference.source;
+}
+
+function renderFileReferenceText(
+  text: string,
+  references: ChatFileReference[],
+): React.ReactNode[] | string {
+  if (references.length === 0) return text;
+
+  const positioned = references
+    .map((reference) => {
+      const rangeStart =
+        reference.range &&
+        text.slice(reference.range.start, reference.range.end) ===
+          reference.insertedText
+          ? reference.range.start
+          : text.indexOf(reference.insertedText);
+      return { reference, start: rangeStart };
+    })
+    .filter((item) => item.start >= 0)
+    .sort((left, right) => left.start - right.start);
+
+  if (positioned.length === 0) return text;
+
+  const nodes: React.ReactNode[] = [];
+  let cursor = 0;
+  for (const item of positioned) {
+    if (item.start < cursor) continue;
+    if (item.start > cursor) {
+      nodes.push(
+        <React.Fragment key={`text-${cursor}`}>
+          {text.slice(cursor, item.start)}
+        </React.Fragment>,
+      );
+    }
+
+    const reference = item.reference;
+    const displayName = formatFileReferenceDisplay(reference);
+    const Icon = getFileIcon(formatFileReferenceIconName(reference));
+    nodes.push(
+      <span
+        key={`${reference.id}-${item.start}`}
+        title={formatFileReferenceTitle(reference)}
+        className="inline-flex max-w-full cursor-text select-text items-center rounded-md border border-amber-900/30 bg-amber-900/10 px-1.5 py-0.5 text-sm font-semibold text-foreground align-baseline"
+      >
+        <Icon className="mr-1 size-3.5 shrink-0" aria-hidden="true" />
+        {displayName.replace(/^#/, "")}
+      </span>,
+    );
+    cursor = item.start + reference.insertedText.length;
+  }
+
+  if (cursor < text.length) {
+    nodes.push(
+      <React.Fragment key={`text-${cursor}`}>{text.slice(cursor)}</React.Fragment>,
+    );
+  }
+  return nodes;
 }
 
 function formatTriggerSource(triggerContext?: AgentTriggerContext): string {

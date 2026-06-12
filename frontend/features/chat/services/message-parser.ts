@@ -451,7 +451,7 @@ export function parseMessages(
           timestamp: msg.created_at,
           metadata: {
             triggerContext: extractTriggerContext(contentObj),
-            inputFileReferences: extractFileReferences(contentObj),
+            fileReferences: extractFileReferences(contentObj),
           },
           attachments: msg.attachments ?? undefined,
         });

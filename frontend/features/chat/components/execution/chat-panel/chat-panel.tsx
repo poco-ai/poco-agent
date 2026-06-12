@@ -785,7 +785,7 @@ export function ChatPanel({
           id: result.queueItemId ?? `queued-${Date.now()}`,
           content,
           attachments,
-          inputFileReferences: fileReferences,
+          fileReferences,
           status: "queued",
         });
       }
@@ -895,7 +895,7 @@ export function ChatPanel({
         inputRef.current?.setDraftAndFocus({
           value: draft.content,
           attachments: draft.attachments,
-          inputFileReferences: draft.inputFileReferences,
+          fileReferences: draft.fileReferences ?? draft.inputFileReferences,
         });
         await refreshTasks();
       } catch (error) {

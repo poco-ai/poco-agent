@@ -99,7 +99,7 @@ test("parseMessages maps file_references metadata onto user messages", () => {
 
   assert.equal(parsed.messages.length, 1);
   assert.deepEqual(
-    parsed.messages[0].metadata?.inputFileReferences,
+    parsed.messages[0].metadata?.fileReferences,
     fileReferences,
   );
 });

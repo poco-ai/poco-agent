@@ -525,7 +525,7 @@ export function useChatMessages({
           status: "sent",
           timestamp: new Date().toISOString(),
           metadata: {
-            inputFileReferences: fileReferences,
+            fileReferences,
           },
           attachments,
         };
