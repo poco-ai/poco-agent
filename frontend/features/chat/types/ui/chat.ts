@@ -1,4 +1,4 @@
-import type { InputFile } from "../api/session";
+import type { ChatFileReference, InputFile } from "../api/session";
 
 /**
  * Chat-related UI types (frontend-specific)
@@ -93,6 +93,8 @@ export type ChatMessage = {
     duration?: number;
     toolCalls?: ToolCall[];
     triggerContext?: AgentTriggerContext;
+    fileReferences?: ChatFileReference[];
+    inputFileReferences?: ChatFileReference[];
   };
   parentId?: string;
   attachments?: InputFile[];

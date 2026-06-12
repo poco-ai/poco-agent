@@ -3,6 +3,8 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import {
+  Check,
+  Copy,
   Image as ImageIcon,
   HardDrive,
   Loader2,
@@ -10,6 +12,8 @@ import {
   PanelRightClose,
   PanelRightOpen,
   Quote,
+  Send,
+  Share2,
 } from "lucide-react";
 import { ChatMessageList } from "../../chat/chat-message-list";
 import { TodoList } from "./todo-list";
@@ -35,7 +39,9 @@ import {
   regenerateMessageAction,
 } from "@/features/chat/actions/session-actions";
 import type {
+  ChatFileReference,
   ExecutionSession,
+  FileNode,
   InputFile,
   StatePatch,
   UserInputRequest,
@@ -66,6 +72,8 @@ import {
 import { useLanguage } from "@/hooks/use-language";
 import { ModelSelector } from "@/features/chat/components/chat/model-selector";
 import { chatService } from "@/features/chat/api/chat-api";
+import { ShareToChannelDialog } from "@/features/chat/components/share/share-to-channel-dialog";
+import { useSessionShareActions } from "@/features/chat/hooks/use-session-share-actions";
 import { useModelCatalog } from "@/features/chat/hooks/use-model-catalog";
 import {
   normalizeModelSelection,
@@ -240,6 +248,51 @@ export function ChatPanel({
     modifyPendingMessage,
     deletePendingMessage,
   } = usePendingMessages({ session });
+  const [sessionFiles, setSessionFiles] = React.useState<FileNode[]>([]);
+
+  const sessionInputFiles = React.useMemo(() => {
+    const bySource = new Map<string, InputFile>();
+    for (const message of displayMessages) {
+      for (const attachment of message.attachments ?? []) {
+        const source = (attachment.source || "").trim();
+        if (source && !bySource.has(source)) {
+          bySource.set(source, attachment);
+        }
+      }
+    }
+    for (const message of pendingMessages) {
+      for (const attachment of message.attachments ?? []) {
+        const source = (attachment.source || "").trim();
+        if (source && !bySource.has(source)) {
+          bySource.set(source, attachment);
+        }
+      }
+    }
+    return Array.from(bySource.values());
+  }, [displayMessages, pendingMessages]);
+
+  React.useEffect(() => {
+    const sessionId = session?.session_id;
+    if (!sessionId) {
+      setSessionFiles([]);
+      return;
+    }
+
+    let cancelled = false;
+    void chatService.getFiles(sessionId).then((files) => {
+      if (!cancelled) {
+        setSessionFiles(files);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    session?.session_id,
+    session?.state_patch?.workspace_state?.file_change_count,
+    session?.workspace_export_status,
+  ]);
 
   // Determine if session is running/active
   const isSessionActive =
@@ -679,7 +732,11 @@ export function ChatPanel({
 
   // Handle send from input
   const handleSend = React.useCallback(
-    async (content: string, attachments?: InputFile[]) => {
+    async (
+      content: string,
+      attachments?: InputFile[],
+      fileReferences?: ChatFileReference[],
+    ) => {
       if (!session?.session_id) return;
 
       if (hasActiveUserInput) {
@@ -712,6 +769,7 @@ export function ChatPanel({
       const result = await sendMessage(
         content,
         attachments,
+        fileReferences,
         selectedModelSelection,
       );
 
@@ -727,6 +785,7 @@ export function ChatPanel({
           id: result.queueItemId ?? `queued-${Date.now()}`,
           content,
           attachments,
+          fileReferences,
           status: "queued",
         });
       }
@@ -836,6 +895,7 @@ export function ChatPanel({
         inputRef.current?.setDraftAndFocus({
           value: draft.content,
           attachments: draft.attachments,
+          fileReferences: draft.fileReferences ?? draft.inputFileReferences,
         });
         await refreshTasks();
       } catch (error) {
@@ -1018,6 +1078,11 @@ export function ChatPanel({
     session?.new_message?.title?.trim() ||
     t("chat.executionTitle");
   const headerDescription = session?.title?.trim() || t("chat.emptyStateDesc");
+  const shareActions = useSessionShareActions({
+    sessionId: session?.session_id,
+    title: headerDescription,
+    logContext: "ChatPanel",
+  });
   const safeCollapsedChatContentInsetPercent = Math.min(
     20,
     Math.max(0, collapsedChatContentInsetPercent),
@@ -1207,6 +1272,46 @@ export function ChatPanel({
                     </DropdownMenuContent>
                   </DropdownMenu>
                 ) : null}
+                {session?.session_id ? (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <PanelHeaderAction
+                        title={t("chat.share")}
+                        disabled={
+                          shareActions.isCreatingShare ||
+                          shareActions.isSharingToChannel
+                        }
+                      >
+                        {shareActions.isCreatingShare ||
+                        shareActions.isSharingToChannel ? (
+                          <Loader2 className="size-4 animate-spin" />
+                        ) : (
+                          <Share2 className="size-4" />
+                        )}
+                      </PanelHeaderAction>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem
+                        onClick={() => void shareActions.copyShareLink()}
+                        disabled={shareActions.isCreatingShare}
+                      >
+                        {shareActions.shareToken ? (
+                          <Check className="size-4" />
+                        ) : (
+                          <Copy className="size-4" />
+                        )}
+                        {t("chat.copyShareLink")}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => shareActions.setShareToChannelOpen(true)}
+                        disabled={shareActions.isSharingToChannel}
+                      >
+                        <Send className="size-4" />
+                        {t("chat.shareToChannel")}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ) : null}
                 {showRightPanelToggle ? (
                   <PanelHeaderAction
                     onClick={onToggleRightPanel}
@@ -1376,6 +1481,19 @@ export function ChatPanel({
         />
       ) : null}
 
+      <ShareToChannelDialog
+        open={shareActions.shareToChannelOpen}
+        onOpenChange={shareActions.setShareToChannelOpen}
+        servers={shareActions.shareServers}
+        channels={shareActions.shareChannels}
+        selectedServerId={shareActions.selectedShareServerId}
+        onSelectedServerIdChange={shareActions.setSelectedShareServerId}
+        selectedChannelId={shareActions.selectedShareChannelId}
+        onSelectedChannelIdChange={shareActions.setSelectedShareChannelId}
+        isSharing={shareActions.isSharingToChannel}
+        onShare={shareActions.shareToChannel}
+      />
+
       {/* Status Bar - Skills and MCP */}
       {(currentPreset ||
         hasConfigSnapshot ||
@@ -1423,6 +1541,9 @@ export function ChatPanel({
           session?.status === "canceling"
         }
         history={userPromptHistory}
+        sessionId={session?.session_id}
+        sessionInputFiles={sessionInputFiles}
+        sessionFiles={sessionFiles}
         className={
           isRightPanelCollapsed ? collapsedContentInsetClass : undefined
         }

@@ -21,7 +21,10 @@ async def get_schedules() -> JSONResponse:
     url = f"{settings.executor_manager_url}/api/v1/schedules"
 
     try:
-        headers = {"accept": "application/json"}
+        headers = {
+            "accept": "application/json",
+            "X-Internal-Token": settings.internal_api_token,
+        }
         request_id = get_request_id()
         if request_id:
             headers["X-Request-ID"] = request_id

@@ -13,6 +13,7 @@ from app.models.session_queue_item import AgentSessionQueueItem
 from app.repositories.message_repository import MessageRepository
 from app.repositories.run_repository import RunRepository
 from app.repositories.session_queue_item_repository import SessionQueueItemRepository
+from app.services.file_reference_service import FileReferenceService
 from app.schemas.session_queue_item import (
     SessionQueueItemResponse,
     SessionQueueItemUpdateRequest,
@@ -39,6 +40,8 @@ class SessionQueueService:
             return None
         session_config = dict(run_config_snapshot)
         session_config.pop("input_files", None)
+        session_config.pop("file_references", None)
+        session_config.pop("input_file_references", None)
         return session_config or None
 
     @staticmethod
@@ -67,10 +70,16 @@ class SessionQueueService:
     ) -> dict[str, Any] | None:
         if not isinstance(run_config_snapshot, dict):
             return None
+        metadata: dict[str, Any] = {}
         trigger_context = run_config_snapshot.get("trigger_context")
-        if not isinstance(trigger_context, dict):
-            return None
-        return {"trigger_context": trigger_context}
+        if isinstance(trigger_context, dict):
+            metadata["trigger_context"] = trigger_context
+        file_references = run_config_snapshot.get("file_references")
+        if file_references is None:
+            file_references = run_config_snapshot.get("input_file_references")
+        if isinstance(file_references, list) and file_references:
+            metadata["file_references"] = file_references
+        return metadata or None
 
     @staticmethod
     def _move_item_to_front(
@@ -301,7 +310,12 @@ class SessionQueueService:
         if request.prompt is not None:
             item.prompt = self._normalize_prompt(request.prompt)
 
-        if request.attachments is not None:
+        if (
+            request.prompt is not None
+            or request.attachments is not None
+            or request.file_references is not None
+            or request.input_file_references is not None
+        ):
             snapshot = (
                 dict(item.run_config_snapshot)
                 if isinstance(item.run_config_snapshot, dict)
@@ -312,8 +326,46 @@ class SessionQueueService:
                     attachment.model_dump(mode="json")
                     for attachment in request.attachments
                 ]
+            elif request.attachments is not None:
+                snapshot.pop("input_files", None)
+            input_files = snapshot.get("input_files")
+            if not isinstance(input_files, list):
+                input_files = []
+            requested_references = (
+                request.file_references
+                if request.file_references is not None
+                else request.input_file_references
+            )
+            if requested_references is None:
+                requested_references = snapshot.get("file_references")
+                if requested_references is None:
+                    requested_references = snapshot.get("input_file_references")
+            current_input_files = []
+            for raw_input in input_files:
+                input_file = FileReferenceService._input_file_from_raw(raw_input)
+                if input_file is not None:
+                    current_input_files.append(input_file)
+            merged_input_files, normalized_file_references = (
+                FileReferenceService().resolve_for_run(
+                    db,
+                    db_session,
+                    requested_references,
+                    current_input_files,
+                    prompt=item.prompt,
+                )
+            )
+            if merged_input_files:
+                snapshot["input_files"] = [
+                    input_file.model_dump(mode="json")
+                    for input_file in merged_input_files
+                ]
             else:
                 snapshot.pop("input_files", None)
+            if normalized_file_references:
+                snapshot["file_references"] = normalized_file_references
+            else:
+                snapshot.pop("file_references", None)
+            snapshot.pop("input_file_references", None)
             item.run_config_snapshot = snapshot or None
 
         db.flush()

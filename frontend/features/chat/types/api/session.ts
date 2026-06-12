@@ -179,6 +179,47 @@ export interface InputFile {
   url?: string | null;
 }
 
+export interface ChatInputFileReferenceRange {
+  start: number;
+  end: number;
+}
+
+export interface ChatInputFileReference {
+  [x: string]: unknown;
+  id: string;
+  kind: "input_file";
+  source: string;
+  insertedText: string;
+  displayName: string;
+  range?: ChatInputFileReferenceRange;
+  metadata?: {
+    inputFileId?: string | null;
+    size?: number | null;
+    contentType?: string | null;
+    path?: string | null;
+  };
+}
+
+export interface ChatWorkspaceFileReference {
+  [x: string]: unknown;
+  id: string;
+  kind: "workspace_file";
+  sessionId: string;
+  path: string;
+  insertedText: string;
+  displayName: string;
+  range?: ChatInputFileReferenceRange;
+  metadata?: {
+    size?: number | null;
+    contentType?: string | null;
+    sourceKind?: string | null;
+  };
+}
+
+export type ChatFileReference =
+  | ChatInputFileReference
+  | ChatWorkspaceFileReference;
+
 export interface TaskConfig {
   repo_url?: string | null;
   git_branch?: string; // defaults to "main"
@@ -217,5 +258,7 @@ export interface TaskConfig {
   filesystem_mode?: FilesystemMode;
   local_mounts?: LocalMountConfig[];
   input_files?: InputFile[];
+  file_references?: ChatFileReference[];
+  input_file_references?: ChatFileReference[];
   trigger_context?: Record<string, unknown> | null;
 }

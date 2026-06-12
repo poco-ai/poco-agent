@@ -64,6 +64,10 @@ interface ComputerPanelProps {
   browserEnabled?: boolean;
   headerAction?: React.ReactNode;
   hideHeader?: boolean;
+  toolExecutions?: ToolExecutionResponse[];
+  getBrowserScreenshotUrl?: (
+    toolUseId: string,
+  ) => Promise<string | null | undefined> | string | null | undefined;
 }
 
 type ReplayFilter = "all" | "browser" | "terminal" | "tool";
@@ -99,23 +103,33 @@ export function ComputerPanel({
   sessionStatus,
   headerAction,
   hideHeader = false,
+  toolExecutions,
+  getBrowserScreenshotUrl,
 }: ComputerPanelProps) {
   const { t } = useT("translation");
   const isActive = sessionStatus === "running" || sessionStatus === "pending";
+  const usesProvidedExecutions = toolExecutions !== undefined;
 
   const {
-    executions,
-    isLoading,
-    isSwitchingRun,
-    isLoadingMore,
-    hasMore,
-    loadMore,
+    executions: fetchedExecutions,
+    isLoading: fetchedIsLoading,
+    isSwitchingRun: fetchedIsSwitchingRun,
+    isLoadingMore: fetchedIsLoadingMore,
+    hasMore: fetchedHasMore,
+    loadMore: fetchedLoadMore,
   } = useToolExecutions({
-    runId,
-    isActive,
+    runId: usesProvidedExecutions ? undefined : runId,
+    isActive: usesProvidedExecutions ? false : isActive,
     pollingIntervalMs: 2000,
     limit: 100,
   });
+  const executions = toolExecutions ?? fetchedExecutions;
+  const isLoading = usesProvidedExecutions ? false : fetchedIsLoading;
+  const isSwitchingRun = usesProvidedExecutions ? false : fetchedIsSwitchingRun;
+  const isLoadingMore = usesProvidedExecutions ? false : fetchedIsLoadingMore;
+  const hasMore = usesProvidedExecutions ? false : fetchedHasMore;
+  const noopLoadMore = React.useCallback(() => undefined, []);
+  const loadMore = usesProvidedExecutions ? noopLoadMore : fetchedLoadMore;
 
   // --- Screenshot caching (persists across tab switches) ---
   const screenshotCacheRef = React.useRef(new Map<string, string | null>());
@@ -137,6 +151,25 @@ export function ComputerPanel({
       }
 
       inflightRef.current.add(id);
+
+      if (getBrowserScreenshotUrl) {
+        try {
+          const url = (await getBrowserScreenshotUrl(id)) ?? null;
+          screenshotCacheRef.current.set(id, url);
+          setBrowserScreenshotUrls((prev) => ({ ...prev, [id]: url }));
+        } catch {
+          screenshotCacheRef.current.set(id, null);
+          setBrowserScreenshotUrls((prev) => ({ ...prev, [id]: null }));
+        } finally {
+          inflightRef.current.delete(id);
+        }
+        return;
+      }
+
+      if (!runId) {
+        inflightRef.current.delete(id);
+        return;
+      }
 
       const fetchWithRetry = async (attempts = 0): Promise<void> => {
         try {
@@ -166,7 +199,7 @@ export function ComputerPanel({
 
       await fetchWithRetry();
     },
-    [runId],
+    [getBrowserScreenshotUrl, runId],
   );
 
   const replayFramesAll: ReplayFrame[] = React.useMemo(() => {

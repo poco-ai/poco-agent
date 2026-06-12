@@ -1,6 +1,6 @@
-fix(server-channel): name agent direct messages by handle
+fix(executor-manager): require tokens for manager APIs
 
-- Create agent direct-message channels with @handle names and handle-based slugs
-- Project existing agent DMs with current handles when listing channels
-- Keep newly opened DMs in local channel state before routing to the conversation
-- Cover agent DM naming and legacy projection behavior in backend tests
+- Protect EM control-plane routes with X-Internal-Token and executor proxy routes with callback tokens
+- Send internal headers from Backend EM clients and callback Bearer tokens from executor clients
+- Add auth regression coverage for EM routes, Backend callers, and executor manager clients
+- Record the token boundary decision and completed hardening plan

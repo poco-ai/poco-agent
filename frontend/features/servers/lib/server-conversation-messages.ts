@@ -135,6 +135,8 @@ export function getChannelEventLabelKey(eventType: string): string {
       return "conversationView.events.artifactUploaded";
     case "artifact.deleted":
       return "conversationView.events.artifactDeleted";
+    case "conversation.shared":
+      return "conversationView.events.conversationShared";
     default:
       return "conversationView.events.unknown";
   }

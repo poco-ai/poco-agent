@@ -4,6 +4,7 @@
     "servers-and-membership",
     "conversations-and-tasks",
     "persistent-agents",
+    "session-sharing",
     "shared-context-and-artifacts"
   ]
 }

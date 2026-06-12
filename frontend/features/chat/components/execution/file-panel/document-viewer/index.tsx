@@ -1392,7 +1392,7 @@ const DocumentViewerComponent = ({
   const textLanguage = getTextLanguage(extension, file.mimeType);
   const excalidrawFile = isExcalidrawFile(extension, file.mimeType);
   const drawioFile = isDrawioFile(extension, file.mimeType);
-  const videoFile = isVideoFile(extension, file.mimeType);
+  const videoFile = !textLanguage && isVideoFile(extension, file.mimeType);
   const showCardWhileLoading = Boolean(onClose);
 
   const handleDownload = async () => {

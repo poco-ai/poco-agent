@@ -45,6 +45,8 @@ PROVIDER_SPECS: tuple[ProviderSpec, ...] = (
         api_key_env_key="GLM_API_KEY",
         base_url_env_key="GLM_BASE_URL",
         default_base_url="https://open.bigmodel.cn/api/anthropic",
+        api_key_settings_fields=("glm_api_key",),
+        base_url_settings_fields=("glm_base_url",),
         known_models=(
             ("glm-4.7", "GLM-4.7"),
             ("glm-5", "GLM-5"),
@@ -56,6 +58,8 @@ PROVIDER_SPECS: tuple[ProviderSpec, ...] = (
         api_key_env_key="MINIMAX_API_KEY",
         base_url_env_key="MINIMAX_BASE_URL",
         default_base_url="https://api.minimaxi.com/anthropic",
+        api_key_settings_fields=("minimax_api_key",),
+        base_url_settings_fields=("minimax_base_url",),
         known_models=(("MiniMax-M2.5", "MiniMax M2.5"),),
     ),
     ProviderSpec(
@@ -64,6 +68,8 @@ PROVIDER_SPECS: tuple[ProviderSpec, ...] = (
         api_key_env_key="DEEPSEEK_API_KEY",
         base_url_env_key="DEEPSEEK_BASE_URL",
         default_base_url="https://api.deepseek.com/anthropic",
+        api_key_settings_fields=("deepseek_api_key",),
+        base_url_settings_fields=("deepseek_base_url",),
         known_models=(
             ("deepseek-chat", "DeepSeek Chat"),
             ("deepseek-reasoner", "DeepSeek Reasoner"),

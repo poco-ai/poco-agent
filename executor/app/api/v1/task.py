@@ -50,19 +50,36 @@ async def run_task(req: TaskRun, background_tasks: BackgroundTasks) -> dict:
     Returns:
         Accepted status with session ID.
     """
-    callback_client = CallbackClient(callback_url=req.callback_url)
+    callback_client = CallbackClient(
+        callback_url=req.callback_url,
+        callback_token=req.callback_token,
+    )
     base_url = UserInputClient.resolve_base_url(
         callback_url=req.callback_url, callback_base_url=req.callback_base_url
     )
-    user_input_client = UserInputClient(base_url=base_url)
-    computer_client = ComputerClient(base_url=base_url)
+    user_input_client = UserInputClient(
+        base_url=base_url,
+        callback_token=req.callback_token,
+    )
+    computer_client = ComputerClient(
+        base_url=base_url,
+        callback_token=req.callback_token,
+    )
     memory_client = (
-        MemoryClient(base_url=base_url, session_id=req.session_id)
+        MemoryClient(
+            base_url=base_url,
+            session_id=req.session_id,
+            callback_token=req.callback_token,
+        )
         if req.config.memory_enabled
         else None
     )
     channel_runtime_client = (
-        ChannelRuntimeClient(base_url=base_url, session_id=req.session_id)
+        ChannelRuntimeClient(
+            base_url=base_url,
+            session_id=req.session_id,
+            callback_token=req.callback_token,
+        )
         if req.config.server_id
         and req.config.channel_id
         and req.config.agent_identity_id

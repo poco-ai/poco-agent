@@ -54,6 +54,7 @@ import { MessageReactionPicker } from "./message-reaction-picker";
 
 const MESSAGE_COLLAPSE_LINES = 8;
 const MAX_REACTION_ACTOR_NAME_LENGTH = 18;
+const IMPORTED_AGENT_DISPLAY_NAME = "Poco";
 
 type MessageRowProps = {
   message: ServerConversationMessage;
@@ -118,6 +119,15 @@ export function getMessageText(message: ServerConversationMessage): string {
   return getServerMessageText(message);
 }
 
+function isImportedAgentTranscriptMessage(
+  message: ServerConversationMessage,
+): boolean {
+  return (
+    message.messageType === "system" &&
+    message.content.source === "imported_agent_session"
+  );
+}
+
 function formatSummaryDate(value: string, locale?: string): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
@@ -149,6 +159,13 @@ export function getMessageAuthor(message: ServerConversationMessage): string {
   if (message.messageType === "event") {
     const event = getChannelEventContent(message);
     return event?.actorLabel?.trim() || "System";
+  }
+  if (isImportedAgentTranscriptMessage(message)) {
+    const actor = message.content.actor_label;
+    if (typeof actor === "string" && actor.trim()) {
+      return actor.trim();
+    }
+    return IMPORTED_AGENT_DISPLAY_NAME;
   }
   if (message.messageType === "system") {
     const actor = message.content.actor_label;
@@ -683,18 +700,21 @@ function StandardMessageRow({
   const contentText =
     typeof message.content.text === "string" ? message.content.text.trim() : "";
   const text = attachments.length > 0 ? contentText : getMessageText(message);
+  const isImportedAgentTranscript = isImportedAgentTranscriptMessage(message);
   const executionMessage = isExecutionMessage(message) ? message : null;
   const drilldownSessionId = getMessageSessionId(message);
   const canOpenExecutionFromAvatar =
     Boolean(onOpenExecution) && isExecutionDrilldownMessage(message);
-  const avatarUrl = getUserAvatarUrl(message.authorUser);
+  const avatarUrl = isImportedAgentTranscript
+    ? null
+    : getUserAvatarUrl(message.authorUser);
   const matchingMember =
     message.authorUserId != null
       ? (members.find((member) => member.userId === message.authorUserId) ??
         null)
       : null;
   const matchingAgent =
-    message.messageType === "system"
+    message.messageType === "system" && !isImportedAgentTranscript
       ? (message.authorAgent ??
         agents.find((agent) => {
           const contentHandle =
@@ -818,7 +838,11 @@ function StandardMessageRow({
             <Avatar className="size-11 rounded-md border border-border">
               {avatarUrl ? <AvatarImage src={avatarUrl} alt={author} /> : null}
               <AvatarFallback className="rounded-md bg-muted text-sm font-semibold text-foreground">
-                {getInitials(author)}
+                {isImportedAgentTranscript ? (
+                  <MessageSquare className="size-4" aria-hidden="true" />
+                ) : (
+                  getInitials(author)
+                )}
               </AvatarFallback>
             </Avatar>
           </div>

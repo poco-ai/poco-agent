@@ -21,6 +21,8 @@ import {
   TASK_STATUS_META,
   type TaskHistoryItem,
 } from "@/features/projects";
+import { ShareToChannelDialog } from "@/features/chat/components/share/share-to-channel-dialog";
+import { useSessionShareActions } from "@/features/chat/hooks/use-session-share-actions";
 import {
   SIDEBAR_CARD_NESTED_INSET_CLASS,
   SIDEBAR_CARD_TEXT_CLASS,
@@ -80,6 +82,13 @@ function DraggableTask({
   const { t } = useT("translation");
   const router = useRouter();
   const [isDropdownOpen, setIsDropdownOpen] = React.useState(false);
+  const shareActions = useSessionShareActions({
+    sessionId: task.id,
+    title: task.title || t("chat.newChat"),
+    logContext: "TaskHistoryList",
+  });
+  const isShareActionPending =
+    shareActions.isCreatingShare || shareActions.isSharingToChannel;
   const { listeners, setNodeRef, isDragging } = useDraggable({
     id: task.id,
     data: {
@@ -104,154 +113,178 @@ function DraggableTask({
   };
 
   return (
-    <SidebarMenuItem
-      ref={setNodeRef}
-      className={cn("relative transition-opacity", isDragging && "opacity-50")}
-      data-task-id={task.id}
-    >
-      {isSelectionMode ? (
-        <div
-          role="button"
-          tabIndex={0}
-          data-slot="sidebar-menu-button"
-          data-sidebar="menu-button"
-          className={cn(
-            "flex w-full min-w-0 items-center cursor-pointer outline-hidden rounded-md",
-            SIDEBAR_CARD_BASE_CLASS,
-            isNested && SIDEBAR_CARD_NESTED_INSET_CLASS,
-          )}
-          onClick={handleClick}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault();
-              (e.currentTarget as HTMLElement).click();
-            }
-          }}
-        >
-          <div className="flex items-center gap-3 min-w-0 w-full">
-            <div className="shrink-0 flex items-center justify-center">
-              <Checkbox
-                checked={isSelected}
-                onCheckedChange={() => onToggleSelection?.(task.id)}
-                className="size-4"
-                onClick={(e) => e.stopPropagation()}
-              />
-            </div>
-            <span
-              className={cn(SIDEBAR_CARD_TEXT_CLASS, isSelectionMode && "ml-1")}
-            >
-              {task.title || t("chat.newChat")}
-            </span>
-          </div>
-        </div>
-      ) : (
-        <div
-          className="relative group/task-card"
-          data-active={isActive ? "true" : undefined}
-        >
-          <SidebarMenuButton
-            isActive={isActive}
+    <>
+      <SidebarMenuItem
+        ref={setNodeRef}
+        className={cn(
+          "relative transition-opacity",
+          isDragging && "opacity-50",
+        )}
+        data-task-id={task.id}
+      >
+        {isSelectionMode ? (
+          <div
+            role="button"
+            tabIndex={0}
+            data-slot="sidebar-menu-button"
+            data-sidebar="menu-button"
             className={cn(
-              SIDEBAR_CARD_WITH_ACTION_CLASS,
+              "flex w-full min-w-0 items-center cursor-pointer outline-hidden rounded-md",
+              SIDEBAR_CARD_BASE_CLASS,
               isNested && SIDEBAR_CARD_NESTED_INSET_CLASS,
             )}
-            tooltip={task.title}
             onClick={handleClick}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                (e.currentTarget as HTMLElement).click();
+              }
+            }}
           >
-            {/* Status indicator and drag handle - same slot, toggled on hover */}
-            <div className="size-4 shrink-0 flex items-center justify-center relative">
-              {/* Default: status dot (hidden on hover) */}
+            <div className="flex items-center gap-3 min-w-0 w-full">
+              <div className="shrink-0 flex items-center justify-center">
+                <Checkbox
+                  checked={isSelected}
+                  onCheckedChange={() => onToggleSelection?.(task.id)}
+                  className="size-4"
+                  onClick={(e) => e.stopPropagation()}
+                />
+              </div>
               <span
                 className={cn(
-                  "size-2 shrink-0 rounded-full transition-opacity",
-                  statusMeta.dotClassName,
-                  isRunningTask &&
-                    "motion-safe:animate-[running-status-dot-blink_1.05s_ease-in-out_infinite] motion-reduce:animate-none",
-                  shouldShowDragHandle && "group-hover/task-card:opacity-0",
-                  shouldShowDragHandle &&
-                    "group-data-[active=true]/task-card:opacity-0",
+                  SIDEBAR_CARD_TEXT_CLASS,
+                  isSelectionMode && "ml-1",
                 )}
-                aria-hidden="true"
-              />
-              <span className="sr-only">{t(statusMeta.labelKey)}</span>
-
-              {/* Hover: drag handle (overlays the dot) */}
-              <div
-                className={cn(
-                  "absolute inset-0 flex items-center justify-center text-muted-foreground opacity-0 transition-opacity cursor-grab active:cursor-grabbing group-data-[collapsible=icon]:hidden",
-                  shouldShowDragHandle &&
-                    "group-hover/task-card:opacity-100 group-data-[active=true]/task-card:opacity-100",
-                )}
-                {...(shouldShowDragHandle ? listeners : {})}
-                onClick={(e) => e.stopPropagation()}
               >
-                {shouldShowDragHandle ? (
-                  <GripVertical className="size-3" />
-                ) : null}
-              </div>
-            </div>
-
-            {/* Text */}
-            <div className="flex min-w-0 flex-1 items-center gap-2">
-              <span className={SIDEBAR_CARD_TEXT_CLASS}>
                 {task.title || t("chat.newChat")}
               </span>
-              {task.hasPendingUserInput && (
-                <Badge className="shrink-0 bg-primary text-primary-foreground px-2 py-0 text-[10px] font-semibold animate-[ask-blink_1.2s_ease-in-out_infinite] group-data-[collapsible=icon]:hidden">
-                  {t("sidebar.askTag")}
-                </Badge>
-              )}
             </div>
-          </SidebarMenuButton>
-
-          {isPinned && (
-            <div
-              className={cn(
-                "pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 shrink-0 size-5 flex items-center justify-center rounded-lg text-muted-foreground transition-opacity group-data-[collapsible=icon]:hidden",
-                isDropdownOpen
-                  ? "opacity-0"
-                  : "opacity-100 group-hover/task-card:opacity-0 group-data-[active=true]/task-card:opacity-0",
-              )}
-              aria-hidden="true"
-            >
-              <Pin className="size-3.5" />
-            </div>
-          )}
-
-          {/* More actions - only in non-selection mode */}
-          <TaskActionsDropdown
-            taskId={task.id}
-            isPinned={isPinned}
-            projects={projects}
-            onTogglePin={onTogglePin}
-            onRename={onRenameClick ? () => onRenameClick(task) : undefined}
-            onMoveToProject={onMoveTaskToProject}
-            onDelete={onDeleteTask}
-            open={isDropdownOpen}
-            onOpenChange={setIsDropdownOpen}
-            side="right"
+          </div>
+        ) : (
+          <div
+            className="relative group/task-card"
+            data-active={isActive ? "true" : undefined}
           >
-            <div
-              role="button"
-              tabIndex={0}
-              onClick={(e) => {
-                e.stopPropagation();
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  (e.currentTarget as HTMLElement).click();
-                }
-              }}
-              className="absolute top-1/2 right-2 -translate-y-1/2 shrink-0 size-5 flex items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground opacity-0 transition-opacity group-hover/task-card:opacity-100 group-data-[active=true]/task-card:opacity-100 data-[state=open]:opacity-100 group-data-[collapsible=icon]:hidden cursor-pointer focus-visible:outline-none z-10"
+            <SidebarMenuButton
+              isActive={isActive}
+              className={cn(
+                SIDEBAR_CARD_WITH_ACTION_CLASS,
+                isNested && SIDEBAR_CARD_NESTED_INSET_CLASS,
+              )}
+              tooltip={task.title}
+              onClick={handleClick}
             >
-              <MoreHorizontal className="size-3.5" />
-            </div>
-          </TaskActionsDropdown>
-        </div>
-      )}
-    </SidebarMenuItem>
+              {/* Status indicator and drag handle - same slot, toggled on hover */}
+              <div className="size-4 shrink-0 flex items-center justify-center relative">
+                {/* Default: status dot (hidden on hover) */}
+                <span
+                  className={cn(
+                    "size-2 shrink-0 rounded-full transition-opacity",
+                    statusMeta.dotClassName,
+                    isRunningTask &&
+                      "motion-safe:animate-[running-status-dot-blink_1.05s_ease-in-out_infinite] motion-reduce:animate-none",
+                    shouldShowDragHandle && "group-hover/task-card:opacity-0",
+                    shouldShowDragHandle &&
+                      "group-data-[active=true]/task-card:opacity-0",
+                  )}
+                  aria-hidden="true"
+                />
+                <span className="sr-only">{t(statusMeta.labelKey)}</span>
+
+                {/* Hover: drag handle (overlays the dot) */}
+                <div
+                  className={cn(
+                    "absolute inset-0 flex items-center justify-center text-muted-foreground opacity-0 transition-opacity cursor-grab active:cursor-grabbing group-data-[collapsible=icon]:hidden",
+                    shouldShowDragHandle &&
+                      "group-hover/task-card:opacity-100 group-data-[active=true]/task-card:opacity-100",
+                  )}
+                  {...(shouldShowDragHandle ? listeners : {})}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {shouldShowDragHandle ? (
+                    <GripVertical className="size-3" />
+                  ) : null}
+                </div>
+              </div>
+
+              {/* Text */}
+              <div className="flex min-w-0 flex-1 items-center gap-2">
+                <span className={SIDEBAR_CARD_TEXT_CLASS}>
+                  {task.title || t("chat.newChat")}
+                </span>
+                {task.hasPendingUserInput && (
+                  <Badge className="shrink-0 bg-primary text-primary-foreground px-2 py-0 text-[10px] font-semibold animate-[ask-blink_1.2s_ease-in-out_infinite] group-data-[collapsible=icon]:hidden">
+                    {t("sidebar.askTag")}
+                  </Badge>
+                )}
+              </div>
+            </SidebarMenuButton>
+
+            {isPinned && (
+              <div
+                className={cn(
+                  "pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 shrink-0 size-5 flex items-center justify-center rounded-lg text-muted-foreground transition-opacity group-data-[collapsible=icon]:hidden",
+                  isDropdownOpen
+                    ? "opacity-0"
+                    : "opacity-100 group-hover/task-card:opacity-0 group-data-[active=true]/task-card:opacity-0",
+                )}
+                aria-hidden="true"
+              >
+                <Pin className="size-3.5" />
+              </div>
+            )}
+
+            {/* More actions - only in non-selection mode */}
+            <TaskActionsDropdown
+              taskId={task.id}
+              isPinned={isPinned}
+              projects={projects}
+              onTogglePin={onTogglePin}
+              onRename={onRenameClick ? () => onRenameClick(task) : undefined}
+              onCopyShareLink={() => shareActions.copyShareLink()}
+              onShareToChannel={() => shareActions.setShareToChannelOpen(true)}
+              isShareActionPending={isShareActionPending}
+              onMoveToProject={onMoveTaskToProject}
+              onDelete={onDeleteTask}
+              open={isDropdownOpen}
+              onOpenChange={setIsDropdownOpen}
+              side="right"
+            >
+              <div
+                role="button"
+                tabIndex={0}
+                onClick={(e) => {
+                  e.stopPropagation();
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    (e.currentTarget as HTMLElement).click();
+                  }
+                }}
+                className="absolute top-1/2 right-2 -translate-y-1/2 shrink-0 size-5 flex items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground opacity-0 transition-opacity group-hover/task-card:opacity-100 group-data-[active=true]/task-card:opacity-100 data-[state=open]:opacity-100 group-data-[collapsible=icon]:hidden cursor-pointer focus-visible:outline-none z-10"
+              >
+                <MoreHorizontal className="size-3.5" />
+              </div>
+            </TaskActionsDropdown>
+          </div>
+        )}
+      </SidebarMenuItem>
+
+      <ShareToChannelDialog
+        open={shareActions.shareToChannelOpen}
+        onOpenChange={shareActions.setShareToChannelOpen}
+        servers={shareActions.shareServers}
+        channels={shareActions.shareChannels}
+        selectedServerId={shareActions.selectedShareServerId}
+        onSelectedServerIdChange={shareActions.setSelectedShareServerId}
+        selectedChannelId={shareActions.selectedShareChannelId}
+        onSelectedChannelIdChange={shareActions.setSelectedShareChannelId}
+        isSharing={shareActions.isSharingToChannel}
+        onShare={shareActions.shareToChannel}
+      />
+    </>
   );
 }
 

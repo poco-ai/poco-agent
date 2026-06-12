@@ -1,14 +1,19 @@
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
 from fastapi.responses import FileResponse
 from fastapi.responses import JSONResponse
 
+from app.core.deps import require_internal_token
 from app.core.errors.error_codes import ErrorCode
 from app.core.errors.exceptions import AppException
 from app.schemas.response import Response, ResponseSchema
 from app.schemas.workspace import FileNode
 from app.services.workspace_manager import WorkspaceManager
 
-router = APIRouter(prefix="/workspace", tags=["workspace"])
+router = APIRouter(
+    prefix="/workspace",
+    tags=["workspace"],
+    dependencies=[Depends(require_internal_token)],
+)
 workspace_manager = WorkspaceManager()
 
 

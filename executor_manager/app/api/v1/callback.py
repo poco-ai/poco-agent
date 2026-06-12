@@ -1,15 +1,20 @@
 import logging
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 
+from app.core.deps import require_callback_token
 from app.schemas.callback import AgentCallbackRequest, CallbackReceiveResponse
 from app.schemas.response import Response, ResponseSchema
 from app.services.callback_service import CallbackService
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/callback", tags=["callback"])
+router = APIRouter(
+    prefix="/callback",
+    tags=["callback"],
+    dependencies=[Depends(require_callback_token)],
+)
 callback_service = CallbackService()
 
 

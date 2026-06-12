@@ -1,4 +1,3 @@
-import mimetypes
 from pathlib import Path
 import uuid
 
@@ -10,6 +9,7 @@ from app.models.agent_identity import AgentIdentity
 from app.schemas.workspace import FileNode
 from app.services.agent_state_bootstrap_service import DEFAULT_AGENT_STATE_BASE_DIR
 from app.services.server_member_service import require_server_owner
+from app.utils.mime import guess_mime_type
 
 
 class AgentStateBrowserService:
@@ -214,7 +214,6 @@ class AgentStateBrowserService:
                 )
                 continue
 
-            mime_type, _ = mimetypes.guess_type(entry.name)
             nodes.append(
                 FileNode(
                     id=node_path,
@@ -222,7 +221,7 @@ class AgentStateBrowserService:
                     type="file",
                     path=node_path,
                     source="workspace",
-                    mimeType=mime_type,
+                    mimeType=guess_mime_type(entry.name),
                 )
             )
 

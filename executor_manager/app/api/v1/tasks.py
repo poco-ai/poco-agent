@@ -1,8 +1,9 @@
 import logging
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 
+from app.core.deps import require_internal_token
 from app.schemas.response import Response, ResponseSchema
 from app.schemas.task import (
     SessionStatusResponse,
@@ -14,7 +15,11 @@ from app.services.task_service import TaskService
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/tasks", tags=["tasks"])
+router = APIRouter(
+    prefix="/tasks",
+    tags=["tasks"],
+    dependencies=[Depends(require_internal_token)],
+)
 task_service = TaskService()
 
 

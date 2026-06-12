@@ -15,9 +15,11 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import type {
   AgentTriggerContext,
+  ChatFileReference,
   MessageBlock,
   InputFile,
 } from "@/features/chat/types";
+import { getFileIcon } from "@/lib/utils/file/get-file-icon";
 import { useT } from "@/lib/i18n/client";
 import { cn } from "@/lib/utils";
 
@@ -27,6 +29,7 @@ export function UserMessage({
   messageId,
   content,
   triggerContext,
+  fileReferences,
   attachments,
   repoUrl,
   gitBranch,
@@ -35,6 +38,7 @@ export function UserMessage({
   messageId: string;
   content: string | MessageBlock[];
   triggerContext?: AgentTriggerContext;
+  fileReferences?: ChatFileReference[];
   attachments?: InputFile[];
   repoUrl?: string | null;
   gitBranch?: string | null;
@@ -267,7 +271,7 @@ export function UserMessage({
                     shouldCollapse && !isExpanded ? "line-clamp-5" : ""
                   }`}
                 >
-                  {textContent}
+                  {renderFileReferenceText(textContent, fileReferences ?? [])}
                 </p>
               </div>
               <div className="flex items-center justify-between w-full gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
@@ -320,6 +324,89 @@ export function UserMessage({
       )}
     </div>
   );
+}
+
+function formatFileReferenceDisplay(reference: ChatFileReference): string {
+  const displayName = reference.displayName?.trim();
+  if (displayName) return displayName;
+  if (reference.kind === "workspace_file") {
+    return reference.path.split("/").filter(Boolean).pop() || reference.path;
+  }
+  return reference.metadata?.path || reference.source;
+}
+
+function formatFileReferenceTitle(reference: ChatFileReference): string {
+  const displayName = formatFileReferenceDisplay(reference);
+  if (reference.kind === "workspace_file") {
+    return reference.path || displayName;
+  }
+  return reference.metadata?.path || reference.source || displayName;
+}
+
+function formatFileReferenceIconName(reference: ChatFileReference): string {
+  if (reference.kind === "workspace_file") {
+    return reference.path || reference.displayName;
+  }
+  return reference.metadata?.path || reference.displayName || reference.source;
+}
+
+function renderFileReferenceText(
+  text: string,
+  references: ChatFileReference[],
+): React.ReactNode[] | string {
+  if (references.length === 0) return text;
+
+  const positioned = references
+    .map((reference) => {
+      const rangeStart =
+        reference.range &&
+        text.slice(reference.range.start, reference.range.end) ===
+          reference.insertedText
+          ? reference.range.start
+          : text.indexOf(reference.insertedText);
+      return { reference, start: rangeStart };
+    })
+    .filter((item) => item.start >= 0)
+    .sort((left, right) => left.start - right.start);
+
+  if (positioned.length === 0) return text;
+
+  const nodes: React.ReactNode[] = [];
+  let cursor = 0;
+  for (const item of positioned) {
+    if (item.start < cursor) continue;
+    if (item.start > cursor) {
+      nodes.push(
+        <React.Fragment key={`text-${cursor}`}>
+          {text.slice(cursor, item.start)}
+        </React.Fragment>,
+      );
+    }
+
+    const reference = item.reference;
+    const displayName = formatFileReferenceDisplay(reference);
+    const Icon = getFileIcon(formatFileReferenceIconName(reference));
+    nodes.push(
+      <span
+        key={`${reference.id}-${item.start}`}
+        title={formatFileReferenceTitle(reference)}
+        className="inline-flex max-w-full cursor-text select-text items-center rounded-md border border-amber-900/30 bg-amber-900/10 px-1.5 py-0.5 text-sm font-semibold text-foreground align-baseline"
+      >
+        <Icon className="mr-1 size-3.5 shrink-0" aria-hidden="true" />
+        {displayName.replace(/^#/, "")}
+      </span>,
+    );
+    cursor = item.start + reference.insertedText.length;
+  }
+
+  if (cursor < text.length) {
+    nodes.push(
+      <React.Fragment key={`text-${cursor}`}>
+        {text.slice(cursor)}
+      </React.Fragment>,
+    );
+  }
+  return nodes;
 }
 
 function formatTriggerSource(triggerContext?: AgentTriggerContext): string {

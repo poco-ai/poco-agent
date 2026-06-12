@@ -1,6 +1,7 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 
+from app.core.deps import require_internal_token
 from app.schemas.response import Response, ResponseSchema
 from app.schemas.task import (
     ContainerDeleteRequest,
@@ -10,7 +11,11 @@ from app.schemas.task import (
 )
 from app.scheduler.task_dispatcher import TaskDispatcher
 
-router = APIRouter(prefix="/executor", tags=["executor"])
+router = APIRouter(
+    prefix="/executor",
+    tags=["executor"],
+    dependencies=[Depends(require_internal_token)],
+)
 
 
 @router.post("/cancel", response_model=ResponseSchema[TaskCancelResult])

@@ -1,6 +1,7 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 
+from app.core.deps import require_internal_token
 from app.core.settings import get_settings
 from app.schemas.response import Response, ResponseSchema
 from app.schemas.schedule import (
@@ -17,7 +18,11 @@ from app.scheduler.pull_schedule_config import (
 from app.scheduler.pull_schedule_state import get_current_pull_schedule_config
 from app.scheduler.scheduler_config import scheduler
 
-router = APIRouter(prefix="/schedules", tags=["schedules"])
+router = APIRouter(
+    prefix="/schedules",
+    tags=["schedules"],
+    dependencies=[Depends(require_internal_token)],
+)
 
 
 def _build_job_info(job_id: str) -> ScheduleJobInfo | None:

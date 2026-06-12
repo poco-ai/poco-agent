@@ -1,13 +1,18 @@
 from typing import Any
 
 import httpx
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse, Response as FastAPIResponse
 
+from app.core.deps import require_callback_token
 from app.schemas.response import Response, ResponseSchema
 from app.services.backend_client import BackendClient
 
-router = APIRouter(prefix="/agent-channel-artifacts", tags=["agent-channel-artifacts"])
+router = APIRouter(
+    prefix="/agent-channel-artifacts",
+    tags=["agent-channel-artifacts"],
+    dependencies=[Depends(require_callback_token)],
+)
 backend_client = BackendClient()
 
 

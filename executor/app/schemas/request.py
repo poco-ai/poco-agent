@@ -86,6 +86,8 @@ class TaskConfig(BaseModel):
     mount_fingerprint: str | None = None
     resolved_local_mounts: list[ResolvedLocalMount] = Field(default_factory=list)
     input_files: list[InputFile] = Field(default_factory=list)
+    file_references: list[dict[str, Any]] = Field(default_factory=list)
+    input_file_references: list[dict[str, Any]] = Field(default_factory=list)
 
 
 class TaskRun(BaseModel):

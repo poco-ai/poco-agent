@@ -11,6 +11,7 @@ import type {
   InputFile,
   ConfigSnapshot,
   AgentTriggerContext,
+  ChatFileReference,
 } from "@/features/chat/types";
 
 // ---------------------------------------------------------------------------
@@ -88,6 +89,50 @@ function extractTriggerContext(
   const triggerContext = metadata.trigger_context;
   if (!isRecord(triggerContext)) return undefined;
   return triggerContext as AgentTriggerContext;
+}
+
+function extractFileReferences(
+  contentObj: MessageContentShape,
+): ChatFileReference[] | undefined {
+  const metadata = contentObj.metadata;
+  if (!isRecord(metadata)) return undefined;
+
+  const rawReferences = Array.isArray(metadata.file_references)
+    ? metadata.file_references
+    : Array.isArray(metadata.input_file_references)
+      ? metadata.input_file_references
+      : null;
+  if (!rawReferences) return undefined;
+
+  const references = rawReferences.flatMap((reference) => {
+    if (!isRecord(reference)) return [];
+    if (reference.kind === "input_file") {
+      if (
+        !isNonEmptyString(reference.id) ||
+        !isNonEmptyString(reference.source) ||
+        !isNonEmptyString(reference.insertedText) ||
+        !isNonEmptyString(reference.displayName)
+      ) {
+        return [];
+      }
+      return [reference as ChatFileReference];
+    }
+    if (reference.kind === "workspace_file") {
+      if (
+        !isNonEmptyString(reference.id) ||
+        !isNonEmptyString(reference.sessionId) ||
+        !isNonEmptyString(reference.path) ||
+        !isNonEmptyString(reference.insertedText) ||
+        !isNonEmptyString(reference.displayName)
+      ) {
+        return [];
+      }
+      return [reference as ChatFileReference];
+    }
+    return [];
+  });
+
+  return references.length > 0 ? references : undefined;
 }
 
 function appendAssistantTextBlock(
@@ -406,6 +451,7 @@ export function parseMessages(
           timestamp: msg.created_at,
           metadata: {
             triggerContext: extractTriggerContext(contentObj),
+            fileReferences: extractFileReferences(contentObj),
           },
           attachments: msg.attachments ?? undefined,
         });
