@@ -396,9 +396,12 @@ class ServerChannelMessageService:
             canonical_content["attachments"] = attachment_payloads
 
         if "entities" not in canonical_content and not auto_entities:
-            if raw_attachments is not None:
-                return {**canonical_content, "entities": []}
-            return content
+            # No structured entities to track (the composer always sends an
+            # `attachments` array, often empty). Returning content without an
+            # `entities` key keeps the trigger service's @handle text fallback
+            # active for plain-mention replies. Injecting `entities: []` here
+            # would make the trigger treat entities as authoritative and skip it.
+            return canonical_content
 
         raw_entities = canonical_content.get("entities")
         if raw_entities is None:

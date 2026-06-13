@@ -464,6 +464,95 @@ class ServerAgentTriggerServiceTests(unittest.TestCase):
         self.assertEqual(request.config.trigger_type, "agent_dm")
         self.assertEqual(request.config.trigger_context.trigger_type, "agent_dm")
 
+    def test_text_mention_triggers_when_entities_contain_no_agent(self) -> None:
+        # Regression: a reply can carry an `entities` array (e.g. a file-reference
+        # produced by the composer) that has no agent-trigger entity, while the text
+        # mentions an agent. The @handle text fallback must still trigger the agent
+        # instead of being skipped just because an `entities` key is present.
+        message = SimpleNamespace(
+            id=uuid.uuid4(),
+            channel_id=self.channel_id,
+            author_user_id="user-1",
+            text_preview="@api-specialist please review",
+            content={
+                "text": "@api-specialist please review",
+                "entities": [
+                    {
+                        "kind": "artifact",
+                        "action": "reference",
+                        "target_id": str(uuid.uuid4()),
+                    }
+                ],
+            },
+            thread_root_message_id=None,
+        )
+        channel = SimpleNamespace(
+            id=self.channel_id,
+            server_id=self.server_id,
+            conversation_type="channel",
+            direct_agent_identity_id=None,
+            name="backend",
+        )
+        agent = SimpleNamespace(
+            id=self.agent_id,
+            server_id=self.server_id,
+            preset_id=8,
+            handle="api-specialist",
+            display_name="API Specialist",
+            lifecycle_state="active",
+            removed_at=None,
+            created_by="owner-user",
+            persistent_state=SimpleNamespace(active_session_id=None),
+        )
+        membership = SimpleNamespace(agent_identity_id=self.agent_id, status="active")
+        self.context_service.extract_trigger_body.return_value = (
+            "@api-specialist please review"
+        )
+        self.context_service.build_trigger_envelope.return_value = AgentTriggerEnvelope(
+            trigger_type="channel_mention",
+            server_id=self.server_id,
+            channel_id=self.channel_id,
+            trigger_message_id=message.id,
+            thread_root_message_id=message.id,
+            target_agent_identity_id=self.agent_id,
+            target_agent_handle="api-specialist",
+            source_actor={"actor_type": "user", "user_id": "user-1"},
+            handoff={
+                "dedupe_key": f"channel-trigger:{message.id}:{self.agent_id}",
+            },
+        )
+        self.task_service.enqueue_task.return_value = TaskEnqueueResponse(
+            session_id=uuid.uuid4(),
+            accepted_type="run",
+            run_id=uuid.uuid4(),
+            status="queued",
+            queued_query_count=0,
+        )
+
+        with (
+            patch(
+                "app.services.server_agent_trigger_service."
+                "ServerChannelAgentMemberRepository.list_by_channel",
+                return_value=[membership],
+            ),
+            patch(
+                "app.services.server_agent_trigger_service.AgentIdentityRepository.get_by_id",
+                return_value=agent,
+            ),
+        ):
+            results = self.service.trigger_for_channel_message(
+                self.db,
+                current_user=self.current_user,
+                server_id=self.server_id,
+                channel=channel,
+                message=message,
+            )
+
+        self.assertEqual(len(results), 1)
+        self.task_service.enqueue_task.assert_called_once()
+        _, _, request = self.task_service.enqueue_task.call_args.args
+        self.assertEqual(request.config.agent_identity_id, self.agent_id)
+
 
 if __name__ == "__main__":
     unittest.main()

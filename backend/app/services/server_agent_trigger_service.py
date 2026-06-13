@@ -230,7 +230,13 @@ class ServerAgentTriggerService:
                     continue
                 seen_agent_ids.add(agent_identity_id)
                 matched.append(agent)
-            return matched
+            # Structured agent-trigger entities are authoritative when present: they
+            # let us ignore stray @handle regex matches the sender did not intend. But
+            # if the entities carry no resolvable agent (e.g. only file references), we
+            # must fall through to the @handle text fallback so plain-mention replies
+            # still trigger instead of being silently dropped.
+            if matched:
+                return matched
 
         message_text = ""
         content = getattr(message, "content", None)

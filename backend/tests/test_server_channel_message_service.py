@@ -488,7 +488,7 @@ class ServerChannelMessageServiceTests(unittest.TestCase):
         publish_attachment.assert_not_called()
         created = create_message.call_args.args[1]
         self.assertEqual(created.content["attachments"], [])
-        self.assertEqual(created.content.get("entities"), [])
+        self.assertNotIn("entities", created.content)
 
     def test_get_thread_returns_root_and_replies(self) -> None:
         service = ServerChannelMessageService()
@@ -557,6 +557,51 @@ class ServerChannelMessageServiceTests(unittest.TestCase):
         assert reply_author is not None
         self.assertEqual(root_author.display_name, "Alice")
         self.assertEqual(reply_author.display_name, "Bob")
+
+    def test_send_message_omits_entities_key_when_only_empty_attachments(self) -> None:
+        # Regression: the composer always sends `attachments: []`. A plain @-mention
+        # reply must NOT gain an `entities` key, otherwise the trigger service treats
+        # the (empty) entities as authoritative and skips the @handle text fallback.
+        service = ServerChannelMessageService()
+
+        with (
+            patch.object(service, "_require_channel_access", return_value=self.channel),
+            patch(
+                "app.services.server_channel_message_service."
+                "ServerChannelMessageRepository.create"
+            ) as create_message,
+            patch(
+                "app.services.server_channel_message_service."
+                "ServerAgentTriggerService.trigger_for_channel_message",
+                return_value=[],
+            ),
+        ):
+
+            def build_message(_db, message):
+                now = datetime.now(UTC)
+                message.id = uuid.uuid4()
+                message.created_at = now
+                message.updated_at = now
+                return message
+
+            create_message.side_effect = build_message
+
+            service.send_message(
+                self.db,
+                self.user,
+                self.server_id,
+                self.channel.id,
+                ServerChannelMessageCreateRequest(
+                    content={
+                        "text": "please review @api-specialist",
+                        "attachments": [],
+                    },
+                    text_preview="please review @api-specialist",
+                ),
+            )
+
+        created = create_message.call_args.args[1]
+        self.assertNotIn("entities", created.content)
 
 
 if __name__ == "__main__":
