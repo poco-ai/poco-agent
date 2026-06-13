@@ -64,17 +64,7 @@ import {
 } from "@/components/ui/tooltip";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { uploadAttachment } from "@/features/attachments/api/attachment-api";
-import type {
-  ChatFileReference,
-  FileNode,
-  InputFile,
-} from "@/features/chat/types";
-import {
-  filterInputFileReferences,
-  getReferencedInputFiles,
-  insertUploadedInputFileReference,
-  removeInputFileReference,
-} from "@/features/chat/lib/input-file-reference";
+import type { FileNode, InputFile } from "@/features/chat/types";
 import { channelTasksApi } from "@/features/channel-tasks/api/channel-tasks-api";
 import { resolveChannelTaskView } from "@/features/channel-tasks/lib/channel-task-board";
 import type {
@@ -88,7 +78,6 @@ import type {
   ServerAgentItem,
   ServerChannelItem,
   ServerChannelMemberItem,
-  ChannelMessageEntity,
   ServerConversationMessage,
   ServerItem,
   ServerMemberItem,
@@ -101,16 +90,23 @@ import {
   buildHumanMentionCandidates,
   buildParticipantComposerCandidate,
   buildTaskComposerCandidate,
-  filterStaleMessageEntities,
+  filterStaleComposerReferences,
+  getComposerDraftAttachmentReferences,
+  getComposerDraftAttachments,
   getComposerCandidateSearchText,
   getComposerTrigger,
   getAvailableChannelHumanMembers,
   getUserDisplayName,
   hasInboxSignal,
   insertComposerCandidate,
+  insertUploadedComposerReference,
+  removeComposerReferenceText,
+  serializeComposerReferencesForSend,
   sortChannelsForSidebar,
   sortMessagesChronologically,
   type ComposerCandidate,
+  type ComposerReference,
+  upsertComposerReference,
 } from "@/features/servers/lib/server-conversation-view";
 import { getMessageSessionId } from "@/features/servers/lib/server-conversation-messages";
 import {
@@ -432,20 +428,15 @@ function ConversationContent({
   messages,
   savedMessageIds,
   draft,
-  draftEntities,
-  attachmentReferences,
-  attachments,
+  draftReferences,
   asTask,
   isLoading,
   isUploading,
   onDraftChange,
-  onDraftEntitiesChange,
-  onAttachmentReferencesChange,
-  onAttachmentsChange,
+  onDraftReferencesChange,
   onAsTaskChange,
   onSend,
   onUploadFiles,
-  onRemoveAttachment,
   onOpenThread,
   onOpenSettings,
   onOpenMembers,
@@ -465,20 +456,15 @@ function ConversationContent({
   messages: ServerConversationMessage[];
   savedMessageIds: Set<string>;
   draft: string;
-  draftEntities: ChannelMessageEntity[];
-  attachmentReferences: ChatFileReference[];
-  attachments: InputFile[];
+  draftReferences: ComposerReference[];
   asTask: boolean;
   isLoading: boolean;
   isUploading: boolean;
   onDraftChange: (value: string) => void;
-  onDraftEntitiesChange: (value: ChannelMessageEntity[]) => void;
-  onAttachmentReferencesChange: (value: ChatFileReference[]) => void;
-  onAttachmentsChange: (value: InputFile[]) => void;
+  onDraftReferencesChange: (value: ComposerReference[]) => void;
   onAsTaskChange: (value: boolean) => void;
   onSend: () => void;
   onUploadFiles: (files: File[]) => Promise<InputFile[]>;
-  onRemoveAttachment: (index: number) => void;
   onOpenThread: (message: ServerConversationMessage) => void;
   onOpenSettings: () => void;
   onOpenMembers: () => void;
@@ -587,10 +573,13 @@ function ConversationContent({
     };
   }, [channel, composerTrigger]);
 
-  const composerCandidates =
-    composerTrigger?.prefix === "@"
-      ? participantCandidates.slice(0, 8)
-      : contextCandidates;
+  const composerCandidates = React.useMemo(
+    () =>
+      composerTrigger?.prefix === "@"
+        ? participantCandidates.slice(0, 8)
+        : contextCandidates,
+    [composerTrigger?.prefix, contextCandidates, participantCandidates],
+  );
 
   const composerActive =
     composerTrigger !== null && composerCandidates.length > 0;
@@ -616,33 +605,17 @@ function ConversationContent({
     syncTextareaHeight();
   }, [draft, syncTextareaHeight]);
 
+  const activeReferences = React.useMemo(
+    () => filterStaleComposerReferences(draft, draftReferences),
+    [draft, draftReferences],
+  );
+
   const handleDraftValueChange = React.useCallback(
     (nextDraft: string) => {
       onDraftChange(nextDraft);
-      onDraftEntitiesChange(filterStaleMessageEntities(nextDraft, draftEntities));
-      const nextAttachmentReferences = filterInputFileReferences(
-        attachmentReferences,
-        nextDraft,
-        attachments,
-      );
-      const nextAttachments = getReferencedInputFiles(
-        attachments,
-        nextAttachmentReferences,
-      );
-      if (nextAttachments.length !== attachments.length) {
-        onAttachmentsChange(nextAttachments);
-      }
-      onAttachmentReferencesChange(nextAttachmentReferences);
+      onDraftReferencesChange(filterStaleComposerReferences(nextDraft, draftReferences));
     },
-    [
-      attachmentReferences,
-      attachments,
-      draftEntities,
-      onAttachmentsChange,
-      onAttachmentReferencesChange,
-      onDraftChange,
-      onDraftEntitiesChange,
-    ],
+    [draftReferences, onDraftChange, onDraftReferencesChange],
   );
 
   const insertUploadedDraftReferences = React.useCallback(
@@ -654,11 +627,10 @@ function ConversationContent({
       const initialEnd = textarea?.selectionEnd ?? selectionStart;
       let nextDraft = draft;
       let nextCursor = initialStart;
-      let nextReferences = [...attachmentReferences];
-      const availableFiles = [...attachments, ...uploadedFiles];
+      let nextReferences = [...activeReferences];
 
       for (const file of uploadedFiles) {
-        const result = insertUploadedInputFileReference(
+        const result = insertUploadedComposerReference(
           nextDraft,
           nextCursor,
           initialEnd,
@@ -666,20 +638,16 @@ function ConversationContent({
         );
         if (!result) continue;
 
-        nextDraft = result.value;
+        nextDraft = result.text;
         nextCursor = result.cursor;
-        nextReferences = [
-          ...filterInputFileReferences(
-            nextReferences,
-            nextDraft,
-            availableFiles,
-          ),
+        nextReferences = upsertComposerReference(
+          filterStaleComposerReferences(nextDraft, nextReferences),
           result.reference,
-        ];
+        );
       }
 
       onDraftChange(nextDraft);
-      onAttachmentReferencesChange(nextReferences);
+      onDraftReferencesChange(nextReferences);
       setSelectionStart(nextCursor);
       requestAnimationFrame(() => {
         textareaRef.current?.focus();
@@ -688,11 +656,10 @@ function ConversationContent({
       });
     },
     [
-      attachmentReferences,
-      attachments,
+      activeReferences,
       draft,
-      onAttachmentReferencesChange,
       onDraftChange,
+      onDraftReferencesChange,
       selectionStart,
       syncTextareaHeight,
     ],
@@ -715,8 +682,8 @@ function ConversationContent({
     onTranscription: handleVoiceTranscription,
   });
   const confirmedAttachments = React.useMemo(
-    () => getReferencedInputFiles(attachments, attachmentReferences),
-    [attachmentReferences, attachments],
+    () => getComposerDraftAttachments(activeReferences),
+    [activeReferences],
   );
 
   const scrollToBottom = React.useCallback(
@@ -800,11 +767,11 @@ function ConversationContent({
     }
     const inserted = insertComposerCandidate(draft, composerTrigger, candidate);
     onDraftChange(inserted.text);
-    onDraftEntitiesChange(
-      filterStaleMessageEntities(inserted.text, [
-        ...draftEntities,
-        inserted.entity,
-      ]),
+    onDraftReferencesChange(
+      upsertComposerReference(
+        filterStaleComposerReferences(inserted.text, draftReferences),
+        inserted.reference,
+      ),
     );
     textareaRef.current?.focus();
   };
@@ -887,6 +854,34 @@ function ConversationContent({
     const uploadedFiles = await onUploadFiles([file]);
     insertUploadedDraftReferences(uploadedFiles);
   };
+
+  const handleRemoveAttachment = React.useCallback(
+    (index: number) => {
+      const reference = getComposerDraftAttachmentReferences(activeReferences)[index];
+      if (!reference) return;
+      const result = removeComposerReferenceText(draft, reference);
+      onDraftChange(result.text);
+      onDraftReferencesChange(
+        filterStaleComposerReferences(
+          result.text,
+          activeReferences.filter((item) => item.id !== reference.id),
+        ),
+      );
+      setSelectionStart(result.cursor);
+      requestAnimationFrame(() => {
+        textareaRef.current?.focus();
+        textareaRef.current?.setSelectionRange(result.cursor, result.cursor);
+        syncTextareaHeight();
+      });
+    },
+    [
+      activeReferences,
+      draft,
+      onDraftChange,
+      onDraftReferencesChange,
+      syncTextareaHeight,
+    ],
+  );
 
   return (
     <section className="flex min-h-0 min-w-0 flex-1 flex-col">
@@ -994,13 +989,13 @@ function ConversationContent({
           className="hidden"
           onChange={(event) => void handleFileSelect(event)}
         />
-        {attachments.length > 0 ? (
+        {confirmedAttachments.length > 0 ? (
           <div className="mb-2 flex min-w-0 flex-wrap gap-2 px-3">
-            {attachments.map((file, index) => (
+            {confirmedAttachments.map((file, index) => (
               <FileCard
                 key={`${file.source}-${index}`}
                 file={file}
-                onRemove={() => onRemoveAttachment(index)}
+                onRemove={() => handleRemoveAttachment(index)}
                 className="w-full max-w-48 bg-background"
               />
             ))}
@@ -2048,23 +2043,13 @@ export function ServerConversationPageClient({
     [],
   );
   const [draft, setDraft] = React.useState("");
-  const [draftEntities, setDraftEntities] = React.useState<
-    ChannelMessageEntity[]
+  const [draftReferences, setDraftReferences] = React.useState<
+    ComposerReference[]
   >([]);
-  const [draftAttachments, setDraftAttachments] = React.useState<InputFile[]>(
-    [],
-  );
-  const [draftAttachmentReferences, setDraftAttachmentReferences] =
-    React.useState<ChatFileReference[]>([]);
   const [threadDraft, setThreadDraft] = React.useState("");
-  const [threadDraftEntities, setThreadDraftEntities] = React.useState<
-    ChannelMessageEntity[]
+  const [threadDraftReferences, setThreadDraftReferences] = React.useState<
+    ComposerReference[]
   >([]);
-  const [threadDraftAttachments, setThreadDraftAttachments] = React.useState<
-    InputFile[]
-  >([]);
-  const [threadDraftAttachmentReferences, setThreadDraftAttachmentReferences] =
-    React.useState<ChatFileReference[]>([]);
   const [searchValue, setSearchValue] = React.useState("");
   const [isLoading, setIsLoading] = React.useState(!cachedServerContext);
   const [isSending, setIsSending] = React.useState(false);
@@ -2539,8 +2524,7 @@ export function ServerConversationPageClient({
   ]);
 
   React.useEffect(() => {
-    setDraftAttachments([]);
-    setDraftAttachmentReferences([]);
+    setDraftReferences([]);
     setIsUploadingDraftFile(false);
   }, [activeChannelId]);
 
@@ -2798,11 +2782,7 @@ export function ServerConversationPageClient({
   );
 
   const uploadConversationDraftFiles = React.useCallback(
-    async (
-      files: File[],
-      existingAttachments: InputFile[],
-      onUploaded: React.Dispatch<React.SetStateAction<InputFile[]>>,
-    ) => {
+    async (files: File[], existingAttachments: InputFile[]) => {
       if (files.length === 0) {
         return [];
       }
@@ -2840,10 +2820,6 @@ export function ServerConversationPageClient({
             toast.error(t("hero.toasts.uploadFailed"));
           }
         }
-
-        if (uploadedFiles.length > 0) {
-          onUploaded((current) => [...current, ...uploadedFiles]);
-        }
       } finally {
         setIsUploadingDraftFile(false);
       }
@@ -2855,18 +2831,20 @@ export function ServerConversationPageClient({
 
   const uploadDraftFiles = React.useCallback(
     async (files: File[]) =>
-      uploadConversationDraftFiles(files, draftAttachments, setDraftAttachments),
-    [draftAttachments, uploadConversationDraftFiles],
+      uploadConversationDraftFiles(
+        files,
+        getComposerDraftAttachments(draftReferences),
+      ),
+    [draftReferences, uploadConversationDraftFiles],
   );
 
   const uploadThreadDraftFiles = React.useCallback(
     async (files: File[]) =>
       uploadConversationDraftFiles(
         files,
-        threadDraftAttachments,
-        setThreadDraftAttachments,
+        getComposerDraftAttachments(threadDraftReferences),
       ),
-    [threadDraftAttachments, uploadConversationDraftFiles],
+    [threadDraftReferences, uploadConversationDraftFiles],
   );
 
   const deleteSharedArtifact = React.useCallback(
@@ -2902,49 +2880,14 @@ export function ServerConversationPageClient({
     [activeChannelId, selectedServerId, t],
   );
 
-  const removeDraftAttachment = React.useCallback(
-    (index: number) => {
-      const file = draftAttachments[index];
-      if (!file) return;
-
-      setDraftAttachments((current) => current.filter((_, i) => i !== index));
-      setDraftAttachmentReferences((current) => {
-        const reference = current.find(
-          (item) =>
-            item.kind === "input_file" &&
-            item.source.trim() === (file.source || "").trim(),
-        );
-        if (!reference) {
-          return current;
-        }
-        const result = removeInputFileReference(draft, reference);
-        setDraft(result.value);
-        return filterInputFileReferences(
-          current.filter((item) => item !== reference),
-          result.value,
-          draftAttachments.filter((_, i) => i !== index),
-        );
-      });
-    },
-    [draft, draftAttachments],
-  );
-
   const handleSend = async () => {
     if (!selectedServerId || !activeChannelId) {
       return;
     }
     const content = draft.trim();
-    const attachments = [...draftAttachments];
-    const entities = filterStaleMessageEntities(content, draftEntities);
-    const attachmentReferences = filterInputFileReferences(
-      draftAttachmentReferences,
-      content,
-      attachments,
-    );
-    const confirmedAttachments = getReferencedInputFiles(
-      attachments,
-      attachmentReferences,
-    );
+    const serialized = serializeComposerReferencesForSend(content, draftReferences);
+    const entities = serialized.entities;
+    const confirmedAttachments = serialized.attachments;
     if (!content && confirmedAttachments.length === 0) {
       return;
     }
@@ -2980,9 +2923,7 @@ export function ServerConversationPageClient({
         });
       }
       setDraft("");
-      setDraftEntities([]);
-      setDraftAttachments([]);
-      setDraftAttachmentReferences([]);
+      setDraftReferences([]);
       setAsTask(false);
       const messages = await serversApi.listMessages(
         selectedServerId,
@@ -3010,24 +2951,17 @@ export function ServerConversationPageClient({
       return;
     }
     const trimmedDraft = threadDraft.trim();
-    const attachmentReferences = filterInputFileReferences(
-      threadDraftAttachmentReferences,
+    const serialized = serializeComposerReferencesForSend(
       trimmedDraft,
-      threadDraftAttachments,
+      threadDraftReferences,
     );
-    const confirmedAttachments = getReferencedInputFiles(
-      threadDraftAttachments,
-      attachmentReferences,
-    );
+    const entities = serialized.entities;
+    const confirmedAttachments = serialized.attachments;
     if (!trimmedDraft && confirmedAttachments.length === 0) {
       return;
     }
     setIsSending(true);
     try {
-      const entities = filterStaleMessageEntities(
-        trimmedDraft,
-        threadDraftEntities,
-      );
       if (threadAsTask) {
         const explicitMentions = getExplicitMentionHandles(trimmedDraft);
         const replyText =
@@ -3056,9 +2990,7 @@ export function ServerConversationPageClient({
           sourceMessageId: message.id,
         });
         setThreadDraft("");
-        setThreadDraftEntities([]);
-        setThreadDraftAttachments([]);
-        setThreadDraftAttachmentReferences([]);
+        setThreadDraftReferences([]);
         setThreadAsTask(false);
         setTasks(
           await channelTasksApi.listTasks(selectedServerId, drawer.channelId),
@@ -3085,9 +3017,7 @@ export function ServerConversationPageClient({
           threadRootMessageId: drawer.rootMessageId,
         });
         setThreadDraft("");
-        setThreadDraftEntities([]);
-        setThreadDraftAttachments([]);
-        setThreadDraftAttachmentReferences([]);
+        setThreadDraftReferences([]);
         const [messages, thread] = await Promise.all([
           serversApi.listMessages(selectedServerId, drawer.channelId),
           serversApi.getThread(
@@ -3979,20 +3909,15 @@ export function ServerConversationPageClient({
                 messages={currentMessages}
                 savedMessageIds={savedMessageIds}
                 draft={draft}
-                draftEntities={draftEntities}
-                attachmentReferences={draftAttachmentReferences}
-                attachments={draftAttachments}
+                draftReferences={draftReferences}
                 asTask={asTask}
                 isLoading={isLoading}
                 isUploading={isUploadingDraftFile}
                 onDraftChange={setDraft}
-                onDraftEntitiesChange={setDraftEntities}
-                onAttachmentReferencesChange={setDraftAttachmentReferences}
-                onAttachmentsChange={setDraftAttachments}
+                onDraftReferencesChange={setDraftReferences}
                 onAsTaskChange={setAsTask}
                 onSend={() => void handleSend()}
                 onUploadFiles={uploadDraftFiles}
-                onRemoveAttachment={removeDraftAttachment}
                 onOpenThread={(message) =>
                   setDrawer({
                     type: "thread",
@@ -4043,47 +3968,14 @@ export function ServerConversationPageClient({
                     members={channelMembers}
                     currentUserId={profile?.id}
                     draft={threadDraft}
-                    draftEntities={threadDraftEntities}
-                    attachmentReferences={threadDraftAttachmentReferences}
-                    attachments={threadDraftAttachments}
+                    draftReferences={threadDraftReferences}
                     suggestedMentionHandle={threadMentionHandle}
                     asTask={threadAsTask}
                     onDraftChange={setThreadDraft}
-                    onDraftEntitiesChange={setThreadDraftEntities}
-                    onAttachmentReferencesChange={
-                      setThreadDraftAttachmentReferences
-                    }
-                    onAttachmentsChange={setThreadDraftAttachments}
+                    onDraftReferencesChange={setThreadDraftReferences}
                     onAsTaskChange={setThreadAsTask}
                     onSend={() => void handleReply()}
                     onUploadFiles={uploadThreadDraftFiles}
-                    onRemoveAttachment={(index) => {
-                      const file = threadDraftAttachments[index];
-                      if (!file) return;
-                      setThreadDraftAttachments((current) =>
-                        current.filter((_, i) => i !== index),
-                      );
-                      setThreadDraftAttachmentReferences((current) => {
-                        const reference = current.find(
-                          (item) =>
-                            item.kind === "input_file" &&
-                            item.source.trim() === (file.source || "").trim(),
-                        );
-                        if (!reference) {
-                          return current;
-                        }
-                        const result = removeInputFileReference(
-                          threadDraft,
-                          reference,
-                        );
-                        setThreadDraft(result.value);
-                        return filterInputFileReferences(
-                          current.filter((item) => item !== reference),
-                          result.value,
-                          threadDraftAttachments.filter((_, i) => i !== index),
-                        );
-                      });
-                    }}
                     onClose={() => setDrawer({ type: "none" })}
                     onOpenExecution={(sessionId) =>
                       setDrawer({ type: "execution", sessionId })

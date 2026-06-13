@@ -309,6 +309,32 @@ class ServerChannelMessageService:
             message=f"Unsupported message entity combination: {entity.kind}/{entity.action}",
         )
 
+    @staticmethod
+    def _raw_entity_value(raw_entity: Any, *keys: str) -> Any:
+        if not isinstance(raw_entity, dict):
+            return None
+        for key in keys:
+            if key in raw_entity:
+                return raw_entity[key]
+        return None
+
+    @classmethod
+    def _is_shadowed_by_generated_attachment_entity(
+        cls,
+        raw_entity: Any,
+        generated_artifact_tokens: set[str],
+    ) -> bool:
+        if not generated_artifact_tokens:
+            return False
+        inserted_text = str(
+            cls._raw_entity_value(raw_entity, "insertedText", "inserted_text") or ""
+        ).strip()
+        return (
+            cls._raw_entity_value(raw_entity, "kind") == "artifact"
+            and cls._raw_entity_value(raw_entity, "action") == "reference"
+            and inserted_text in generated_artifact_tokens
+        )
+
     def _canonicalize_message_content(
         self,
         db: Session,
@@ -384,6 +410,19 @@ class ServerChannelMessageService:
             )
 
         canonical_entities: list[dict[str, Any]] = []
+        generated_artifact_tokens = {
+            str(entity.get("insertedText") or entity.get("inserted_text") or "").strip()
+            for entity in auto_entities
+            if entity.get("kind") == "artifact" and entity.get("action") == "reference"
+        }
+        raw_entities = [
+            raw_entity
+            for raw_entity in raw_entities
+            if not self._is_shadowed_by_generated_attachment_entity(
+                raw_entity,
+                generated_artifact_tokens,
+            )
+        ]
         for raw_entity in [*raw_entities, *auto_entities]:
             try:
                 entity = ServerChannelMessageEntity.model_validate(raw_entity)

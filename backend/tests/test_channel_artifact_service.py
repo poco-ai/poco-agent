@@ -399,6 +399,55 @@ class ChannelArtifactServiceTests(unittest.TestCase):
             "/Uploads/design.md",
         )
 
+    def test_publish_input_file_attachment_copies_private_upload_without_event(self) -> None:
+        input_file = SimpleNamespace(
+            id="draft-1",
+            type="file",
+            name="diagram.png",
+            source="attachments/user-1/draft-1/file",
+            size=128,
+            content_type="image/png",
+        )
+
+        with (
+            patch(
+                "app.services.channel_artifact_service.require_channel_member_access",
+                return_value=SimpleNamespace(id=self.channel_id, name="Product"),
+            ),
+            patch.object(self.service._storage, "exists", return_value=True),
+            patch.object(self.service._storage, "copy_object") as copy_object,
+            patch(
+                "app.services.channel_artifact_service."
+                "ChannelArtifactRepository.get_by_channel_and_path",
+                return_value=None,
+            ),
+            patch(
+                "app.services.channel_artifact_service.create_channel_event_message"
+            ) as create_event,
+        ):
+            artifact = self.service.publish_input_file_attachment(
+                self.db,
+                current_user=SimpleNamespace(
+                    id="user-1",
+                    display_name="Alice",
+                    primary_email="alice@example.com",
+                ),
+                server_id=self.server_id,
+                channel_id=self.channel_id,
+                input_file=input_file,
+            )
+
+        copy_object.assert_called_once_with(
+            source_key="attachments/user-1/draft-1/file",
+            destination_key=(
+                f"channel-artifacts/{self.server_id}/{self.channel_id}/"
+                f"Uploads/{artifact.id}/file"
+            ),
+        )
+        create_event.assert_not_called()
+        self.assertEqual(artifact.logical_path, "/Uploads/diagram.png")
+        self.assertEqual(artifact.mime_type, "image/png")
+
     def test_delete_channel_artifact_removes_user_upload(self) -> None:
         artifact_id = uuid.uuid4()
         artifact = SimpleNamespace(

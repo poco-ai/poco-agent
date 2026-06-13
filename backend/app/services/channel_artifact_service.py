@@ -640,7 +640,6 @@ class ChannelArtifactService:
         self._storage.copy_object(
             source_key=source_key,
             destination_key=object_key,
-            content_type=input_file.content_type,
         )
 
         artifact = ChannelArtifact(
@@ -659,6 +658,11 @@ class ChannelArtifactService:
             is_previewable=True,
         )
         db.add(artifact)
+        # The global session disables autoflush, so flush explicitly. Otherwise the
+        # just-published row is invisible to same-session reads that follow during
+        # message send (e.g. artifact-reference canonicalization), which would reject
+        # the message with "Artifact reference target is invalid for this channel".
+        db.flush()
         return artifact
 
     def delete_channel_artifact(

@@ -20,17 +20,12 @@ import { Button } from "@/components/ui/button";
 import { FileCard } from "@/components/shared/file-card";
 import { PersistentRuntimeBadge } from "@/components/shared/persistent-runtime-badge";
 import { Textarea } from "@/components/ui/textarea";
-import type { ChatFileReference, InputFile } from "@/features/chat/types";
+import type { InputFile } from "@/features/chat/types";
 import type { Preset } from "@/features/capabilities/presets/lib/preset-types";
 import { ExecutionContainer } from "@/features/chat";
 import { cancelCurrentRunAction } from "@/features/chat/actions/session-actions";
 import { ConversationTimelineRail } from "@/features/chat/components/shared/conversation-timeline-rail";
 import { useExecutionSession } from "@/features/chat/hooks/use-execution-session";
-import {
-  filterInputFileReferences,
-  getReferencedInputFiles,
-  insertUploadedInputFileReference,
-} from "@/features/chat/lib/input-file-reference";
 import type {
   ChannelTask,
   ChannelTaskActivityMessage,
@@ -38,7 +33,6 @@ import type {
 import { channelTasksApi } from "@/features/channel-tasks/api/channel-tasks-api";
 import { TaskHistoryProvider } from "@/features/projects/contexts/task-history-context";
 import type {
-  ChannelMessageEntity,
   ServerAgentItem,
   ServerChannelMemberItem,
   ServerConversationMessage,
@@ -50,11 +44,17 @@ import {
   buildHumanMentionCandidates,
   buildParticipantComposerCandidate,
   buildTaskComposerCandidate,
-  filterStaleMessageEntities,
+  filterStaleComposerReferences,
   getComposerCandidateSearchText,
+  getComposerDraftAttachmentReferences,
+  getComposerDraftAttachments,
   getComposerTrigger,
   insertComposerCandidate,
+  insertUploadedComposerReference,
+  removeComposerReferenceText,
   type ComposerCandidate,
+  type ComposerReference,
+  upsertComposerReference,
 } from "@/features/servers/lib/server-conversation-view";
 import { useT } from "@/lib/i18n/client";
 import { cn } from "@/lib/utils";
@@ -101,19 +101,14 @@ export function ThreadDrawer({
   members,
   currentUserId,
   draft,
-  draftEntities,
-  attachmentReferences,
-  attachments,
+  draftReferences,
   suggestedMentionHandle,
   asTask,
   onDraftChange,
-  onDraftEntitiesChange,
-  onAttachmentReferencesChange,
-  onAttachmentsChange,
+  onDraftReferencesChange,
   onAsTaskChange,
   onSend,
   onUploadFiles,
-  onRemoveAttachment,
   onClose,
   onOpenExecution,
   onToggleReaction,
@@ -127,19 +122,14 @@ export function ThreadDrawer({
   members: ServerChannelMemberItem[];
   currentUserId?: string | null;
   draft: string;
-  draftEntities: ChannelMessageEntity[];
-  attachmentReferences: ChatFileReference[];
-  attachments: InputFile[];
+  draftReferences: ComposerReference[];
   suggestedMentionHandle?: string | null;
   asTask: boolean;
   onDraftChange: (value: string) => void;
-  onDraftEntitiesChange: (value: ChannelMessageEntity[]) => void;
-  onAttachmentReferencesChange: (value: ChatFileReference[]) => void;
-  onAttachmentsChange: (value: InputFile[]) => void;
+  onDraftReferencesChange: (value: ComposerReference[]) => void;
   onAsTaskChange: (value: boolean) => void;
   onSend: () => void;
   onUploadFiles: (files: File[]) => Promise<InputFile[]>;
-  onRemoveAttachment: (index: number) => void;
   onClose: () => void;
   onOpenExecution?: (sessionId: string) => void;
   onToggleReaction?: (
@@ -226,10 +216,13 @@ export function ThreadDrawer({
     };
   }, [channelId, composerTrigger, serverId]);
 
-  const composerCandidates =
-    composerTrigger?.prefix === "@"
-      ? participantCandidates.slice(0, 8)
-      : contextCandidates;
+  const composerCandidates = React.useMemo(
+    () =>
+      composerTrigger?.prefix === "@"
+        ? participantCandidates.slice(0, 8)
+        : contextCandidates,
+    [composerTrigger?.prefix, contextCandidates, participantCandidates],
+  );
 
   const composerActive =
     composerTrigger !== null && composerCandidates.length > 0;
@@ -251,47 +244,30 @@ export function ThreadDrawer({
     if (!composerTrigger) return;
     const inserted = insertComposerCandidate(draft, composerTrigger, candidate);
     onDraftChange(inserted.text);
-    onDraftEntitiesChange(
-      filterStaleMessageEntities(inserted.text, [
-        ...draftEntities,
-        inserted.entity,
-      ]),
+    onDraftReferencesChange(
+      upsertComposerReference(
+        filterStaleComposerReferences(inserted.text, draftReferences),
+        inserted.reference,
+      ),
     );
     textareaRef.current?.focus();
   };
 
+  const activeReferences = React.useMemo(
+    () => filterStaleComposerReferences(draft, draftReferences),
+    [draft, draftReferences],
+  );
   const confirmedAttachments = React.useMemo(
-    () => getReferencedInputFiles(attachments, attachmentReferences),
-    [attachmentReferences, attachments],
+    () => getComposerDraftAttachments(activeReferences),
+    [activeReferences],
   );
 
   const handleDraftValueChange = React.useCallback(
     (nextDraft: string) => {
       onDraftChange(nextDraft);
-      onDraftEntitiesChange(filterStaleMessageEntities(nextDraft, draftEntities));
-      const nextAttachmentReferences = filterInputFileReferences(
-        attachmentReferences,
-        nextDraft,
-        attachments,
-      );
-      const nextAttachments = getReferencedInputFiles(
-        attachments,
-        nextAttachmentReferences,
-      );
-      if (nextAttachments.length !== attachments.length) {
-        onAttachmentsChange(nextAttachments);
-      }
-      onAttachmentReferencesChange(nextAttachmentReferences);
+      onDraftReferencesChange(filterStaleComposerReferences(nextDraft, draftReferences));
     },
-    [
-      attachmentReferences,
-      attachments,
-      draftEntities,
-      onAttachmentReferencesChange,
-      onAttachmentsChange,
-      onDraftChange,
-      onDraftEntitiesChange,
-    ],
+    [draftReferences, onDraftChange, onDraftReferencesChange],
   );
 
   const insertUploadedDraftReferences = React.useCallback(
@@ -303,11 +279,10 @@ export function ThreadDrawer({
       const initialEnd = textarea?.selectionEnd ?? selectionStart;
       let nextDraft = draft;
       let nextCursor = initialStart;
-      let nextReferences = [...attachmentReferences];
-      const availableFiles = [...attachments, ...uploadedFiles];
+      let nextReferences = [...activeReferences];
 
       for (const file of uploadedFiles) {
-        const result = insertUploadedInputFileReference(
+        const result = insertUploadedComposerReference(
           nextDraft,
           nextCursor,
           initialEnd,
@@ -315,20 +290,16 @@ export function ThreadDrawer({
         );
         if (!result) continue;
 
-        nextDraft = result.value;
+        nextDraft = result.text;
         nextCursor = result.cursor;
-        nextReferences = [
-          ...filterInputFileReferences(
-            nextReferences,
-            nextDraft,
-            availableFiles,
-          ),
+        nextReferences = upsertComposerReference(
+          filterStaleComposerReferences(nextDraft, nextReferences),
           result.reference,
-        ];
+        );
       }
 
       onDraftChange(nextDraft);
-      onAttachmentReferencesChange(nextReferences);
+      onDraftReferencesChange(nextReferences);
       setSelectionStart(nextCursor);
       requestAnimationFrame(() => {
         textareaRef.current?.focus();
@@ -336,11 +307,10 @@ export function ThreadDrawer({
       });
     },
     [
-      attachmentReferences,
-      attachments,
+      activeReferences,
       draft,
-      onAttachmentReferencesChange,
       onDraftChange,
+      onDraftReferencesChange,
       selectionStart,
     ],
   );
@@ -410,6 +380,27 @@ export function ThreadDrawer({
     const uploadedFiles = await onUploadFiles([file]);
     insertUploadedDraftReferences(uploadedFiles);
   };
+
+  const handleRemoveAttachment = React.useCallback(
+    (index: number) => {
+      const reference = getComposerDraftAttachmentReferences(activeReferences)[index];
+      if (!reference) return;
+      const result = removeComposerReferenceText(draft, reference);
+      onDraftChange(result.text);
+      onDraftReferencesChange(
+        filterStaleComposerReferences(
+          result.text,
+          activeReferences.filter((item) => item.id !== reference.id),
+        ),
+      );
+      setSelectionStart(result.cursor);
+      requestAnimationFrame(() => {
+        textareaRef.current?.focus();
+        textareaRef.current?.setSelectionRange(result.cursor, result.cursor);
+      });
+    },
+    [activeReferences, draft, onDraftChange, onDraftReferencesChange],
+  );
 
   return (
     <aside className={overlayDrawerClassName}>
@@ -482,13 +473,13 @@ export function ThreadDrawer({
             void handleFileSelect(event);
           }}
         />
-        {attachments.length > 0 ? (
+        {confirmedAttachments.length > 0 ? (
           <div className="mb-3 flex flex-wrap gap-2">
-            {attachments.map((file, index) => (
+            {confirmedAttachments.map((file, index) => (
               <FileCard
                 key={`${file.source}-${index}`}
                 file={file}
-                onRemove={() => onRemoveAttachment(index)}
+                onRemove={() => handleRemoveAttachment(index)}
                 className="w-full max-w-56 bg-background"
               />
             ))}
