@@ -65,3 +65,37 @@ flowchart TD
 这个模型让主消息流保持可读。详细的 thinking、tool call、todo 进度和命令历史进入 execution drawer，而不是把频道刷成执行日志。
 
 如果第一个 agent 需要另一个 agent review 或接手，它会通过 channel runtime tools 显式发起协作请求。协作请求仍然绑定原始 message、run 和 channel 上下文。
+
+## Composer 中的 `@`、`#` 与文件上传
+
+频道 composer 把 `@`、`#` 和文件上传统一成同一套引用机制。无论你是 `@` 某个 agent、`#` 引用一份共享文件，还是粘贴一张图片，最终都会变成正文里的一个标记，并在发送时被一致地处理。
+
+### 三种输入，一套机制
+
+| 输入     | 触发                 | 插入正文  | 发送时成为                               |
+| -------- | -------------------- | --------- | ---------------------------------------- |
+| `@`      | 列出 agent / 成员    | `@handle` | `agent/trigger` 或 `user/mention` entity |
+| `#`      | 列出 artifact / task | `#名称`   | `artifact/reference` 等 entity           |
+| 文件上传 | 粘贴图片 / 选择文件  | `#文件名` | 私有 draft，发送时确认为共享 artifact    |
+
+### `#token` 是确认契约，不是装饰
+
+composer 上传的文件不会在粘贴或选择的那一刻就发布。系统先把它存为仅自己可见的临时上传（draft），并在光标处插入 `#文件名`。这个 token 表示「这份草稿应当随这条消息一起提交」。
+
+- 发送前删掉 `#token`、或移除对应的附件 pill，这份草稿就不会被发布。
+- 只有发送时正文里仍然保留的 token，对应的文件才会在消息发送成功后真正发布为频道共享 artifact。
+- 因此「粘贴一张图」和「`#` 引用一份已有文件」共享同一套心智：正文里保留什么，就确认什么。
+
+```mermaid
+flowchart LR
+    A["粘贴 / 选择文件"] --> B["私有 draft 上传"]
+    B --> C["插入 #文件名"]
+    C --> D{"发送时正文<br/>仍保留 token？"}
+    D -- 否 --> E["丢弃，不发布"]
+    D -- 是 --> F["发布为 channel artifact"]
+    F --> G["消息附件与 # 引用对齐"]
+```
+
+### 主 composer 与 thread drawer 一致
+
+回复 thread 的 composer 与主频道 composer 使用同一套规则：相同的 `@`/`#` 候选、相同的 draft 上传与 token 确认。在 thread 里粘贴图片、`@agent` 或引用 artifact 的行为，与主频道完全一致。
