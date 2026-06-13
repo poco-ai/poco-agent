@@ -596,6 +596,71 @@ class ChannelArtifactService:
             path=artifact.logical_path,
         )
 
+    def publish_input_file_attachment(
+        self,
+        db: Session,
+        *,
+        current_user: Any,
+        server_id: uuid.UUID,
+        channel_id: uuid.UUID,
+        input_file: InputFile,
+    ) -> ChannelArtifact:
+        require_channel_member_access(
+            db,
+            server_id=server_id,
+            channel_id=channel_id,
+            user_id=current_user.id,
+        )
+
+        source_key = str(input_file.source or "").strip()
+        expected_prefix = f"attachments/{current_user.id}/"
+        if not source_key.startswith(expected_prefix):
+            raise AppException(
+                error_code=ErrorCode.BAD_REQUEST,
+                message="Draft attachment does not belong to the current user",
+            )
+        if not self._storage.exists(source_key):
+            raise AppException(
+                error_code=ErrorCode.BAD_REQUEST,
+                message="Draft attachment source does not exist",
+            )
+
+        artifact_id = uuid.uuid4()
+        filename = self._normalize_upload_filename(input_file.name or "")
+        logical_path = self._dedupe_upload_logical_path(
+            db,
+            channel_id=channel_id,
+            filename=filename,
+        )
+        object_key = self._upload_object_key(
+            server_id=server_id,
+            channel_id=channel_id,
+            artifact_id=artifact_id,
+        )
+        self._storage.copy_object(
+            source_key=source_key,
+            destination_key=object_key,
+            content_type=input_file.content_type,
+        )
+
+        artifact = ChannelArtifact(
+            id=artifact_id,
+            server_id=server_id,
+            channel_id=channel_id,
+            source_session_id=None,
+            agent_identity_id=None,
+            publisher_user_id=current_user.id,
+            source_kind=self.UPLOAD_SOURCE_KIND,
+            logical_path=logical_path,
+            display_name=PurePosixPath(logical_path).name,
+            object_key=object_key,
+            mime_type=input_file.content_type or guess_mime_type(logical_path),
+            size_bytes=input_file.size,
+            is_previewable=True,
+        )
+        db.add(artifact)
+        return artifact
+
     def delete_channel_artifact(
         self,
         db: Session,

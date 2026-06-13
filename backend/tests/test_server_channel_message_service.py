@@ -6,6 +6,7 @@ from unittest.mock import MagicMock, patch
 from app.models.server_channel import ServerChannel
 from app.models.server_channel_message import ServerChannelMessage
 from app.models.user import User
+from app.schemas.input_file import InputFile
 from app.schemas.server_channel_message import ServerChannelMessageCreateRequest
 from app.schemas.user_profile import UserPublicProfileResponse
 from app.services.server_channel_message_service import ServerChannelMessageService
@@ -251,6 +252,145 @@ class ServerChannelMessageServiceTests(unittest.TestCase):
         self.assertEqual(entities[1]["display_text"], "design.md")
         self.assertEqual(entities[1]["metadata"]["logical_path"], "/docs/design.md")
         self.assertEqual(result.content["entities"], entities)
+
+    def test_send_message_materializes_confirmed_draft_attachments(self) -> None:
+        service = ServerChannelMessageService()
+        artifact_id = uuid.uuid4()
+        published_artifact = type(
+            "Artifact",
+            (),
+            {
+                "id": artifact_id,
+                "display_name": "diagram.png",
+                "logical_path": "/Uploads/diagram.png",
+                "mime_type": "image/png",
+                "size_bytes": 128,
+                "source_kind": "user_upload",
+                "object_key": "channel-artifacts/server/channel/Uploads/artifact/file",
+            },
+        )()
+
+        with (
+            patch.object(service, "_require_channel_access", return_value=self.channel),
+            patch(
+                "app.services.server_channel_message_service."
+                "ChannelArtifactService.publish_input_file_attachment",
+                return_value=published_artifact,
+            ) as publish_attachment,
+            patch(
+                "app.services.server_channel_message_service.ServerChannelMessageRepository.create"
+            ) as create_message,
+            patch(
+                "app.services.server_channel_message_service."
+                "ServerAgentTriggerService.trigger_for_channel_message",
+                return_value=[],
+            ),
+        ):
+
+            def build_message(_db, message):
+                now = datetime.now(UTC)
+                message.id = uuid.uuid4()
+                message.created_at = now
+                message.updated_at = now
+                return message
+
+            create_message.side_effect = build_message
+
+            result = service.send_message(
+                self.db,
+                self.user,
+                self.server_id,
+                self.channel.id,
+                ServerChannelMessageCreateRequest(
+                    content={
+                        "text": "please review #diagram.png",
+                        "attachments": [
+                            {
+                                "id": "draft-1",
+                                "type": "file",
+                                "name": "diagram.png",
+                                "source": "attachments/user-1/draft-1/file",
+                                "size": 128,
+                                "content_type": "image/png",
+                            }
+                        ],
+                    },
+                    text_preview="please review #diagram.png",
+                ),
+            )
+
+        publish_attachment.assert_called_once()
+        published_input = publish_attachment.call_args.kwargs["input_file"]
+        self.assertIsInstance(published_input, InputFile)
+        self.assertEqual(published_input.name, "diagram.png")
+
+        created = create_message.call_args.args[1]
+        self.assertEqual(created.content["attachments"][0]["path"], "/Uploads/diagram.png")
+        self.assertEqual(
+            created.content["entities"][0]["target_id"],
+            str(artifact_id),
+        )
+        self.assertEqual(
+            created.content["entities"][0]["inserted_text"],
+            "#diagram.png",
+        )
+        self.assertEqual(result.content["attachments"], created.content["attachments"])
+
+    def test_send_message_skips_unconfirmed_draft_attachments(self) -> None:
+        service = ServerChannelMessageService()
+
+        with (
+            patch.object(service, "_require_channel_access", return_value=self.channel),
+            patch(
+                "app.services.server_channel_message_service."
+                "ChannelArtifactService.publish_input_file_attachment",
+            ) as publish_attachment,
+            patch(
+                "app.services.server_channel_message_service.ServerChannelMessageRepository.create"
+            ) as create_message,
+            patch(
+                "app.services.server_channel_message_service."
+                "ServerAgentTriggerService.trigger_for_channel_message",
+                return_value=[],
+            ),
+        ):
+
+            def build_message(_db, message):
+                now = datetime.now(UTC)
+                message.id = uuid.uuid4()
+                message.created_at = now
+                message.updated_at = now
+                return message
+
+            create_message.side_effect = build_message
+
+            service.send_message(
+                self.db,
+                self.user,
+                self.server_id,
+                self.channel.id,
+                ServerChannelMessageCreateRequest(
+                    content={
+                        "text": "please review this image",
+                        "attachments": [
+                            {
+                                "id": "draft-1",
+                                "type": "file",
+                                "name": "diagram.png",
+                                "source": "attachments/user-1/draft-1/file",
+                                "size": 128,
+                                "content_type": "image/png",
+                            }
+                        ],
+                    },
+                    text_preview="please review this image",
+                ),
+            )
+
+        publish_attachment.assert_not_called()
+        created = create_message.call_args.args[1]
+        self.assertEqual(created.content["attachments"], [])
+        self.assertEqual(created.content.get("entities"), [])
 
     def test_get_thread_returns_root_and_replies(self) -> None:
         service = ServerChannelMessageService()

@@ -20,6 +20,7 @@ from app.repositories.server_channel_agent_member_repository import (
     ServerChannelAgentMemberRepository,
 )
 from app.repositories.server_channel_task_repository import ServerChannelTaskRepository
+from app.schemas.input_file import InputFile
 from app.schemas.server_channel_message import (
     ServerChannelMessageEntity,
     ServerChannelMessageCreateRequest,
@@ -32,6 +33,7 @@ from app.schemas.server_channel_message_reaction import (
 )
 from app.schemas.agent_identity import AgentIdentityResponse
 from app.schemas.user_profile import UserPublicProfileResponse
+from app.services.channel_artifact_service import ChannelArtifactService
 from app.services.server_agent_trigger_service import ServerAgentTriggerService
 from app.services.server_channel_access import require_channel_member_access
 from app.services.user_public_profile_service import (
@@ -43,6 +45,18 @@ logger = logging.getLogger(__name__)
 
 
 class ServerChannelMessageService:
+    @staticmethod
+    def _artifact_to_attachment_payload(artifact: Any) -> dict[str, Any]:
+        return InputFile(
+            id=str(artifact.id),
+            type="file",
+            name=artifact.display_name,
+            source=artifact.object_key,
+            size=artifact.size_bytes,
+            content_type=artifact.mime_type,
+            path=artifact.logical_path,
+        ).model_dump(mode="json")
+
     @staticmethod
     def _build_message_response(
         message: ServerChannelMessage,
@@ -299,14 +313,70 @@ class ServerChannelMessageService:
         self,
         db: Session,
         *,
+        current_user: User,
+        server_id: uuid.UUID,
         channel: ServerChannel,
         content: dict[str, Any],
     ) -> dict[str, Any]:
-        if "entities" not in content:
+        canonical_content = dict(content)
+        raw_attachments = canonical_content.get("attachments")
+        attachment_payloads: list[dict[str, Any]] = []
+        auto_entities: list[dict[str, Any]] = []
+
+        if raw_attachments is not None:
+            if not isinstance(raw_attachments, list):
+                raise AppException(
+                    error_code=ErrorCode.BAD_REQUEST,
+                    message="Message content attachments must be an array",
+                )
+
+            text = str(canonical_content.get("text") or "")
+            artifact_service = ChannelArtifactService()
+            for raw_attachment in raw_attachments:
+                try:
+                    input_file = InputFile.model_validate(raw_attachment)
+                except ValidationError as exc:
+                    raise AppException(
+                        error_code=ErrorCode.BAD_REQUEST,
+                        message="Message content attachment is invalid",
+                        details=exc.errors(),
+                    ) from exc
+
+                inserted_text = f"#{(input_file.name or '').strip()}"
+                if not inserted_text.strip("#") or inserted_text not in text:
+                    continue
+
+                artifact = artifact_service.publish_input_file_attachment(
+                    db,
+                    current_user=current_user,
+                    server_id=server_id,
+                    channel_id=channel.id,
+                    input_file=input_file,
+                )
+                attachment_payloads.append(
+                    self._artifact_to_attachment_payload(artifact)
+                )
+                auto_entities.append(
+                    {
+                        "id": f"attachment-{artifact.id}",
+                        "kind": "artifact",
+                        "action": "reference",
+                        "targetId": str(artifact.id),
+                        "displayText": artifact.display_name,
+                        "insertedText": inserted_text,
+                    }
+                )
+
+            canonical_content["attachments"] = attachment_payloads
+
+        if "entities" not in canonical_content and not auto_entities:
+            if raw_attachments is not None:
+                return {**canonical_content, "entities": []}
             return content
-        raw_entities = content.get("entities")
+
+        raw_entities = canonical_content.get("entities")
         if raw_entities is None:
-            return {**content, "entities": []}
+            raw_entities = []
         if not isinstance(raw_entities, list):
             raise AppException(
                 error_code=ErrorCode.BAD_REQUEST,
@@ -314,7 +384,7 @@ class ServerChannelMessageService:
             )
 
         canonical_entities: list[dict[str, Any]] = []
-        for raw_entity in raw_entities:
+        for raw_entity in [*raw_entities, *auto_entities]:
             try:
                 entity = ServerChannelMessageEntity.model_validate(raw_entity)
             except ValidationError as exc:
@@ -330,7 +400,7 @@ class ServerChannelMessageService:
                     entity=entity,
                 )
             )
-        return {**content, "entities": canonical_entities}
+        return {**canonical_content, "entities": canonical_entities}
 
     def send_message(
         self,
@@ -357,6 +427,8 @@ class ServerChannelMessageService:
 
         content = self._canonicalize_message_content(
             db,
+            current_user=current_user,
+            server_id=server_id,
             channel=channel,
             content=request.content,
         )

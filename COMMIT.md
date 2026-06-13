@@ -1,5 +1,5 @@
-feat(frontend): confirm uploaded chat files with # tokens
+feat(server-collaboration): publish composer uploads on send
 
-- auto-insert readable #file tokens after pasted or uploaded files in ordinary chat inputs
-- keep task composer and execution chat input aligned on draft attachment confirmation rules
-- send only attachments that still have live file references and remove tokens when pills are deleted
+- stage channel composer and thread-drawer uploads as private draft attachments instead of immediate artifacts
+- materialize only token-confirmed draft files into channel artifacts during message creation
+- keep channel attachments, generated artifact references, and send-time validation aligned across frontend and backend
