@@ -10,6 +10,7 @@ from starlette.datastructures import Headers
 from app.core.errors.exceptions import AppException
 from app.models.agent_session import AgentSession
 from app.models.channel_artifact import ChannelArtifact
+from app.schemas.input_file import InputFile
 from app.services.channel_artifact_service import ChannelArtifactService
 
 
@@ -399,8 +400,10 @@ class ChannelArtifactServiceTests(unittest.TestCase):
             "/Uploads/design.md",
         )
 
-    def test_publish_input_file_attachment_copies_private_upload_without_event(self) -> None:
-        input_file = SimpleNamespace(
+    def test_publish_input_file_attachment_copies_private_upload_without_event(
+        self,
+    ) -> None:
+        input_file = InputFile(
             id="draft-1",
             type="file",
             name="diagram.png",
@@ -452,13 +455,17 @@ class ChannelArtifactServiceTests(unittest.TestCase):
         self.db.add.assert_called_once_with(artifact)
         self.db.flush.assert_called_once()
 
-    def test_publish_input_file_attachment_flushes_so_same_session_can_read(self) -> None:
+    def test_publish_input_file_attachment_flushes_so_same_session_can_read(
+        self,
+    ) -> None:
         # Regression guard for the channel-chat send-time publish 400: the global
         # session uses autoflush=False, so an artifact that is only add()-ed is
         # invisible to the same-session read that canonicalizes the generated
         # artifact-reference entity. Use a real session with matching autoflush to
         # exercise the actual SQL visibility behavior (MagicMock cannot).
-        from sqlalchemy import create_engine
+        from typing import cast
+
+        from sqlalchemy import Table, create_engine
         from sqlalchemy.orm import sessionmaker
 
         from app.models import Base
@@ -468,11 +475,16 @@ class ChannelArtifactServiceTests(unittest.TestCase):
         )
 
         engine = create_engine("sqlite:///:memory:")
-        Base.metadata.create_all(engine, tables=[ChannelArtifactModel.__table__])
+        # Model.__table__ is statically typed as the broader FromClause; cast to Table
+        # to satisfy MetaData.create_all's Sequence[Table] parameter.
+        Base.metadata.create_all(
+            engine,
+            tables=[cast(Table, ChannelArtifactModel.__table__)],
+        )
         real_session = sessionmaker(autoflush=False, bind=engine)
         db = real_session()
 
-        input_file = SimpleNamespace(
+        input_file = InputFile(
             id="draft-1",
             type="file",
             name="diagram.png",

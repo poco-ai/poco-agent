@@ -57,8 +57,7 @@ export interface ComposerEntityReference extends BaseComposerReference {
   targetId: string;
 }
 
-export interface ComposerDraftAttachmentReference
-  extends BaseComposerReference {
+export interface ComposerDraftAttachmentReference extends BaseComposerReference {
   kind: "draft_attachment";
   action: "reference";
   file: InputFile;
@@ -319,7 +318,9 @@ function normalizeInputFileSource(file: InputFile): string {
 }
 
 function normalizeInputFileDisplayName(file: InputFile): string {
-  return String(file.name || "").trim() || normalizeInputFileSource(file) || "file";
+  return (
+    String(file.name || "").trim() || normalizeInputFileSource(file) || "file"
+  );
 }
 
 export function insertUploadedComposerReference(
@@ -327,7 +328,11 @@ export function insertUploadedComposerReference(
   selectionStart: number,
   selectionEnd: number,
   file: InputFile,
-): { text: string; cursor: number; reference: ComposerDraftAttachmentReference } | null {
+): {
+  text: string;
+  cursor: number;
+  reference: ComposerDraftAttachmentReference;
+} | null {
   const source = normalizeInputFileSource(file);
   if (!source) return null;
 

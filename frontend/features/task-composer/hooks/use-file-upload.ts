@@ -121,9 +121,12 @@ export function useFileUpload({ t }: UseFileUploadOptions) {
     setAttachments([]);
   }, []);
 
-  const replaceAttachments = React.useCallback((nextAttachments: InputFile[]) => {
-    setAttachments(nextAttachments);
-  }, []);
+  const replaceAttachments = React.useCallback(
+    (nextAttachments: InputFile[]) => {
+      setAttachments(nextAttachments);
+    },
+    [],
+  );
 
   return {
     isUploading,

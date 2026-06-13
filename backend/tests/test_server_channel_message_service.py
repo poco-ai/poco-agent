@@ -325,7 +325,9 @@ class ServerChannelMessageServiceTests(unittest.TestCase):
         self.assertEqual(published_input.name, "diagram.png")
 
         created = create_message.call_args.args[1]
-        self.assertEqual(created.content["attachments"][0]["path"], "/Uploads/diagram.png")
+        self.assertEqual(
+            created.content["attachments"][0]["path"], "/Uploads/diagram.png"
+        )
         self.assertEqual(
             created.content["entities"][0]["target_id"],
             str(artifact_id),

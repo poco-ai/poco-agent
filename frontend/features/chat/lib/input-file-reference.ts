@@ -322,7 +322,9 @@ export function getReferencedInputFiles(
     return [];
   }
 
-  return files.filter((file) => referencedSources.has(normalizeSource(file.source)));
+  return files.filter((file) =>
+    referencedSources.has(normalizeSource(file.source)),
+  );
 }
 
 export function removeInputFileReference(

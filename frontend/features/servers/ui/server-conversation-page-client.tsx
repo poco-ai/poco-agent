@@ -599,7 +599,9 @@ function ConversationContent({
   const handleDraftValueChange = React.useCallback(
     (nextDraft: string) => {
       onDraftChange(nextDraft);
-      onDraftReferencesChange(filterStaleComposerReferences(nextDraft, draftReferences));
+      onDraftReferencesChange(
+        filterStaleComposerReferences(nextDraft, draftReferences),
+      );
     },
     [draftReferences, onDraftChange, onDraftReferencesChange],
   );
@@ -843,7 +845,8 @@ function ConversationContent({
 
   const handleRemoveAttachment = React.useCallback(
     (index: number) => {
-      const reference = getComposerDraftAttachmentReferences(activeReferences)[index];
+      const reference =
+        getComposerDraftAttachmentReferences(activeReferences)[index];
       if (!reference) return;
       const result = removeComposerReferenceText(draft, reference);
       onDraftChange(result.text);
@@ -1058,19 +1061,23 @@ function ConversationContent({
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-            <textarea
-              ref={textareaRef}
-              value={draft}
-              onChange={(event) => {
-                const nextDraft = event.target.value;
-                handleDraftValueChange(nextDraft);
-                setSelectionStart(event.target.selectionStart);
-              }}
-              onClick={(event) => setSelectionStart(event.currentTarget.selectionStart)}
-              onKeyUp={(event) => setSelectionStart(event.currentTarget.selectionStart)}
-              onKeyDown={handleTextareaKeyDown}
-              onInput={() => syncTextareaHeight()}
-              onPaste={(event) => void handlePaste(event)}
+          <textarea
+            ref={textareaRef}
+            value={draft}
+            onChange={(event) => {
+              const nextDraft = event.target.value;
+              handleDraftValueChange(nextDraft);
+              setSelectionStart(event.target.selectionStart);
+            }}
+            onClick={(event) =>
+              setSelectionStart(event.currentTarget.selectionStart)
+            }
+            onKeyUp={(event) =>
+              setSelectionStart(event.currentTarget.selectionStart)
+            }
+            onKeyDown={handleTextareaKeyDown}
+            onInput={() => syncTextareaHeight()}
+            onPaste={(event) => void handlePaste(event)}
             onCompositionStart={() => {
               isComposingRef.current = true;
             }}
@@ -1139,12 +1146,12 @@ function ConversationContent({
           <button
             type="button"
             onClick={onSend}
-                  disabled={
-                    isSending ||
-                    isUploading ||
-                    voiceInput.isBusy ||
-                    (!draft.trim() && confirmedAttachments.length === 0)
-                  }
+            disabled={
+              isSending ||
+              isUploading ||
+              voiceInput.isBusy ||
+              (!draft.trim() && confirmedAttachments.length === 0)
+            }
             className="flex size-8 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground disabled:opacity-50"
             aria-label={t("conversationView.send")}
             title={t("conversationView.send")}
@@ -2851,7 +2858,10 @@ export function ServerConversationPageClient({
       return;
     }
     const content = draft.trim();
-    const serialized = serializeComposerReferencesForSend(content, draftReferences);
+    const serialized = serializeComposerReferencesForSend(
+      content,
+      draftReferences,
+    );
     const entities = serialized.entities;
     const confirmedAttachments = serialized.attachments;
     if (!content && confirmedAttachments.length === 0) {
@@ -2952,7 +2962,9 @@ export function ServerConversationPageClient({
           title,
           description:
             trimmedDraft ||
-            confirmedAttachments.map((attachment) => attachment.name).join("\n"),
+            confirmedAttachments
+              .map((attachment) => attachment.name)
+              .join("\n"),
           sourceMessageId: message.id,
         });
         setThreadDraft("");

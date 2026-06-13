@@ -635,24 +635,24 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
     const handleInputChange = useCallback(
       (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         const nextValue = e.target.value;
-      setValue(nextValue);
-      setSelectionStart(e.target.selectionStart);
-      setInputFileReferences((prev) => {
-        const nextReferences = filterInputFileReferences(
-          prev,
-          nextValue,
-          [...attachments, ...sessionInputFiles],
-          { sessionId, workspaceFiles: sessionFiles },
-        );
-        const nextAttachments = getReferencedInputFiles(
-          attachments,
-          nextReferences,
-        );
-        if (nextAttachments.length !== attachments.length) {
-          setAttachments(nextAttachments);
-        }
-        return nextReferences;
-      });
+        setValue(nextValue);
+        setSelectionStart(e.target.selectionStart);
+        setInputFileReferences((prev) => {
+          const nextReferences = filterInputFileReferences(
+            prev,
+            nextValue,
+            [...attachments, ...sessionInputFiles],
+            { sessionId, workspaceFiles: sessionFiles },
+          );
+          const nextAttachments = getReferencedInputFiles(
+            attachments,
+            nextReferences,
+          );
+          if (nextAttachments.length !== attachments.length) {
+            setAttachments(nextAttachments);
+          }
+          return nextReferences;
+        });
         if (historyIndex !== -1) {
           setHistoryIndex(-1);
         }
@@ -677,37 +677,35 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
       if (!file) return;
       setAttachments((prev) => {
         const next = prev.filter((_, i) => i !== index);
-        setInputFileReferences((current) =>
-          {
-            const reference = current.find(
-              (item) =>
-                item.kind === "input_file" &&
-                item.source.trim() === (file.source || "").trim(),
-            );
-            if (!reference) {
-              return filterInputFileReferences(
-                current,
-                value,
-                [...next, ...sessionInputFiles],
-                { sessionId, workspaceFiles: sessionFiles },
-              );
-            }
-
-            const result = removeInputFileReference(value, reference);
-            setValue(result.value);
-            setSelectionStart(result.cursor);
-            requestAnimationFrame(() => {
-              syncTextareaValue(result.value, result.cursor);
-            });
-
+        setInputFileReferences((current) => {
+          const reference = current.find(
+            (item) =>
+              item.kind === "input_file" &&
+              item.source.trim() === (file.source || "").trim(),
+          );
+          if (!reference) {
             return filterInputFileReferences(
-              current.filter((item) => item !== reference),
-              result.value,
+              current,
+              value,
               [...next, ...sessionInputFiles],
               { sessionId, workspaceFiles: sessionFiles },
             );
-          },
-        );
+          }
+
+          const result = removeInputFileReference(value, reference);
+          setValue(result.value);
+          setSelectionStart(result.cursor);
+          requestAnimationFrame(() => {
+            syncTextareaValue(result.value, result.cursor);
+          });
+
+          return filterInputFileReferences(
+            current.filter((item) => item !== reference),
+            result.value,
+            [...next, ...sessionInputFiles],
+            { sessionId, workspaceFiles: sessionFiles },
+          );
+        });
         return next;
       });
     };

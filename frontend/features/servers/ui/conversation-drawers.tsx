@@ -251,7 +251,9 @@ export function ThreadDrawer({
   const handleDraftValueChange = React.useCallback(
     (nextDraft: string) => {
       onDraftChange(nextDraft);
-      onDraftReferencesChange(filterStaleComposerReferences(nextDraft, draftReferences));
+      onDraftReferencesChange(
+        filterStaleComposerReferences(nextDraft, draftReferences),
+      );
     },
     [draftReferences, onDraftChange, onDraftReferencesChange],
   );
@@ -369,7 +371,8 @@ export function ThreadDrawer({
 
   const handleRemoveAttachment = React.useCallback(
     (index: number) => {
-      const reference = getComposerDraftAttachmentReferences(activeReferences)[index];
+      const reference =
+        getComposerDraftAttachmentReferences(activeReferences)[index];
       if (!reference) return;
       const result = removeComposerReferenceText(draft, reference);
       onDraftChange(result.text);
@@ -515,8 +518,12 @@ export function ThreadDrawer({
               handleDraftValueChange(event.target.value);
               setSelectionStart(event.target.selectionStart);
             }}
-            onClick={(event) => setSelectionStart(event.currentTarget.selectionStart)}
-            onKeyUp={(event) => setSelectionStart(event.currentTarget.selectionStart)}
+            onClick={(event) =>
+              setSelectionStart(event.currentTarget.selectionStart)
+            }
+            onKeyUp={(event) =>
+              setSelectionStart(event.currentTarget.selectionStart)
+            }
             onKeyDown={handleKeyDown}
             onPaste={(event) => void handlePaste(event)}
             onCompositionStart={() => {
@@ -557,7 +564,9 @@ export function ThreadDrawer({
             type="button"
             size="sm"
             onClick={onSend}
-            disabled={isSending || (!draft.trim() && confirmedAttachments.length === 0)}
+            disabled={
+              isSending || (!draft.trim() && confirmedAttachments.length === 0)
+            }
           >
             {t("conversationView.send")}
           </Button>
