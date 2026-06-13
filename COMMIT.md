@@ -1,6 +1,5 @@
-fix(executor-manager): require tokens for manager APIs
+docs(specs): define draft upload and send-time publish flow
 
-- Protect EM control-plane routes with X-Internal-Token and executor proxy routes with callback tokens
-- Send internal headers from Backend EM clients and callback Bearer tokens from executor clients
-- Add auth regression coverage for EM routes, Backend callers, and executor manager clients
-- Record the token boundary decision and completed hardening plan
+- add an active implementation spec for unifying ordinary and channel chat upload semantics
+- define early-upload plus send-time materialization across inputs and channel artifacts
+- document automatic #token confirmation for pasted images and reused file-upload entrypoints
