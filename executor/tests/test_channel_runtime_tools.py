@@ -278,6 +278,76 @@ class ChannelRuntimeToolContractTests(unittest.IsolatedAsyncioTestCase):
             )
             self.assertIn("/inputs/channel-artifacts/", result.local_path)
 
+    def test_stage_downloaded_artifact_supports_non_ascii_filename(self) -> None:
+        with TemporaryDirectory() as tmp_dir:
+            result = stage_downloaded_artifact(
+                DownloadedArtifact(
+                    artifact_id="artifact-1",
+                    logical_path="/Uploads/倦怠小猫.jpg",
+                    display_name="倦怠小猫.jpg",
+                    mime_type="image/jpeg",
+                    size_bytes=4,
+                    content=b"\xff\xd8\xff\xe0",
+                ),
+                workspace_root=Path(tmp_dir),
+            )
+
+            self.assertTrue(result.local_path.endswith("倦怠小猫.jpg"))
+            self.assertEqual(
+                Path(result.local_path).read_bytes(),
+                b"\xff\xd8\xff\xe0",
+            )
+            self.assertEqual(result.display_name, "倦怠小猫.jpg")
+
+    async def test_client_downloads_artifact_decodes_non_ascii_filename(self) -> None:
+        from urllib.parse import quote
+
+        # The backend percent-encodes non-ASCII header values; the client must
+        # decode them back to recover the original filename / logical path.
+        encoded_name = quote("倦怠小猫.jpg", safe="")
+        encoded_path = quote("/Uploads/倦怠小猫.jpg", safe="")
+
+        class FakeAsyncClient:
+            def __init__(self, *args, **kwargs) -> None:
+                pass
+
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, exc_type, exc, tb) -> None:
+                pass
+
+            async def post(self, *args, **kwargs) -> httpx.Response:
+                request = httpx.Request(
+                    "POST",
+                    "http://manager/api/v1/agent-channel-artifacts/download",
+                )
+                return httpx.Response(
+                    200,
+                    content=b"\xff\xd8\xff\xe0",
+                    headers={
+                        "content-type": "image/jpeg",
+                        "x-artifact-id": "artifact-1",
+                        "x-artifact-display-name": encoded_name,
+                        "x-artifact-logical-path": encoded_path,
+                        "x-artifact-size-bytes": "4",
+                    },
+                    request=request,
+                )
+
+        client = ChannelRuntimeClient("http://manager", "session-1")
+
+        with patch("app.core.channel_runtime.httpx.AsyncClient", FakeAsyncClient):
+            result = await client.download_artifact(
+                artifact_id="artifact-1",
+                logical_path=None,
+            )
+
+        self.assertEqual(result.display_name, "倦怠小猫.jpg")
+        self.assertEqual(result.logical_path, "/Uploads/倦怠小猫.jpg")
+        self.assertEqual(result.mime_type, "image/jpeg")
+        self.assertEqual(result.content, b"\xff\xd8\xff\xe0")
+
     async def test_client_routes_task_tools_through_facade(self) -> None:
         client = ChannelRuntimeClient("http://manager", "session-1")
 

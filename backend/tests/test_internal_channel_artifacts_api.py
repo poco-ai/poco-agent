@@ -158,6 +158,44 @@ class InternalChannelArtifactsApiTests(unittest.TestCase):
         self.assertEqual(response.headers["x-artifact-display-name"], "resume.pdf")
         download_runtime.assert_called_once()
 
+    @patch("app.api.v1.internal_channel_artifacts.service.download_runtime_artifact")
+    def test_download_internal_channel_artifact_supports_non_ascii_filename(
+        self, download_runtime
+    ):
+        from urllib.parse import unquote
+
+        download_runtime.return_value = SimpleNamespace(
+            artifact=SimpleNamespace(
+                id=self.artifact_id,
+                display_name="倦怠小猫.jpg",
+                logical_path="/Uploads/倦怠小猫.jpg",
+                mime_type="image/jpeg",
+                size_bytes=4,
+            ),
+            filename="倦怠小猫.jpg",
+            media_type="image/jpeg",
+            content=b"\xff\xd8\xff\xe0",
+        )
+
+        response = self.client.post(
+            f"/api/v1/internal/channel-artifacts/download?session_id={self.session_id}",
+            headers={"X-Internal-Token": "change-this-token-in-production"},
+            json={"artifact_id": str(self.artifact_id)},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content, b"\xff\xd8\xff\xe0")
+        # Header values are percent-encoded (HTTP headers are ASCII-only); decode
+        # to recover the original non-ASCII filename / logical path.
+        self.assertEqual(
+            unquote(response.headers["x-artifact-display-name"]),
+            "倦怠小猫.jpg",
+        )
+        self.assertEqual(
+            unquote(response.headers["x-artifact-logical-path"]),
+            "/Uploads/倦怠小猫.jpg",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

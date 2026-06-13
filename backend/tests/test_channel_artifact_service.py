@@ -447,6 +447,81 @@ class ChannelArtifactServiceTests(unittest.TestCase):
         create_event.assert_not_called()
         self.assertEqual(artifact.logical_path, "/Uploads/diagram.png")
         self.assertEqual(artifact.mime_type, "image/png")
+        # Published artifacts must be flushed so the same session can read them back
+        # during message canonicalization (the global session disables autoflush).
+        self.db.add.assert_called_once_with(artifact)
+        self.db.flush.assert_called_once()
+
+    def test_publish_input_file_attachment_flushes_so_same_session_can_read(self) -> None:
+        # Regression guard for the channel-chat send-time publish 400: the global
+        # session uses autoflush=False, so an artifact that is only add()-ed is
+        # invisible to the same-session read that canonicalizes the generated
+        # artifact-reference entity. Use a real session with matching autoflush to
+        # exercise the actual SQL visibility behavior (MagicMock cannot).
+        from sqlalchemy import create_engine
+        from sqlalchemy.orm import sessionmaker
+
+        from app.models import Base
+        from app.models.channel_artifact import ChannelArtifact as ChannelArtifactModel
+        from app.repositories.channel_artifact_repository import (
+            ChannelArtifactRepository,
+        )
+
+        engine = create_engine("sqlite:///:memory:")
+        Base.metadata.create_all(engine, tables=[ChannelArtifactModel.__table__])
+        real_session = sessionmaker(autoflush=False, bind=engine)
+        db = real_session()
+
+        input_file = SimpleNamespace(
+            id="draft-1",
+            type="file",
+            name="diagram.png",
+            source="attachments/user-1/draft-1/file",
+            size=128,
+            content_type="image/png",
+        )
+
+        try:
+            with (
+                patch(
+                    "app.services.channel_artifact_service.require_channel_member_access",
+                    return_value=SimpleNamespace(id=self.channel_id, name="Product"),
+                ),
+                patch.object(self.service._storage, "exists", return_value=True),
+                patch.object(self.service._storage, "copy_object"),
+                patch(
+                    "app.services.channel_artifact_service."
+                    "ChannelArtifactRepository.get_by_channel_and_path",
+                    return_value=None,
+                ),
+                patch(
+                    "app.services.channel_artifact_service.create_channel_event_message"
+                ),
+            ):
+                artifact = self.service.publish_input_file_attachment(
+                    db,
+                    current_user=SimpleNamespace(
+                        id="user-1",
+                        display_name="Alice",
+                        primary_email="alice@example.com",
+                    ),
+                    server_id=self.server_id,
+                    channel_id=self.channel_id,
+                    input_file=input_file,
+                )
+
+            fetched = ChannelArtifactRepository.get_by_channel_and_id(
+                db,
+                channel_id=self.channel_id,
+                artifact_id=artifact.id,
+            )
+        finally:
+            db.close()
+
+        self.assertIsNotNone(fetched)
+        assert fetched is not None
+        self.assertEqual(fetched.id, artifact.id)
+        self.assertEqual(fetched.channel_id, self.channel_id)
 
     def test_delete_channel_artifact_removes_user_upload(self) -> None:
         artifact_id = uuid.uuid4()

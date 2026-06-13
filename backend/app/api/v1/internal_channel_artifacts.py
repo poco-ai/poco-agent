@@ -1,4 +1,5 @@
 import uuid
+from urllib.parse import quote
 
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse, Response as FastAPIResponse
@@ -110,10 +111,13 @@ async def download_channel_artifact_internal(
         "artifact_id",
         getattr(result.artifact, "id", None),
     )
+    # HTTP header values are latin-1; percent-encode non-ASCII filenames and paths
+    # so response serialization doesn't crash on e.g. "倦怠小猫.jpg". The executor
+    # client percent-decodes these on read.
     headers = {
         "X-Artifact-Id": str(artifact_id),
-        "X-Artifact-Display-Name": result.filename,
-        "X-Artifact-Logical-Path": result.artifact.logical_path,
+        "X-Artifact-Display-Name": quote(result.filename, safe=""),
+        "X-Artifact-Logical-Path": quote(result.artifact.logical_path, safe=""),
         "X-Artifact-Mime-Type": result.media_type,
     }
     if result.artifact.size_bytes is not None:
