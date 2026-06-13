@@ -9,6 +9,7 @@ import {
   Loader2,
   MessageSquare,
   Pause,
+  Plus,
   SquareCheckBig,
   UserRound,
 } from "lucide-react";
@@ -16,12 +17,13 @@ import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { FileCard } from "@/components/shared/file-card";
 import { PersistentRuntimeBadge } from "@/components/shared/persistent-runtime-badge";
 import { Textarea } from "@/components/ui/textarea";
+import type { InputFile } from "@/features/chat/types";
 import type { Preset } from "@/features/capabilities/presets/lib/preset-types";
 import { ExecutionContainer } from "@/features/chat";
 import { cancelCurrentRunAction } from "@/features/chat/actions/session-actions";
-import { ConversationTimelineRail } from "@/features/chat/components/shared/conversation-timeline-rail";
 import { useExecutionSession } from "@/features/chat/hooks/use-execution-session";
 import type {
   ChannelTask,
@@ -30,7 +32,6 @@ import type {
 import { channelTasksApi } from "@/features/channel-tasks/api/channel-tasks-api";
 import { TaskHistoryProvider } from "@/features/projects/contexts/task-history-context";
 import type {
-  ChannelMessageEntity,
   ServerAgentItem,
   ServerChannelMemberItem,
   ServerConversationMessage,
@@ -42,11 +43,17 @@ import {
   buildHumanMentionCandidates,
   buildParticipantComposerCandidate,
   buildTaskComposerCandidate,
-  filterStaleMessageEntities,
+  filterStaleComposerReferences,
   getComposerCandidateSearchText,
+  getComposerDraftAttachmentReferences,
+  getComposerDraftAttachments,
   getComposerTrigger,
   insertComposerCandidate,
+  insertUploadedComposerReference,
+  removeComposerReferenceText,
   type ComposerCandidate,
+  type ComposerReference,
+  upsertComposerReference,
 } from "@/features/servers/lib/server-conversation-view";
 import { useT } from "@/lib/i18n/client";
 import { cn } from "@/lib/utils";
@@ -54,7 +61,6 @@ import { SharedArtifactsDrawer } from "@/features/servers/ui/shared-artifacts-dr
 
 import { MessageRow } from "./conversation-message-row";
 import { getAgentRuntimeStatus } from "../lib/agent-runtime-status";
-import { buildChannelTimelineItems } from "../lib/conversation-timeline";
 import { ServerAgentAvatar } from "./server-agent-avatar";
 
 const overlayDrawerClassName =
@@ -93,13 +99,14 @@ export function ThreadDrawer({
   members,
   currentUserId,
   draft,
-  draftEntities,
+  draftReferences,
   suggestedMentionHandle,
   asTask,
   onDraftChange,
-  onDraftEntitiesChange,
+  onDraftReferencesChange,
   onAsTaskChange,
   onSend,
+  onUploadFiles,
   onClose,
   onOpenExecution,
   onToggleReaction,
@@ -113,13 +120,14 @@ export function ThreadDrawer({
   members: ServerChannelMemberItem[];
   currentUserId?: string | null;
   draft: string;
-  draftEntities: ChannelMessageEntity[];
+  draftReferences: ComposerReference[];
   suggestedMentionHandle?: string | null;
   asTask: boolean;
   onDraftChange: (value: string) => void;
-  onDraftEntitiesChange: (value: ChannelMessageEntity[]) => void;
+  onDraftReferencesChange: (value: ComposerReference[]) => void;
   onAsTaskChange: (value: boolean) => void;
   onSend: () => void;
+  onUploadFiles: (files: File[]) => Promise<InputFile[]>;
   onClose: () => void;
   onOpenExecution?: (sessionId: string) => void;
   onToggleReaction?: (
@@ -130,10 +138,9 @@ export function ThreadDrawer({
 }) {
   const { t } = useT("translation");
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
-  const messageElementsRef = React.useRef<Map<string, HTMLDivElement>>(
-    new Map(),
-  );
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
   const isComposingRef = React.useRef(false);
+  const [selectionStart, setSelectionStart] = React.useState(0);
 
   const composerTrigger = React.useMemo(
     () => getComposerTrigger(draft),
@@ -204,23 +211,17 @@ export function ThreadDrawer({
     };
   }, [channelId, composerTrigger, serverId]);
 
-  const composerCandidates =
-    composerTrigger?.prefix === "@"
-      ? participantCandidates.slice(0, 8)
-      : contextCandidates;
+  const composerCandidates = React.useMemo(
+    () =>
+      composerTrigger?.prefix === "@"
+        ? participantCandidates.slice(0, 8)
+        : contextCandidates,
+    [composerTrigger?.prefix, contextCandidates, participantCandidates],
+  );
 
   const composerActive =
     composerTrigger !== null && composerCandidates.length > 0;
   const [mentionIndex, setMentionIndex] = React.useState(0);
-  const timelineItems = React.useMemo(
-    () => buildChannelTimelineItems(thread),
-    [thread],
-  );
-  const handleSelectTimelineItem = React.useCallback((messageId: string) => {
-    messageElementsRef.current
-      .get(messageId)
-      ?.scrollIntoView({ block: "center", behavior: "smooth" });
-  }, []);
   React.useEffect(() => {
     setMentionIndex(0);
   }, [composerCandidates]);
@@ -229,14 +230,78 @@ export function ThreadDrawer({
     if (!composerTrigger) return;
     const inserted = insertComposerCandidate(draft, composerTrigger, candidate);
     onDraftChange(inserted.text);
-    onDraftEntitiesChange(
-      filterStaleMessageEntities(inserted.text, [
-        ...draftEntities,
-        inserted.entity,
-      ]),
+    onDraftReferencesChange(
+      upsertComposerReference(
+        filterStaleComposerReferences(inserted.text, draftReferences),
+        inserted.reference,
+      ),
     );
     textareaRef.current?.focus();
   };
+
+  const activeReferences = React.useMemo(
+    () => filterStaleComposerReferences(draft, draftReferences),
+    [draft, draftReferences],
+  );
+  const confirmedAttachments = React.useMemo(
+    () => getComposerDraftAttachments(activeReferences),
+    [activeReferences],
+  );
+
+  const handleDraftValueChange = React.useCallback(
+    (nextDraft: string) => {
+      onDraftChange(nextDraft);
+      onDraftReferencesChange(
+        filterStaleComposerReferences(nextDraft, draftReferences),
+      );
+    },
+    [draftReferences, onDraftChange, onDraftReferencesChange],
+  );
+
+  const insertUploadedDraftReferences = React.useCallback(
+    (uploadedFiles: InputFile[]) => {
+      if (uploadedFiles.length === 0) return;
+
+      const textarea = textareaRef.current;
+      const initialStart = textarea?.selectionStart ?? selectionStart;
+      const initialEnd = textarea?.selectionEnd ?? selectionStart;
+      let nextDraft = draft;
+      let nextCursor = initialStart;
+      let nextReferences = [...activeReferences];
+
+      for (const file of uploadedFiles) {
+        const result = insertUploadedComposerReference(
+          nextDraft,
+          nextCursor,
+          initialEnd,
+          file,
+        );
+        if (!result) continue;
+
+        nextDraft = result.text;
+        nextCursor = result.cursor;
+        nextReferences = upsertComposerReference(
+          filterStaleComposerReferences(nextDraft, nextReferences),
+          result.reference,
+        );
+      }
+
+      onDraftChange(nextDraft);
+      onDraftReferencesChange(nextReferences);
+      setSelectionStart(nextCursor);
+      requestAnimationFrame(() => {
+        textareaRef.current?.focus();
+        textareaRef.current?.setSelectionRange(nextCursor, nextCursor);
+      });
+    },
+    [
+      activeReferences,
+      draft,
+      onDraftChange,
+      onDraftReferencesChange,
+      selectionStart,
+    ],
+  );
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
     const isComposing = event.nativeEvent.isComposing || isComposingRef.current;
@@ -268,11 +333,63 @@ export function ThreadDrawer({
     }
     if (event.key === "Enter" && !event.shiftKey && !isComposing) {
       event.preventDefault();
-      if (!isSending && draft.trim()) {
+      if (!isSending && (draft.trim() || confirmedAttachments.length > 0)) {
         onSend();
       }
     }
   };
+
+  const handleFileSelect = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const input = event.currentTarget;
+    const files = Array.from(event.target.files ?? []);
+    if (files.length === 0) {
+      return;
+    }
+    try {
+      const uploadedFiles = await onUploadFiles(files);
+      insertUploadedDraftReferences(uploadedFiles);
+    } finally {
+      input.value = "";
+    }
+  };
+
+  const handlePaste = async (
+    event: React.ClipboardEvent<HTMLTextAreaElement>,
+  ) => {
+    const file = Array.from(event.clipboardData?.items ?? [])
+      .find((item) => item.kind === "file")
+      ?.getAsFile();
+    if (!file) {
+      return;
+    }
+    event.preventDefault();
+    const uploadedFiles = await onUploadFiles([file]);
+    insertUploadedDraftReferences(uploadedFiles);
+  };
+
+  const handleRemoveAttachment = React.useCallback(
+    (index: number) => {
+      const reference =
+        getComposerDraftAttachmentReferences(activeReferences)[index];
+      if (!reference) return;
+      const result = removeComposerReferenceText(draft, reference);
+      onDraftChange(result.text);
+      onDraftReferencesChange(
+        filterStaleComposerReferences(
+          result.text,
+          activeReferences.filter((item) => item.id !== reference.id),
+        ),
+      );
+      setSelectionStart(result.cursor);
+      requestAnimationFrame(() => {
+        textareaRef.current?.focus();
+        textareaRef.current?.setSelectionRange(result.cursor, result.cursor);
+      });
+    },
+    [activeReferences, draft, onDraftChange, onDraftReferencesChange],
+  );
 
   return (
     <aside className={overlayDrawerClassName}>
@@ -299,16 +416,7 @@ export function ThreadDrawer({
       <div className="flex min-h-0 flex-1">
         <div className="min-h-0 flex-1 overflow-y-auto">
           {thread.map((message, index) => (
-            <div
-              key={message.id}
-              ref={(element) => {
-                if (element) {
-                  messageElementsRef.current.set(message.id, element);
-                } else {
-                  messageElementsRef.current.delete(message.id);
-                }
-              }}
-            >
+            <div key={message.id}>
               <MessageRow
                 message={message}
                 agents={agents}
@@ -323,19 +431,29 @@ export function ThreadDrawer({
             </div>
           ))}
         </div>
-        <ConversationTimelineRail
-          title={t("chat.timeline")}
-          emptyLabel={t("chat.timelineEmpty")}
-          items={timelineItems}
-          className="hidden 2xl:flex"
-          onSelectItem={(item) => {
-            if (item.channelMessageId) {
-              handleSelectTimelineItem(item.channelMessageId);
-            }
-          }}
-        />
       </div>
       <div className="border-t border-border px-6 py-5">
+        <input
+          type="file"
+          multiple
+          ref={fileInputRef}
+          className="hidden"
+          onChange={(event) => {
+            void handleFileSelect(event);
+          }}
+        />
+        {confirmedAttachments.length > 0 ? (
+          <div className="mb-3 flex flex-wrap gap-2">
+            {confirmedAttachments.map((file, index) => (
+              <FileCard
+                key={`${file.source}-${index}`}
+                file={file}
+                onRemove={() => handleRemoveAttachment(index)}
+                className="w-full max-w-56 bg-background"
+              />
+            ))}
+          </div>
+        ) : null}
         {suggestedMentionHandle ? (
           <div className="mb-3 flex items-center gap-2 rounded-md border border-border bg-muted/20 px-3 py-2 text-sm text-muted-foreground">
             <Info className="size-4 shrink-0 text-muted-foreground" />
@@ -397,13 +515,17 @@ export function ThreadDrawer({
             ref={textareaRef}
             value={draft}
             onChange={(event) => {
-              const nextDraft = event.target.value;
-              onDraftChange(nextDraft);
-              onDraftEntitiesChange(
-                filterStaleMessageEntities(nextDraft, draftEntities),
-              );
+              handleDraftValueChange(event.target.value);
+              setSelectionStart(event.target.selectionStart);
             }}
+            onClick={(event) =>
+              setSelectionStart(event.currentTarget.selectionStart)
+            }
+            onKeyUp={(event) =>
+              setSelectionStart(event.currentTarget.selectionStart)
+            }
             onKeyDown={handleKeyDown}
+            onPaste={(event) => void handlePaste(event)}
             onCompositionStart={() => {
               isComposingRef.current = true;
             }}
@@ -418,6 +540,17 @@ export function ThreadDrawer({
           />
         </div>
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isSending}
+            aria-label={t("hero.uploadFile")}
+            title={t("hero.uploadFile")}
+          >
+            <Plus className="size-4" />
+          </Button>
           <label className="flex items-center gap-3 text-base text-foreground">
             <input
               type="checkbox"
@@ -431,7 +564,9 @@ export function ThreadDrawer({
             type="button"
             size="sm"
             onClick={onSend}
-            disabled={isSending || !draft.trim()}
+            disabled={
+              isSending || (!draft.trim() && confirmedAttachments.length === 0)
+            }
           >
             {t("conversationView.send")}
           </Button>

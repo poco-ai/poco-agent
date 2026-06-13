@@ -10,6 +10,7 @@ from starlette.datastructures import Headers
 from app.core.errors.exceptions import AppException
 from app.models.agent_session import AgentSession
 from app.models.channel_artifact import ChannelArtifact
+from app.schemas.input_file import InputFile
 from app.services.channel_artifact_service import ChannelArtifactService
 
 
@@ -398,6 +399,141 @@ class ChannelArtifactServiceTests(unittest.TestCase):
             create_event.call_args.kwargs["content"]["artifact_logical_path"],
             "/Uploads/design.md",
         )
+
+    def test_publish_input_file_attachment_copies_private_upload_without_event(
+        self,
+    ) -> None:
+        input_file = InputFile(
+            id="draft-1",
+            type="file",
+            name="diagram.png",
+            source="attachments/user-1/draft-1/file",
+            size=128,
+            content_type="image/png",
+        )
+
+        with (
+            patch(
+                "app.services.channel_artifact_service.require_channel_member_access",
+                return_value=SimpleNamespace(id=self.channel_id, name="Product"),
+            ),
+            patch.object(self.service._storage, "exists", return_value=True),
+            patch.object(self.service._storage, "copy_object") as copy_object,
+            patch(
+                "app.services.channel_artifact_service."
+                "ChannelArtifactRepository.get_by_channel_and_path",
+                return_value=None,
+            ),
+            patch(
+                "app.services.channel_artifact_service.create_channel_event_message"
+            ) as create_event,
+        ):
+            artifact = self.service.publish_input_file_attachment(
+                self.db,
+                current_user=SimpleNamespace(
+                    id="user-1",
+                    display_name="Alice",
+                    primary_email="alice@example.com",
+                ),
+                server_id=self.server_id,
+                channel_id=self.channel_id,
+                input_file=input_file,
+            )
+
+        copy_object.assert_called_once_with(
+            source_key="attachments/user-1/draft-1/file",
+            destination_key=(
+                f"channel-artifacts/{self.server_id}/{self.channel_id}/"
+                f"Uploads/{artifact.id}/file"
+            ),
+        )
+        create_event.assert_not_called()
+        self.assertEqual(artifact.logical_path, "/Uploads/diagram.png")
+        self.assertEqual(artifact.mime_type, "image/png")
+        # Published artifacts must be flushed so the same session can read them back
+        # during message canonicalization (the global session disables autoflush).
+        self.db.add.assert_called_once_with(artifact)
+        self.db.flush.assert_called_once()
+
+    def test_publish_input_file_attachment_flushes_so_same_session_can_read(
+        self,
+    ) -> None:
+        # Regression guard for the channel-chat send-time publish 400: the global
+        # session uses autoflush=False, so an artifact that is only add()-ed is
+        # invisible to the same-session read that canonicalizes the generated
+        # artifact-reference entity. Use a real session with matching autoflush to
+        # exercise the actual SQL visibility behavior (MagicMock cannot).
+        from typing import cast
+
+        from sqlalchemy import Table, create_engine
+        from sqlalchemy.orm import sessionmaker
+
+        from app.models import Base
+        from app.models.channel_artifact import ChannelArtifact as ChannelArtifactModel
+        from app.repositories.channel_artifact_repository import (
+            ChannelArtifactRepository,
+        )
+
+        engine = create_engine("sqlite:///:memory:")
+        # Model.__table__ is statically typed as the broader FromClause; cast to Table
+        # to satisfy MetaData.create_all's Sequence[Table] parameter.
+        Base.metadata.create_all(
+            engine,
+            tables=[cast(Table, ChannelArtifactModel.__table__)],
+        )
+        real_session = sessionmaker(autoflush=False, bind=engine)
+        db = real_session()
+
+        input_file = InputFile(
+            id="draft-1",
+            type="file",
+            name="diagram.png",
+            source="attachments/user-1/draft-1/file",
+            size=128,
+            content_type="image/png",
+        )
+
+        try:
+            with (
+                patch(
+                    "app.services.channel_artifact_service.require_channel_member_access",
+                    return_value=SimpleNamespace(id=self.channel_id, name="Product"),
+                ),
+                patch.object(self.service._storage, "exists", return_value=True),
+                patch.object(self.service._storage, "copy_object"),
+                patch(
+                    "app.services.channel_artifact_service."
+                    "ChannelArtifactRepository.get_by_channel_and_path",
+                    return_value=None,
+                ),
+                patch(
+                    "app.services.channel_artifact_service.create_channel_event_message"
+                ),
+            ):
+                artifact = self.service.publish_input_file_attachment(
+                    db,
+                    current_user=SimpleNamespace(
+                        id="user-1",
+                        display_name="Alice",
+                        primary_email="alice@example.com",
+                    ),
+                    server_id=self.server_id,
+                    channel_id=self.channel_id,
+                    input_file=input_file,
+                )
+
+            fetched = ChannelArtifactRepository.get_by_channel_and_id(
+                db,
+                channel_id=self.channel_id,
+                artifact_id=artifact.id,
+            )
+        finally:
+            db.close()
+
+        self.assertIsNotNone(fetched)
+        assert fetched is not None
+        self.assertEqual(fetched.id, artifact.id)
+        self.assertEqual(fetched.channel_id, self.channel_id)
 
     def test_delete_channel_artifact_removes_user_upload(self) -> None:
         artifact_id = uuid.uuid4()

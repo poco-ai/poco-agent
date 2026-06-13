@@ -1,6 +1,5 @@
-fix(executor-manager): require tokens for manager APIs
+feat(server-collaboration): publish composer uploads on send
 
-- Protect EM control-plane routes with X-Internal-Token and executor proxy routes with callback tokens
-- Send internal headers from Backend EM clients and callback Bearer tokens from executor clients
-- Add auth regression coverage for EM routes, Backend callers, and executor manager clients
-- Record the token boundary decision and completed hardening plan
+- stage channel composer and thread-drawer uploads as private draft attachments instead of immediate artifacts
+- materialize only token-confirmed draft files into channel artifacts during message creation
+- keep channel attachments, generated artifact references, and send-time validation aligned across frontend and backend

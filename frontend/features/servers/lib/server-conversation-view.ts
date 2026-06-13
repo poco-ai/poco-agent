@@ -1,3 +1,4 @@
+import type { InputFile } from "@/features/chat/types";
 import type {
   ChannelArtifactCandidate,
   ChannelMessageEntity,
@@ -36,6 +37,35 @@ export interface ComposerCandidate {
   description?: string | null;
   metadata?: Record<string, unknown>;
 }
+
+interface ComposerReferenceRange {
+  start: number;
+  end: number;
+}
+
+interface BaseComposerReference {
+  id: string;
+  insertedText: string;
+  displayText: string;
+  range?: ComposerReferenceRange;
+  metadata?: Record<string, unknown>;
+}
+
+export interface ComposerEntityReference extends BaseComposerReference {
+  kind: ChannelMessageEntityKind;
+  action: ChannelMessageEntityAction;
+  targetId: string;
+}
+
+export interface ComposerDraftAttachmentReference extends BaseComposerReference {
+  kind: "draft_attachment";
+  action: "reference";
+  file: InputFile;
+}
+
+export type ComposerReference =
+  | ComposerEntityReference
+  | ComposerDraftAttachmentReference;
 
 function normalizeMentionSearch(value: string): string {
   return value.trim().toLocaleLowerCase();
@@ -221,13 +251,13 @@ export function insertComposerCandidate(
   draft: string,
   trigger: ComposerTrigger,
   candidate: ComposerCandidate,
-): { text: string; entity: ChannelMessageEntity } {
+): { text: string; reference: ComposerEntityReference } {
   const insertText = `${candidate.insertedText} `;
   const replaceEnd = trigger.start + trigger.query.length + 1;
   const text = `${draft.slice(0, trigger.start)}${insertText}${draft.slice(replaceEnd)}`;
   return {
     text,
-    entity: {
+    reference: {
       id: `${candidate.id}-${Date.now()}`,
       kind: candidate.kind,
       action: candidate.action,
@@ -243,11 +273,231 @@ export function insertComposerCandidate(
   };
 }
 
+function updateReferenceRange(
+  text: string,
+  reference: ComposerReference,
+): ComposerReference | null {
+  const insertedText = reference.insertedText.trim();
+  if (!insertedText) {
+    return null;
+  }
+  const start = text.indexOf(insertedText);
+  if (start === -1) {
+    return null;
+  }
+  return {
+    ...reference,
+    range: { start, end: start + insertedText.length },
+  };
+}
+
+export function filterStaleComposerReferences(
+  text: string,
+  references: ComposerReference[],
+): ComposerReference[] {
+  return references
+    .map((reference) => updateReferenceRange(text, reference))
+    .filter((reference): reference is ComposerReference => reference !== null);
+}
+
+export function upsertComposerReference(
+  references: ComposerReference[],
+  nextReference: ComposerReference,
+): ComposerReference[] {
+  const reservedText = nextReference.insertedText.trim();
+  return [
+    ...references.filter(
+      (reference) => reference.insertedText.trim() !== reservedText,
+    ),
+    nextReference,
+  ];
+}
+
+function normalizeInputFileSource(file: InputFile): string {
+  return String(file.source || "").trim();
+}
+
+function normalizeInputFileDisplayName(file: InputFile): string {
+  return (
+    String(file.name || "").trim() || normalizeInputFileSource(file) || "file"
+  );
+}
+
+export function insertUploadedComposerReference(
+  draft: string,
+  selectionStart: number,
+  selectionEnd: number,
+  file: InputFile,
+): {
+  text: string;
+  cursor: number;
+  reference: ComposerDraftAttachmentReference;
+} | null {
+  const source = normalizeInputFileSource(file);
+  if (!source) return null;
+
+  const start = Math.max(0, Math.min(selectionStart, draft.length));
+  const end = Math.max(start, Math.min(selectionEnd, draft.length));
+  const before = draft.slice(0, start);
+  const after = draft.slice(end);
+  const insertedText = `#${normalizeInputFileDisplayName(file)}`;
+  const prefix = before && !/\s$/.test(before) ? " " : "";
+  const suffix = after.startsWith(" ") ? "" : " ";
+  const replacement = `${prefix}${insertedText}${suffix}`;
+  const tokenStart = start + prefix.length;
+  const tokenEnd = tokenStart + insertedText.length;
+
+  return {
+    text: `${before}${replacement}${after}`,
+    cursor: start + replacement.length,
+    reference: {
+      id: `draft-attachment:${source}:${tokenStart}:${tokenEnd}`,
+      kind: "draft_attachment",
+      action: "reference",
+      insertedText,
+      displayText: normalizeInputFileDisplayName(file),
+      range: { start: tokenStart, end: tokenEnd },
+      file,
+      metadata: {
+        size: file.size ?? null,
+        contentType: file.content_type ?? null,
+        path: file.path ?? null,
+      },
+    },
+  };
+}
+
+export function getComposerDraftAttachments(
+  references: ComposerReference[],
+): InputFile[] {
+  const seenSources = new Set<string>();
+  const attachments: InputFile[] = [];
+  for (const reference of references) {
+    if (reference.kind !== "draft_attachment") continue;
+    const source = normalizeInputFileSource(reference.file);
+    if (!source || seenSources.has(source)) continue;
+    attachments.push(reference.file);
+    seenSources.add(source);
+  }
+  return attachments;
+}
+
+export function getComposerDraftAttachmentReferences(
+  references: ComposerReference[],
+): ComposerDraftAttachmentReference[] {
+  return references.filter(
+    (reference): reference is ComposerDraftAttachmentReference =>
+      reference.kind === "draft_attachment",
+  );
+}
+
+export function removeComposerReferenceText(
+  text: string,
+  reference: ComposerReference,
+): { text: string; cursor: number } {
+  const insertedText = reference.insertedText.trim();
+  if (!insertedText) {
+    return { text, cursor: text.length };
+  }
+  const rangeStart = reference.range?.start ?? text.indexOf(insertedText);
+  const rangeEnd =
+    reference.range?.end ??
+    (rangeStart >= 0 ? rangeStart + insertedText.length : -1);
+  if (rangeStart < 0 || rangeEnd < 0 || rangeStart > text.length) {
+    return { text, cursor: text.length };
+  }
+
+  const before = text.slice(0, rangeStart);
+  const after = text.slice(rangeEnd);
+  const nextText = `${before}${after}`.replace(/ {2,}/g, " ");
+  return {
+    text: nextText,
+    cursor: Math.min(rangeStart, nextText.length),
+  };
+}
+
+export function serializeComposerReferencesForSend(
+  text: string,
+  references: ComposerReference[],
+): {
+  activeReferences: ComposerReference[];
+  entities: ChannelMessageEntity[];
+  attachments: InputFile[];
+} {
+  const activeReferences = filterStaleComposerReferences(text, references);
+  const attachments = getComposerDraftAttachments(activeReferences);
+  const reservedAttachmentTokens = new Set(
+    activeReferences
+      .filter(
+        (reference): reference is ComposerDraftAttachmentReference =>
+          reference.kind === "draft_attachment",
+      )
+      .map((reference) => reference.insertedText.trim())
+      .filter(Boolean),
+  );
+  const entities = activeReferences
+    .filter(
+      (reference): reference is ComposerEntityReference =>
+        reference.kind !== "draft_attachment",
+    )
+    .filter(
+      (reference) =>
+        !(
+          reference.kind === "artifact" &&
+          reservedAttachmentTokens.has(reference.insertedText.trim())
+        ),
+    )
+    .map<ChannelMessageEntity>((reference) => ({
+      id: reference.id,
+      kind: reference.kind,
+      action: reference.action,
+      targetId: reference.targetId,
+      displayText: reference.displayText,
+      insertedText: reference.insertedText,
+      range: reference.range,
+      metadata: reference.metadata,
+    }));
+
+  return {
+    activeReferences,
+    entities,
+    attachments,
+  };
+}
+
 export function filterStaleMessageEntities(
   text: string,
   entities: ChannelMessageEntity[],
 ): ChannelMessageEntity[] {
   return entities.filter((entity) => text.includes(entity.insertedText));
+}
+
+export function filterMessageEntitiesForSend(
+  text: string,
+  entities: ChannelMessageEntity[],
+  attachmentReferences: ComposerReference[] = [],
+): ChannelMessageEntity[] {
+  const activeEntities = filterStaleMessageEntities(text, entities);
+  const reservedAttachmentTokens = new Set(
+    attachmentReferences
+      .filter(
+        (reference): reference is ComposerDraftAttachmentReference =>
+          reference.kind === "draft_attachment",
+      )
+      .map((reference) => reference.insertedText.trim())
+      .filter(Boolean),
+  );
+  if (reservedAttachmentTokens.size === 0) {
+    return activeEntities;
+  }
+
+  return activeEntities.filter(
+    (entity) =>
+      !(
+        entity.kind === "artifact" &&
+        reservedAttachmentTokens.has(entity.insertedText.trim())
+      ),
+  );
 }
 
 export function buildHumanMentionCandidates(

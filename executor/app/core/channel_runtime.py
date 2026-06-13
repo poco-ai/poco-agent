@@ -4,6 +4,7 @@ import re
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
+from urllib.parse import unquote
 
 import httpx
 from claude_agent_sdk import create_sdk_mcp_server, tool
@@ -246,10 +247,13 @@ class ChannelRuntimeClient:
 
         size_header = response.headers.get("x-artifact-size-bytes")
         size_bytes = int(size_header) if size_header and size_header.isdigit() else None
+        # The backend percent-encodes non-ASCII filename/path header values (HTTP
+        # headers are ASCII-only); decode them back to the original text.
         return DownloadedArtifact(
             artifact_id=response.headers.get("x-artifact-id"),
-            logical_path=response.headers.get("x-artifact-logical-path"),
-            display_name=response.headers.get("x-artifact-display-name")
+            logical_path=unquote(response.headers.get("x-artifact-logical-path") or "")
+            or None,
+            display_name=unquote(response.headers.get("x-artifact-display-name") or "")
             or "artifact.bin",
             mime_type=response.headers.get("x-artifact-mime-type")
             or response.headers.get("content-type"),
