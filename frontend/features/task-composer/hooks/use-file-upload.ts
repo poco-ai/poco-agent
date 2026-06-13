@@ -34,10 +34,11 @@ export function useFileUpload({ t }: UseFileUploadOptions) {
 
   const uploadFiles = React.useCallback(
     async (files: File[]) => {
-      if (files.length === 0) return;
+      if (files.length === 0) return [];
 
       const existingNames = getAttachmentNameSet();
       setIsUploading(true);
+      const uploadedFiles: InputFile[] = [];
 
       try {
         for (const file of files) {
@@ -57,6 +58,7 @@ export function useFileUpload({ t }: UseFileUploadOptions) {
           try {
             const uploaded = await uploadAttachment(file);
             setAttachments((prev) => [...prev, uploaded]);
+            uploadedFiles.push(uploaded);
             existingNames.add(normalized);
             toast.success(t("hero.toasts.uploadSuccess"));
             playUploadSound();
@@ -68,13 +70,16 @@ export function useFileUpload({ t }: UseFileUploadOptions) {
       } finally {
         setIsUploading(false);
       }
+
+      return uploadedFiles;
     },
     [getAttachmentNameSet, t],
   );
 
   const uploadFile = React.useCallback(
     async (file: File) => {
-      await uploadFiles([file]);
+      const uploadedFiles = await uploadFiles([file]);
+      return uploadedFiles[0] ?? null;
     },
     [uploadFiles],
   );
@@ -85,7 +90,7 @@ export function useFileUpload({ t }: UseFileUploadOptions) {
       const files = Array.from(e.target.files ?? []);
       if (files.length === 0) return;
       try {
-        await uploadFiles(files);
+        return await uploadFiles(files);
       } finally {
         input.value = "";
       }
@@ -102,8 +107,8 @@ export function useFileUpload({ t }: UseFileUploadOptions) {
         .find((item) => item.kind === "file")
         ?.getAsFile();
 
-      if (!file) return;
-      await uploadFiles([file]);
+      if (!file) return [];
+      return await uploadFiles([file]);
     },
     [uploadFiles],
   );
@@ -116,6 +121,10 @@ export function useFileUpload({ t }: UseFileUploadOptions) {
     setAttachments([]);
   }, []);
 
+  const replaceAttachments = React.useCallback((nextAttachments: InputFile[]) => {
+    setAttachments(nextAttachments);
+  }, []);
+
   return {
     isUploading,
     attachments,
@@ -125,5 +134,6 @@ export function useFileUpload({ t }: UseFileUploadOptions) {
     handlePaste,
     removeAttachment,
     clearAttachments,
+    replaceAttachments,
   };
 }

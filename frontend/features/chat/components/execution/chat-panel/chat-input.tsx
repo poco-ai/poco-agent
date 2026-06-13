@@ -36,9 +36,12 @@ import { useLanguage } from "@/hooks/use-language";
 import { appendTranscribedText, useVoiceInput } from "@/features/voice";
 import {
   filterInputFileReferences,
+  getReferencedInputFiles,
   getInputFileReferenceCandidates,
   getInputFileReferenceTrigger,
   insertInputFileReference,
+  insertUploadedInputFileReference,
+  removeInputFileReference,
 } from "@/features/chat/lib/input-file-reference";
 
 interface ChatInputProps {
@@ -223,6 +226,64 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
       setFileReferenceActiveIndex(0);
     }, [inputFileReferenceTrigger?.query, inputFileReferenceCandidates.length]);
 
+    const insertUploadedFileReferences = useCallback(
+      (uploadedFiles: InputFile[]) => {
+        if (uploadedFiles.length === 0) return;
+
+        const textarea = textareaRef.current;
+        const initialStart = textarea?.selectionStart ?? selectionStart;
+        const initialEnd = textarea?.selectionEnd ?? selectionStart;
+        let nextValue = value;
+        let nextCursor = initialStart;
+        let nextReferences = [...inputFileReferences];
+        const availableFiles = [
+          ...attachments,
+          ...sessionInputFiles,
+          ...uploadedFiles,
+        ];
+
+        for (const file of uploadedFiles) {
+          const result = insertUploadedInputFileReference(
+            nextValue,
+            nextCursor,
+            initialEnd,
+            file,
+          );
+          if (!result) continue;
+
+          nextValue = result.value;
+          nextCursor = result.cursor;
+          nextReferences = [
+            ...filterInputFileReferences(
+              nextReferences,
+              nextValue,
+              availableFiles,
+              { sessionId, workspaceFiles: sessionFiles },
+            ),
+            result.reference,
+          ];
+        }
+
+        setHistoryIndex(-1);
+        setValue(nextValue);
+        setSelectionStart(nextCursor);
+        setInputFileReferences(nextReferences);
+        requestAnimationFrame(() => {
+          syncTextareaValue(nextValue, nextCursor);
+        });
+      },
+      [
+        attachments,
+        inputFileReferences,
+        selectionStart,
+        sessionFiles,
+        sessionId,
+        sessionInputFiles,
+        syncTextareaValue,
+        value,
+      ],
+    );
+
     const applyInputFileReferenceSelection = useCallback(
       (index: number) => {
         const candidate = inputFileReferenceCandidates[index];
@@ -278,6 +339,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
         const abortController = new AbortController();
         uploadAbortControllerRef.current = abortController;
         setIsUploading(true);
+        const uploadedFiles: InputFile[] = [];
         try {
           for (const file of files) {
             if (abortController.signal.aborted) {
@@ -337,6 +399,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
               }
 
               setAttachments((prev) => [...prev, uploadResult.uploadedFile]);
+              uploadedFiles.push(uploadResult.uploadedFile);
               existingNames.add(normalizedName);
               toast.success(t("hero.toasts.uploadSuccess"));
               playUploadSound();
@@ -354,8 +417,10 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
           }
           setIsUploading(false);
         }
+
+        insertUploadedFileReferences(uploadedFiles);
       },
-      [attachments, t],
+      [attachments, insertUploadedFileReferences, t],
     );
     const fileDrop = useFileDropUpload({
       disabled: disabled || isUploading,
@@ -403,8 +468,16 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
       };
     }, [isUploading]);
 
+    const confirmedDraftAttachments = getReferencedInputFiles(
+      attachments,
+      inputFileReferences,
+    );
+
     const handleSend = useCallback(() => {
-      if (voiceInput.isBusy || (!value.trim() && attachments.length === 0)) {
+      if (
+        voiceInput.isBusy ||
+        (!value.trim() && confirmedDraftAttachments.length === 0)
+      ) {
         return;
       }
 
@@ -416,6 +489,10 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
         [...currentAttachments, ...sessionInputFiles],
         { sessionId, workspaceFiles: sessionFiles },
       );
+      const confirmedAttachments = getReferencedInputFiles(
+        currentAttachments,
+        currentReferences,
+      );
       setHistoryIndex(-1);
       setValue(""); // Clear immediately
       setAttachments([]);
@@ -424,7 +501,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
       if (textareaRef.current) {
         textareaRef.current.style.height = "auto";
       }
-      onSend(content, currentAttachments, currentReferences);
+      onSend(content, confirmedAttachments, currentReferences);
     }, [
       attachments,
       inputFileReferences,
@@ -433,6 +510,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
       sessionId,
       sessionInputFiles,
       value,
+      confirmedDraftAttachments.length,
       voiceInput.isBusy,
     ]);
 
@@ -518,7 +596,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
             return;
           }
           if (
-            (value.trim() || attachments.length > 0) &&
+            (value.trim() || confirmedDraftAttachments.length > 0) &&
             !isComposingRef.current &&
             !e.nativeEvent.isComposing &&
             e.keyCode !== 229
@@ -530,7 +608,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
       },
       [
         value,
-        attachments,
+        confirmedDraftAttachments.length,
         handleSend,
         isInputFileReferenceOpen,
         inputFileReferenceCandidates.length,
@@ -557,16 +635,24 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
     const handleInputChange = useCallback(
       (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         const nextValue = e.target.value;
-        setValue(nextValue);
-        setSelectionStart(e.target.selectionStart);
-        setInputFileReferences((prev) =>
-          filterInputFileReferences(
-            prev,
-            nextValue,
-            [...attachments, ...sessionInputFiles],
-            { sessionId, workspaceFiles: sessionFiles },
-          ),
+      setValue(nextValue);
+      setSelectionStart(e.target.selectionStart);
+      setInputFileReferences((prev) => {
+        const nextReferences = filterInputFileReferences(
+          prev,
+          nextValue,
+          [...attachments, ...sessionInputFiles],
+          { sessionId, workspaceFiles: sessionFiles },
         );
+        const nextAttachments = getReferencedInputFiles(
+          attachments,
+          nextReferences,
+        );
+        if (nextAttachments.length !== attachments.length) {
+          setAttachments(nextAttachments);
+        }
+        return nextReferences;
+      });
         if (historyIndex !== -1) {
           setHistoryIndex(-1);
         }
@@ -587,21 +673,47 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
     };
 
     const removeAttachment = (index: number) => {
+      const file = attachments[index];
+      if (!file) return;
       setAttachments((prev) => {
         const next = prev.filter((_, i) => i !== index);
         setInputFileReferences((current) =>
-          filterInputFileReferences(
-            current,
-            value,
-            [...next, ...sessionInputFiles],
-            { sessionId, workspaceFiles: sessionFiles },
-          ),
+          {
+            const reference = current.find(
+              (item) =>
+                item.kind === "input_file" &&
+                item.source.trim() === (file.source || "").trim(),
+            );
+            if (!reference) {
+              return filterInputFileReferences(
+                current,
+                value,
+                [...next, ...sessionInputFiles],
+                { sessionId, workspaceFiles: sessionFiles },
+              );
+            }
+
+            const result = removeInputFileReference(value, reference);
+            setValue(result.value);
+            setSelectionStart(result.cursor);
+            requestAnimationFrame(() => {
+              syncTextareaValue(result.value, result.cursor);
+            });
+
+            return filterInputFileReferences(
+              current.filter((item) => item !== reference),
+              result.value,
+              [...next, ...sessionInputFiles],
+              { sessionId, workspaceFiles: sessionFiles },
+            );
+          },
         );
         return next;
       });
     };
 
-    const hasDraft = value.trim().length > 0 || attachments.length > 0;
+    const hasDraft =
+      value.trim().length > 0 || confirmedDraftAttachments.length > 0;
     const showCancel = Boolean(onCancel) && canCancel && !hasDraft;
 
     return (
@@ -725,6 +837,15 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
               onClick={(e) => setSelectionStart(e.currentTarget.selectionStart)}
               onKeyUp={(e) => setSelectionStart(e.currentTarget.selectionStart)}
               onKeyDown={handleKeyDown}
+              onPaste={(event) => {
+                const files = Array.from(event.clipboardData?.items ?? [])
+                  .filter((item) => item.kind === "file")
+                  .map((item) => item.getAsFile())
+                  .filter((file): file is File => file !== null);
+                if (files.length === 0) return;
+                event.preventDefault();
+                void uploadFiles(files);
+              }}
               onCompositionStart={handleCompositionStart}
               onCompositionEnd={handleCompositionEnd}
               placeholder={t("chat.inputPlaceholder")}

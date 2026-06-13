@@ -1,5 +1,5 @@
-docs(specs): define draft upload and send-time publish flow
+feat(frontend): confirm uploaded chat files with # tokens
 
-- add an active implementation spec for unifying ordinary and channel chat upload semantics
-- define early-upload plus send-time materialization across inputs and channel artifacts
-- document automatic #token confirmation for pasted images and reused file-upload entrypoints
+- auto-insert readable #file tokens after pasted or uploaded files in ordinary chat inputs
+- keep task composer and execution chat input aligned on draft attachment confirmation rules
+- send only attachments that still have live file references and remove tokens when pills are deleted

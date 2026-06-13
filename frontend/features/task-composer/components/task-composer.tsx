@@ -38,9 +38,12 @@ import { playInstallSound } from "@/lib/utils/sound";
 import { useCapabilityToggle } from "@/features/connectors";
 import {
   filterInputFileReferences,
+  getReferencedInputFiles,
   getInputFileReferenceCandidates,
   getInputFileReferenceTrigger,
   insertInputFileReference,
+  insertUploadedInputFileReference,
+  removeInputFileReference,
 } from "@/features/chat/lib/input-file-reference";
 import type { RunScheduleMode } from "@/features/task-composer/model/run-schedule";
 import type {
@@ -49,7 +52,10 @@ import type {
   RepoUsageMode,
   TaskSendOptions,
 } from "@/features/task-composer/types";
-import type { ChatFileReference } from "@/features/chat/types/api/session";
+import type {
+  ChatFileReference,
+  InputFile,
+} from "@/features/chat/types/api/session";
 import type { CapabilityRecommendation } from "@/features/task-composer/types/capability-recommendation";
 import type { Preset } from "@/features/capabilities/presets/lib/preset-types";
 
@@ -151,10 +157,6 @@ export function TaskComposer({
 
   // ---- File upload (shared hook) ----
   const upload = useFileUpload({ t });
-  const fileDrop = useFileDropUpload({
-    disabled: Boolean(isSubmitting) || upload.isUploading,
-    onFilesDrop: upload.uploadFiles,
-  });
   const [inputFileReferences, setInputFileReferences] = React.useState<
     ChatFileReference[]
   >([]);
@@ -165,11 +167,23 @@ export function TaskComposer({
   const handleValueChange = React.useCallback(
     (nextValue: string) => {
       onChange(nextValue);
-      setInputFileReferences((current) =>
-        filterInputFileReferences(current, nextValue, upload.attachments),
-      );
+      setInputFileReferences((current) => {
+        const nextReferences = filterInputFileReferences(
+          current,
+          nextValue,
+          upload.attachments,
+        );
+        const nextAttachments = getReferencedInputFiles(
+          upload.attachments,
+          nextReferences,
+        );
+        if (nextAttachments.length !== upload.attachments.length) {
+          upload.replaceAttachments(nextAttachments);
+        }
+        return nextReferences;
+      });
     },
-    [onChange, upload.attachments],
+    [onChange, upload],
   );
 
   // ---- Slash-command autocomplete ----
@@ -207,6 +221,72 @@ export function TaskComposer({
       filterInputFileReferences(current, value, upload.attachments),
     );
   }, [upload.attachments, value]);
+
+  const insertUploadedFileReferences = React.useCallback(
+    (uploadedFiles: InputFile[]) => {
+      if (uploadedFiles.length === 0) return;
+
+      const textarea = textareaRef.current;
+      const initialStart = textarea?.selectionStart ?? selectionStart;
+      const initialEnd = textarea?.selectionEnd ?? selectionStart;
+      let nextValue = value;
+      let nextCursor = initialStart;
+      let nextReferences = [...inputFileReferences];
+      const availableFiles = [...upload.attachments, ...uploadedFiles];
+
+      for (const file of uploadedFiles) {
+        const result = insertUploadedInputFileReference(
+          nextValue,
+          nextCursor,
+          initialEnd,
+          file,
+        );
+        if (!result) continue;
+
+        nextValue = result.value;
+        nextCursor = result.cursor;
+        nextReferences = [
+          ...filterInputFileReferences(
+            nextReferences,
+            nextValue,
+            availableFiles,
+          ),
+          result.reference,
+        ];
+      }
+
+      onChange(nextValue);
+      setInputFileReferences(nextReferences);
+      setSelectionStart(nextCursor);
+      requestAnimationFrame(() => {
+        const currentTextarea = textareaRef.current;
+        if (!currentTextarea) return;
+        currentTextarea.focus();
+        currentTextarea.setSelectionRange(nextCursor, nextCursor);
+      });
+    },
+    [
+      inputFileReferences,
+      onChange,
+      selectionStart,
+      textareaRef,
+      upload.attachments,
+      value,
+    ],
+  );
+
+  const handleUploadFiles = React.useCallback(
+    async (files: File[]) => {
+      const uploadedFiles = await upload.uploadFiles(files);
+      insertUploadedFileReferences(uploadedFiles);
+    },
+    [insertUploadedFileReferences, upload],
+  );
+
+  const fileDrop = useFileDropUpload({
+    disabled: Boolean(isSubmitting) || upload.isUploading,
+    onFilesDrop: handleUploadFiles,
+  });
 
   const applyInputFileReferenceSelection = React.useCallback(
     (index: number) => {
@@ -478,20 +558,52 @@ export function TaskComposer({
 
   const handleRemoveAttachment = React.useCallback(
     (index: number) => {
+      const file = upload.attachments[index];
+      if (!file) return;
       const nextAttachments = upload.attachments.filter((_, i) => i !== index);
       upload.removeAttachment(index);
-      setInputFileReferences((current) =>
-        filterInputFileReferences(current, value, nextAttachments),
-      );
+      setInputFileReferences((current) => {
+        const reference = current.find(
+          (item) =>
+            item.kind === "input_file" &&
+            item.source.trim() === (file.source || "").trim(),
+        );
+        if (!reference) {
+          return filterInputFileReferences(current, value, nextAttachments);
+        }
+
+        const result = removeInputFileReference(value, reference);
+        onChange(result.value);
+        setSelectionStart(result.cursor);
+        requestAnimationFrame(() => {
+          const textarea = textareaRef.current;
+          if (!textarea) return;
+          textarea.focus();
+          textarea.setSelectionRange(result.cursor, result.cursor);
+        });
+        return filterInputFileReferences(
+          current.filter((item) => item !== reference),
+          result.value,
+          nextAttachments,
+        );
+      });
     },
-    [upload, value],
+    [onChange, textareaRef, upload, value],
   );
 
   const canSubmit = React.useMemo(() => {
     if (mode === "scheduled") {
       return Boolean(value.trim()) && Boolean(scheduledCron.trim());
     }
-    const hasContent = Boolean(value.trim()) || upload.attachments.length > 0;
+    const activeInputFileReferences = filterInputFileReferences(
+      inputFileReferences,
+      value,
+      upload.attachments,
+    );
+    const hasContent =
+      Boolean(value.trim()) ||
+      getReferencedInputFiles(upload.attachments, activeInputFileReferences)
+        .length > 0;
     if (runScheduleMode === "scheduled" && !(runScheduledAt || "").trim()) {
       return false;
     }
@@ -500,7 +612,8 @@ export function TaskComposer({
     mode,
     value,
     scheduledCron,
-    upload.attachments.length,
+    inputFileReferences,
+    upload.attachments,
     runScheduleMode,
     runScheduledAt,
   ]);
@@ -515,8 +628,12 @@ export function TaskComposer({
       value,
       upload.attachments,
     );
+    const confirmedAttachments = getReferencedInputFiles(
+      upload.attachments,
+      currentInputFileReferences,
+    );
     const payload: TaskSendOptions = {
-      attachments: upload.attachments,
+      attachments: confirmedAttachments,
       file_references: currentInputFileReferences,
       repo_url: repoUrl.trim() || null,
       git_branch: gitBranch.trim() || null,
@@ -675,7 +792,14 @@ export function TaskComposer({
           multiple
           ref={fileInputRef}
           className="hidden"
-          onChange={upload.handleFileSelect}
+          onChange={(event) => {
+            void (async () => {
+              const uploadedFiles = await upload.handleFileSelect(event);
+              if (uploadedFiles?.length) {
+                insertUploadedFileReferences(uploadedFiles);
+              }
+            })();
+          }}
         />
 
         {/* Attachments */}
@@ -832,7 +956,21 @@ export function TaskComposer({
                 isComposing.current = false;
               });
             }}
-            onPaste={upload.handlePaste}
+            onPaste={(event) => {
+              void (async () => {
+                const items = event.clipboardData?.items;
+                const hasFile = Array.from(items ?? []).some(
+                  (item) => item.kind === "file",
+                );
+                if (hasFile) {
+                  event.preventDefault();
+                }
+                const uploadedFiles = (await upload.handlePaste(event)) ?? [];
+                if (uploadedFiles.length > 0) {
+                  insertUploadedFileReferences(uploadedFiles);
+                }
+              })();
+            }}
             onFocus={onFocus}
             onBlur={onBlur}
             onKeyDown={(e) => {
