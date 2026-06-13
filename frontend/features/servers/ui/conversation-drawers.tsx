@@ -24,7 +24,6 @@ import type { InputFile } from "@/features/chat/types";
 import type { Preset } from "@/features/capabilities/presets/lib/preset-types";
 import { ExecutionContainer } from "@/features/chat";
 import { cancelCurrentRunAction } from "@/features/chat/actions/session-actions";
-import { ConversationTimelineRail } from "@/features/chat/components/shared/conversation-timeline-rail";
 import { useExecutionSession } from "@/features/chat/hooks/use-execution-session";
 import type {
   ChannelTask,
@@ -62,7 +61,6 @@ import { SharedArtifactsDrawer } from "@/features/servers/ui/shared-artifacts-dr
 
 import { MessageRow } from "./conversation-message-row";
 import { getAgentRuntimeStatus } from "../lib/agent-runtime-status";
-import { buildChannelTimelineItems } from "../lib/conversation-timeline";
 import { ServerAgentAvatar } from "./server-agent-avatar";
 
 const overlayDrawerClassName =
@@ -141,9 +139,6 @@ export function ThreadDrawer({
   const { t } = useT("translation");
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
-  const messageElementsRef = React.useRef<Map<string, HTMLDivElement>>(
-    new Map(),
-  );
   const isComposingRef = React.useRef(false);
   const [selectionStart, setSelectionStart] = React.useState(0);
 
@@ -227,15 +222,6 @@ export function ThreadDrawer({
   const composerActive =
     composerTrigger !== null && composerCandidates.length > 0;
   const [mentionIndex, setMentionIndex] = React.useState(0);
-  const timelineItems = React.useMemo(
-    () => buildChannelTimelineItems(thread),
-    [thread],
-  );
-  const handleSelectTimelineItem = React.useCallback((messageId: string) => {
-    messageElementsRef.current
-      .get(messageId)
-      ?.scrollIntoView({ block: "center", behavior: "smooth" });
-  }, []);
   React.useEffect(() => {
     setMentionIndex(0);
   }, [composerCandidates]);
@@ -427,16 +413,7 @@ export function ThreadDrawer({
       <div className="flex min-h-0 flex-1">
         <div className="min-h-0 flex-1 overflow-y-auto">
           {thread.map((message, index) => (
-            <div
-              key={message.id}
-              ref={(element) => {
-                if (element) {
-                  messageElementsRef.current.set(message.id, element);
-                } else {
-                  messageElementsRef.current.delete(message.id);
-                }
-              }}
-            >
+            <div key={message.id}>
               <MessageRow
                 message={message}
                 agents={agents}
@@ -451,17 +428,6 @@ export function ThreadDrawer({
             </div>
           ))}
         </div>
-        <ConversationTimelineRail
-          title={t("chat.timeline")}
-          emptyLabel={t("chat.timelineEmpty")}
-          items={timelineItems}
-          className="hidden 2xl:flex"
-          onSelectItem={(item) => {
-            if (item.channelMessageId) {
-              handleSelectTimelineItem(item.channelMessageId);
-            }
-          }}
-        />
       </div>
       <div className="border-t border-border px-6 py-5">
         <input
