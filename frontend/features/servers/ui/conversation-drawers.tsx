@@ -429,7 +429,9 @@ export function ThreadDrawer({
   );
 
   return (
-    <aside className={focused ? embeddedDrawerClassName : overlayDrawerClassName}>
+    <aside
+      className={focused ? embeddedDrawerClassName : overlayDrawerClassName}
+    >
       <div className={drawerHeaderClassName}>
         <div className="flex min-w-0 items-center gap-3">
           <Button
