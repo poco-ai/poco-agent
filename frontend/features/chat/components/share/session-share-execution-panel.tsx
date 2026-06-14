@@ -73,7 +73,7 @@ function findFileByPath(
   return undefined;
 }
 
-function mapSharedRunToRunResponse(
+export function mapSharedRunToRunResponse(
   run: SharedRunSummary,
   sessionId: string,
 ): RunResponse {
@@ -146,7 +146,7 @@ function mapSharedToolExecution(
   };
 }
 
-function SharedComputerSnapshot({ run }: { run: SharedRunSummary }) {
+export function SharedComputerSnapshot({ run }: { run: SharedRunSummary }) {
   const toolExecutions = React.useMemo(
     () => run.toolExecutions.map(mapSharedToolExecution),
     [run.toolExecutions],
@@ -175,7 +175,7 @@ function SharedComputerSnapshot({ run }: { run: SharedRunSummary }) {
   );
 }
 
-function SharedArtifactsSnapshot({ run }: { run: SharedRunSummary }) {
+export function SharedArtifactsSnapshot({ run }: { run: SharedRunSummary }) {
   const { t } = useT("translation");
   const [selectedPath, setSelectedPath] = React.useState<string | null>(null);
   const files = run.workspaceFiles;
@@ -218,9 +218,9 @@ function SharedArtifactsSnapshot({ run }: { run: SharedRunSummary }) {
   }
 
   return (
-    <div className="grid h-full min-h-0 grid-cols-[minmax(0,70%)_minmax(0,30%)] overflow-hidden">
-      <div className="min-h-0 min-w-0 overflow-hidden border-r border-border/60 bg-background p-3">
-        <div className="h-full min-h-0 overflow-hidden rounded-xl border bg-card">
+    <div className="grid h-full min-h-0 grid-rows-[minmax(0,1fr)_minmax(9rem,35%)] overflow-hidden md:grid-cols-[minmax(0,70%)_minmax(0,30%)] md:grid-rows-none">
+      <div className="min-h-0 min-w-0 overflow-hidden border-b border-border/60 bg-background p-2 md:border-r md:border-b-0 md:p-3">
+        <div className="h-full min-h-0 overflow-hidden rounded-lg border bg-card md:rounded-xl">
           {selectedFile ? (
             <DocumentViewer file={selectedFile} />
           ) : (
