@@ -2561,27 +2561,48 @@ export function ServerConversationPageClient({
     router.replace(`/${lng}/servers?mode=search&server=${selectedServerId}`);
   }, [activeChannelId, channels, lng, router, selectedServerId]);
 
+  // Poll the active thread independently so its placeholder/status stays live
+  // regardless of which channel is currently active (matches the top-level
+  // channel snapshot polling pattern below).
   React.useEffect(() => {
-    const loadThread = async () => {
-      if (drawer.type !== "thread" || !selectedServerId) {
-        setThreadMessages([]);
+    if (drawer.type !== "thread" || !selectedServerId) {
+      setThreadMessages([]);
+      return;
+    }
+
+    let cancelled = false;
+    let inFlight = false;
+
+    const refreshThread = async () => {
+      if (cancelled || inFlight) {
         return;
       }
+      inFlight = true;
       try {
-        setThreadMessages(
-          await serversApi.getThread(
-            selectedServerId,
-            drawer.channelId,
-            drawer.rootMessageId,
-          ),
+        const nextThread = await serversApi.getThread(
+          selectedServerId,
+          drawer.channelId,
+          drawer.rootMessageId,
         );
+        if (!cancelled) {
+          setThreadMessages(nextThread);
+        }
       } catch (error) {
-        console.error("[ServersWorkspace] thread load failed", error);
-        toast.error(t("conversationView.toasts.threadFailed"));
+        if (!cancelled) {
+          console.error("[ServersWorkspace] thread refresh failed", error);
+          toast.error(t("conversationView.toasts.threadFailed"));
+        }
+      } finally {
+        inFlight = false;
       }
     };
 
-    void loadThread();
+    void refreshThread();
+    const intervalId = window.setInterval(refreshThread, 4000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+    };
   }, [drawer, selectedServerId, t]);
 
   React.useEffect(() => {
@@ -2621,16 +2642,7 @@ export function ServerConversationPageClient({
             channelTasksApi.listTasks(selectedServerId, activeChannelId),
           );
         }
-        if (drawer.type === "thread" && drawer.channelId === activeChannelId) {
-          requests.push(
-            serversApi.getThread(
-              selectedServerId,
-              drawer.channelId,
-              drawer.rootMessageId,
-            ),
-          );
-        }
-        const [nextMessages, nextArtifacts, nextTasks, nextThread] =
+        const [nextMessages, nextArtifacts, nextTasks] =
           await Promise.all(requests);
 
         if (cancelled) {
@@ -2643,9 +2655,6 @@ export function ServerConversationPageClient({
         setChannelArtifacts(nextArtifacts as FileNode[]);
         if (mode === "tasks" && Array.isArray(nextTasks)) {
           setTasks(nextTasks as ChannelTask[]);
-        }
-        if (drawer.type === "thread" && Array.isArray(nextThread)) {
-          setThreadMessages(nextThread as ServerConversationMessage[]);
         }
       } catch (error) {
         if (!cancelled) {
@@ -2665,7 +2674,7 @@ export function ServerConversationPageClient({
       cancelled = true;
       window.clearInterval(intervalId);
     };
-  }, [activeChannelId, drawer, mode, selectedChannel, selectedServerId]);
+  }, [activeChannelId, mode, selectedChannel, selectedServerId]);
 
   const openMode = (nextMode: WorkspaceMode) => {
     setMode(nextMode);
@@ -3962,6 +3971,7 @@ export function ServerConversationPageClient({
                       void handleToggleReaction(message, emoji)
                     }
                     isSending={isSending}
+                    isUploading={isUploadingDraftFile}
                   />
                 ) : drawer.type === "execution" ? (
                   <ExecutionDrawer
