@@ -282,6 +282,8 @@
     "threadDescription": "Ответы остаются привязанными к текущему контексту беседы.",
     "threadPlaceholder": "Сообщение в тред",
     "close": "Закрыть",
+    "focusThread": "Фокус",
+    "backToChannel": "Вернуться к каналу",
     "backToContext": "Показать в канале",
     "contextTitle": "Панель контекста",
     "contextDescription": "Выберите тред или агента, чтобы открыть более подробный контекст.",

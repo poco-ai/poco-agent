@@ -282,6 +282,8 @@
     "threadDescription": "Replies stay attached to the current conversation context.",
     "threadPlaceholder": "Message thread",
     "close": "Close",
+    "focusThread": "Focus",
+    "backToChannel": "Back to channel",
     "backToContext": "View in channel",
     "contextTitle": "Context panel",
     "contextDescription": "Select a thread or agent to replace this panel with deeper context.",

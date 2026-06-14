@@ -282,6 +282,8 @@
     "threadDescription": "返信は現在の会話コンテキストに紐づきます。",
     "threadPlaceholder": "スレッドにメッセージ",
     "close": "閉じる",
+    "focusThread": "フォーカス",
+    "backToChannel": "チャンネルに戻る",
     "backToContext": "チャンネルで表示",
     "contextTitle": "コンテキストパネル",
     "contextDescription": "スレッドまたは Agent を選択して、より深いコンテキストを表示します。",

@@ -74,6 +74,10 @@ import { ServerAgentAvatar } from "./server-agent-avatar";
 const overlayDrawerClassName =
   "absolute inset-y-0 right-0 z-30 flex w-full flex-col border-l border-border bg-card md:left-[17rem] md:w-auto lg:left-[18rem] xl:static xl:h-full xl:w-full xl:min-w-0 xl:shrink-0";
 
+// Focused variant: thread replaces the channel content in the main column (wider, no overlay).
+const embeddedDrawerClassName =
+  "flex h-full min-h-0 w-full flex-col overflow-hidden bg-card";
+
 const drawerHeaderClassName =
   "flex w-full max-w-full flex-wrap items-center justify-between gap-3 overflow-hidden border-b border-border px-4 py-4 sm:px-6 sm:py-5";
 
@@ -117,9 +121,12 @@ export function ThreadDrawer({
   onUploadFiles,
   onClose,
   onOpenExecution,
+  onOpenAgentProfile,
   onToggleReaction,
   isSending,
   isUploading,
+  focused,
+  onToggleFocus,
 }: {
   thread: ServerConversationMessage[];
   serverId: string | null;
@@ -139,12 +146,15 @@ export function ThreadDrawer({
   onUploadFiles: (files: File[]) => Promise<InputFile[]>;
   onClose: () => void;
   onOpenExecution?: (sessionId: string) => void;
+  onOpenAgentProfile?: (agentId: string) => void;
   onToggleReaction?: (
     message: ServerConversationMessage,
     emoji: string,
   ) => void;
   isSending: boolean;
   isUploading?: boolean;
+  focused?: boolean;
+  onToggleFocus?: () => void;
 }) {
   const { t } = useT("translation");
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
@@ -419,7 +429,7 @@ export function ThreadDrawer({
   );
 
   return (
-    <aside className={overlayDrawerClassName}>
+    <aside className={focused ? embeddedDrawerClassName : overlayDrawerClassName}>
       <div className={drawerHeaderClassName}>
         <div className="flex min-w-0 items-center gap-3">
           <Button
@@ -436,9 +446,24 @@ export function ThreadDrawer({
             {t("conversationView.threadTitle")}
           </p>
         </div>
-        <Button type="button" variant="outline" size="sm" onClick={onClose}>
-          {t("conversationView.close")}
-        </Button>
+        <div className={drawerHeaderActionsClassName}>
+          {onToggleFocus ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onToggleFocus}
+              className="hidden xl:inline-flex"
+            >
+              {focused
+                ? t("conversationView.backToChannel")
+                : t("conversationView.focusThread")}
+            </Button>
+          ) : null}
+          <Button type="button" variant="outline" size="sm" onClick={onClose}>
+            {t("conversationView.close")}
+          </Button>
+        </div>
       </div>
       <div className="flex min-h-0 flex-1">
         <div className="min-h-0 flex-1 overflow-y-auto">
@@ -450,8 +475,8 @@ export function ThreadDrawer({
                 members={members}
                 presets={presets}
                 defaultExpanded={index === thread.length - 1}
-                onOpenThread={() => undefined}
                 onOpenExecution={onOpenExecution}
+                onOpenAgentProfile={onOpenAgentProfile}
                 onToggleSaved={() => undefined}
                 onToggleReaction={(emoji) => onToggleReaction?.(message, emoji)}
               />
@@ -1066,7 +1091,6 @@ export function TaskDrawer({
                     <MessageRow
                       message={toConversationMessage(item)}
                       agents={agents}
-                      onOpenThread={() => undefined}
                       onToggleSaved={() => undefined}
                       compact
                     />
