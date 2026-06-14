@@ -2942,15 +2942,15 @@ export function ServerConversationPageClient({
     );
     const entities = serialized.entities;
     const confirmedAttachments = serialized.attachments;
+    const hasAgentMention = entities.some((entity) => entity.kind === "agent");
     if (!trimmedDraft && confirmedAttachments.length === 0) {
       return;
     }
     setIsSending(true);
     try {
       if (threadAsTask) {
-        const explicitMentions = getExplicitMentionHandles(trimmedDraft);
         const replyText =
-          threadMentionHandle && !explicitMentions.includes(threadMentionHandle)
+          threadMentionHandle && !hasAgentMention
             ? `@${threadMentionHandle} ${trimmedDraft}`
             : trimmedDraft;
         const message = await serversApi.sendMessage(
@@ -2992,9 +2992,8 @@ export function ServerConversationPageClient({
         }));
         toast.success(t("conversationView.toasts.taskCreated"));
       } else {
-        const explicitMentions = getExplicitMentionHandles(trimmedDraft);
         const replyText =
-          threadMentionHandle && !explicitMentions.includes(threadMentionHandle)
+          threadMentionHandle && !hasAgentMention
             ? `@${threadMentionHandle} ${trimmedDraft}`
             : trimmedDraft;
         await serversApi.sendMessage(selectedServerId, drawer.channelId, {

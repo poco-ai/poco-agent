@@ -270,6 +270,10 @@ export function ThreadDrawer({
     () => getComposerDraftAttachments(activeReferences),
     [activeReferences],
   );
+  const hasAgentMention = React.useMemo(
+    () => activeReferences.some((reference) => reference.kind === "agent"),
+    [activeReferences],
+  );
 
   const handleDraftValueChange = React.useCallback(
     (nextDraft: string) => {
@@ -478,14 +482,25 @@ export function ThreadDrawer({
           </div>
         ) : null}
         {suggestedMentionHandle ? (
-          <div className="mb-2 flex items-center gap-2 rounded-md border border-border bg-muted/20 px-3 py-2 text-sm text-muted-foreground">
-            <Info className="size-4 shrink-0 text-muted-foreground" />
-            <span>
-              {t("conversationView.threadMentionHint")}{" "}
-              <span className="font-medium text-foreground">
-                @{suggestedMentionHandle}
-              </span>
-            </span>
+          <div
+            className={cn(
+              "grid overflow-hidden transition-[grid-template-rows,opacity] duration-300 ease-out",
+              hasAgentMention
+                ? "grid-rows-[0fr] opacity-0"
+                : "grid-rows-[1fr] opacity-100",
+            )}
+          >
+            <div className="overflow-hidden">
+              <div className="mb-2 flex items-center gap-2 rounded-md border border-border bg-muted/20 px-3 py-2 text-sm text-muted-foreground">
+                <Info className="size-4 shrink-0 text-muted-foreground" />
+                <span>
+                  {t("conversationView.threadMentionHint")}{" "}
+                  <span className="font-medium text-foreground">
+                    @{suggestedMentionHandle}
+                  </span>
+                </span>
+              </div>
+            </div>
           </div>
         ) : null}
         <div className="relative flex w-full min-w-0 items-end gap-2 rounded-lg border border-border bg-card px-3 py-2">
