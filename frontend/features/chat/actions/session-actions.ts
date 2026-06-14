@@ -76,6 +76,28 @@ const fileReferenceSchema = z.discriminatedUnion("kind", [
   workspaceFileReferenceSchema,
 ]);
 
+const skillReferenceSchema = z
+  .object({
+    id: z.string().trim().min(1),
+    kind: z.literal("skill"),
+    skillId: z.number().int().positive(),
+    insertedText: z.string().trim().min(1),
+    displayName: z.string().trim().min(1),
+    range: z
+      .object({
+        start: z.number().int().nonnegative(),
+        end: z.number().int().nonnegative(),
+      })
+      .optional(),
+    metadata: z
+      .object({
+        trigger: z.enum(["/", "$"]).optional(),
+        description: z.string().optional().nullable(),
+      })
+      .optional(),
+  })
+  .passthrough();
+
 const configSchema = z
   .object({
     repo_url: z.string().optional().nullable(),
@@ -118,6 +140,7 @@ const configSchema = z
     input_files: z.array(inputFileSchema).optional(),
     file_references: z.array(fileReferenceSchema).optional(),
     input_file_references: z.array(fileReferenceSchema).optional(),
+    skill_references: z.array(skillReferenceSchema).optional(),
   })
   .passthrough();
 
@@ -172,6 +195,8 @@ const sendMessageSchema = z
     attachments: z.array(inputFileSchema).optional(),
     file_references: z.array(fileReferenceSchema).optional(),
     input_file_references: z.array(fileReferenceSchema).optional(),
+    skill_references: z.array(skillReferenceSchema).optional(),
+    skill_config: z.record(z.string(), z.boolean()).optional(),
     model: z.string().trim().optional().nullable(),
     model_provider_id: z.string().trim().optional().nullable(),
   })
@@ -196,13 +221,15 @@ const updateQueuedQuerySchema = queuedQueryItemSchema
     attachments: z.array(inputFileSchema).optional(),
     file_references: z.array(fileReferenceSchema).optional(),
     input_file_references: z.array(fileReferenceSchema).optional(),
+    skill_references: z.array(skillReferenceSchema).optional(),
   })
   .refine(
     (data) =>
       data.prompt !== undefined ||
       data.attachments !== undefined ||
       data.file_references !== undefined ||
-      data.input_file_references !== undefined,
+      data.input_file_references !== undefined ||
+      data.skill_references !== undefined,
     {
       message: VALIDATION_ERRORS.messageContentRequired,
       path: ["prompt"],
@@ -286,6 +313,8 @@ export async function sendMessageAction(input: SendMessageInput) {
     attachments,
     file_references,
     input_file_references,
+    skill_references,
+    skill_config,
     model,
     model_provider_id,
   } = sendMessageSchema.parse(input);
@@ -301,6 +330,8 @@ export async function sendMessageAction(input: SendMessageInput) {
     model_provider_id,
     attachments,
     fileReferences,
+    skill_references,
+    skill_config,
     createClientRequestId(),
   );
   return mapTaskEnqueueResult(result);
@@ -446,12 +477,14 @@ export async function updateQueuedQueryAction(input: UpdateQueuedQueryInput) {
     attachments,
     file_references,
     input_file_references,
+    skill_references,
   } = updateQueuedQuerySchema.parse(input);
   const fileReferences = file_references ?? input_file_references;
   return chatService.updateQueuedQuery(sessionId, itemId, {
     prompt,
     attachments,
     file_references: fileReferences,
+    skill_references,
   });
 }
 

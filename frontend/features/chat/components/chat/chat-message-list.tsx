@@ -494,6 +494,7 @@ export function ChatMessageList({
                       message.metadata?.fileReferences ??
                       message.metadata?.inputFileReferences
                     }
+                    skillReferences={message.metadata?.skillReferences}
                     attachments={message.attachments}
                     repoUrl={message.id === firstUserMessageId ? repoUrl : null}
                     gitBranch={

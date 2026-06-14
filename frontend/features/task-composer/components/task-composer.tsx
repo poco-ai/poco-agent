@@ -23,6 +23,7 @@ import { PresetPickerDialog } from "@/features/task-composer/components/preset-p
 import { RepoDialog } from "@/features/task-composer/components/repo-dialog";
 import { SlashAutocompleteDropdown } from "@/features/task-composer/components/slash-autocomplete-dropdown";
 import { presetsService } from "@/features/capabilities/presets/api/presets-api";
+import { skillsService } from "@/features/capabilities/skills/api/skills-api";
 import { PresetGlyph } from "@/features/capabilities/presets/components/preset-glyph";
 import { useCapabilityRecommendations } from "@/features/task-composer/hooks/use-capability-recommendations";
 import { saveLocalFilesystemDraft } from "@/features/task-composer/lib/local-filesystem-save";
@@ -45,6 +46,18 @@ import {
   insertUploadedInputFileReference,
   removeInputFileReference,
 } from "@/features/chat/lib/input-file-reference";
+import {
+  filterSkillReferences,
+  getReferencedSkillConfig,
+  getSkillReferenceCandidates,
+  getSkillReferenceTrigger,
+  insertSkillReference,
+  type SkillReferenceCandidate,
+} from "@/features/chat/lib/skill-reference";
+import {
+  getStartupPreloadValue,
+  hasStartupPreloadValue,
+} from "@/lib/startup-preload";
 import type { RunScheduleMode } from "@/features/task-composer/model/run-schedule";
 import type {
   ComposerMode,
@@ -54,10 +67,12 @@ import type {
 } from "@/features/task-composer/types";
 import type {
   ChatFileReference,
+  ChatSkillReference,
   InputFile,
 } from "@/features/chat/types/api/session";
 import type { CapabilityRecommendation } from "@/features/task-composer/types/capability-recommendation";
 import type { Preset } from "@/features/capabilities/presets/lib/preset-types";
+import type { Skill } from "@/features/capabilities/skills/types";
 
 interface TrackedCapabilityItem {
   item: CapabilityRecommendation;
@@ -160,8 +175,18 @@ export function TaskComposer({
   const [inputFileReferences, setInputFileReferences] = React.useState<
     ChatFileReference[]
   >([]);
+  const [skillReferences, setSkillReferences] = React.useState<
+    ChatSkillReference[]
+  >([]);
+  const [availableSkills, setAvailableSkills] = React.useState<Skill[]>(() =>
+    hasStartupPreloadValue("skills")
+      ? (getStartupPreloadValue("skills") ?? [])
+      : [],
+  );
   const [selectionStart, setSelectionStart] = React.useState(0);
   const [fileReferenceActiveIndex, setFileReferenceActiveIndex] =
+    React.useState(0);
+  const [skillReferenceActiveIndex, setSkillReferenceActiveIndex] =
     React.useState(0);
 
   const handleValueChange = React.useCallback(
@@ -182,8 +207,59 @@ export function TaskComposer({
         }
         return nextReferences;
       });
+      setSkillReferences((current) =>
+        filterSkillReferences(current, nextValue, availableSkills),
+      );
     },
-    [onChange, upload],
+    [availableSkills, onChange, upload],
+  );
+
+  React.useEffect(() => {
+    let active = true;
+
+    const loadSkills = async () => {
+      try {
+        const data = await skillsService.listSkills({ revalidate: 0 });
+        if (!active) return;
+        setAvailableSkills(data);
+      } catch (error) {
+        console.error("[TaskComposer] Failed to load skills", error);
+      }
+    };
+
+    void loadSkills();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const applySkillReferenceSelection = React.useCallback(
+    (
+      candidate: SkillReferenceCandidate,
+      selection?: { start: number; end: number },
+    ) => {
+      const textarea = textareaRef.current;
+      const start =
+        selection?.start ?? textarea?.selectionStart ?? selectionStart;
+      const end = selection?.end ?? textarea?.selectionEnd ?? selectionStart;
+      const result = insertSkillReference(value, start, end, candidate);
+      if (!result) return false;
+
+      handleValueChange(result.value);
+      setSelectionStart(result.cursor);
+      setSkillReferences((current) => [
+        ...filterSkillReferences(current, result.value, availableSkills),
+        result.reference,
+      ]);
+      requestAnimationFrame(() => {
+        const currentTextarea = textareaRef.current;
+        if (!currentTextarea) return;
+        currentTextarea.focus();
+        currentTextarea.setSelectionRange(result.cursor, result.cursor);
+      });
+      return true;
+    },
+    [availableSkills, handleValueChange, selectionStart, textareaRef, value],
   );
 
   // ---- Slash-command autocomplete ----
@@ -191,6 +267,18 @@ export function TaskComposer({
     value,
     onChange: handleValueChange,
     textareaRef,
+    onSelectSuggestion: (suggestion, tokenInfo) => {
+      if (suggestion.source !== "skill") return false;
+      const candidate = getSkillReferenceCandidates(
+        availableSkills,
+        suggestion.name,
+      ).find((item) => item.displayName === suggestion.name);
+      if (!candidate) return false;
+      return applySkillReferenceSelection(candidate, {
+        start: tokenInfo.end,
+        end: tokenInfo.end,
+      });
+    },
   });
 
   const inputFileReferenceTrigger = React.useMemo(
@@ -211,16 +299,45 @@ export function TaskComposer({
     !slashAutocomplete.isOpen &&
     Boolean(inputFileReferenceTrigger) &&
     inputFileReferenceCandidates.length > 0;
+  const skillReferenceTrigger = React.useMemo(
+    () => getSkillReferenceTrigger(value, selectionStart),
+    [selectionStart, value],
+  );
+  const skillReferenceCandidates = React.useMemo(
+    () =>
+      skillReferenceTrigger
+        ? getSkillReferenceCandidates(
+            availableSkills,
+            skillReferenceTrigger.query,
+          )
+        : [],
+    [availableSkills, skillReferenceTrigger],
+  );
+  const isSkillReferenceOpen =
+    !slashAutocomplete.isOpen &&
+    !isInputFileReferenceOpen &&
+    Boolean(skillReferenceTrigger) &&
+    skillReferenceCandidates.length > 0;
 
   React.useEffect(() => {
     setFileReferenceActiveIndex(0);
   }, [inputFileReferenceTrigger?.query, inputFileReferenceCandidates.length]);
 
   React.useEffect(() => {
+    setSkillReferenceActiveIndex(0);
+  }, [skillReferenceTrigger?.query, skillReferenceCandidates.length]);
+
+  React.useEffect(() => {
     setInputFileReferences((current) =>
       filterInputFileReferences(current, value, upload.attachments),
     );
   }, [upload.attachments, value]);
+
+  React.useEffect(() => {
+    setSkillReferences((current) =>
+      filterSkillReferences(current, value, availableSkills),
+    );
+  }, [availableSkills, value]);
 
   const insertUploadedFileReferences = React.useCallback(
     (uploadedFiles: InputFile[]) => {
@@ -628,6 +745,18 @@ export function TaskComposer({
       value,
       upload.attachments,
     );
+    const currentSkillReferences = filterSkillReferences(
+      skillReferences,
+      value,
+      availableSkills,
+    );
+    const referencedSkillConfig = getReferencedSkillConfig(
+      currentSkillReferences,
+    );
+    const nextSkillConfig = {
+      ...sessionSkillOverrides,
+      ...referencedSkillConfig,
+    };
     const confirmedAttachments = getReferencedInputFiles(
       upload.attachments,
       currentInputFileReferences,
@@ -635,6 +764,7 @@ export function TaskComposer({
     const payload: TaskSendOptions = {
       attachments: confirmedAttachments,
       file_references: currentInputFileReferences,
+      skill_references: currentSkillReferences,
       repo_url: repoUrl.trim() || null,
       git_branch: gitBranch.trim() || null,
       git_token_env_key: repoUrl.trim() ? gitTokenEnvKey.trim() || null : null,
@@ -651,9 +781,7 @@ export function TaskComposer({
           ? sessionMcpOverrides
           : null,
       skill_config:
-        Object.keys(sessionSkillOverrides).length > 0
-          ? sessionSkillOverrides
-          : null,
+        Object.keys(nextSkillConfig).length > 0 ? nextSkillConfig : null,
       filesystem_mode: localFilesystemDraft.filesystem_mode,
       local_mounts: localFilesystemDraft.local_mounts,
       run_schedule:
@@ -682,10 +810,12 @@ export function TaskComposer({
     onSend(payload);
     upload.clearAttachments();
     setInputFileReferences([]);
+    setSkillReferences([]);
     setRunScheduleMode("immediate");
     setRunScheduledAt(null);
   }, [
     allowProjectize,
+    availableSkills,
     browserEnabled,
     canSubmit,
     gitBranch,
@@ -712,6 +842,7 @@ export function TaskComposer({
     scheduledTimezone,
     sessionMcpOverrides,
     sessionSkillOverrides,
+    skillReferences,
     upload,
     value,
     voiceInput.isBusy,
@@ -902,6 +1033,45 @@ export function TaskComposer({
             onHover={slashAutocomplete.setActiveIndex}
             onSelect={slashAutocomplete.applySelection}
           />
+          {isSkillReferenceOpen ? (
+            <div className="absolute bottom-full left-0 z-50 mb-2 w-full overflow-hidden rounded-lg border border-border bg-popover shadow-md">
+              <div className="max-h-64 overflow-auto py-1">
+                {skillReferenceCandidates.map((item, idx) => {
+                  const selected = idx === skillReferenceActiveIndex;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onMouseEnter={() => setSkillReferenceActiveIndex(idx)}
+                      onMouseDown={(event) => {
+                        event.preventDefault();
+                        applySkillReferenceSelection(item);
+                      }}
+                      className={cn(
+                        "flex w-full min-w-0 items-center gap-2 px-3 py-2 text-left text-sm",
+                        selected
+                          ? "bg-accent text-accent-foreground"
+                          : "hover:bg-accent/50",
+                      )}
+                    >
+                      <Sparkles className="size-4 shrink-0 text-muted-foreground" />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate font-medium">
+                          {skillReferenceTrigger?.symbol}
+                          {item.displayName}
+                        </span>
+                        {item.description ? (
+                          <span className="block truncate text-xs text-muted-foreground">
+                            {item.description}
+                          </span>
+                        ) : null}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
           {isInputFileReferenceOpen ? (
             <div className="absolute bottom-full left-0 z-50 mb-2 w-full overflow-hidden rounded-lg border border-border bg-popover shadow-md">
               <div className="max-h-64 overflow-auto py-1">
@@ -1001,6 +1171,34 @@ export function TaskComposer({
                 if (e.key === "Enter" || e.key === "Tab") {
                   e.preventDefault();
                   applyInputFileReferenceSelection(fileReferenceActiveIndex);
+                  return;
+                }
+                if (e.key === "Escape") {
+                  e.preventDefault();
+                  setSelectionStart(-1);
+                  return;
+                }
+              }
+              if (isSkillReferenceOpen) {
+                if (e.key === "ArrowDown") {
+                  e.preventDefault();
+                  setSkillReferenceActiveIndex((current) =>
+                    Math.min(current + 1, skillReferenceCandidates.length - 1),
+                  );
+                  return;
+                }
+                if (e.key === "ArrowUp") {
+                  e.preventDefault();
+                  setSkillReferenceActiveIndex((current) =>
+                    Math.max(current - 1, 0),
+                  );
+                  return;
+                }
+                if (e.key === "Enter" || e.key === "Tab") {
+                  e.preventDefault();
+                  const candidate =
+                    skillReferenceCandidates[skillReferenceActiveIndex];
+                  if (candidate) applySkillReferenceSelection(candidate);
                   return;
                 }
                 if (e.key === "Escape") {

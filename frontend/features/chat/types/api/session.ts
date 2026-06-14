@@ -220,6 +220,20 @@ export type ChatFileReference =
   | ChatInputFileReference
   | ChatWorkspaceFileReference;
 
+export interface ChatSkillReference {
+  [x: string]: unknown;
+  id: string;
+  kind: "skill";
+  skillId: number;
+  insertedText: string;
+  displayName: string;
+  range?: ChatInputFileReferenceRange;
+  metadata?: {
+    trigger?: "/" | "$";
+    description?: string | null;
+  };
+}
+
 export interface TaskConfig {
   repo_url?: string | null;
   git_branch?: string; // defaults to "main"
@@ -260,5 +274,6 @@ export interface TaskConfig {
   input_files?: InputFile[];
   file_references?: ChatFileReference[];
   input_file_references?: ChatFileReference[];
+  skill_references?: ChatSkillReference[];
   trigger_context?: Record<string, unknown> | null;
 }

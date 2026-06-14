@@ -37,6 +37,9 @@ function buildTaskConfig(
   if (fileReferences.length > 0) {
     config.file_references = fileReferences;
   }
+  if (options.skill_references && options.skill_references.length > 0) {
+    config.skill_references = options.skill_references;
+  }
   if (repoUrl) {
     config.repo_url = repoUrl;
     config.git_branch = gitBranch;

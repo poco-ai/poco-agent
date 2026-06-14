@@ -1184,6 +1184,12 @@ class SessionService:
             )
             if normalized_file_references:
                 run_config_snapshot["file_references"] = normalized_file_references
+            skill_references = latest_target_run.config_snapshot.get("skill_references")
+            normalized_skill_references = self._filter_file_references_for_prompt(
+                skill_references
+            )
+            if normalized_skill_references:
+                run_config_snapshot["skill_references"] = normalized_skill_references
         # Override model with current selection if provided
         if model is not None:
             run_config_snapshot["model"] = model
@@ -1315,6 +1321,15 @@ class SessionService:
                 run_config_snapshot["file_references"] = normalized_file_references
             else:
                 run_config_snapshot.pop("file_references", None)
+            skill_references = latest_target_run.config_snapshot.get("skill_references")
+            normalized_skill_references = self._filter_file_references_for_prompt(
+                skill_references,
+                prompt,
+            )
+            if normalized_skill_references:
+                run_config_snapshot["skill_references"] = normalized_skill_references
+            else:
+                run_config_snapshot.pop("skill_references", None)
         # Override model with current selection if provided
         if model is not None:
             run_config_snapshot["model"] = model

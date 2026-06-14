@@ -8,6 +8,7 @@ import {
   Copy,
   Check,
   Pencil,
+  Sparkles,
 } from "lucide-react";
 import { FileCard } from "@/components/shared/file-card";
 import { RepoCard } from "@/components/shared/repo-card";
@@ -16,6 +17,7 @@ import { Textarea } from "@/components/ui/textarea";
 import type {
   AgentTriggerContext,
   ChatFileReference,
+  ChatSkillReference,
   MessageBlock,
   InputFile,
 } from "@/features/chat/types";
@@ -30,6 +32,7 @@ export function UserMessage({
   content,
   triggerContext,
   fileReferences,
+  skillReferences,
   attachments,
   repoUrl,
   gitBranch,
@@ -39,6 +42,7 @@ export function UserMessage({
   content: string | MessageBlock[];
   triggerContext?: AgentTriggerContext;
   fileReferences?: ChatFileReference[];
+  skillReferences?: ChatSkillReference[];
   attachments?: InputFile[];
   repoUrl?: string | null;
   gitBranch?: string | null;
@@ -271,7 +275,11 @@ export function UserMessage({
                     shouldCollapse && !isExpanded ? "line-clamp-5" : ""
                   }`}
                 >
-                  {renderFileReferenceText(textContent, fileReferences ?? [])}
+                  {renderReferenceText(
+                    textContent,
+                    fileReferences ?? [],
+                    skillReferences ?? [],
+                  )}
                 </p>
               </div>
               <div className="flex items-center justify-between w-full gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
@@ -350,24 +358,50 @@ function formatFileReferenceIconName(reference: ChatFileReference): string {
   return reference.metadata?.path || reference.displayName || reference.source;
 }
 
-function renderFileReferenceText(
-  text: string,
-  references: ChatFileReference[],
-): React.ReactNode[] | string {
-  if (references.length === 0) return text;
+type PositionedReference =
+  | { kind: "file"; reference: ChatFileReference; start: number }
+  | { kind: "skill"; reference: ChatSkillReference; start: number };
 
-  const positioned = references
+function resolveReferenceStart(
+  text: string,
+  reference: { insertedText: string; range?: { start: number; end: number } },
+): number {
+  return reference.range &&
+    text.slice(reference.range.start, reference.range.end) ===
+      reference.insertedText
+    ? reference.range.start
+    : text.indexOf(reference.insertedText);
+}
+
+function renderReferenceText(
+  text: string,
+  fileReferences: ChatFileReference[],
+  skillReferences: ChatSkillReference[],
+): React.ReactNode[] | string {
+  if (fileReferences.length === 0 && skillReferences.length === 0) return text;
+
+  const filePositions: PositionedReference[] = fileReferences
     .map((reference) => {
-      const rangeStart =
-        reference.range &&
-        text.slice(reference.range.start, reference.range.end) ===
-          reference.insertedText
-          ? reference.range.start
-          : text.indexOf(reference.insertedText);
-      return { reference, start: rangeStart };
+      return {
+        kind: "file" as const,
+        reference,
+        start: resolveReferenceStart(text, reference),
+      };
     })
-    .filter((item) => item.start >= 0)
-    .sort((left, right) => left.start - right.start);
+    .filter((item) => item.start >= 0);
+  const skillPositions: PositionedReference[] = skillReferences
+    .map((reference) => {
+      return {
+        kind: "skill" as const,
+        reference,
+        start: resolveReferenceStart(text, reference),
+      };
+    })
+    .filter((item) => item.start >= 0);
+
+  const positioned = [...filePositions, ...skillPositions].sort(
+    (left, right) => left.start - right.start,
+  );
 
   if (positioned.length === 0) return text;
 
@@ -381,6 +415,22 @@ function renderFileReferenceText(
           {text.slice(cursor, item.start)}
         </React.Fragment>,
       );
+    }
+
+    if (item.kind === "skill") {
+      const reference = item.reference;
+      nodes.push(
+        <span
+          key={`${reference.id}-${item.start}`}
+          title={reference.metadata?.description ?? reference.displayName}
+          className="inline-flex max-w-full cursor-text select-text items-center rounded-md border border-primary/30 bg-primary/10 px-1.5 py-0.5 text-sm font-semibold text-foreground align-baseline"
+        >
+          <Sparkles className="mr-1 size-3.5 shrink-0" aria-hidden="true" />
+          {reference.displayName.replace(/^[/$]/, "")}
+        </span>,
+      );
+      cursor = item.start + reference.insertedText.length;
+      continue;
     }
 
     const reference = item.reference;

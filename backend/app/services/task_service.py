@@ -470,6 +470,11 @@ class TaskService:
             ]
         if normalized_file_references:
             run_config_snapshot["file_references"] = normalized_file_references
+        if request.config is not None and request.config.skill_references:
+            run_config_snapshot["skill_references"] = [
+                reference.model_dump(mode="json")
+                for reference in request.config.skill_references
+            ]
         run_config_snapshot = run_config_snapshot or None
 
         if (
@@ -600,6 +605,7 @@ class TaskService:
         merged_base.pop("input_files", None)
         merged_base.pop("file_references", None)
         merged_base.pop("input_file_references", None)
+        merged_base.pop("skill_references", None)
 
         base_mcp_server_ids = self._normalize_mcp_server_ids(
             merged_base.get("mcp_server_ids")
@@ -621,6 +627,7 @@ class TaskService:
             request_config.pop("input_files", None)
             request_config.pop("file_references", None)
             request_config.pop("input_file_references", None)
+            request_config.pop("skill_references", None)
             # Extract mcp_config toggles before merging (don't merge as dict)
             request_mcp_toggles = normalize_override_map(
                 request_config.pop("mcp_config", None)

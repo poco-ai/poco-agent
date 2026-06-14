@@ -12,6 +12,7 @@ import type {
   ConfigSnapshot,
   AgentTriggerContext,
   ChatFileReference,
+  ChatSkillReference,
 } from "@/features/chat/types";
 
 // ---------------------------------------------------------------------------
@@ -130,6 +131,33 @@ function extractFileReferences(
       return [reference as ChatFileReference];
     }
     return [];
+  });
+
+  return references.length > 0 ? references : undefined;
+}
+
+function extractSkillReferences(
+  contentObj: MessageContentShape,
+): ChatSkillReference[] | undefined {
+  const metadata = contentObj.metadata;
+  if (!isRecord(metadata)) return undefined;
+  const rawReferences = Array.isArray(metadata.skill_references)
+    ? metadata.skill_references
+    : null;
+  if (!rawReferences) return undefined;
+
+  const references = rawReferences.flatMap((reference) => {
+    if (!isRecord(reference)) return [];
+    if (
+      reference.kind !== "skill" ||
+      !isNonEmptyString(reference.id) ||
+      typeof reference.skillId !== "number" ||
+      !isNonEmptyString(reference.insertedText) ||
+      !isNonEmptyString(reference.displayName)
+    ) {
+      return [];
+    }
+    return [reference as ChatSkillReference];
   });
 
   return references.length > 0 ? references : undefined;
@@ -452,6 +480,7 @@ export function parseMessages(
           metadata: {
             triggerContext: extractTriggerContext(contentObj),
             fileReferences: extractFileReferences(contentObj),
+            skillReferences: extractSkillReferences(contentObj),
           },
           attachments: msg.attachments ?? undefined,
         });

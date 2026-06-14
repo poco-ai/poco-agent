@@ -1,4 +1,8 @@
-import type { ChatFileReference, InputFile } from "./session";
+import type {
+  ChatFileReference,
+  ChatSkillReference,
+  InputFile,
+} from "./session";
 
 export interface SessionQueueItemResponse {
   queue_item_id: string;
@@ -10,6 +14,7 @@ export interface SessionQueueItemResponse {
   attachments: InputFile[];
   file_references?: ChatFileReference[] | null;
   input_file_references?: ChatFileReference[] | null;
+  skill_references?: ChatSkillReference[] | null;
   client_request_id?: string | null;
   linked_run_id?: string | null;
   linked_user_message_id?: number | null;
@@ -22,4 +27,5 @@ export interface SessionQueueItemUpdateRequest {
   attachments?: InputFile[] | null;
   file_references?: ChatFileReference[] | null;
   input_file_references?: ChatFileReference[] | null;
+  skill_references?: ChatSkillReference[] | null;
 }

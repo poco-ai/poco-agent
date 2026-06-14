@@ -42,6 +42,7 @@ class SessionQueueService:
         session_config.pop("input_files", None)
         session_config.pop("file_references", None)
         session_config.pop("input_file_references", None)
+        session_config.pop("skill_references", None)
         return session_config or None
 
     @staticmethod
@@ -79,6 +80,9 @@ class SessionQueueService:
             file_references = run_config_snapshot.get("input_file_references")
         if isinstance(file_references, list) and file_references:
             metadata["file_references"] = file_references
+        skill_references = run_config_snapshot.get("skill_references")
+        if isinstance(skill_references, list) and skill_references:
+            metadata["skill_references"] = skill_references
         return metadata or None
 
     @staticmethod
@@ -315,6 +319,7 @@ class SessionQueueService:
             or request.attachments is not None
             or request.file_references is not None
             or request.input_file_references is not None
+            or request.skill_references is not None
         ):
             snapshot = (
                 dict(item.run_config_snapshot)
@@ -366,6 +371,13 @@ class SessionQueueService:
             else:
                 snapshot.pop("file_references", None)
             snapshot.pop("input_file_references", None)
+            if request.skill_references:
+                snapshot["skill_references"] = [
+                    reference.model_dump(mode="json")
+                    for reference in request.skill_references
+                ]
+            elif request.skill_references is not None:
+                snapshot.pop("skill_references", None)
             item.run_config_snapshot = snapshot or None
 
         db.flush()
