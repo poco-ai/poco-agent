@@ -71,9 +71,11 @@ function parseJsonLike(value: unknown): unknown {
 }
 
 export function stringifyForDisplay(value: unknown): string {
+  if (value === undefined) return "";
   if (typeof value === "string") return value;
   try {
-    return JSON.stringify(value, null, 2);
+    const serialized = JSON.stringify(value, null, 2);
+    return typeof serialized === "string" ? serialized : String(value);
   } catch {
     return String(value);
   }
