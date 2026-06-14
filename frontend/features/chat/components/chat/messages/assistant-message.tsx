@@ -22,6 +22,7 @@ import type {
 } from "@/features/chat/types";
 import { Button } from "@/components/ui/button";
 import { useT } from "@/lib/i18n/client";
+import { copyToClipboard } from "@/lib/utils/clipboard/copy-to-clipboard";
 
 interface AssistantMessageProps {
   message: ChatMessage;
@@ -82,13 +83,15 @@ export function AssistantMessage({
   };
 
   const onCopy = async () => {
-    try {
-      const textContent = getTextContent(message.content);
-      await navigator.clipboard.writeText(textContent);
+    const textContent = getTextContent(message.content);
+    const copied = await copyToClipboard(textContent, {
+      onError: (error) => {
+        console.error("Failed to copy message", error);
+      },
+    });
+    if (copied) {
       setIsCopied(true);
       setTimeout(() => setIsCopied(false), 2000);
-    } catch (err) {
-      console.error("Failed to copy message", err);
     }
   };
 

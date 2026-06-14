@@ -24,6 +24,7 @@ import type {
 import { getFileIcon } from "@/lib/utils/file/get-file-icon";
 import { useT } from "@/lib/i18n/client";
 import { cn } from "@/lib/utils";
+import { copyToClipboard } from "@/lib/utils/clipboard/copy-to-clipboard";
 
 const MAX_LINES = 5;
 
@@ -88,12 +89,14 @@ export function UserMessage({
 
   // Copy handler
   const onCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(textContent);
+    const copied = await copyToClipboard(textContent, {
+      onError: (error) => {
+        console.error("Failed to copy message", error);
+      },
+    });
+    if (copied) {
       setIsCopied(true);
       setTimeout(() => setIsCopied(false), 2000);
-    } catch (err) {
-      console.error("Failed to copy message", err);
     }
   };
 
