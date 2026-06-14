@@ -65,7 +65,7 @@ type MessageRowProps = {
   isSaved?: boolean;
   compact?: boolean;
   defaultExpanded?: boolean;
-  onOpenThread: () => void;
+  onOpenThread?: () => void;
   onOpenExecution?: ((sessionId: string) => void) | undefined;
   onOpenAgentProfile?: ((agentId: string) => void) | undefined;
   onToggleSaved: () => void;
@@ -651,7 +651,7 @@ function getExecutionStatusTone(status: string | null | undefined): string {
     case "canceling":
       return "bg-orange-500";
     case "running":
-      return "bg-amber-500";
+      return "bg-primary";
     default:
       return "bg-muted-foreground";
   }
@@ -673,6 +673,10 @@ function getExecutionStatusLabelKey(status: string | null | undefined): string {
     default:
       return "conversationView.execution.status.queued";
   }
+}
+
+function isExecutionRunning(status: string | null | undefined): boolean {
+  return (status || "").trim().toLowerCase() === "running";
 }
 
 function StandardMessageRow({
@@ -733,10 +737,6 @@ function StandardMessageRow({
           );
         }) ??
         null)
-      : null;
-  const executionSessionId =
-    executionMessage && typeof executionMessage.content.session_id === "string"
-      ? executionMessage.content.session_id
       : null;
   const canCollapseMessage =
     !executionMessage && Boolean(text) && message.messageType !== "task";
@@ -850,20 +850,58 @@ function StandardMessageRow({
       )}
       <div className="relative min-w-0 flex-1 space-y-1.5">
         <div className="flex items-start justify-between gap-3 text-sm">
-          <div className="min-w-0 flex flex-wrap items-center gap-3">
-            <span className="text-sm font-semibold text-foreground">
-              {author}
-            </span>
-            <span className="text-sm text-muted-foreground">
-              {formatRelativeDate(message.createdAt)}{" "}
-              {formatTime(message.createdAt)}
-            </span>
-            {channelLabel ? (
-              <span className="text-sm text-muted-foreground">
-                #{channelLabel}
+          {executionMessage ? (
+            <div className="flex min-w-0 items-center gap-2 text-sm text-muted-foreground">
+              <span
+                className={cn(
+                  "size-1.5 shrink-0 rounded-full",
+                  getExecutionStatusTone(
+                    executionMessage.content.execution_status,
+                  ),
+                  isExecutionRunning(
+                    executionMessage.content.execution_status,
+                  ) && "animate-pulse",
+                )}
+              />
+              <span className="shrink-0">
+                {t(
+                  getExecutionStatusLabelKey(
+                    executionMessage.content.execution_status,
+                  ),
+                )}
               </span>
-            ) : null}
-          </div>
+              {executionMessage.content.todo_progress &&
+              executionMessage.content.todo_progress.total > 0 ? (
+                <span className="shrink-0">
+                  {t("conversationView.execution.todoProgress", {
+                    completed:
+                      executionMessage.content.todo_progress.completed ?? 0,
+                    total: executionMessage.content.todo_progress.total ?? 0,
+                  })}
+                </span>
+              ) : null}
+              {executionMessage.content.current_step ? (
+                <span className="min-w-0 truncate">
+                  {executionMessage.content.current_step}
+                </span>
+              ) : null}
+            </div>
+          ) : (
+            <div className="min-w-0 flex flex-wrap items-center gap-3">
+              <span className="text-sm font-semibold text-foreground">
+                {author}
+              </span>
+              <span className="text-sm text-muted-foreground">
+                {formatRelativeDate(message.createdAt)}{" "}
+                {formatTime(message.createdAt)}
+              </span>
+              {channelLabel ? (
+                <span className="text-sm text-muted-foreground">
+                  #{channelLabel}
+                </span>
+              ) : null}
+            </div>
+          )}
           <div className="absolute right-0 top-0 flex items-center gap-2 opacity-0 transition-opacity group-hover:opacity-100">
             {onToggleReaction ? (
               <div className="relative">
@@ -891,17 +929,19 @@ function StandardMessageRow({
             >
               <Copy className="size-4" />
             </button>
-            <button
-              type="button"
-              onClick={onOpenThread}
-              aria-label={t("conversationView.reply")}
-              className="inline-flex size-8 items-center justify-center gap-1 rounded-md text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
-            >
-              <MessageSquare className="size-3.5" />
-              {message.replyCount > 0 ? (
-                <span className="tabular-nums">{message.replyCount}</span>
-              ) : null}
-            </button>
+            {onOpenThread ? (
+              <button
+                type="button"
+                onClick={onOpenThread}
+                aria-label={t("conversationView.reply")}
+                className="inline-flex size-8 items-center justify-center gap-1 rounded-md text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
+              >
+                <MessageSquare className="size-3.5" />
+                {message.replyCount > 0 ? (
+                  <span className="tabular-nums">{message.replyCount}</span>
+                ) : null}
+              </button>
+            ) : null}
             <button
               type="button"
               onClick={onToggleSaved}
@@ -919,62 +959,12 @@ function StandardMessageRow({
           </div>
         </div>
         {executionMessage ? (
-          <button
-            type="button"
-            onClick={() => {
-              if (executionSessionId && onOpenExecution) {
-                onOpenExecution(executionSessionId);
-              }
-            }}
-            disabled={!executionSessionId || !onOpenExecution}
-            className={cn(
-              "w-full rounded-md border border-border bg-muted/20 p-4 text-left",
-              executionSessionId && onOpenExecution
-                ? "transition-colors hover:bg-muted/35"
-                : "cursor-default",
-            )}
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex min-w-0 flex-wrap items-center gap-3">
-                <span className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-2.5 py-1 text-xs text-muted-foreground">
-                  <span
-                    className={cn(
-                      "size-2 rounded-full",
-                      getExecutionStatusTone(
-                        executionMessage.content.execution_status,
-                      ),
-                    )}
-                  />
-                  {t(
-                    getExecutionStatusLabelKey(
-                      executionMessage.content.execution_status,
-                    ),
-                  )}
-                </span>
-                {executionMessage.content.todo_progress &&
-                executionMessage.content.todo_progress.total > 0 ? (
-                  <span className="text-xs text-muted-foreground">
-                    {t("conversationView.execution.todoProgress", {
-                      completed:
-                        executionMessage.content.todo_progress.completed ?? 0,
-                      total: executionMessage.content.todo_progress.total ?? 0,
-                    })}
-                  </span>
-                ) : null}
-              </div>
-              {executionMessage.content.current_step ? (
-                <p className="min-w-0 max-w-[40%] truncate text-right text-sm font-medium text-foreground">
-                  {executionMessage.content.current_step}
-                </p>
-              ) : null}
-            </div>
-            <div className="mt-2 max-h-[4.5rem] cursor-text select-text overflow-hidden text-sm leading-6 text-muted-foreground">
-              <ServerMessageContent
-                content={text || t("conversationView.execution.emptySummary")}
-                messageContent={message.content}
-              />
-            </div>
-          </button>
+          <div className="line-clamp-2 cursor-text select-text text-sm leading-6 text-muted-foreground">
+            <ServerMessageContent
+              content={text || t("conversationView.execution.emptySummary")}
+              messageContent={message.content}
+            />
+          </div>
         ) : text || attachments.length === 0 ? (
           <div className="group/message min-w-0">
             <div

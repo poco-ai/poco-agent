@@ -282,6 +282,8 @@
     "threadDescription": "回复会保留在当前 conversation 语境里。",
     "threadPlaceholder": "回复会话串",
     "close": "关闭",
+    "focusThread": "聚焦",
+    "backToChannel": "返回频道",
     "backToContext": "查看频道上下文",
     "contextTitle": "上下文面板",
     "contextDescription": "选择一个 thread 或 agent，让右侧面板切换到更深的上下文。",

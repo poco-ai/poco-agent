@@ -2029,6 +2029,10 @@ export function ServerConversationPageClient({
   const [isUploadingDraftFile, setIsUploadingDraftFile] = React.useState(false);
   const [asTask, setAsTask] = React.useState(false);
   const [threadAsTask, setThreadAsTask] = React.useState(false);
+  const [focusedThread, setFocusedThread] = React.useState<{
+    channelId: string;
+    rootMessageId: string;
+  } | null>(null);
   const [savedMessageIds, setSavedMessageIds] = React.useState<Set<string>>(
     new Set(),
   );
@@ -2154,6 +2158,28 @@ export function ServerConversationPageClient({
   const contentAreaRef = React.useRef<HTMLDivElement | null>(null);
   const isResizingDrawerRef = React.useRef(false);
   const hasDesktopDrawer = drawer.type !== "none";
+  // A focused thread lives in the main column independently of the right drawer, so
+  // opening another drawer (agent/execution/colleague) preserves the focus.
+  const activeThreadTarget = React.useMemo<{
+    channelId: string;
+    rootMessageId: string;
+  } | null>(() => {
+    if (focusedThread) {
+      return focusedThread;
+    }
+    if (drawer.type === "thread") {
+      return {
+        channelId: drawer.channelId,
+        rootMessageId: drawer.rootMessageId,
+      };
+    }
+    return null;
+  }, [drawer, focusedThread]);
+
+  // Leaving the current channel/server invalidates a focused thread.
+  React.useEffect(() => {
+    setFocusedThread(null);
+  }, [selectedServerId, activeChannelId]);
   const feedModeActive = mode === "search" || mode === "inbox";
   const tasksModeActive = Boolean(channelId) && mode === "tasks";
   const colleaguesModeActive = mode === "colleagues";
@@ -2561,28 +2587,49 @@ export function ServerConversationPageClient({
     router.replace(`/${lng}/servers?mode=search&server=${selectedServerId}`);
   }, [activeChannelId, channels, lng, router, selectedServerId]);
 
+  // Poll the active thread independently so its placeholder/status stays live
+  // regardless of which channel is currently active (matches the top-level
+  // channel snapshot polling pattern below).
   React.useEffect(() => {
-    const loadThread = async () => {
-      if (drawer.type !== "thread" || !selectedServerId) {
-        setThreadMessages([]);
+    if (!activeThreadTarget || !selectedServerId) {
+      setThreadMessages([]);
+      return;
+    }
+
+    let cancelled = false;
+    let inFlight = false;
+
+    const refreshThread = async () => {
+      if (cancelled || inFlight) {
         return;
       }
+      inFlight = true;
       try {
-        setThreadMessages(
-          await serversApi.getThread(
-            selectedServerId,
-            drawer.channelId,
-            drawer.rootMessageId,
-          ),
+        const nextThread = await serversApi.getThread(
+          selectedServerId,
+          activeThreadTarget.channelId,
+          activeThreadTarget.rootMessageId,
         );
+        if (!cancelled) {
+          setThreadMessages(nextThread);
+        }
       } catch (error) {
-        console.error("[ServersWorkspace] thread load failed", error);
-        toast.error(t("conversationView.toasts.threadFailed"));
+        if (!cancelled) {
+          console.error("[ServersWorkspace] thread refresh failed", error);
+          toast.error(t("conversationView.toasts.threadFailed"));
+        }
+      } finally {
+        inFlight = false;
       }
     };
 
-    void loadThread();
-  }, [drawer, selectedServerId, t]);
+    void refreshThread();
+    const intervalId = window.setInterval(refreshThread, 4000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, [activeThreadTarget, selectedServerId, t]);
 
   React.useEffect(() => {
     if (currentMessages.length === 0 || mode === "inbox" || mode === "search") {
@@ -2592,11 +2639,11 @@ export function ServerConversationPageClient({
   }, [currentMessages, markMessagesRead, mode]);
 
   React.useEffect(() => {
-    if (drawer.type !== "thread" || threadMessages.length === 0) {
+    if (!activeThreadTarget || threadMessages.length === 0) {
       return;
     }
     markMessagesRead(threadMessages.map((message) => message.id));
-  }, [drawer, markMessagesRead, threadMessages]);
+  }, [activeThreadTarget, markMessagesRead, threadMessages]);
 
   React.useEffect(() => {
     if (!selectedServerId || !activeChannelId || !selectedChannel) {
@@ -2621,16 +2668,7 @@ export function ServerConversationPageClient({
             channelTasksApi.listTasks(selectedServerId, activeChannelId),
           );
         }
-        if (drawer.type === "thread" && drawer.channelId === activeChannelId) {
-          requests.push(
-            serversApi.getThread(
-              selectedServerId,
-              drawer.channelId,
-              drawer.rootMessageId,
-            ),
-          );
-        }
-        const [nextMessages, nextArtifacts, nextTasks, nextThread] =
+        const [nextMessages, nextArtifacts, nextTasks] =
           await Promise.all(requests);
 
         if (cancelled) {
@@ -2643,9 +2681,6 @@ export function ServerConversationPageClient({
         setChannelArtifacts(nextArtifacts as FileNode[]);
         if (mode === "tasks" && Array.isArray(nextTasks)) {
           setTasks(nextTasks as ChannelTask[]);
-        }
-        if (drawer.type === "thread" && Array.isArray(nextThread)) {
-          setThreadMessages(nextThread as ServerConversationMessage[]);
         }
       } catch (error) {
         if (!cancelled) {
@@ -2665,7 +2700,7 @@ export function ServerConversationPageClient({
       cancelled = true;
       window.clearInterval(intervalId);
     };
-  }, [activeChannelId, drawer, mode, selectedChannel, selectedServerId]);
+  }, [activeChannelId, mode, selectedChannel, selectedServerId]);
 
   const openMode = (nextMode: WorkspaceMode) => {
     setMode(nextMode);
@@ -2923,9 +2958,11 @@ export function ServerConversationPageClient({
   };
 
   const handleReply = async () => {
-    if (drawer.type !== "thread" || !selectedServerId) {
+    if (!activeThreadTarget || !selectedServerId) {
       return;
     }
+    const threadChannelId = activeThreadTarget.channelId;
+    const threadRootMessageId = activeThreadTarget.rootMessageId;
     const trimmedDraft = threadDraft.trim();
     const serialized = serializeComposerReferencesForSend(
       trimmedDraft,
@@ -2933,32 +2970,32 @@ export function ServerConversationPageClient({
     );
     const entities = serialized.entities;
     const confirmedAttachments = serialized.attachments;
+    const hasAgentMention = entities.some((entity) => entity.kind === "agent");
     if (!trimmedDraft && confirmedAttachments.length === 0) {
       return;
     }
     setIsSending(true);
     try {
       if (threadAsTask) {
-        const explicitMentions = getExplicitMentionHandles(trimmedDraft);
         const replyText =
-          threadMentionHandle && !explicitMentions.includes(threadMentionHandle)
+          threadMentionHandle && !hasAgentMention
             ? `@${threadMentionHandle} ${trimmedDraft}`
             : trimmedDraft;
         const message = await serversApi.sendMessage(
           selectedServerId,
-          drawer.channelId,
+          threadChannelId,
           {
             text: replyText,
             attachments: confirmedAttachments,
             entities: entities.length > 0 ? entities : undefined,
-            threadRootMessageId: drawer.rootMessageId,
+            threadRootMessageId: threadRootMessageId,
             asTask: true,
           },
         );
         const title =
           trimmedDraft.split("\n")[0]?.trim().slice(0, 80) ||
           trimmedDraft.slice(0, 80);
-        await channelTasksApi.createTask(selectedServerId, drawer.channelId, {
+        await channelTasksApi.createTask(selectedServerId, threadChannelId, {
           title,
           description:
             trimmedDraft ||
@@ -2971,42 +3008,41 @@ export function ServerConversationPageClient({
         setThreadDraftReferences([]);
         setThreadAsTask(false);
         setTasks(
-          await channelTasksApi.listTasks(selectedServerId, drawer.channelId),
+          await channelTasksApi.listTasks(selectedServerId, threadChannelId),
         );
         const messages = await serversApi.listMessages(
           selectedServerId,
-          drawer.channelId,
+          threadChannelId,
         );
         setMessagesByChannel((current) => ({
           ...current,
-          [drawer.channelId]: messages,
+          [threadChannelId]: messages,
         }));
         toast.success(t("conversationView.toasts.taskCreated"));
       } else {
-        const explicitMentions = getExplicitMentionHandles(trimmedDraft);
         const replyText =
-          threadMentionHandle && !explicitMentions.includes(threadMentionHandle)
+          threadMentionHandle && !hasAgentMention
             ? `@${threadMentionHandle} ${trimmedDraft}`
             : trimmedDraft;
-        await serversApi.sendMessage(selectedServerId, drawer.channelId, {
+        await serversApi.sendMessage(selectedServerId, threadChannelId, {
           text: replyText,
           attachments: confirmedAttachments,
           entities: entities.length > 0 ? entities : undefined,
-          threadRootMessageId: drawer.rootMessageId,
+          threadRootMessageId: threadRootMessageId,
         });
         setThreadDraft("");
         setThreadDraftReferences([]);
         const [messages, thread] = await Promise.all([
-          serversApi.listMessages(selectedServerId, drawer.channelId),
+          serversApi.listMessages(selectedServerId, threadChannelId),
           serversApi.getThread(
             selectedServerId,
-            drawer.channelId,
-            drawer.rootMessageId,
+            threadChannelId,
+            threadRootMessageId,
           ),
         ]);
         setMessagesByChannel((current) => ({
           ...current,
-          [drawer.channelId]: messages,
+          [threadChannelId]: messages,
         }));
         setThreadMessages(thread);
       }
@@ -3773,7 +3809,43 @@ export function ServerConversationPageClient({
                 "xl:flex-none xl:w-[calc(100%_-_var(--server-drawer-width)_-_0.25rem)]",
             )}
           >
-            {feedModeActive ? (
+            {focusedThread ? (
+              <ThreadDrawer
+                thread={threadMessages}
+                serverId={selectedServerId}
+                channelId={focusedThread.channelId}
+                agents={channelAgents}
+                presets={presets}
+                members={channelMembers}
+                currentUserId={profile?.id}
+                draft={threadDraft}
+                draftReferences={threadDraftReferences}
+                suggestedMentionHandle={threadMentionHandle}
+                asTask={threadAsTask}
+                onDraftChange={setThreadDraft}
+                onDraftReferencesChange={setThreadDraftReferences}
+                onAsTaskChange={setThreadAsTask}
+                onSend={() => void handleReply()}
+                onUploadFiles={uploadThreadDraftFiles}
+                focused
+                onToggleFocus={() => setFocusedThread(null)}
+                onClose={() => setFocusedThread(null)}
+                onOpenExecution={(sessionId) =>
+                  setDrawer({ type: "execution", sessionId })
+                }
+                onOpenAgentProfile={(agentId) =>
+                  setDrawer({
+                    type: "colleague",
+                    selection: { kind: "agent", id: agentId },
+                  })
+                }
+                onToggleReaction={(message, emoji) =>
+                  void handleToggleReaction(message, emoji)
+                }
+                isSending={isSending}
+                isUploading={isUploadingDraftFile}
+              />
+            ) : feedModeActive ? (
               <section className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
                 {mode === "search" ? (
                   <SearchPanel
@@ -3958,10 +4030,24 @@ export function ServerConversationPageClient({
                     onOpenExecution={(sessionId) =>
                       setDrawer({ type: "execution", sessionId })
                     }
+                    onOpenAgentProfile={(agentId) =>
+                      setDrawer({
+                        type: "colleague",
+                        selection: { kind: "agent", id: agentId },
+                      })
+                    }
                     onToggleReaction={(message, emoji) =>
                       void handleToggleReaction(message, emoji)
                     }
                     isSending={isSending}
+                    isUploading={isUploadingDraftFile}
+                    onToggleFocus={() => {
+                      setFocusedThread({
+                        channelId: drawer.channelId,
+                        rootMessageId: drawer.rootMessageId,
+                      });
+                      setDrawer({ type: "none" });
+                    }}
                   />
                 ) : drawer.type === "execution" ? (
                   <ExecutionDrawer

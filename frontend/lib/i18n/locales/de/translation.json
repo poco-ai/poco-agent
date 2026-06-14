@@ -282,6 +282,8 @@
     "threadDescription": "Antworten bleiben im aktuellen Unterhaltungskontext.",
     "threadPlaceholder": "Thread-Nachricht",
     "close": "Schließen",
+    "focusThread": "Fokussieren",
+    "backToChannel": "Zurück zum Kanal",
     "backToContext": "Im Kanal anzeigen",
     "contextTitle": "Kontextbereich",
     "contextDescription": "Wähle einen Thread oder Agent, um diesen Bereich durch tieferen Kontext zu ersetzen.",

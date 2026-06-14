@@ -282,6 +282,8 @@
     "threadDescription": "Les réponses restent attachées au contexte de conversation actuel.",
     "threadPlaceholder": "Message du fil",
     "close": "Fermer",
+    "focusThread": "Focus",
+    "backToChannel": "Retour au canal",
     "backToContext": "Voir dans le canal",
     "contextTitle": "Panneau de contexte",
     "contextDescription": "Sélectionnez un fil ou un agent pour afficher un contexte plus détaillé.",

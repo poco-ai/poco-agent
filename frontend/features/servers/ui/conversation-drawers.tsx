@@ -3,11 +3,14 @@
 import React from "react";
 import {
   ArrowLeft,
+  ArrowUp,
   Bot,
+  Check,
   Files,
   Info,
   Loader2,
   MessageSquare,
+  Paperclip,
   Pause,
   Plus,
   SquareCheckBig,
@@ -19,7 +22,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { FileCard } from "@/components/shared/file-card";
 import { PersistentRuntimeBadge } from "@/components/shared/persistent-runtime-badge";
-import { Textarea } from "@/components/ui/textarea";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import type { InputFile } from "@/features/chat/types";
 import type { Preset } from "@/features/capabilities/presets/lib/preset-types";
 import { ExecutionContainer } from "@/features/chat";
@@ -66,6 +74,10 @@ import { ServerAgentAvatar } from "./server-agent-avatar";
 const overlayDrawerClassName =
   "absolute inset-y-0 right-0 z-30 flex w-full flex-col border-l border-border bg-card md:left-[17rem] md:w-auto lg:left-[18rem] xl:static xl:h-full xl:w-full xl:min-w-0 xl:shrink-0";
 
+// Focused variant: thread replaces the channel content in the main column (wider, no overlay).
+const embeddedDrawerClassName =
+  "flex h-full min-h-0 w-full flex-col overflow-hidden bg-card";
+
 const drawerHeaderClassName =
   "flex w-full max-w-full flex-wrap items-center justify-between gap-3 overflow-hidden border-b border-border px-4 py-4 sm:px-6 sm:py-5";
 
@@ -109,8 +121,12 @@ export function ThreadDrawer({
   onUploadFiles,
   onClose,
   onOpenExecution,
+  onOpenAgentProfile,
   onToggleReaction,
   isSending,
+  isUploading,
+  focused,
+  onToggleFocus,
 }: {
   thread: ServerConversationMessage[];
   serverId: string | null;
@@ -130,17 +146,34 @@ export function ThreadDrawer({
   onUploadFiles: (files: File[]) => Promise<InputFile[]>;
   onClose: () => void;
   onOpenExecution?: (sessionId: string) => void;
+  onOpenAgentProfile?: (agentId: string) => void;
   onToggleReaction?: (
     message: ServerConversationMessage,
     emoji: string,
   ) => void;
   isSending: boolean;
+  isUploading?: boolean;
+  focused?: boolean;
+  onToggleFocus?: () => void;
 }) {
   const { t } = useT("translation");
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const isComposingRef = React.useRef(false);
   const [selectionStart, setSelectionStart] = React.useState(0);
+
+  const syncTextareaHeight = React.useCallback(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) {
+      return;
+    }
+    textarea.style.height = "auto";
+    textarea.style.height = `${Math.min(textarea.scrollHeight, 160)}px`;
+  }, []);
+
+  React.useEffect(() => {
+    syncTextareaHeight();
+  }, [draft, syncTextareaHeight]);
 
   const composerTrigger = React.useMemo(
     () => getComposerTrigger(draft),
@@ -245,6 +278,10 @@ export function ThreadDrawer({
   );
   const confirmedAttachments = React.useMemo(
     () => getComposerDraftAttachments(activeReferences),
+    [activeReferences],
+  );
+  const hasAgentMention = React.useMemo(
+    () => activeReferences.some((reference) => reference.kind === "agent"),
     [activeReferences],
   );
 
@@ -392,7 +429,9 @@ export function ThreadDrawer({
   );
 
   return (
-    <aside className={overlayDrawerClassName}>
+    <aside
+      className={focused ? embeddedDrawerClassName : overlayDrawerClassName}
+    >
       <div className={drawerHeaderClassName}>
         <div className="flex min-w-0 items-center gap-3">
           <Button
@@ -409,9 +448,24 @@ export function ThreadDrawer({
             {t("conversationView.threadTitle")}
           </p>
         </div>
-        <Button type="button" variant="outline" size="sm" onClick={onClose}>
-          {t("conversationView.close")}
-        </Button>
+        <div className={drawerHeaderActionsClassName}>
+          {onToggleFocus ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onToggleFocus}
+              className="hidden xl:inline-flex"
+            >
+              {focused
+                ? t("conversationView.backToChannel")
+                : t("conversationView.focusThread")}
+            </Button>
+          ) : null}
+          <Button type="button" variant="outline" size="sm" onClick={onClose}>
+            {t("conversationView.close")}
+          </Button>
+        </div>
       </div>
       <div className="flex min-h-0 flex-1">
         <div className="min-h-0 flex-1 overflow-y-auto">
@@ -423,8 +477,8 @@ export function ThreadDrawer({
                 members={members}
                 presets={presets}
                 defaultExpanded={index === thread.length - 1}
-                onOpenThread={() => undefined}
                 onOpenExecution={onOpenExecution}
+                onOpenAgentProfile={onOpenAgentProfile}
                 onToggleSaved={() => undefined}
                 onToggleReaction={(emoji) => onToggleReaction?.(message, emoji)}
               />
@@ -432,7 +486,7 @@ export function ThreadDrawer({
           ))}
         </div>
       </div>
-      <div className="border-t border-border px-6 py-5">
+      <div className="border-t border-border px-6 py-4">
         <input
           type="file"
           multiple
@@ -443,29 +497,40 @@ export function ThreadDrawer({
           }}
         />
         {confirmedAttachments.length > 0 ? (
-          <div className="mb-3 flex flex-wrap gap-2">
+          <div className="mb-2 flex min-w-0 flex-wrap gap-2 px-3">
             {confirmedAttachments.map((file, index) => (
               <FileCard
                 key={`${file.source}-${index}`}
                 file={file}
                 onRemove={() => handleRemoveAttachment(index)}
-                className="w-full max-w-56 bg-background"
+                className="w-full max-w-48 bg-background"
               />
             ))}
           </div>
         ) : null}
         {suggestedMentionHandle ? (
-          <div className="mb-3 flex items-center gap-2 rounded-md border border-border bg-muted/20 px-3 py-2 text-sm text-muted-foreground">
-            <Info className="size-4 shrink-0 text-muted-foreground" />
-            <span>
-              {t("conversationView.threadMentionHint")}{" "}
-              <span className="font-medium text-foreground">
-                @{suggestedMentionHandle}
-              </span>
-            </span>
+          <div
+            className={cn(
+              "grid overflow-hidden transition-[grid-template-rows,opacity] duration-300 ease-out",
+              hasAgentMention
+                ? "grid-rows-[0fr] opacity-0"
+                : "grid-rows-[1fr] opacity-100",
+            )}
+          >
+            <div className="overflow-hidden">
+              <div className="mb-2 flex items-center gap-2 rounded-md border border-border bg-muted/20 px-3 py-2 text-sm text-muted-foreground">
+                <Info className="size-4 shrink-0 text-muted-foreground" />
+                <span>
+                  {t("conversationView.threadMentionHint")}{" "}
+                  <span className="font-medium text-foreground">
+                    @{suggestedMentionHandle}
+                  </span>
+                </span>
+              </div>
+            </div>
           </div>
         ) : null}
-        <div className="relative">
+        <div className="relative flex w-full min-w-0 items-end gap-2 rounded-lg border border-border bg-card px-3 py-2">
           {composerActive ? (
             <div className="absolute bottom-full left-0 z-20 mb-2 w-full max-w-md rounded-md border border-border bg-popover p-2 shadow-[var(--shadow-lg)]">
               <div className="px-2 pb-2 text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
@@ -511,7 +576,52 @@ export function ThreadDrawer({
               </div>
             </div>
           ) : null}
-          <Textarea
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                disabled={isSending || isUploading}
+                className="flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
+                aria-label={t("conversationView.composerActions")}
+                title={t("conversationView.composerActions")}
+              >
+                {isUploading ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Plus className="size-4" />
+                )}
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="start"
+              side="top"
+              sideOffset={8}
+              className="w-36"
+            >
+              <DropdownMenuItem
+                disabled={isSending || isUploading}
+                onSelect={() => fileInputRef.current?.click()}
+              >
+                {isUploading ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Paperclip className="size-4" />
+                )}
+                <span>{t("hero.uploadFile")}</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                disabled={isSending}
+                onSelect={() => onAsTaskChange(!asTask)}
+              >
+                <SquareCheckBig
+                  className={cn("size-4", asTask ? "text-primary" : "")}
+                />
+                <span className="flex-1">{t("conversationView.asTask")}</span>
+                {asTask ? <Check className="size-4 text-primary" /> : null}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <textarea
             ref={textareaRef}
             value={draft}
             onChange={(event) => {
@@ -525,6 +635,7 @@ export function ThreadDrawer({
               setSelectionStart(event.currentTarget.selectionStart)
             }
             onKeyDown={handleKeyDown}
+            onInput={() => syncTextareaHeight()}
             onPaste={(event) => void handlePaste(event)}
             onCompositionStart={() => {
               isComposingRef.current = true;
@@ -534,42 +645,34 @@ export function ThreadDrawer({
                 isComposingRef.current = false;
               });
             }}
-            rows={6}
+            rows={1}
             placeholder={t("conversationView.threadPlaceholder")}
-            className="rounded-md border-border bg-background text-sm shadow-none"
-          />
-        </div>
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            onClick={() => fileInputRef.current?.click()}
             disabled={isSending}
-            aria-label={t("hero.uploadFile")}
-            title={t("hero.uploadFile")}
-          >
-            <Plus className="size-4" />
-          </Button>
-          <label className="flex items-center gap-3 text-base text-foreground">
-            <input
-              type="checkbox"
-              checked={asTask}
-              onChange={(event) => onAsTaskChange(event.target.checked)}
-              className="size-5 rounded-none border-foreground"
-            />
-            {t("conversationView.asTask")}
-          </label>
-          <Button
+            className="min-w-0 flex-1 resize-none overflow-y-auto bg-transparent py-1 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 scrollbar-hide"
+            style={{
+              minHeight: "2rem",
+              maxHeight: "10rem",
+              lineHeight: "1.5rem",
+            }}
+          />
+          <button
             type="button"
-            size="sm"
             onClick={onSend}
             disabled={
-              isSending || (!draft.trim() && confirmedAttachments.length === 0)
+              isSending ||
+              isUploading ||
+              (!draft.trim() && confirmedAttachments.length === 0)
             }
+            className="flex size-8 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground disabled:opacity-50"
+            aria-label={t("conversationView.send")}
+            title={t("conversationView.send")}
           >
-            {t("conversationView.send")}
-          </Button>
+            {isSending ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <ArrowUp className="size-4" />
+            )}
+          </button>
         </div>
       </div>
     </aside>
@@ -990,7 +1093,6 @@ export function TaskDrawer({
                     <MessageRow
                       message={toConversationMessage(item)}
                       agents={agents}
-                      onOpenThread={() => undefined}
                       onToggleSaved={() => undefined}
                       compact
                     />
