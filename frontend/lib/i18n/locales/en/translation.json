@@ -1950,7 +1950,9 @@
       },
       "actions": {
         "install": "Install",
-        "uninstall": "Uninstall"
+        "uninstall": "Uninstall",
+        "enableGroup": "Enable group",
+        "disableGroup": "Disable group"
       },
       "toasts": {
         "loadError": "Failed to load skills",
@@ -2275,7 +2277,9 @@
       "selectors": {
         "skills": "Choose the reusable skills bundled into this preset.",
         "mcp": "Choose the MCP servers this preset should enable.",
-        "plugins": "Choose the plugins this preset should carry."
+        "plugins": "Choose the plugins this preset should carry.",
+        "selectGroup": "Select group",
+        "clearGroup": "Clear group"
       },
       "form": {
         "name": "Name",

@@ -1950,7 +1950,9 @@
       },
       "actions": {
         "install": "安装",
-        "uninstall": "卸载"
+        "uninstall": "卸载",
+        "enableGroup": "启用此组",
+        "disableGroup": "停用此组"
       },
       "toasts": {
         "loadError": "加载技能列表失败",
@@ -2275,7 +2277,9 @@
       "selectors": {
         "skills": "选择这个预设默认启用的 Skills。",
         "mcp": "选择这个预设默认启用的 MCP 服务。",
-        "plugins": "选择这个预设携带的插件。"
+        "plugins": "选择这个预设携带的插件。",
+        "selectGroup": "全选此组",
+        "clearGroup": "取消此组"
       },
       "form": {
         "name": "名称",

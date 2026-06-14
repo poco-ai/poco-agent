@@ -1979,7 +1979,9 @@
       },
       "actions": {
         "install": "Installieren",
-        "uninstall": "Deinstallieren"
+        "uninstall": "Deinstallieren",
+        "enableGroup": "Diese Gruppe aktivieren",
+        "disableGroup": "Diese Gruppe deaktivieren"
       },
       "toasts": {
         "loadError": "Laden der Skills fehlgeschlagen",
@@ -2304,7 +2306,9 @@
       "selectors": {
         "skills": "Wähle die wiederverwendbaren Skills für diese Vorlage aus.",
         "mcp": "Wähle die MCP-Server aus, die diese Vorlage aktivieren soll.",
-        "plugins": "Waehle die Plugins aus, die diese Vorlage enthalten soll."
+        "plugins": "Waehle die Plugins aus, die diese Vorlage enthalten soll.",
+        "selectGroup": "Diese Gruppe auswählen",
+        "clearGroup": "Diese Gruppe abwählen"
       },
       "form": {
         "name": "Name",

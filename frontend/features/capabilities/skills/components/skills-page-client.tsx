@@ -11,6 +11,7 @@ import { PullToRefresh } from "@/components/ui/pull-to-refresh";
 import { PaginatedGrid } from "@/components/ui/paginated-grid";
 import { usePagination } from "@/hooks/use-pagination";
 import { skillsService } from "@/features/capabilities/skills/api/skills-api";
+import type { Skill } from "@/features/capabilities/skills/types";
 import { useT } from "@/lib/i18n/client";
 import { CapabilityContentShell } from "@/features/capabilities/components/capability-content-shell";
 import { HeaderSearchInput } from "@/components/shared/header-search-input";
@@ -104,6 +105,75 @@ export function SkillsPageClient() {
     [installs, refresh, skills, t],
   );
 
+  const handleBatchToggleGroup = useCallback(
+    async (targetSkills: Skill[], enabled: boolean) => {
+      try {
+        const targetSkillIds = new Set(targetSkills.map((skill) => skill.id));
+        const targetInstalls = installs.filter((install) => {
+          if (!targetSkillIds.has(install.skill_id)) {
+            return false;
+          }
+          const skill = targetSkills.find(
+            (item) => item.id === install.skill_id,
+          );
+          return enabled || !skill?.force_enabled;
+        });
+        const missingInstalls = enabled
+          ? targetSkills.filter((skill) => {
+              if (skill.admin_disabled) {
+                return false;
+              }
+              const install = installs.find(
+                (item) => item.skill_id === skill.id,
+              );
+              const state = getEffectiveInstallState(skill, install);
+              return !install && !state.isEnabled;
+            })
+          : [];
+        const syntheticDisables = enabled
+          ? []
+          : targetSkills.filter((skill) => {
+              const install = installs.find(
+                (item) => item.skill_id === skill.id,
+              );
+              const state = getEffectiveInstallState(skill, install);
+              return state.autoEnabled && !skill.force_enabled;
+            });
+
+        if (
+          targetInstalls.length === 0 &&
+          missingInstalls.length === 0 &&
+          syntheticDisables.length === 0
+        ) {
+          toast.message(
+            t("library.skillsManager.toasts.noEligibleBatchToggle"),
+          );
+          return;
+        }
+
+        await Promise.all([
+          ...targetInstalls.map((install) =>
+            skillsService.updateInstall(install.id, { enabled }),
+          ),
+          ...missingInstalls.map((skill) =>
+            skillsService.createInstall({ skill_id: skill.id, enabled: true }),
+          ),
+          ...syntheticDisables.map((skill) =>
+            skillsService.createInstall({ skill_id: skill.id, enabled: false }),
+          ),
+        ]);
+        refresh();
+      } catch (error) {
+        console.error(
+          "[SkillsPageClient] Failed to batch toggle group:",
+          error,
+        );
+        toast.error(t("library.skillsManager.toasts.actionFailed"));
+      }
+    },
+    [installs, refresh, t],
+  );
+
   const toolbarSlot = (
     <HeaderSearchInput
       value={searchQuery}
@@ -137,6 +207,7 @@ export function SkillsPageClient() {
                 onOpenSkillSettings={(skill) => setSelectedSkillId(skill.id)}
                 onToggleEnabled={setEnabled}
                 onBatchToggle={handleBatchToggle}
+                onBatchToggleGroup={handleBatchToggleGroup}
                 createCardLabel={t("library.skillsPage.addCard")}
                 onCreate={() => setImportOpen(true)}
                 toolbarSlot={toolbarSlot}
