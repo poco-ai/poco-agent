@@ -2236,8 +2236,8 @@ export function ServerConversationPageClient({
   const canManageServerMemberRoles = canManageServerMembers(currentServerRole);
   const canDeleteCurrentServer = Boolean(
     selectedServer &&
-      selectedServer.kind !== "personal" &&
-      currentServerRole === "owner",
+    selectedServer.kind !== "personal" &&
+    currentServerRole === "owner",
   );
 
   const allFeedItems = React.useMemo<FeedItem[]>(() => {

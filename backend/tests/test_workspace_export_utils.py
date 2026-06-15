@@ -51,7 +51,9 @@ class WorkspaceExportUtilsTests(unittest.TestCase):
             manifest_key="workspaces/user/session/manifest.json",
             workspace_files_prefix="workspaces/user/session/files",
             storage_service=storage,
-            file_url_builder=lambda path: f"/api/v1/sessions/session/workspace/raw{path}",
+            file_url_builder=lambda path: (
+                f"/api/v1/sessions/session/workspace/raw{path}"
+            ),
         )
 
         deck = nodes[0]

@@ -508,7 +508,9 @@ function SessionShareMobileView({
                 activeIndex === 1 ? "bg-background" : "bg-muted/50",
               )}
             >
-              {selectedRun ? <SharedComputerSnapshot run={selectedRun} /> : null}
+              {selectedRun ? (
+                <SharedComputerSnapshot run={selectedRun} />
+              ) : null}
             </div>
           </SwiperSlide>
           <SwiperSlide className="h-full">
@@ -518,7 +520,9 @@ function SessionShareMobileView({
                 activeIndex === 2 ? "bg-background" : "bg-muted/50",
               )}
             >
-              {selectedRun ? <SharedArtifactsSnapshot run={selectedRun} /> : null}
+              {selectedRun ? (
+                <SharedArtifactsSnapshot run={selectedRun} />
+              ) : null}
             </div>
           </SwiperSlide>
         </Swiper>
