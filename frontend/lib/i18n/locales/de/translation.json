@@ -396,6 +396,13 @@
       "noInvites": "Noch keine aktiven Einladungen.",
       "invitePermissionHint": "Only server admins and owners can manage invite keys."
     },
+    "serverActions": {
+      "menu": "Servereinstellungen",
+      "addServer": "Server hinzufügen oder beitreten",
+      "deleteCurrentServer": "Aktuellen Server löschen",
+      "deleteConfirmTitle": "Aktuellen Server löschen?",
+      "deleteConfirmDescription": "Dadurch wird {{server}} für alle Mitglieder aus der Serverliste entfernt. Persönliche Server können nicht gelöscht werden."
+    },
     "agentPreset": {
       "title": "Agent hinzufügen",
       "description": "Erstelle einen Agent im aktuellen Server aus einem bestehenden Preset.",
@@ -507,6 +514,8 @@
       "agentAddFailed": "Agent konnte nicht hinzugefügt werden",
       "serverCreated": "Server erstellt",
       "serverCreateFailed": "Server konnte nicht erstellt werden",
+      "serverDeleted": "Server gelöscht",
+      "serverDeleteFailed": "Server konnte nicht gelöscht werden",
       "inviteAccepted": "Server beigetreten",
       "inviteAcceptFailed": "Einladung konnte nicht angenommen werden",
       "inviteCreated": "Einladungsschlüssel erstellt",

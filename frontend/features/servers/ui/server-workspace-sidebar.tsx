@@ -9,11 +9,19 @@ import {
   Plus,
   Search,
   Server as ServerIcon,
+  Settings2,
+  Trash2,
   Users,
 } from "lucide-react";
 
 import { PageHeaderShell } from "@/components/shared/page-header-shell";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Select,
   SelectContent,
@@ -44,8 +52,10 @@ export function ServerWorkspaceSidebar({
   topLevelChannels,
   directMessages,
   activeChannelId,
+  canDeleteCurrentServer,
   onSelectServer,
   onOpenServerAccess,
+  onDeleteCurrentServer,
   onOpenMode,
   onOpenTasks,
   onOpenChannel,
@@ -59,8 +69,10 @@ export function ServerWorkspaceSidebar({
   topLevelChannels: ServerChannelItem[];
   directMessages: ServerChannelItem[];
   activeChannelId: string | null;
+  canDeleteCurrentServer: boolean;
   onSelectServer: (serverId: string) => void;
   onOpenServerAccess: () => void;
+  onDeleteCurrentServer: () => void;
   onOpenMode: (mode: WorkspaceMode) => void;
   onOpenTasks: () => void;
   onOpenChannel: (channel: ServerChannelItem) => void;
@@ -125,16 +137,33 @@ export function ServerWorkspaceSidebar({
               </SelectContent>
             </Select>
           </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            onClick={onOpenServerAccess}
-            aria-label={t("conversationView.serverAccess.title")}
-            className="size-9 shrink-0"
-          >
-            <Plus className="size-4" />
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                aria-label={t("conversationView.serverActions.menu")}
+                className="size-9 shrink-0"
+              >
+                <Settings2 className="size-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-52">
+              <DropdownMenuItem onSelect={onOpenServerAccess}>
+                <Plus className="size-4" />
+                {t("conversationView.serverActions.addServer")}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                variant="destructive"
+                disabled={!selectedServerId || !canDeleteCurrentServer}
+                onSelect={onDeleteCurrentServer}
+              >
+                <Trash2 className="size-4" />
+                {t("conversationView.serverActions.deleteCurrentServer")}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 

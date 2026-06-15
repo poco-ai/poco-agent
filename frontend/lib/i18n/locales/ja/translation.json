@@ -396,6 +396,13 @@
       "noInvites": "有効な招待はまだありません。",
       "invitePermissionHint": "Only server admins and owners can manage invite keys."
     },
+    "serverActions": {
+      "menu": "サーバー設定",
+      "addServer": "サーバーを追加または参加",
+      "deleteCurrentServer": "現在の server を削除",
+      "deleteConfirmTitle": "現在の server を削除しますか？",
+      "deleteConfirmDescription": "{{server}} はすべてのメンバーのサーバー一覧から削除されます。Personal サーバーは削除できません。"
+    },
     "agentPreset": {
       "title": "Agent を追加",
       "description": "既存のプリセットから現在のサーバー内に Agent を作成します。",
@@ -507,6 +514,8 @@
       "agentAddFailed": "Agent の追加に失敗しました",
       "serverCreated": "サーバーを作成しました",
       "serverCreateFailed": "サーバーの作成に失敗しました",
+      "serverDeleted": "サーバーを削除しました",
+      "serverDeleteFailed": "サーバーの削除に失敗しました",
       "inviteAccepted": "サーバーに参加しました",
       "inviteAcceptFailed": "招待の承諾に失敗しました",
       "inviteCreated": "招待キーを作成しました",

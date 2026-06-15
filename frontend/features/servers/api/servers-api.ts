@@ -465,6 +465,10 @@ export const serversApi = {
     return mapServer(server);
   },
 
+  deleteServer: async (serverId: string): Promise<void> => {
+    await apiClient.delete(API_ENDPOINTS.server(serverId));
+  },
+
   acceptInvite: async (input: { token: string }): Promise<ServerMemberItem> => {
     const member = await apiClient.post<ServerMemberResponse>(
       "/server-invites/accept",

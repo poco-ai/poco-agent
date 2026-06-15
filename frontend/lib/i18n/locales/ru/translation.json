@@ -396,6 +396,13 @@
       "noInvites": "Активных приглашений пока нет.",
       "invitePermissionHint": "Only server admins and owners can manage invite keys."
     },
+    "serverActions": {
+      "menu": "Настройки сервера",
+      "addServer": "Добавить сервер или присоединиться",
+      "deleteCurrentServer": "Удалить текущий server",
+      "deleteConfirmTitle": "Удалить текущий server?",
+      "deleteConfirmDescription": "{{server}} будет удалён из списка серверов для всех участников. Personal-серверы удалить нельзя."
+    },
     "agentPreset": {
       "title": "Добавить агента",
       "description": "Создайте агента на текущем сервере из существующего пресета.",
@@ -507,6 +514,8 @@
       "agentAddFailed": "Не удалось добавить агента",
       "serverCreated": "Сервер создан",
       "serverCreateFailed": "Не удалось создать сервер",
+      "serverDeleted": "Сервер удалён",
+      "serverDeleteFailed": "Не удалось удалить сервер",
       "inviteAccepted": "Вы присоединились к серверу",
       "inviteAcceptFailed": "Не удалось принять приглашение",
       "inviteCreated": "Ключ приглашения создан",
