@@ -160,7 +160,7 @@ class SessionServiceCancellationProjectionTests(unittest.TestCase):
         )
 
         with patch(
-            "app.services.session_service.AgentRuntimeService.release_runtime_for_session"
+            "app.services.session_service.PersistentRuntimeService.release_runtime_for_session"
         ) as release_runtime:
             self.service._release_agent_runtime_on_cancellation(
                 self.db,

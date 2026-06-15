@@ -5,6 +5,7 @@ from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
+from app.core.deps import get_current_user_id, get_db
 from app.main import create_app
 from app.schemas.preset import PresetResponse, PresetVisualSummary
 from app.schemas.project import ProjectResponse
@@ -54,6 +55,11 @@ class PresetApiTests(unittest.TestCase):
         self.app = create_app()
         self.client = TestClient(self.app)
         self.headers = {"X-User-Id": "user-1"}
+        self.app.dependency_overrides[get_current_user_id] = lambda: "user-1"
+        self.app.dependency_overrides[get_db] = lambda: object()
+
+    def tearDown(self) -> None:
+        self.app.dependency_overrides.clear()
 
     @patch("app.api.v1.presets.service.list_presets")
     def test_list_presets_returns_response_envelope(self, list_presets) -> None:
@@ -139,6 +145,11 @@ class ProjectApiTests(unittest.TestCase):
         self.client = TestClient(self.app)
         self.headers = {"X-User-Id": "user-1"}
         self.project_id = "f219f040-6ec9-4d2f-9cd3-7d2f93f75368"
+        self.app.dependency_overrides[get_current_user_id] = lambda: "user-1"
+        self.app.dependency_overrides[get_db] = lambda: object()
+
+    def tearDown(self) -> None:
+        self.app.dependency_overrides.clear()
 
     @patch("app.api.v1.projects.service.update_project")
     def test_update_project_returns_default_preset_id(self, update_project) -> None:

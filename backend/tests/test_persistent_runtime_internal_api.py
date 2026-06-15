@@ -1,7 +1,7 @@
 import unittest
 import uuid
 from datetime import UTC, datetime
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from fastapi.testclient import TestClient
 
@@ -44,7 +44,8 @@ class PersistentRuntimeInternalApiTests(unittest.TestCase):
         self.app = create_app()
         self.client = TestClient(self.app)
         self.app.dependency_overrides[require_internal_token] = lambda: None
-        self.app.dependency_overrides[get_db] = lambda: object()
+        self.db = MagicMock()
+        self.app.dependency_overrides[get_db] = lambda: self.db
 
     def tearDown(self) -> None:
         self.app.dependency_overrides.clear()
