@@ -117,6 +117,31 @@ export function useServerMembership({
     [onServersChanged, onSwitchServer, t],
   );
 
+  const deleteServer = React.useCallback(async () => {
+    if (!selectedServerId) {
+      return;
+    }
+    setIsServerAccessWorking(true);
+    try {
+      await serversApi.deleteServer(selectedServerId);
+      const nextServers = await serversApi.listServers();
+      onServersChanged(nextServers);
+      const nextServer =
+        nextServers.find((server) => server.id !== selectedServerId) ??
+        nextServers[0];
+      if (nextServer) {
+        onSwitchServer(nextServer.id);
+      }
+      toast.success(t("conversationView.toasts.serverDeleted"));
+    } catch (error) {
+      console.error("[ServersWorkspace] delete server failed", error);
+      toast.error(t("conversationView.toasts.serverDeleteFailed"));
+      throw error;
+    } finally {
+      setIsServerAccessWorking(false);
+    }
+  }, [onServersChanged, onSwitchServer, selectedServerId, t]);
+
   const acceptInvite = React.useCallback(
     async (token: string) => {
       const trimmed = token.trim();
@@ -299,6 +324,7 @@ export function useServerMembership({
     isServerAccessWorking,
     isAgentCreating,
     createServer,
+    deleteServer,
     acceptInvite,
     createInvite,
     copyInvite,

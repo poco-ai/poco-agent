@@ -63,3 +63,20 @@ class WorkspaceFileReference(BaseModel):
 
 
 FileReference = InputFileReference | WorkspaceFileReference
+
+
+class SkillReferenceMetadata(BaseModel):
+    trigger: Literal["/", "$"] | None = None
+    description: str | None = None
+
+
+class SkillReference(BaseModel):
+    id: str = Field(min_length=1)
+    kind: Literal["skill"] = "skill"
+    skill_id: int = Field(gt=0, alias="skillId")
+    inserted_text: str = Field(min_length=1, alias="insertedText")
+    display_name: str = Field(min_length=1, alias="displayName")
+    range: FileReferenceRange | None = None
+    metadata: SkillReferenceMetadata | None = None
+
+    model_config = ConfigDict(populate_by_name=True, serialize_by_alias=True)

@@ -1,10 +1,10 @@
 import uuid
 import shutil
 from datetime import datetime
-from urllib.parse import urlencode
+from urllib.parse import quote, urlencode
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, Response as FastAPIResponse
 from starlette.background import BackgroundTask
 from sqlalchemy.orm import Session
 
@@ -47,8 +47,14 @@ from app.services.tool_execution_service import ToolExecutionService
 from app.services.usage_service import UsageService
 from app.services.workspace_archive_service import WorkspaceArchiveService
 from app.utils.computer import build_browser_screenshot_key
-from app.utils.workspace_export import build_workspace_file_nodes_from_export
+from app.utils.workspace_export import (
+    build_workspace_file_nodes_from_export,
+    create_workspace_preview_token,
+    resolve_export_object_key,
+    verify_workspace_preview_token,
+)
 from app.utils.workspace_manifest import (
+    find_manifest_file,
     normalize_manifest_path,
 )
 from app.utils.mime import guess_mime_type
@@ -96,6 +102,72 @@ def _attach_local_mount_file_urls(
             )
         result.append(node.model_copy(update={"children": children, "url": url}))
     return result
+
+
+def _workspace_export_file_url(
+    *,
+    session_id: uuid.UUID,
+    path: str,
+    preview_token: str,
+) -> str | None:
+    normalized = normalize_manifest_path(path)
+    if not normalized:
+        return None
+    return (
+        f"/api/v1/sessions/{session_id}/workspace/raw"
+        f"/{quote(preview_token, safe='')}/{quote(normalized.lstrip('/'), safe='/')}"
+    )
+
+
+def _stream_workspace_export_file(
+    *,
+    manifest_key: str | None,
+    workspace_files_prefix: str | None,
+    path: str,
+) -> FastAPIResponse:
+    manifest_key = (manifest_key or "").strip()
+    if not manifest_key:
+        raise AppException(
+            error_code=ErrorCode.NOT_FOUND,
+            message="Workspace export not ready",
+        )
+
+    normalized_path = normalize_manifest_path(path)
+    if not normalized_path:
+        raise AppException(
+            error_code=ErrorCode.BAD_REQUEST,
+            message="Invalid workspace file path",
+        )
+
+    manifest = storage_service.get_manifest(manifest_key)
+    file_entry = find_manifest_file(manifest, normalized_path)
+    if file_entry is None:
+        raise AppException(
+            error_code=ErrorCode.NOT_FOUND,
+            message="Workspace file not found",
+        )
+
+    object_key = resolve_export_object_key(
+        file_entry=file_entry,
+        workspace_files_prefix=workspace_files_prefix,
+    )
+    if not object_key:
+        raise AppException(
+            error_code=ErrorCode.NOT_FOUND,
+            message="Workspace file object not found",
+        )
+
+    mime_type = (
+        file_entry.get("mimeType")
+        or file_entry.get("mime_type")
+        or guess_mime_type(normalized_path)
+        or "application/octet-stream"
+    )
+    return FastAPIResponse(
+        content=storage_service.get_bytes(object_key),
+        media_type=str(mime_type),
+        headers={"Content-Disposition": "inline"},
+    )
 
 
 @router.post("", response_model=ResponseSchema[SessionResponse])
@@ -649,12 +721,43 @@ async def get_session_workspace_files(
     if not db_session.workspace_manifest_key:
         return Response.success(data=[], message="Workspace export not ready")
 
+    preview_token = create_workspace_preview_token(
+        scope="session",
+        scope_id=str(session_id),
+    )
     nodes = build_workspace_file_nodes_from_export(
         manifest_key=db_session.workspace_manifest_key,
         workspace_files_prefix=db_session.workspace_files_prefix,
         storage_service=storage_service,
+        file_url_builder=lambda path: _workspace_export_file_url(
+            session_id=session_id,
+            path=path,
+            preview_token=preview_token,
+        ),
     )
     return Response.success(data=nodes, message="Workspace files retrieved")
+
+
+@router.get("/{session_id}/workspace/raw/{preview_token}/{path:path}")
+async def get_session_workspace_file(
+    session_id: uuid.UUID,
+    preview_token: str,
+    path: str,
+    db: Session = Depends(get_db),
+) -> FastAPIResponse:
+    """Stream a file from an exported workspace snapshot."""
+    db_session = session_service.get_session(db, session_id)
+    if not verify_workspace_preview_token(
+        preview_token,
+        scope="session",
+        scope_id=str(session_id),
+    ):
+        raise HTTPException(status_code=401, detail="Authentication required")
+    return _stream_workspace_export_file(
+        manifest_key=db_session.workspace_manifest_key,
+        workspace_files_prefix=db_session.workspace_files_prefix,
+        path=path,
+    )
 
 
 @router.get(

@@ -1,6 +1,7 @@
 import type { AddTaskOptions } from "@/features/projects/types";
 import type {
   ChatFileReference,
+  ChatSkillReference,
   InputFile,
   LocalMountConfig,
 } from "@/features/chat/types/api/session";
@@ -19,6 +20,7 @@ export interface TaskSendOptions {
   attachments?: InputFile[];
   file_references?: ChatFileReference[];
   input_file_references?: ChatFileReference[];
+  skill_references?: ChatSkillReference[];
   repo_url?: string | null;
   git_branch?: string | null;
   git_token_env_key?: string | null;

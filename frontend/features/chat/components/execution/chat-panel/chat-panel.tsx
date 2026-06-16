@@ -40,6 +40,7 @@ import {
 } from "@/features/chat/actions/session-actions";
 import type {
   ChatFileReference,
+  ChatSkillReference,
   ExecutionSession,
   FileNode,
   InputFile,
@@ -736,6 +737,8 @@ export function ChatPanel({
       content: string,
       attachments?: InputFile[],
       fileReferences?: ChatFileReference[],
+      skillConfig?: Record<string, boolean>,
+      skillReferences?: ChatSkillReference[],
     ) => {
       if (!session?.session_id) return;
 
@@ -770,6 +773,8 @@ export function ChatPanel({
         content,
         attachments,
         fileReferences,
+        skillConfig,
+        skillReferences,
         selectedModelSelection,
       );
 
@@ -786,6 +791,7 @@ export function ChatPanel({
           content,
           attachments,
           fileReferences,
+          skillReferences,
           status: "queued",
         });
       }
@@ -896,6 +902,7 @@ export function ChatPanel({
           value: draft.content,
           attachments: draft.attachments,
           fileReferences: draft.fileReferences ?? draft.inputFileReferences,
+          skillReferences: draft.skillReferences,
         });
         await refreshTasks();
       } catch (error) {

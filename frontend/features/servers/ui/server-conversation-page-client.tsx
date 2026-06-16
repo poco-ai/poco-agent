@@ -2059,6 +2059,7 @@ export function ServerConversationPageClient({
   const [settingsOpen, setSettingsOpen] = React.useState(false);
   const [membersOpen, setMembersOpen] = React.useState(false);
   const [serverAccessOpen, setServerAccessOpen] = React.useState(false);
+  const [serverDeleteOpen, setServerDeleteOpen] = React.useState(false);
   const [createChannelOpen, setCreateChannelOpen] = React.useState(false);
   const [leaveChannelOpen, setLeaveChannelOpen] = React.useState(false);
   const [agentPresetOpen, setAgentPresetOpen] = React.useState(false);
@@ -2092,6 +2093,7 @@ export function ServerConversationPageClient({
     isServerAccessWorking,
     isAgentCreating,
     createServer,
+    deleteServer,
     acceptInvite,
     createInvite,
     copyInvite,
@@ -2232,6 +2234,11 @@ export function ServerConversationPageClient({
   }, [currentServerMembership?.role, profile?.id, selectedServer?.ownerUserId]);
   const canManageServerOps = canManageServerOperations(currentServerRole);
   const canManageServerMemberRoles = canManageServerMembers(currentServerRole);
+  const canDeleteCurrentServer = Boolean(
+    selectedServer &&
+    selectedServer.kind !== "personal" &&
+    currentServerRole === "owner",
+  );
 
   const allFeedItems = React.useMemo<FeedItem[]>(() => {
     return channels
@@ -3208,6 +3215,20 @@ export function ServerConversationPageClient({
     }
   };
 
+  const handleDeleteCurrentServer = async () => {
+    if (!selectedServerId || !canDeleteCurrentServer) {
+      return;
+    }
+    try {
+      serverConversationContextCache.delete(selectedServerId);
+      await deleteServer();
+      setServerDeleteOpen(false);
+      setDrawer({ type: "none" });
+    } catch {
+      // The hook owns error reporting so callers get a single toast.
+    }
+  };
+
   const handleLeaveChannel = async () => {
     if (
       !selectedServerId ||
@@ -3729,8 +3750,10 @@ export function ServerConversationPageClient({
     topLevelChannels,
     directMessages,
     activeChannelId,
+    canDeleteCurrentServer,
     onSelectServer: switchServer,
     onOpenServerAccess: () => setServerAccessOpen(true),
+    onDeleteCurrentServer: () => setServerDeleteOpen(true),
     onOpenMode: openMode,
     onOpenTasks: openTaskMode,
     onOpenChannel: openChannel,
@@ -4176,6 +4199,34 @@ export function ServerConversationPageClient({
                   ? "conversationView.leaveConfirm.dissolve"
                   : "conversationView.leaveConfirm.leave",
               )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <AlertDialog open={serverDeleteOpen} onOpenChange={setServerDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {t("conversationView.serverActions.deleteConfirmTitle")}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("conversationView.serverActions.deleteConfirmDescription", {
+                server: selectedServer?.name ?? "",
+              })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isServerAccessWorking}>
+              {t("common.cancel")}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => void handleDeleteCurrentServer()}
+              disabled={isServerAccessWorking || !canDeleteCurrentServer}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isServerAccessWorking
+                ? t("common.deleting")
+                : t("conversationView.serverActions.deleteCurrentServer")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

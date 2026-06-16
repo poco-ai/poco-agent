@@ -7,6 +7,8 @@ import {
   AlertTriangle,
   ChevronDown,
   ChevronRight,
+  CheckCheck,
+  X,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +16,11 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { SkeletonShimmer } from "@/components/ui/skeleton-shimmer";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import type {
   Skill,
   UserSkillInstall,
@@ -43,6 +50,7 @@ interface SkillsGridProps {
   onOpenSkillSettings?: (skill: Skill) => void;
   onToggleEnabled?: (installId: number, enabled: boolean) => void;
   onBatchToggle?: (enabled: boolean) => void;
+  onBatchToggleGroup?: (skills: Skill[], enabled: boolean) => void;
   createCardLabel?: string;
   onCreate?: () => void;
   toolbarSlot?: React.ReactNode;
@@ -66,6 +74,7 @@ export function SkillsGrid({
   onOpenSkillSettings,
   onToggleEnabled,
   onBatchToggle,
+  onBatchToggleGroup,
   createCardLabel,
   onCreate,
   toolbarSlot,
@@ -446,42 +455,115 @@ export function SkillsGrid({
                 {(() => {
                   const fullGroupKey = group.key;
                   const isCollapsed = collapsedGroupKeys.has(fullGroupKey);
+                  const enabledGroupCount = group.skills.reduce(
+                    (count, skill) => {
+                      if (skill.admin_disabled) {
+                        return count;
+                      }
+                      const install = installBySkillId.get(skill.id);
+                      return (
+                        count +
+                        (getEffectiveInstallState(skill, install).isEnabled
+                          ? 1
+                          : 0)
+                      );
+                    },
+                    0,
+                  );
+                  const toggleableGroupSkills = group.skills.filter(
+                    (skill) => !skill.admin_disabled,
+                  );
+                  const allGroupSkillsEnabled =
+                    toggleableGroupSkills.length > 0 &&
+                    enabledGroupCount === toggleableGroupSkills.length;
+                  const groupActionEnabled = !allGroupSkillsEnabled;
+                  const groupActionLabel = groupActionEnabled
+                    ? t("library.skillsManager.actions.enableGroup")
+                    : t("library.skillsManager.actions.disableGroup");
+                  const groupActionDisabled =
+                    displayMode === "admin" ||
+                    !onBatchToggleGroup ||
+                    (groupActionEnabled
+                      ? toggleableGroupSkills.length === enabledGroupCount
+                      : !group.skills.some((skill) => {
+                          const install = installBySkillId.get(skill.id);
+                          const state = getEffectiveInstallState(
+                            skill,
+                            install,
+                          );
+                          return state.isEnabled && !skill.force_enabled;
+                        }));
 
                   return (
                     <>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setCollapsedGroupKeys((prev) => {
-                            const next = new Set(prev);
-                            if (next.has(fullGroupKey)) {
-                              next.delete(fullGroupKey);
-                            } else {
-                              next.add(fullGroupKey);
-                            }
-                            return next;
-                          });
-                        }}
-                        className="flex w-full items-center gap-3 rounded-xl border border-transparent py-2 pl-2 pr-3 text-left"
-                        aria-expanded={!isCollapsed}
-                      >
-                        <CapabilitySourceAvatar
-                          name={group.title}
-                          source={group.source}
-                          className="size-8 shrink-0 bg-card [&>svg]:size-4"
-                          statusDotClassName="hidden"
-                        />
-                        <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground md:text-base">
-                          {group.title}
-                        </span>
-                        <span className="opacity-0 transition-opacity group-hover/repo:opacity-100 group-focus-within/repo:opacity-100">
-                          {isCollapsed ? (
-                            <ChevronRight className="size-4 text-muted-foreground" />
-                          ) : (
-                            <ChevronDown className="size-4 text-muted-foreground" />
-                          )}
-                        </span>
-                      </button>
+                      <div className="flex items-center gap-2 rounded-xl border border-transparent py-2 pl-2 pr-3">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCollapsedGroupKeys((prev) => {
+                              const next = new Set(prev);
+                              if (next.has(fullGroupKey)) {
+                                next.delete(fullGroupKey);
+                              } else {
+                                next.add(fullGroupKey);
+                              }
+                              return next;
+                            });
+                          }}
+                          className="flex min-w-0 flex-1 items-center gap-3 text-left"
+                          aria-expanded={!isCollapsed}
+                        >
+                          <CapabilitySourceAvatar
+                            name={group.title}
+                            source={group.source}
+                            className="size-8 shrink-0 bg-card [&>svg]:size-4"
+                            statusDotClassName="hidden"
+                          />
+                          <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground md:text-base">
+                            {group.title}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {enabledGroupCount}/{toggleableGroupSkills.length}
+                          </span>
+                          <span className="opacity-0 transition-opacity group-hover/repo:opacity-100 group-focus-within/repo:opacity-100">
+                            {isCollapsed ? (
+                              <ChevronRight className="size-4 text-muted-foreground" />
+                            ) : (
+                              <ChevronDown className="size-4 text-muted-foreground" />
+                            )}
+                          </span>
+                        </button>
+                        {displayMode !== "admin" ? (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="size-8 shrink-0 rounded-md text-muted-foreground hover:text-foreground"
+                                disabled={groupActionDisabled}
+                                onClick={() =>
+                                  onBatchToggleGroup?.(
+                                    group.skills,
+                                    groupActionEnabled,
+                                  )
+                                }
+                                aria-label={groupActionLabel}
+                                title={groupActionLabel}
+                              >
+                                {groupActionEnabled ? (
+                                  <CheckCheck className="size-4" />
+                                ) : (
+                                  <X className="size-4" />
+                                )}
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="left">
+                              {groupActionLabel}
+                            </TooltipContent>
+                          </Tooltip>
+                        ) : null}
+                      </div>
                       {!isCollapsed ? (
                         <div className="mt-3 space-y-2 pl-16">
                           {group.skills.map((skill) =>

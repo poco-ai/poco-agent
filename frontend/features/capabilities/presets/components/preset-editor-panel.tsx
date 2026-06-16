@@ -219,6 +219,7 @@ export function PresetEditorPanel({
             name: skill.name,
             description: skill.description,
             scope: skill.scope,
+            source: skill.source ?? null,
           })),
           mcp: servers.map((server) => ({
             id: server.id,
@@ -450,29 +451,83 @@ export function PresetEditorPanel({
               onValueChange={setActiveTab}
               className="flex flex-col gap-5"
             >
-              <TabsList className="w-full justify-start gap-2 overflow-x-auto bg-transparent p-0">
-                <TabsTrigger
-                  value="general"
-                  className="max-w-32 flex-1 gap-1.5 rounded-md border border-border/60 bg-muted/60 data-[state=active]:border-transparent data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-                >
-                  <Info className="size-4 shrink-0" />
-                  {t("library.presetsPage.tabs.general")}
-                </TabsTrigger>
-                <TabsTrigger
-                  value="capabilities"
-                  className="max-w-32 flex-1 gap-1.5 rounded-md border border-border/60 bg-muted/60 data-[state=active]:border-transparent data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-                >
-                  <Sparkles className="size-4 shrink-0" />
-                  {t("library.presetsPage.tabs.capabilities")}
-                </TabsTrigger>
-                <TabsTrigger
-                  value="subagents"
-                  className="max-w-32 flex-1 gap-1.5 rounded-md border border-border/60 bg-muted/60 data-[state=active]:border-transparent data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-                >
-                  <Bot className="size-4 shrink-0" />
-                  {t("library.presetsPage.tabs.subagents")}
-                </TabsTrigger>
-              </TabsList>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <TabsList className="min-w-0 flex-1 justify-start gap-2 overflow-x-auto bg-transparent p-0">
+                  <TabsTrigger
+                    value="general"
+                    className="max-w-32 flex-1 gap-1.5 rounded-md border border-border/60 bg-muted/60 data-[state=active]:border-transparent data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                  >
+                    <Info className="size-4 shrink-0" />
+                    {t("library.presetsPage.tabs.general")}
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="capabilities"
+                    className="max-w-32 flex-1 gap-1.5 rounded-md border border-border/60 bg-muted/60 data-[state=active]:border-transparent data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                  >
+                    <Sparkles className="size-4 shrink-0" />
+                    {t("library.presetsPage.tabs.capabilities")}
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="subagents"
+                    className="max-w-32 flex-1 gap-1.5 rounded-md border border-border/60 bg-muted/60 data-[state=active]:border-transparent data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                  >
+                    <Bot className="size-4 shrink-0" />
+                    {t("library.presetsPage.tabs.subagents")}
+                  </TabsTrigger>
+                </TabsList>
+
+                <div className="ml-auto flex shrink-0 flex-wrap justify-end gap-2">
+                  {mode === "create" && onCancelCreate ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={onCancelCreate}
+                      disabled={isSaving}
+                    >
+                      {t("common.cancel")}
+                    </Button>
+                  ) : null}
+                  {mode === "edit" && preset && onDelete ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        void handleDelete();
+                      }}
+                      disabled={isSaving}
+                      className="text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="mr-2 size-4" />
+                      {t("common.delete")}
+                    </Button>
+                  ) : null}
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      void handleSubmit();
+                    }}
+                    disabled={!isValid || isSaving}
+                  >
+                    {isSaving ? (
+                      <>
+                        <Loader2 className="mr-2 size-4 animate-spin" />
+                        {t("common.saving")}
+                      </>
+                    ) : (
+                      <>
+                        {mode === "create" ? (
+                          <Plus className="mr-2 size-4" />
+                        ) : (
+                          <Save className="mr-2 size-4" />
+                        )}
+                        {mode === "create"
+                          ? t("common.create")
+                          : t("common.save")}
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
 
               <TabsContent value="general" className="space-y-5">
                 <div className="space-y-5">
@@ -558,57 +613,6 @@ export function PresetEditorPanel({
                         onCheckedChange={setMemoryEnabled}
                       />
                     </div>
-                  </div>
-                  <div className="flex flex-wrap justify-end gap-2 border-t border-border/50 pt-4">
-                    {mode === "create" && onCancelCreate ? (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={onCancelCreate}
-                        disabled={isSaving}
-                      >
-                        {t("common.cancel")}
-                      </Button>
-                    ) : null}
-                    {mode === "edit" && preset && onDelete ? (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => {
-                          void handleDelete();
-                        }}
-                        disabled={isSaving}
-                        className="text-destructive hover:text-destructive"
-                      >
-                        <Trash2 className="mr-2 size-4" />
-                        {t("common.delete")}
-                      </Button>
-                    ) : null}
-                    <Button
-                      type="button"
-                      onClick={() => {
-                        void handleSubmit();
-                      }}
-                      disabled={!isValid || isSaving}
-                    >
-                      {isSaving ? (
-                        <>
-                          <Loader2 className="mr-2 size-4 animate-spin" />
-                          {t("common.saving")}
-                        </>
-                      ) : (
-                        <>
-                          {mode === "create" ? (
-                            <Plus className="mr-2 size-4" />
-                          ) : (
-                            <Save className="mr-2 size-4" />
-                          )}
-                          {mode === "create"
-                            ? t("common.create")
-                            : t("common.save")}
-                        </>
-                      )}
-                    </Button>
                   </div>
                 </div>
               </TabsContent>

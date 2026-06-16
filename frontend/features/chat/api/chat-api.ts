@@ -224,6 +224,8 @@ export const chatService = {
     modelProviderId?: string | null,
     attachments?: InputFile[],
     fileReferences?: TaskConfig["file_references"],
+    skillReferences?: TaskConfig["skill_references"],
+    skillConfig?: TaskConfig["skill_config"],
     clientRequestId?: string,
   ): Promise<TaskEnqueueResponse> => {
     const normalizedModel = (model || "").trim() || undefined;
@@ -232,8 +234,14 @@ export const chatService = {
     const hasModelOverride = Boolean(normalizedModel);
     const hasAttachments = (attachments?.length ?? 0) > 0;
     const hasFileReferences = (fileReferences?.length ?? 0) > 0;
+    const hasSkillReferences = (skillReferences?.length ?? 0) > 0;
+    const hasSkillConfig = Object.keys(skillConfig ?? {}).length > 0;
     const config: TaskConfig | undefined =
-      hasModelOverride || hasAttachments || hasFileReferences
+      hasModelOverride ||
+      hasAttachments ||
+      hasFileReferences ||
+      hasSkillReferences ||
+      hasSkillConfig
         ? {
             ...(hasModelOverride ? { model: normalizedModel } : {}),
             ...(hasModelOverride && normalizedModelProviderId
@@ -241,6 +249,10 @@ export const chatService = {
               : {}),
             ...(hasAttachments ? { input_files: attachments } : {}),
             ...(hasFileReferences ? { file_references: fileReferences } : {}),
+            ...(hasSkillReferences
+              ? { skill_references: skillReferences }
+              : {}),
+            ...(hasSkillConfig ? { skill_config: skillConfig } : {}),
           }
         : undefined;
 

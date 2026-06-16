@@ -396,6 +396,13 @@
       "noInvites": "Noch keine aktiven Einladungen.",
       "invitePermissionHint": "Only server admins and owners can manage invite keys."
     },
+    "serverActions": {
+      "menu": "Servereinstellungen",
+      "addServer": "Server hinzufügen oder beitreten",
+      "deleteCurrentServer": "Aktuellen Server löschen",
+      "deleteConfirmTitle": "Aktuellen Server löschen?",
+      "deleteConfirmDescription": "Dadurch wird {{server}} für alle Mitglieder aus der Serverliste entfernt. Persönliche Server können nicht gelöscht werden."
+    },
     "agentPreset": {
       "title": "Agent hinzufügen",
       "description": "Erstelle einen Agent im aktuellen Server aus einem bestehenden Preset.",
@@ -507,6 +514,8 @@
       "agentAddFailed": "Agent konnte nicht hinzugefügt werden",
       "serverCreated": "Server erstellt",
       "serverCreateFailed": "Server konnte nicht erstellt werden",
+      "serverDeleted": "Server gelöscht",
+      "serverDeleteFailed": "Server konnte nicht gelöscht werden",
       "inviteAccepted": "Server beigetreten",
       "inviteAcceptFailed": "Einladung konnte nicht angenommen werden",
       "inviteCreated": "Einladungsschlüssel erstellt",
@@ -1979,7 +1988,9 @@
       },
       "actions": {
         "install": "Installieren",
-        "uninstall": "Deinstallieren"
+        "uninstall": "Deinstallieren",
+        "enableGroup": "Diese Gruppe aktivieren",
+        "disableGroup": "Diese Gruppe deaktivieren"
       },
       "toasts": {
         "loadError": "Laden der Skills fehlgeschlagen",
@@ -2304,7 +2315,9 @@
       "selectors": {
         "skills": "Wähle die wiederverwendbaren Skills für diese Vorlage aus.",
         "mcp": "Wähle die MCP-Server aus, die diese Vorlage aktivieren soll.",
-        "plugins": "Waehle die Plugins aus, die diese Vorlage enthalten soll."
+        "plugins": "Waehle die Plugins aus, die diese Vorlage enthalten soll.",
+        "selectGroup": "Diese Gruppe auswählen",
+        "clearGroup": "Diese Gruppe abwählen"
       },
       "form": {
         "name": "Name",

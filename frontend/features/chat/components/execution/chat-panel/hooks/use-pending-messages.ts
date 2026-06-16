@@ -7,6 +7,7 @@ import {
 import { getQueuedQueriesAction } from "@/features/chat/actions/query-actions";
 import type {
   ChatFileReference,
+  ChatSkillReference,
   ExecutionSession,
   InputFile,
 } from "@/features/chat/types";
@@ -24,6 +25,7 @@ export interface PendingMessage {
   attachments?: InputFile[];
   fileReferences?: ChatFileReference[];
   inputFileReferences?: ChatFileReference[];
+  skillReferences?: ChatSkillReference[];
   modelSelection?: ModelSelection | null;
   status: "queued" | "paused";
   sequenceNo: number;
@@ -49,6 +51,7 @@ function toPendingMessage(item: {
   attachments?: InputFile[];
   file_references?: ChatFileReference[] | null;
   input_file_references?: ChatFileReference[] | null;
+  skill_references?: ChatSkillReference[] | null;
   status: "queued" | "paused" | "promoted" | "canceled";
   sequence_no: number;
 }): PendingMessage {
@@ -60,6 +63,7 @@ function toPendingMessage(item: {
       item.file_references ?? item.input_file_references ?? undefined,
     inputFileReferences:
       item.file_references ?? item.input_file_references ?? undefined,
+    skillReferences: item.skill_references ?? undefined,
     status: item.status === "paused" ? "paused" : "queued",
     sequenceNo: item.sequence_no,
   };

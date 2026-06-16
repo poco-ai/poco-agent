@@ -1,3 +1,5 @@
+import type { SourceInfo } from "@/features/capabilities/types/source";
+
 export type PresetSubAgentModel = "sonnet" | "opus" | "haiku" | "inherit";
 
 export interface PresetSubAgentConfig {
@@ -88,4 +90,5 @@ export interface PresetCapabilityItem {
   name: string;
   description?: string | null;
   scope?: string | null;
+  source?: SourceInfo | null;
 }

@@ -61,14 +61,14 @@ export interface SlashCommandSuggestion {
   source: SlashCommandSuggestionSource;
 }
 
-type TokenInfo = {
+export type SlashCommandTokenInfo = {
   token: string;
   start: number;
   end: number;
   hasArgs: boolean;
 };
 
-function extractToken(value: string): TokenInfo | null {
+function extractToken(value: string): SlashCommandTokenInfo | null {
   const leading = value.match(/^\s*/)?.[0].length ?? 0;
   if (value.slice(leading, leading + 1) !== "/") return null;
 
@@ -87,12 +87,17 @@ type UseSlashCommandAutocompleteParams = {
   value: string;
   onChange: (next: string) => void;
   textareaRef?: RefObject<HTMLTextAreaElement | null>;
+  onSelectSuggestion?: (
+    suggestion: SlashCommandSuggestion,
+    tokenInfo: SlashCommandTokenInfo,
+  ) => boolean;
 };
 
 export function useSlashCommandAutocomplete({
   value,
   onChange,
   textareaRef,
+  onSelectSuggestion,
 }: UseSlashCommandAutocompleteParams) {
   const preloadedSuggestionsRef = useRef<BackendSlashCommandSuggestion[]>(
     seedCacheFromPreload(),
@@ -265,6 +270,11 @@ export function useSlashCommandAutocomplete({
       const item = filtered[index];
       if (!item) return;
 
+      if (onSelectSuggestion?.(item, tokenInfo)) {
+        setDismissedToken(item.command);
+        return;
+      }
+
       const before = value.slice(0, tokenInfo.start);
       const after = value.slice(tokenInfo.end);
       const insertSpace = tokenInfo.end === value.length ? " " : "";
@@ -280,7 +290,7 @@ export function useSlashCommandAutocomplete({
         });
       }
     },
-    [filtered, onChange, textareaRef, tokenInfo, value],
+    [filtered, onChange, onSelectSuggestion, textareaRef, tokenInfo, value],
   );
 
   const handleKeyDown = useCallback(

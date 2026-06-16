@@ -31,9 +31,15 @@ class ServerExecutionObservabilityTests(unittest.TestCase):
     def test_trigger_creates_execution_placeholder_after_enqueue(self) -> None:
         task_service = MagicMock()
         context_service = MagicMock()
+        runtime_service = MagicMock()
+        runtime_service.ensure_server_agent_runtime.return_value = SimpleNamespace(
+            runtime_key=f"server_agent:{self.agent_id}",
+            session_id=None,
+        )
         service = ServerAgentTriggerService(
             task_service=task_service,
             shared_context_service=context_service,
+            persistent_runtime_service=runtime_service,
         )
         message = SimpleNamespace(
             id=uuid.uuid4(),
@@ -122,9 +128,15 @@ class ServerExecutionObservabilityTests(unittest.TestCase):
     def test_as_task_trigger_creates_threaded_execution_placeholder(self) -> None:
         task_service = MagicMock()
         context_service = MagicMock()
+        runtime_service = MagicMock()
+        runtime_service.ensure_server_agent_runtime.return_value = SimpleNamespace(
+            runtime_key=f"server_agent:{self.agent_id}",
+            session_id=None,
+        )
         service = ServerAgentTriggerService(
             task_service=task_service,
             shared_context_service=context_service,
+            persistent_runtime_service=runtime_service,
         )
         message = SimpleNamespace(
             id=uuid.uuid4(),

@@ -12,6 +12,7 @@ import {
 import type {
   ChatFileReference,
   ChatMessage,
+  ChatSkillReference,
   ExecutionSession,
   InputFile,
   UsageResponse,
@@ -37,6 +38,8 @@ interface UseChatMessagesReturn {
     content: string,
     attachments?: InputFile[],
     fileReferences?: ChatFileReference[],
+    skillConfig?: Record<string, boolean>,
+    skillReferences?: ChatSkillReference[],
     modelSelection?: ModelSelection | null,
   ) => Promise<TaskEnqueueActionResult | null>;
   beginOptimisticRegenerate: (assistantMessageId: number) => string;
@@ -504,6 +507,8 @@ export function useChatMessages({
       content: string,
       attachments?: InputFile[],
       fileReferences?: ChatFileReference[],
+      skillConfig?: Record<string, boolean>,
+      skillReferences?: ChatSkillReference[],
       modelSelection?: ModelSelection | null,
     ): Promise<TaskEnqueueActionResult | null> => {
       if (!session?.session_id) return null;
@@ -526,6 +531,7 @@ export function useChatMessages({
           timestamp: new Date().toISOString(),
           metadata: {
             fileReferences,
+            skillReferences,
           },
           attachments,
         };
@@ -541,6 +547,8 @@ export function useChatMessages({
           content: normalizedContent,
           attachments,
           file_references: fileReferences,
+          skill_references: skillReferences,
+          skill_config: skillConfig,
           model: modelSelection?.modelId,
           model_provider_id: modelSelection?.providerId,
         });

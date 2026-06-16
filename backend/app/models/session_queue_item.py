@@ -109,3 +109,11 @@ class AgentSessionQueueItem(Base, TimestampMixin):
         if references is None:
             references = snapshot.get("input_file_references")
         return list(references) if isinstance(references, list) else []
+
+    @property
+    def skill_references(self) -> list[dict[str, Any]]:
+        snapshot = self.run_config_snapshot
+        if not isinstance(snapshot, dict):
+            return []
+        references = snapshot.get("skill_references")
+        return list(references) if isinstance(references, list) else []

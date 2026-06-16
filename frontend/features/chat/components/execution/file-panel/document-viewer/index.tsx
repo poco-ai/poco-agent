@@ -1394,6 +1394,9 @@ const DocumentViewerComponent = ({
   const drawioFile = isDrawioFile(extension, file.mimeType);
   const videoFile = !textLanguage && isVideoFile(extension, file.mimeType);
   const showCardWhileLoading = Boolean(onClose);
+  const htmlSandbox = isSameOriginUrl(resolvedUrl || "")
+    ? "allow-scripts allow-forms allow-popups allow-modals"
+    : "allow-scripts allow-same-origin allow-forms allow-popups allow-modals";
 
   const handleDownload = async () => {
     const refreshed = ensureFreshFile ? await ensureFreshFile(file) : file;
@@ -1423,7 +1426,7 @@ const DocumentViewerComponent = ({
           src={resolvedUrl}
           className="h-full w-full border-0 bg-white"
           title={file.name}
-          sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"
+          sandbox={htmlSandbox}
         />
       </div>
     );

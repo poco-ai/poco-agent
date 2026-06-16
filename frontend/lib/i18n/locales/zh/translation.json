@@ -396,6 +396,13 @@
       "noInvites": "还没有生成邀请 key。",
       "invitePermissionHint": "只有服务器管理员和 owner 可以管理邀请 key。"
     },
+    "serverActions": {
+      "menu": "服务器设置",
+      "addServer": "添加或加入服务器",
+      "deleteCurrentServer": "删除当前 server",
+      "deleteConfirmTitle": "确认删除当前 server？",
+      "deleteConfirmDescription": "这会将 {{server}} 从所有成员的服务器列表中移除。Personal 服务器不能删除。"
+    },
     "agentPreset": {
       "title": "添加 Agent",
       "description": "从已有预设创建当前服务器内的 Agent。",
@@ -507,6 +514,8 @@
       "agentAddFailed": "添加 Agent 失败",
       "serverCreated": "服务器已创建",
       "serverCreateFailed": "创建服务器失败",
+      "serverDeleted": "服务器已删除",
+      "serverDeleteFailed": "删除服务器失败",
       "inviteAccepted": "已加入服务器",
       "inviteAcceptFailed": "加入服务器失败",
       "inviteCreated": "邀请 key 已生成",
@@ -1950,7 +1959,9 @@
       },
       "actions": {
         "install": "安装",
-        "uninstall": "卸载"
+        "uninstall": "卸载",
+        "enableGroup": "启用此组",
+        "disableGroup": "停用此组"
       },
       "toasts": {
         "loadError": "加载技能列表失败",
@@ -2275,7 +2286,9 @@
       "selectors": {
         "skills": "选择这个预设默认启用的 Skills。",
         "mcp": "选择这个预设默认启用的 MCP 服务。",
-        "plugins": "选择这个预设携带的插件。"
+        "plugins": "选择这个预设携带的插件。",
+        "selectGroup": "全选此组",
+        "clearGroup": "取消此组"
       },
       "form": {
         "name": "名称",

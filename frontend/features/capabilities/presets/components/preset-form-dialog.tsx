@@ -173,6 +173,7 @@ export function PresetFormDialog({
             name: skill.name,
             description: skill.description,
             scope: skill.scope,
+            source: skill.source ?? null,
           })),
           mcp: servers.map((server) => ({
             id: server.id,

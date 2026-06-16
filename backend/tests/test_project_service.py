@@ -18,21 +18,20 @@ class ProjectServiceTests(unittest.TestCase):
         self.user_id = "user-1"
         self.now = datetime.now(UTC)
 
-    @patch("app.services.project_service.PresetRepository.get_by_id")
+    @patch("app.services.project_service.PresetRepository.get_visible_by_id")
     @patch("app.services.project_service.ProjectRepository.create")
     def test_create_project_persists_runtime_settings(
         self,
         create: MagicMock,
-        get_preset_by_id: MagicMock,
+        get_visible_preset_by_id: MagicMock,
     ) -> None:
         created_project: Project | None = None
-        get_preset_by_id.return_value = Preset(
+        get_visible_preset_by_id.return_value = Preset(
             id=7,
             user_id=self.user_id,
             name="Default preset",
             description=None,
-            icon="default",
-            color=None,
+            visual_key="preset-visual-01",
             prompt_template=None,
             browser_enabled=False,
             memory_enabled=False,
@@ -96,20 +95,19 @@ class ProjectServiceTests(unittest.TestCase):
         self.assertEqual(result.local_mounts[0].name, "Demo workspace")
         self.assertEqual(result.local_mounts[1].host_path, "/workspace/docs")
 
-    @patch("app.services.project_service.PresetRepository.get_by_id")
-    @patch("app.services.project_service.ProjectRepository.get_by_id")
+    @patch("app.services.project_service.PresetRepository.get_visible_by_id")
+    @patch("app.services.project_service.ProjectRepository.get_visible_by_id")
     def test_update_project_updates_runtime_settings_independently(
         self,
-        get_by_id: MagicMock,
-        get_preset_by_id: MagicMock,
+        get_visible_by_id: MagicMock,
+        get_visible_preset_by_id: MagicMock,
     ) -> None:
-        get_preset_by_id.return_value = Preset(
+        get_visible_preset_by_id.return_value = Preset(
             id=9,
             user_id=self.user_id,
             name="Updated preset",
             description=None,
-            icon="default",
-            color=None,
+            visual_key="preset-visual-01",
             prompt_template=None,
             browser_enabled=False,
             memory_enabled=False,
@@ -124,6 +122,8 @@ class ProjectServiceTests(unittest.TestCase):
         project = Project(
             id=uuid.uuid4(),
             user_id=self.user_id,
+            scope="personal",
+            access_policy="private",
             name="Demo",
             description=None,
             default_model=None,
@@ -131,6 +131,7 @@ class ProjectServiceTests(unittest.TestCase):
             repo_url=None,
             git_branch=None,
             git_token_env_key=None,
+            owner_user_id=self.user_id,
             is_deleted=False,
             created_at=self.now,
             updated_at=self.now,
@@ -144,7 +145,7 @@ class ProjectServiceTests(unittest.TestCase):
                 sort_order=0,
             )
         ]
-        get_by_id.return_value = project
+        get_visible_by_id.return_value = project
         self.db.refresh.side_effect = lambda _: None
 
         result = self.service.update_project(
@@ -182,20 +183,23 @@ class ProjectServiceTests(unittest.TestCase):
         self.assertEqual(result.local_mounts[0].access_mode, "ro")
         self.assertEqual(result.local_mounts[1].id, "assets")
 
-    @patch("app.services.project_service.ProjectRepository.get_by_id")
+    @patch("app.services.project_service.ProjectRepository.get_visible_by_id")
     def test_update_project_flushes_deleted_mounts_before_reinserting(
         self,
-        get_by_id: MagicMock,
+        get_visible_by_id: MagicMock,
     ) -> None:
         project = Project(
             id=uuid.uuid4(),
             user_id=self.user_id,
+            scope="personal",
+            access_policy="private",
             name="Demo",
             description=None,
             default_model=None,
             repo_url=None,
             git_branch=None,
             git_token_env_key=None,
+            owner_user_id=self.user_id,
             is_deleted=False,
             created_at=self.now,
             updated_at=self.now,
@@ -209,7 +213,7 @@ class ProjectServiceTests(unittest.TestCase):
                 sort_order=0,
             )
         ]
-        get_by_id.return_value = project
+        get_visible_by_id.return_value = project
         self.db.refresh.side_effect = lambda _: None
 
         self.service.update_project(

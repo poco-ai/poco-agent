@@ -396,6 +396,13 @@
       "noInvites": "No invite key generated yet.",
       "invitePermissionHint": "Only server admins and owners can manage invite keys."
     },
+    "serverActions": {
+      "menu": "Server settings",
+      "addServer": "Add or join server",
+      "deleteCurrentServer": "Delete current server",
+      "deleteConfirmTitle": "Delete current server?",
+      "deleteConfirmDescription": "This will remove {{server}} from the server list for all members. Personal servers cannot be deleted."
+    },
     "agentPreset": {
       "title": "Add agent",
       "description": "Create a server agent from one of your presets.",
@@ -507,6 +514,8 @@
       "agentAddFailed": "Failed to add agent",
       "serverCreated": "Server created",
       "serverCreateFailed": "Failed to create server",
+      "serverDeleted": "Server deleted",
+      "serverDeleteFailed": "Failed to delete server",
       "inviteAccepted": "Joined server",
       "inviteAcceptFailed": "Failed to join server",
       "inviteCreated": "Invite key generated",
@@ -1950,7 +1959,9 @@
       },
       "actions": {
         "install": "Install",
-        "uninstall": "Uninstall"
+        "uninstall": "Uninstall",
+        "enableGroup": "Enable group",
+        "disableGroup": "Disable group"
       },
       "toasts": {
         "loadError": "Failed to load skills",
@@ -2275,7 +2286,9 @@
       "selectors": {
         "skills": "Choose the reusable skills bundled into this preset.",
         "mcp": "Choose the MCP servers this preset should enable.",
-        "plugins": "Choose the plugins this preset should carry."
+        "plugins": "Choose the plugins this preset should carry.",
+        "selectGroup": "Select group",
+        "clearGroup": "Clear group"
       },
       "form": {
         "name": "Name",

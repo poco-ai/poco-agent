@@ -396,6 +396,13 @@
       "noInvites": "Активных приглашений пока нет.",
       "invitePermissionHint": "Only server admins and owners can manage invite keys."
     },
+    "serverActions": {
+      "menu": "Настройки сервера",
+      "addServer": "Добавить сервер или присоединиться",
+      "deleteCurrentServer": "Удалить текущий server",
+      "deleteConfirmTitle": "Удалить текущий server?",
+      "deleteConfirmDescription": "{{server}} будет удалён из списка серверов для всех участников. Personal-серверы удалить нельзя."
+    },
     "agentPreset": {
       "title": "Добавить агента",
       "description": "Создайте агента на текущем сервере из существующего пресета.",
@@ -507,6 +514,8 @@
       "agentAddFailed": "Не удалось добавить агента",
       "serverCreated": "Сервер создан",
       "serverCreateFailed": "Не удалось создать сервер",
+      "serverDeleted": "Сервер удалён",
+      "serverDeleteFailed": "Не удалось удалить сервер",
       "inviteAccepted": "Вы присоединились к серверу",
       "inviteAcceptFailed": "Не удалось принять приглашение",
       "inviteCreated": "Ключ приглашения создан",
@@ -1979,7 +1988,9 @@
       },
       "actions": {
         "install": "Установить",
-        "uninstall": "Удалить"
+        "uninstall": "Удалить",
+        "enableGroup": "Включить эту группу",
+        "disableGroup": "Отключить эту группу"
       },
       "toasts": {
         "loadError": "Не удалось загрузить навыки",
@@ -2305,7 +2316,9 @@
       "selectors": {
         "skills": "Выберите повторно используемые навыки для этого пресета.",
         "mcp": "Выберите MCP-серверы, которые должен включать этот пресет.",
-        "plugins": "Выберите плагины, которые должен содержать этот пресет."
+        "plugins": "Выберите плагины, которые должен содержать этот пресет.",
+        "selectGroup": "Выбрать эту группу",
+        "clearGroup": "Снять выбор с этой группы"
       },
       "form": {
         "name": "Название",

@@ -16,10 +16,16 @@ import {
   MicOff,
   Upload,
   FileText,
+  Sparkles,
 } from "lucide-react";
 import { uploadAttachment } from "@/features/attachments/api/attachment-api";
-import type { ChatFileReference, InputFile } from "@/features/chat/types";
+import type {
+  ChatFileReference,
+  ChatSkillReference,
+  InputFile,
+} from "@/features/chat/types";
 import type { FileNode } from "@/features/chat/types/api/file";
+import type { Skill } from "@/features/capabilities/skills/types";
 import { toast } from "sonner";
 import { FileCard } from "@/components/shared/file-card";
 import {
@@ -30,6 +36,7 @@ import {
 import { useT } from "@/lib/i18n/client";
 import { playUploadSound } from "@/lib/utils/sound";
 import { useSlashCommandAutocomplete } from "@/features/chat/hooks/use-slash-command-autocomplete";
+import { skillsService } from "@/features/capabilities/skills/api/skills-api";
 import { useFileDropUpload } from "@/features/task-composer";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/hooks/use-language";
@@ -43,12 +50,26 @@ import {
   insertUploadedInputFileReference,
   removeInputFileReference,
 } from "@/features/chat/lib/input-file-reference";
+import {
+  filterSkillReferences,
+  getReferencedSkillConfig,
+  getSkillReferenceCandidates,
+  getSkillReferenceTrigger,
+  insertSkillReference,
+  type SkillReferenceCandidate,
+} from "@/features/chat/lib/skill-reference";
+import {
+  getStartupPreloadValue,
+  hasStartupPreloadValue,
+} from "@/lib/startup-preload";
 
 interface ChatInputProps {
   onSend: (
     content: string,
     attachments?: InputFile[],
     fileReferences?: ChatFileReference[],
+    skillConfig?: Record<string, boolean>,
+    skillReferences?: ChatSkillReference[],
   ) => void;
   onCancel?: () => void;
   canCancel?: boolean;
@@ -66,6 +87,7 @@ export interface ChatInputDraft {
   attachments?: InputFile[];
   fileReferences?: ChatFileReference[];
   inputFileReferences?: ChatFileReference[];
+  skillReferences?: ChatSkillReference[];
 }
 
 export interface ChatInputRef {
@@ -100,10 +122,20 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
     const [inputFileReferences, setInputFileReferences] = useState<
       ChatFileReference[]
     >([]);
+    const [skillReferences, setSkillReferences] = useState<
+      ChatSkillReference[]
+    >([]);
+    const [availableSkills, setAvailableSkills] = useState<Skill[]>(() =>
+      hasStartupPreloadValue("skills")
+        ? (getStartupPreloadValue("skills") ?? [])
+        : [],
+    );
     const [isUploading, setIsUploading] = useState(false);
     const [historyIndex, setHistoryIndex] = useState(-1);
     const [selectionStart, setSelectionStart] = useState(0);
     const [fileReferenceActiveIndex, setFileReferenceActiveIndex] = useState(0);
+    const [skillReferenceActiveIndex, setSkillReferenceActiveIndex] =
+      useState(0);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const valueRef = useRef(value);
@@ -158,6 +190,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
       setValueAndFocus: (newValue: string) => {
         setHistoryIndex(-1);
         setInputFileReferences([]);
+        setSkillReferences([]);
         applyValue(newValue);
       },
       appendValueAndFocus: (newValue: string) => {
@@ -169,6 +202,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
         attachments: nextAttachments,
         fileReferences: nextFileReferences,
         inputFileReferences: nextInputFileReferences,
+        skillReferences: nextSkillReferences,
       }: ChatInputDraft) => {
         setHistoryIndex(-1);
         const draftAttachments = nextAttachments ?? [];
@@ -183,6 +217,9 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
             { sessionId, workspaceFiles: sessionFiles },
           ),
         );
+        setSkillReferences(
+          filterSkillReferences(nextSkillReferences, newValue, availableSkills),
+        );
         applyValue(newValue);
       },
     }));
@@ -190,10 +227,68 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
     // Track whether user is composing with IME (Input Method Editor)
     const isComposingRef = useRef(false);
 
+    useEffect(() => {
+      let active = true;
+
+      const loadSkills = async () => {
+        try {
+          const data = await skillsService.listSkills({ revalidate: 0 });
+          if (!active) return;
+          setAvailableSkills(data);
+        } catch (error) {
+          console.error("[ChatInput] Failed to load skills:", error);
+        }
+      };
+
+      void loadSkills();
+      return () => {
+        active = false;
+      };
+    }, []);
+
+    const applySkillReferenceSelection = useCallback(
+      (
+        candidate: SkillReferenceCandidate,
+        selection?: { start: number; end: number },
+      ) => {
+        const textarea = textareaRef.current;
+        const start =
+          selection?.start ?? textarea?.selectionStart ?? selectionStart;
+        const end = selection?.end ?? textarea?.selectionEnd ?? selectionStart;
+        const result = insertSkillReference(value, start, end, candidate);
+        if (!result) return false;
+
+        setHistoryIndex(-1);
+        setValue(result.value);
+        setSelectionStart(result.cursor);
+        setSkillReferences((prev) => [
+          ...filterSkillReferences(prev, result.value, availableSkills),
+          result.reference,
+        ]);
+        requestAnimationFrame(() => {
+          syncTextareaValue(result.value, result.cursor);
+        });
+        return true;
+      },
+      [availableSkills, selectionStart, syncTextareaValue, value],
+    );
+
     const slashAutocomplete = useSlashCommandAutocomplete({
       value,
       onChange: setValue,
       textareaRef,
+      onSelectSuggestion: (suggestion, tokenInfo) => {
+        if (suggestion.source !== "skill") return false;
+        const candidate = getSkillReferenceCandidates(
+          availableSkills,
+          suggestion.name,
+        ).find((item) => item.displayName === suggestion.name);
+        if (!candidate) return false;
+        return applySkillReferenceSelection(candidate, {
+          start: tokenInfo.end,
+          end: tokenInfo.end,
+        });
+      },
     });
 
     const inputFileReferenceTrigger = useMemo(
@@ -221,10 +316,33 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
       !slashAutocomplete.isOpen &&
       Boolean(inputFileReferenceTrigger) &&
       inputFileReferenceCandidates.length > 0;
+    const skillReferenceTrigger = useMemo(
+      () => getSkillReferenceTrigger(value, selectionStart),
+      [selectionStart, value],
+    );
+    const skillReferenceCandidates = useMemo(
+      () =>
+        skillReferenceTrigger
+          ? getSkillReferenceCandidates(
+              availableSkills,
+              skillReferenceTrigger.query,
+            )
+          : [],
+      [availableSkills, skillReferenceTrigger],
+    );
+    const isSkillReferenceOpen =
+      !slashAutocomplete.isOpen &&
+      !isInputFileReferenceOpen &&
+      Boolean(skillReferenceTrigger) &&
+      skillReferenceCandidates.length > 0;
 
     useEffect(() => {
       setFileReferenceActiveIndex(0);
     }, [inputFileReferenceTrigger?.query, inputFileReferenceCandidates.length]);
+
+    useEffect(() => {
+      setSkillReferenceActiveIndex(0);
+    }, [skillReferenceTrigger?.query, skillReferenceCandidates.length]);
 
     const insertUploadedFileReferences = useCallback(
       (uploadedFiles: InputFile[]) => {
@@ -489,6 +607,12 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
         [...currentAttachments, ...sessionInputFiles],
         { sessionId, workspaceFiles: sessionFiles },
       );
+      const currentSkillReferences = filterSkillReferences(
+        skillReferences,
+        content,
+        availableSkills,
+      );
+      const skillConfig = getReferencedSkillConfig(currentSkillReferences);
       const confirmedAttachments = getReferencedInputFiles(
         currentAttachments,
         currentReferences,
@@ -497,18 +621,27 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
       setValue(""); // Clear immediately
       setAttachments([]);
       setInputFileReferences([]);
+      setSkillReferences([]);
       // Reset textarea height
       if (textareaRef.current) {
         textareaRef.current.style.height = "auto";
       }
-      onSend(content, confirmedAttachments, currentReferences);
+      onSend(
+        content,
+        confirmedAttachments,
+        currentReferences,
+        Object.keys(skillConfig).length > 0 ? skillConfig : undefined,
+        currentSkillReferences,
+      );
     }, [
       attachments,
+      availableSkills,
       inputFileReferences,
       onSend,
       sessionFiles,
       sessionId,
       sessionInputFiles,
+      skillReferences,
       value,
       confirmedDraftAttachments.length,
       voiceInput.isBusy,
@@ -553,6 +686,32 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
             return;
           }
         }
+        if (isSkillReferenceOpen) {
+          if (e.key === "ArrowDown") {
+            e.preventDefault();
+            setSkillReferenceActiveIndex((current) =>
+              Math.min(current + 1, skillReferenceCandidates.length - 1),
+            );
+            return;
+          }
+          if (e.key === "ArrowUp") {
+            e.preventDefault();
+            setSkillReferenceActiveIndex((current) => Math.max(current - 1, 0));
+            return;
+          }
+          if (e.key === "Enter" || e.key === "Tab") {
+            e.preventDefault();
+            const candidate =
+              skillReferenceCandidates[skillReferenceActiveIndex];
+            if (candidate) applySkillReferenceSelection(candidate);
+            return;
+          }
+          if (e.key === "Escape") {
+            e.preventDefault();
+            setSelectionStart(-1);
+            return;
+          }
+        }
         if (slashAutocomplete.handleKeyDown(e)) return;
         if (
           disabled ||
@@ -576,6 +735,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
             setHistoryIndex(nextIndex);
             applyValue(history[nextIndex] ?? "");
             setInputFileReferences([]);
+            setSkillReferences([]);
             return;
           }
           if (e.key === "ArrowDown") {
@@ -586,6 +746,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
             setHistoryIndex(nextIndex);
             applyValue(nextIndex === -1 ? "" : (history[nextIndex] ?? ""));
             setInputFileReferences([]);
+            setSkillReferences([]);
             return;
           }
         }
@@ -611,9 +772,13 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
         confirmedDraftAttachments.length,
         handleSend,
         isInputFileReferenceOpen,
+        isSkillReferenceOpen,
         inputFileReferenceCandidates.length,
+        skillReferenceCandidates,
         applyInputFileReferenceSelection,
+        applySkillReferenceSelection,
         fileReferenceActiveIndex,
+        skillReferenceActiveIndex,
         slashAutocomplete,
         disabled,
         historyIndex,
@@ -653,11 +818,21 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
           }
           return nextReferences;
         });
+        setSkillReferences((prev) =>
+          filterSkillReferences(prev, nextValue, availableSkills),
+        );
         if (historyIndex !== -1) {
           setHistoryIndex(-1);
         }
       },
-      [attachments, historyIndex, sessionFiles, sessionId, sessionInputFiles],
+      [
+        attachments,
+        availableSkills,
+        historyIndex,
+        sessionFiles,
+        sessionId,
+        sessionInputFiles,
+      ],
     );
 
     const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -762,6 +937,45 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
                         )}
                       >
                         <span className="font-mono">{item.command}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
+            {isSkillReferenceOpen ? (
+              <div className="absolute bottom-full left-0 z-50 mb-2 w-full overflow-hidden rounded-lg border border-border bg-popover shadow-md">
+                <div className="max-h-64 overflow-auto py-1">
+                  {skillReferenceCandidates.map((item, idx) => {
+                    const selected = idx === skillReferenceActiveIndex;
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onMouseEnter={() => setSkillReferenceActiveIndex(idx)}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          applySkillReferenceSelection(item);
+                        }}
+                        className={cn(
+                          "flex w-full min-w-0 items-center gap-2 px-3 py-2 text-left text-sm",
+                          selected
+                            ? "bg-accent text-accent-foreground"
+                            : "hover:bg-accent/50",
+                        )}
+                      >
+                        <Sparkles className="size-4 shrink-0 text-muted-foreground" />
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate font-medium">
+                            {skillReferenceTrigger?.symbol}
+                            {item.displayName}
+                          </span>
+                          {item.description ? (
+                            <span className="block truncate text-xs text-muted-foreground">
+                              {item.description}
+                            </span>
+                          ) : null}
+                        </span>
                       </button>
                     );
                   })}
