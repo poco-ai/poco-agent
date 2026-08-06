@@ -14,9 +14,12 @@ export type ServerAuthState =
 
 export const getServerAuthState = cache(async (): Promise<ServerAuthState> => {
   const cookieStore = await cookies();
-  if (!cookieStore.get(AUTH_SESSION_COOKIE_NAME)?.value) {
-    return { status: "anonymous" };
-  }
+  // The backend can authenticate cookieless requests in single-user and
+  // disabled auth modes, so always probe /auth/me and only use cookie
+  // presence to distinguish "anonymous" from "stale" on 401.
+  const hasSessionCookie = Boolean(
+    cookieStore.get(AUTH_SESSION_COOKIE_NAME)?.value,
+  );
 
   try {
     await apiClient.get<unknown>(API_ENDPOINTS.authMe, {
@@ -25,7 +28,7 @@ export const getServerAuthState = cache(async (): Promise<ServerAuthState> => {
     return { status: "authenticated" };
   } catch (error) {
     if (error instanceof ApiError && error.statusCode === 401) {
-      return { status: "stale" };
+      return { status: hasSessionCookie ? "stale" : "anonymous" };
     }
     throw error;
   }
