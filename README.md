@@ -84,4 +84,4 @@ For detailed deployment documentation and troubleshooting, please refer to the [
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=poco-ai/poco-agent&type=date&legend=top-left)](https://www.star-history.com/#poco-ai/poco-agent&type=date&legend=top-left)
+[![Star History Chart](https://star-history.dera.page/svg?repos=poco-ai/poco-agent&type=date&legend=top-left)](https://star-history.dera.page/#poco-ai/poco-agent&type=date&legend=top-left)
