@@ -75,6 +75,19 @@ PROVIDER_SPECS: tuple[ProviderSpec, ...] = (
             ("deepseek-reasoner", "DeepSeek Reasoner"),
         ),
     ),
+    ProviderSpec(
+        provider_id="atlascloud",
+        display_name="Atlas Cloud",
+        api_key_env_key="ATLASCLOUD_API_KEY",
+        base_url_env_key="ATLASCLOUD_BASE_URL",
+        default_base_url="https://api.atlascloud.ai",
+        api_key_settings_fields=("atlascloud_api_key",),
+        base_url_settings_fields=("atlascloud_base_url",),
+        known_models=(
+            ("anthropic/claude-haiku-4.5-20251001", "Claude Haiku 4.5"),
+            ("zai-org/GLM-4.6", "GLM-4.6"),
+        ),
+    ),
 )
 
 PROVIDER_SPEC_MAP = {spec.provider_id: spec for spec in PROVIDER_SPECS}
@@ -91,6 +104,11 @@ def infer_provider_id(model_id: str) -> str | None:
         return None
 
     lowered = value.lower()
+    # Atlas Cloud model ids are always "<vendor>/<model>" and no other provider
+    # here uses a slash, so this must come first: "deepseek-ai/DeepSeek-V3.2-Exp"
+    # would otherwise match the startswith("deepseek-") branch below.
+    if "/" in value:
+        return "atlascloud"
     if lowered.startswith("claude-"):
         return "anthropic"
     if lowered.startswith("glm-") or value.startswith("GLM-"):

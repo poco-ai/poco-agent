@@ -186,6 +186,8 @@ class Settings(BaseSettings):
     minimax_base_url: str | None = Field(default=None, alias="MINIMAX_BASE_URL")
     deepseek_api_key: str = Field(default="", alias="DEEPSEEK_API_KEY")
     deepseek_base_url: str | None = Field(default=None, alias="DEEPSEEK_BASE_URL")
+    atlascloud_api_key: str = Field(default="", alias="ATLASCLOUD_API_KEY")
+    atlascloud_base_url: str | None = Field(default=None, alias="ATLASCLOUD_BASE_URL")
     openai_api_key: str | None = Field(default=None, alias="OPENAI_API_KEY")
     openai_base_url: str | None = Field(default=None, alias="OPENAI_BASE_URL")
     openai_audio_transcription_model: str = Field(
